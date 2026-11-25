@@ -15,9 +15,8 @@ research URL is a compatibility redirect.
 The two classic works also ship as complete analysis reports
 (``examples/<slug>-report.pdf``). The Effi Briest excerpt additionally demonstrates
 the shared editorial, reading and submission PDF layouts. Every HTML page carries canonical and social
-metadata plus an explicit provenance notice; private manuscripts and local
-project configuration never enter these files. The script fails when an
-example grows beyond a size the site should ship.
+metadata plus an explicit provenance notice. The script uses approved sample
+inputs and enforces the size limits for each HTML output.
 """
 
 from __future__ import annotations
@@ -51,12 +50,9 @@ from scripts.example_publications import (  # noqa: E402
     build_research_demo,
 )
 
-#: A published example stays a quick page load; past this size the excerpt is
-#: cut further instead of shipping a multi-megabyte HTML document. The shared
-#: chapter inspection, media, export, review, literal-code handling, research
-#: identity, terminology, localized diagnostics, contextual hints, association
-#: review, dossier collections, glassmorphism, table components, lexical grounding, teleprompter, Lucide icon set, command palette, backlinks, pane ribbons and modern UI transitions.
-MAX_PAGE_BYTES = 1_950_000  # Shared fields, readable reference labels, Lucide icons, command palette, search bar, interactive pills, unified pane ribbons, and research windowing.
+# Each generated HTML page must fit its reviewed budget, including its inline
+# application assets. The richer Warehouse 4 exports have their own limits.
+MAX_PAGE_BYTES = 1_950_000
 DEMO_PAGE_BUDGETS: dict[str, int] = {
     "docs/demo/report.html": 7_500_000,
     "docs/demo/reader/index.html": 1_750_000,

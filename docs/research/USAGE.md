@@ -26,9 +26,9 @@ archive restore format or a hosted account with revocable permissions.
 
 Use `lixity research --help` to discover implemented commands and
 `lixity research COMMAND --help` for exact arguments and output formats.
-`lixity about --json` reports supported schema versions and command metadata;
-`lixity research schema` exports the entity JSON schema. This guide covers
-workflows, retained data and semantics that command help cannot establish.
+Use `lixity about --section commands` to inspect command metadata and supported
+versions in a program. Run `lixity research schema` to export the archive
+entity JSON schema. For the running app and MCP, see [interface discovery](../AGENTS.md#choose-the-interface).
 
 ### Output destinations at a glance
 
@@ -120,10 +120,9 @@ lixity research dossier --project ./novel --title "Reading room" --file ./notes.
 lixity research audit --project ./novel
 ```
 
-Replace `PASSAGE_ID` with a full returned ID. To continue in the browser, use
-**Open Project** in the managed app and select the project that owns the archive.
-CLI research commands keep the browser's project selection. [Project onboarding](../ONBOARDING.md)
-explains the existing-project and import paths.
+Replace `PASSAGE_ID` with a full returned ID. To continue in the browser, choose
+**Open Project** and select the same `./novel` folder used with `--project`. See
+[project onboarding](../ONBOARDING.md) for the existing-project and import paths.
 
 A new dossier without `--language` inherits the explicit
 research project's language. An explicit language overrides it. Manuscript
@@ -180,7 +179,7 @@ links** open shared tools while retaining the selected content and unfinished
 forms. Search includes retained passages and current authored records; exact
 quoted versions stay distinct from the current full source. Source-specific
 vocabulary comparison starts in that source's reader. See the
-[workspace workflow](../WORKSPACE.md#research-in-context-unreleased) for return
+[workspace workflow](../WORKSPACE.md#research-in-context) for return
 controls and the whole-project review entry.
 
 ### Record a claim, evidence and an author decision
@@ -1043,13 +1042,14 @@ limit, `warnings` contains an advisory capacity warning without failing integrit
 The audit checks accepted revision objects, retained source/text bytes, citations
 and dossier media pins; it does not establish factual accuracy, fully decode
 media or check search-index freshness.
-Output formats/defaults are command-specific: inspect `--help` or
-`lixity about --json`. `--pager` requires explicit use with a human format and
+For exact output formats and defaults, inspect the selected command's `--help` or
+`lixity about --section commands`. `--pager` requires explicit use with a human format and
 interactive input/output; pipes never start one. Progress phases use stderr,
 leaving stdout for the result. Imported values remain inert text.
-The running server exposes registered routes at `GET /api`; research responses
-are JSON. Manuscript PDF and confidentiality-agreement downloads are separate
-binary/text attachment workflows.
+For HTTP requests, read the selected workspace's API index first. Research
+data routes use JSON. Dossier PDF downloads and retained media use the
+documented file formats. See [interface discovery](../AGENTS.md#choose-the-interface)
+and [research API contracts](../AGENTS.md#51-research-api-lixityresearchapi).
 
 Claim creation accepts `hypothetical`, `evidenced` or `disputed` confidence;
 evidence links accept `supports`, `contradicts`, `qualifies` or `contextualizes`.
@@ -1968,21 +1968,13 @@ there is no semantic search, identity resolution or automatic contradiction
 resolution. The result limit applies across all matching types. Use type filters
 when numerous source hits obscure authored records.
 
-The browser and CLI refresh the disposable catalogue when needed. Use
-`--strict` to require an existing, up-to-date index in the CLI. Python defaults
-to that strict mode and accepts `ensure_fresh=True` for recovery. A successful
-refresh is reported in `warnings`. The [data model](DATA_MODEL.md#search-database-and-deletion)
-describes how results are verified against the archive.
-
-CLI search automatically refreshes stale or missing indexes by default to avoid
-interrupting research tasks with manual maintenance detours. Callers who require
-strict validation can pass `--strict` to fail fast when the index is not up to date.
-Search reads the cache's snapshot identity and hit rows in one SQLite
-transaction. If a rebuild publishes during opening, search can use that index
-after confirming it matches the latest accepted archive snapshot. The SQLite
-connection closes before Lixity resolves selected hits against the archive.
-When a query produces zero passage hits under the default `sources` scope, the
-response warnings suggest trying `--scope all` to search authored records.
+The browser and CLI can rebuild a missing, stale or unreadable catalogue. Use
+`--strict` to require an existing, readable and current index in the CLI. Python
+defaults to strict behavior and accepts `ensure_fresh=True` to allow a rebuild.
+The `warnings` field reports a successful refresh. It also suggests `--scope all`
+when the default `sources` search returns no passage hits. The
+[data model](DATA_MODEL.md#search-database-and-deletion) describes the snapshot
+and transaction checks that back these results.
 
 ### Batch ingestion and non-interactive progress
 
@@ -2047,22 +2039,21 @@ metadata; use archive search for retained text.
 
 ### Cross-corpus comparison and evidence grounding
 
-`compare` requires an explicit source and manuscript. In the 0.8.1
-workspace, open **Research → Sources**, select a retained text source, then choose
-**Compare vocabulary with manuscript**. There is no separate comparison tab.
-Opening a source does not run the comparison. The browser action compares the
-current source capture with the loaded manuscript; it does not select an older
-version from a pinned quotation. Read that exact quotation separately when needed.
+`compare` requires an explicit source and manuscript. In the workspace, open
+**Research → Sources**, select a retained text source, then choose
+**Compare vocabulary with manuscript**. The action compares the current source
+capture with the loaded manuscript. Open a pinned quotation to read its exact
+historical version.
 The CLI accepts the manuscript as a positional path or via `--manuscript`.
 Omit it when `--project` points to a project with an explicit manuscript
 setting.
 
-It returns a separate report without modifying
-either text or recalibrating fingerprints. It measures lexical Jaccard/overlap,
-shared/exclusive terms, signed full $2\times2$ Dunning $G^2$ keyness, register
-contrasts and per-chapter occurrences per 1,000 words. Grounding means vocabulary
-occurrence, not entailment, validated chronology or factual support. Term-list
-limits affect reported rows, not the comparison's meaning.
+The comparison produces a separate report. With matching resolved language
+profiles it measures lexical Jaccard/overlap, shared/exclusive terms, signed full
+$2\times2$ Dunning $G^2$ keyness, register contrasts and per-chapter occurrences
+per 1,000 words. Grounding describes where source vocabulary occurs in the
+manuscript. Factual support and chronology require review of the evidence itself.
+The term-list limit controls the number of reported rows.
 
 ```sh
 lixity research compare --project ./novel ./novel/manuscript.md --source-id SOURCE_ID \
@@ -2087,12 +2078,14 @@ both a manuscript path and `--language` needs no project configuration read.
 The Python API keeps its English default unless `language` is supplied. Check
 the returned `manuscript_language`, `lexical_comparable` and comparison limits.
 
-Cross-language comparisons (`schema_version: "research-comparison-local/2"`)
-keep per-side raw counts (`source_tokens`, `source_content_words`,
+A profile match indicates that both inputs use the same counting rules. Two
+`generic` inputs can contain different languages. When the resolved profiles
+differ, the comparison (`schema_version: "research-comparison-local/2"`) keeps
+per-side raw counts (`source_tokens`, `source_content_words`,
 `manuscript_tokens`, `manuscript_content_words`, `source_vocabulary_types`,
 `manuscript_vocabulary_types`, per-chapter `words` and `content_words`, and
-per-side `register_contrast` measurements), set `meta.lexical_comparable: false`
-and `cross_language_lexical_comparison` in `comparison_limits`, and return
+per-side `register_contrast` measurements), sets `meta.lexical_comparable: false`
+and `cross_language_lexical_comparison` in `comparison_limits`, and returns
 `null` / `[]` for cross-corpus lexical overlap and similarity
 (`shared_types`, `source_exclusive_types`, `manuscript_exclusive_types`,
 `jaccard_similarity`, `overlap_coefficient`, `top_shared_terms`,
@@ -2458,13 +2451,14 @@ behavior belongs to its deployment's privacy boundary.
 
 Dossier bodies support headings, emphasis, quotations, lists, code, tables,
 callouts and a bounded subset of inline/display math. This is not a full
-CommonMark or LaTeX implementation. Raw HTML stays escaped. Bundled Mermaid
-tiny 12.2.0 renders supported `mermaid` fences offline.
+CommonMark or LaTeX implementation. Raw HTML stays escaped. The bundled Mermaid
+Tiny renderer processes supported `mermaid` fences offline.
 The library initializes when a diagram first becomes visible. Image/resource
 syntax, click actions and configuration/style directives are disabled; unsupported
 or invalid diagrams keep their inspectable source. Rendered SVGs share the local
-PhotoSwipe 5.4.4 zoom viewer with images. Neither renderer loads a CDN or uploads
-the diagram; map tiles have the separate network boundary above.
+PhotoSwipe zoom viewer with images. Both libraries run locally. Map tiles have
+the separate network boundary above. For library versions and integration
+details, see the [vendored media inventory](https://github.com/mfahsold/lixity/blob/main/src/lixity/ui/assets/vendor/README.md#research-media).
 
 A small diagram uses a compact frame. Wide diagrams
 keep their label size and scroll horizontally within the reader; focus the

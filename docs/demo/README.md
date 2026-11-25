@@ -11,7 +11,8 @@ Two curated examples use the same production export and manuscript:
 - [Read with context](reader/index.html) combines the six chapters with selected
   dossier passages, diagrams and images, plus an explicitly selected chapter
   analysis. Use **Analysis** from the reading page and **Back to reading copy**
-  to return. The internal research archive is not included.
+  to return. **Chapter audio** plays the reviewed first-chapter recording made
+  with the generic eSpeak NG English voice.
 - [Companion only](companion/index.html) presents that context without novel or
   analysis bytes. This example is capped at chapter 3: later entries and their
   resources are omitted before the website is assembled.
@@ -80,13 +81,13 @@ pinned witness quotation from the fictional archive.
 
 The author-workspace demo supports exploring manuscript analysis, retained
 research, a dossier alongside the manuscript, prepared PDF downloads and a
-claim-evidence matrix.
-Editing, project administration, archive Search and Compare are unavailable in
-the reading copy. Manuscript search and research list filters remain available.
+claim-evidence matrix. Use manuscript search and research list filters to
+find passages and records in the prepared snapshot.
 Use **Manuscript** and **Research** to switch workspace views. Both use the same
 prepared, read-only project snapshot.
-The demo cannot import or save; generating new analysis or PDFs requires the
-[local app](../guides/installation.html).
+Use the local app to import a project, edit, search or compare the full research
+archive, or generate new analysis and PDFs.
+[Installation guide](../guides/installation.html)
 
 The published documentation and author-workspace demo use the configured
 GoatCounter counter for page paths and named links. A PDF event records a click
@@ -125,28 +126,26 @@ For an unwrapped local analysis/research website, use the regular export command
 .venv/bin/lixity export-site --project .artifacts/warehouse-4-project --include-research -o .artifacts/warehouse-4-review
 ```
 
-Project creation lives in `scripts/example_project.py`; screenshot HTTP fixtures
-are a separate adapter in `scripts/make_screenshots.py`.
-`scripts/example_publications.py` owns the Pages wrappers, metadata and
-publication profiles. Screenshot and example generation call the shared demo
-builder. It creates the same ordinary project, adds Mara’s reviewed dossier
-version, and passes the project through the production exporter.
-No screenshot fixture is needed to create or export the editable project.
+[`scripts/example_project.py`](../../scripts/example_project.py) creates the
+editable project and owns its checked source inputs.
+[`scripts/build_examples.py`](../../scripts/build_examples.py) creates a
+disposable copy, adds Mara’s reviewed dossier version and calls the production
+exporter through [`scripts/example_publications.py`](../../scripts/example_publications.py).
+The [screenshot adapter](../../scripts/make_screenshots.py) also starts from the
+shared fixture and adds the HTTP responses used for capture.
 
-A future real-book sample should be a separately prepared, explicitly selected
-project using this same export path. This generator accepts no private manuscript
-input. The public build still checks the synthetic manuscript bytes and reviewed
-assets; changing a local project does not authorize publishing it.
+The public build checks the synthetic manuscript bytes and reviewed assets.
+Keep local changes in the editable copy and use the normal export path for
+projects you have permission to share.
 
 ### Rebuild the public examples
 
-After [installation](../INSTALLATION.md), use `make examples` for the three
-websites and PDFs, `make screenshots` for product captures, and `make videos`
-for walkthroughs. The full video build uses Chromium and FFmpeg with libx264,
-libaom-av1, libwebp, and the `drawtext` filter.
-These entrypoints reuse the existing analysis, research and PDF APIs. Fontane
-and Austen outputs under `examples/` remain named literary case studies linked
-from the relevant articles; they are not alternative demo projects.
+From the checkout, use `make examples` to rebuild the three websites, their
+inventories and the PDF downloads. It also rebuilds the linked Fontane and
+Austen [case studies](../../samples/README.md#generated-artifacts). When changes
+affect the embedded images, refresh the [screenshots](../screenshots/README.md)
+before rebuilding the examples. The [video guide](../videos/README.md)
+describes recording and encoding.
 
 After changing `samples/first-look.md`, refresh the reviewed chapter-one audio
 provenance before running `make examples`.
@@ -160,8 +159,9 @@ checksum before recording the new full manuscript checksum. If the speech text
 changes, run the command without `--reuse-recording` on a machine with eSpeak NG
 and review the new clip before building the reader demo.
 
-Review the output and run `make docs-check` plus the public-documentation browser
-check in [`tests/browser/README.md`](../../tests/browser/README.md). The explicit
-Pages boundary includes the three website bundles and their verified manifests,
-the compatibility entry, five PDFs and reviewed visual assets. Source archives,
-private manuscripts, credentials and local build state remain excluded.
+Follow the [generation and preview procedure](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#generate-and-preview)
+for documentation tests and local review. `scripts/stage_pages.py` verifies
+the three approved website inventories, including the five manuscript PDF
+layouts, Mara’s dossier PDF and the reviewed resources. It also stages the
+compatibility entry. Keep source archives, private manuscripts, credentials
+and local build outputs outside the staged site.

@@ -1,8 +1,8 @@
 # Walkthrough videos
 
-Short recorded flows of the local dashboard. Guide walkthroughs use synthetic
-fixtures; the homepage tour also uses public-domain classics. No private project
-or manuscript appears in these files.
+The guide walkthroughs and homepage tour show the synthetic Warehouse 4
+workspace. The public-domain case studies have their own reports.
+[Effi Briest](../examples/effi-briest.html) · [Pride and Prejudice](../examples/pride-and-prejudice.html)
 
 | File | Purpose |
 | --- | --- |
@@ -12,23 +12,22 @@ or manuscript appears in these files.
 | `analysis-review.mp4` / `.gif` / `.png` | Chapter cell, paragraph Values and style dimensions walkthrough |
 | `editorial-loop.mp4` / `.gif` / `.png` | Flagged passages, an opened paragraph and a marker note written on the passage |
 
-The three guide walkthroughs carry short step captions that name what the recording is
-doing; the recorder overlays them inside the page, so MP4, GIF and poster show
-the same sequence.
+The recorder overlays short step captions in the three guide walkthroughs.
+The MP4, GIF and poster use those same frames.
 
-Regenerate with `make videos`. Browser recording needs Chromium and the FFmpeg
-recorder installed by the selected Playwright release. Encoding needs
-`ffprobe` and FFmpeg with H.264, AV1 and the `drawtext` filter:
+Regenerate all reviewed recordings with `make videos`. Install the pinned
+Playwright browser tools with `make browser-tools`. For the full encoding
+pass, put `ffprobe` and FFmpeg with `libx264`, `libaom-av1`, `libwebp` and
+`drawtext` on PATH.
 
 1. `scripts/make_screenshots.py --video` records the scripted flows and writes
    WebM files to `.artifacts/screenshots/videos/`.
 2. `scripts/make_videos.py` converts them into this directory and checks the
    size limits from its `WALKTHROUGHS` table.
 
-`scripts/stage_pages.py` stages the reviewed files named by the encoder. Other
-recordings in this directory stay local. Review a recording before committing
-it and keep it under the limits
-and free of real projects, names or unpublished text.
+`scripts/stage_pages.py` stages the reviewed files listed in
+`scripts/make_videos.py`. Review the encoded recording and verify that it
+contains only the approved fictional project before committing it.
 
 ## Homepage product tour
 
@@ -67,7 +66,7 @@ and remains visible for its scene; seeking updates the caption. All seven homepa
 languages supply captions and playback controls. The complete transcript remains
 readable without playback or JavaScript. Technical documentation remains English.
 
-To regenerate just this recording:
+To record the tour again and rebuild its derived social excerpts:
 
 ```sh
 .venv/bin/python scripts/make_screenshots.py --video --only product-tour
@@ -75,8 +74,9 @@ To regenerate just this recording:
 make docs-sync
 ```
 
-The recorder checks that actions fit six eight-second scenes. The encoder checks
-the scene boundaries and final duration and enforces a 4 MB limit per video source.
+The recorder checks that actions fit six eight-second scenes. The encoder
+checks the scene boundaries and final duration and enforces a 4 MB limit per
+tour video source.
 It emits exactly 1,200 frames at 25 fps, with a 1440×900 frame, H.264 and AV1
 compression, no audio or metadata, and a WebP poster. Inspect small UI text,
 framing, cursor motion and caption alignment before accepting new encodings.

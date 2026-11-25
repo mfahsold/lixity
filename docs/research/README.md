@@ -14,7 +14,8 @@ choose the reference for the work you are doing.
 | Manuscript reading, project settings or sharing | [Browser workspace manual](../WORKSPACE.md), [all documentation](../README.md) |
 | Program calling Python or HTTP | [Automation contracts](../AGENTS.md#51-research-api-lixityresearchapi) |
 | Contributor working on archive persistence | [Local data model](DATA_MODEL.md), [architecture](../ARCHITECTURE.md) |
-| Verify an installed capability | `lixity research --help`, `lixity about --json`, `lixity research schema` and the [research manual's limits](USAGE.md#limits) |
+| Check an installed command's syntax | `lixity research --help`, then `lixity research COMMAND --help` |
+| Discover installed contracts or inspect record shapes | [CLI, HTTP and MCP discovery](../AGENTS.md#choose-the-interface), `lixity research schema` for the archive entity schema, [research compatibility](USAGE.md#limits) |
 | Choose a backup or restore procedure | [Backup scopes](../PROJECT_BACKUP.md), [research recovery](USAGE.md#export-and-restoration) |
 | Set up PDF extraction or an OCR adapter | [PDF and OCR workflow](USAGE.md#self-hosted-pdf-and-ocr-extraction), [adapter validation](OCR_INTEGRATION.md#validation-scope) |
 

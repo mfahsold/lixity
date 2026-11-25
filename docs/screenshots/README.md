@@ -81,16 +81,16 @@ From the repository root:
 ```
 
 Normal capture selects this manifest and updates the catalog table and embedded
-image dimensions. `--only` accepts reviewed names. Package preparation copies
-lead/support images and the two reviewed social clips into a new directory.
+image dimensions. Use `--only` with a complete reviewed image filename,
+including its extension. Package preparation copies the existing lead and
+support images and both reviewed social clips into a new directory.
 The handoff records questions, captions, text alternatives, destination URLs,
-source revision, working-tree status and byte hashes.
-It does not recapture images, send posts or alter an approval queue. Exact post
-copy and publication records belong in the separate outreach workspace; one
-current package there points to these assets rather than maintaining another
-screenshot selection. The package remains a draft until a separate publication.
+source revision, working-tree status and byte hashes. Keep post drafts and
+publication records in the separate outreach workspace, with one current
+package referring to the reviewed assets here.
 
-Playwright with Chromium and the development Python environment are required
-for capture. Browser fixtures and diagnostic output stay in ignored
-`.artifacts/screenshots/`. Use synthetic or reviewed public-domain material only.
-Pages stages only manifest-listed images; adding a PNG alone never publishes it.
+Use the development Python environment, Node.js and the pinned Chromium tools
+installed by `make browser-tools`. Capturing WebP images requires `cwebp` or
+FFmpeg with `libwebp`. Browser fixtures and diagnostics stay in ignored
+`.artifacts/screenshots/`. Use synthetic or reviewed public-domain material
+only. Pages stages the reviewed images named in the manifest.

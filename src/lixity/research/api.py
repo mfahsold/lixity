@@ -1239,6 +1239,10 @@ def search(
     Sources use ``research-search-local/1``; ``dossiers``, ``claims``,
     ``decisions`` and ``all`` use ``research-search-local/2``, where hits
     carry a ``kind``.
+
+    Set ``ensure_fresh=True`` to allow rebuilding a missing, stale or unreadable
+    catalogue. The default requires a readable catalogue for the accepted
+    archive snapshot.
     """
     return catalogue.search(
         Repository(project), query, limit=limit, scope=scope, ensure_fresh=ensure_fresh
@@ -1423,10 +1427,11 @@ def compare_source(
     top_n: int = 20,
     format: Literal["json", "md"] = "json",
 ) -> dict[str, Any] | str:
-    """Compare verified research source against manuscript text or file.
+    """Compare a retained research source with manuscript text or a file.
 
-    Returns the comparison dictionary, or its Markdown rendering when
-    ``format="md"``. Use `compare_source_to_manuscript` for the data alone.
+    Returns ``research-comparison-local/2`` or its Markdown rendering when
+    ``format="md"``. Only matching resolved language profiles produce joint
+    vocabulary measures.
     """
     from .analysis import compare_source_to_manuscript, format_compare_markdown
 

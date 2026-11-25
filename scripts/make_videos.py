@@ -1,9 +1,10 @@
-"""Convert recorded walkthroughs into published MP4, GIF and poster files.
+"""Encode recorded guide walkthroughs, the homepage tour and social clips.
 
 Recordings come from ``scripts/make_screenshots.py --video`` (Playwright WebM in
-``.artifacts/screenshots/videos/``). This script requires ``ffmpeg`` on PATH and
-writes the reviewed outputs into ``docs/videos/``; commit them together with the
-documentation that embeds them.
+``.artifacts/screenshots/videos/``). The guide outputs use MP4, GIF and PNG.
+The homepage tour uses MP4 and WebM with a WebP poster, and its validated MP4
+is the input for both social clips. See ``docs/videos/README.md`` for encoding
+prerequisites and review steps.
 """
 
 from __future__ import annotations

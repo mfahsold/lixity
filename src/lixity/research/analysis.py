@@ -236,11 +236,11 @@ def compare_source_to_manuscript(
     language: str | None = None,
     top_n: int = 20,
 ) -> dict[str, Any]:
-    """Compare verified research source against manuscript text or file.
+    """Compare an integrity-checked retained source with manuscript text or a file.
 
-    Evaluates lexical overlap, Dunning's G² keyness differential, stylistic/register
-    contrast, and per-chapter evidence grounding. Returns the plain result
-    dictionary; use `format_compare_markdown` to render it.
+    Returns ``research-comparison-local/2``. Differing resolved language profiles
+    retain per-side measurements and withhold overlap, keyness, register deltas
+    and chapter vocabulary matches. Use ``format_compare_markdown`` to render it.
     """
     if top_n < 1 or top_n > 100:
         raise ValueError("top_n must be between 1 and 100")

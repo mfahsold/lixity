@@ -4,15 +4,14 @@ Use audio to listen through a manuscript, review pronunciation and pacing, recor
 your own voice, or prepare a direction plan for another service. This manual owns
 the audio workflow in both the local browser app and the CLI. The
 [documentation map](README.md), [browser workspace manual](WORKSPACE.md) and
-[CLI reference](USAGE.md) cover the surrounding project workflow. Install native
-workers or the optional Apple Silicon runtime through
-[Installation](INSTALLATION.md#external-speech-providers-and-local-audio-inspection).
+[CLI reference](USAGE.md) cover the surrounding project workflow. See the
+[speech setup options](INSTALLATION.md#find-your-setup-task) for separately
+installed workers and the optional Apple Silicon runtime.
 
-Recording, direction and the teleprompter are available from 0.8.1. The MLX-Audio
-commands and the [new native worker lifecycle](INSTALLATION.md#native-audio-model-lifecycle-unreleased)
-require a development build that includes them. Use `lixity --version` and the
-installed command's `--help` to check your build. Audio settings, direction,
-timeline and transcript schemas have their own versions.
+The published application includes recording, direction, the teleprompter and
+commands for optional speech runtimes and providers. Use `lixity --version` and
+the installed command's `--help` to check your build. Audio settings, direction,
+timeline and transcript schemas have independent versions.
 
 | I want to… | Start here | CLI route |
 | --- | --- | --- |
@@ -42,10 +41,10 @@ synthesizes audio.
    open **Listen and direct** in the manuscript view.
 3. Inspect a plan first. **Export direction → Preview export** works without a
    running synthesis service. It still needs valid project/profile settings.
-4. For synthesis, set up the [matching native worker](INSTALLATION.md#optional-qwen-audio-worker),
-   the [Apple Silicon runtime](#mlx-audio-on-apple-silicon) or an
-   [explicit provider](#audio-export-and-external-providers). Check the selected
-   worker in **Services & audio queue** or with `audio-status`.
+4. For synthesis, install the runtime for your selected engine or configure its
+   explicit provider. Review the selected engine in **Services & audio queue**
+   or with `audio-status`.
+   [Speech setup options](INSTALLATION.md#find-your-setup-task)
 5. Choose **Preview paragraph** for a short passage, listen to its actual words
    and delivery, then render the chapter. Save a download when needed. The
    [chapter recording rules](#retain-or-import-chapter-audio) explain
@@ -88,14 +87,11 @@ Prerequisites depend on the task:
 
 ## `lixity read-aloud`
 
-**Speech planning, direction & audio generation:**
-Version 0.7.7 separates dramaturgy and passage direction from raw synthesis.
-The CLI and native dialog compile the manuscript, narrator delivery profiles,
-pronunciation substitutions and timing into structured plans. In 0.8.0, use
-`audio-export-plan` for the exchange timeline, or `--ssml` for an SSML
-projection with explicit limitations. `--plan-only` retains the native speech
-plan JSON contract. Explicit external providers and optional native workers
-share rendering, pauses and atomic audio publication.
+The CLI and audio panels compile the manuscript, narrator profiles,
+pronunciation substitutions and timing into a speech plan. `audio-export-plan`
+outputs an exchange timeline and `--ssml` projects compatible controls into
+SSML. `read-aloud --plan-only` outputs Lixity's speech plan JSON. Explicit
+providers and optional native workers use the same pause and output pipeline.
 
 ```bash
 lixity read-aloud manuscript.md --language en --ssml > manuscript.ssml
@@ -109,7 +105,7 @@ Quote blocks do not currently have selectable preview anchors.
 A chapter selection constrains either preview. Preview skips headings and uses a
 separate default `-preview.wav` output; it does not read or write the segment
 cache. `--plan-only` can be combined with either preview without synthesizing.
-In 0.8.0, `--progress` reports completed segments and, after two segments,
+`--progress` reports completed segments and, after two segments,
 a rough remaining-time estimate on stderr. The estimate averages completed
 segments; different text lengths, cache hits and model startup can make it
 inaccurate, and final encoding and publication are not included. The CLI checks manuscript,
@@ -117,7 +113,7 @@ settings and active direction snapshots during rendering and immediately before
 publishing; changed or unreadable inputs reject the result and preserve an
 existing output. `--no-direction` deliberately excludes the direction ledger.
 
-In 0.8.0, the shared audio logger emits a random render ID and job/render
+The shared audio logger emits a random render ID and job/render
 states at INFO. With `LIXITY_SPEECH_LOG_LEVEL=DEBUG` set before startup it also
 records segment boundaries and timing, requested
 preset/model variant, cache outcome and indicators showing whether effective
@@ -140,7 +136,7 @@ and `ko`: six of the seven analysis languages, with Dutch (`nl`) unsupported.
 Choose a supported speech language explicitly for a Dutch project; there is no
 automatic language or backend fallback. Preset language support does not certify
 native pronunciation. Review the model license before distributing output.
-In 0.8.0, explicitly switching an existing VoiceDesign or Base profile
+Switching an existing VoiceDesign or Base profile
 to CustomVoice also requires an explicit preset, such as `--engine qwen3
 --voice Ryan`. An explicitly supplied reference ID requires a reference-capable
 engine. For Base, clear inherited profile instructions with `--instructions ''`; `--no-direction` only omits saved passage directions.
@@ -186,10 +182,10 @@ selection, generation progress and the resulting download. The
 passage dialog also links directly to chapter output and retains the selected
 chapter; save or discard any direction draft before switching. Draft
 previews do not save settings. Read-only exports do not offer synthesis or expose
-audio settings. The unified dialog and these entry points are available in 0.8.0.
+audio settings.
 
-In 0.8.0, the preview and chapter controls offer an explicit option to
-ignore passage direction. It is off when the dialog opens. Enabling it omits
+The preview and chapter controls offer an explicit option to ignore passage
+direction. It is off when the dialog opens. Enabling it omits
 saved passage instructions, voice assignments and range-specific pauses for that
 render; an unsaved direction draft is also omitted from the preview but remains
 in the editor. The selected profile's instructions, pronunciation rules, speed
@@ -205,14 +201,13 @@ Choose **Render on → This computer / Configured Jetson** in the dialog,
 or pass `--speech-target local|jetson` to the CLI. This choice applies to that
 render; it is not part of a saved voice profile. The default is local, and an
 unavailable target fails explicitly without switching machines or models.
-In 0.8.0, the native audio interface names the choices by how the voice
-is selected: a preset, a description or a reference recording. It also displays
-a point-in-time worker status and compares a known configured model with the selected
-profile's model. An unreachable worker is unavailable; a missing or unrecognised
-model identity leaves the match unknown. The display neither downloads a checkpoint
-nor switches a worker. Check again before rendering if the worker has changed
-since the status was retrieved. An incompatible delivery instruction remains
-visible when switching to Base; remove it explicitly before saving.
+The audio interface groups voices by preset, description or reference recording.
+It displays a point-in-time worker status and compares the running model with
+the selected profile when both are known. An unreachable worker is unavailable.
+A missing or unrecognised model identity leaves the match unknown. Check again
+before rendering if the worker has changed since the status was retrieved.
+An incompatible delivery instruction remains visible when switching to Base.
+Remove it before saving.
 Jetson sends the selected synthesis text to your configured machine through SSH;
 it does not use a hosted inference provider.
 
@@ -474,10 +469,10 @@ starting Lixity. The tool is optional. For a local browser service, set the
 variable when starting the service. On macOS, quit Lixity and pass it to the app
 with `open -a Lixity --env "LIXITY_SOUNDCRAFT_CLI=/absolute/path/to/soundcraft-cli"`.
 
-In **Author's voice**, record or import a 24 kHz mono PCM16 WAV of up to two
-minutes. Open **Trim an excerpt with SoundCraft**, enter the start and end times
-and choose **Create excerpt**. The excerpt must be shorter than the take and
-between 1 and 60 seconds. Lixity verifies that the rendered audio contains the
+In **Author's voice**, record a take within the project limit or import a 24 kHz
+mono PCM16 WAV of up to two minutes. Open **Trim an excerpt with SoundCraft**,
+enter the start and end times and choose **Create excerpt**. The excerpt must
+be shorter than the take and between 1 and 60 seconds. Lixity verifies that the rendered audio contains the
 exact selected samples and keeps the original available in the review dialog.
 Listen to the excerpt and enter and confirm its own transcript before saving.
 The desktop and browser recorders handle microphone capture. SoundCraft only
@@ -733,7 +728,7 @@ it does not automatically tune the microphone or certify recording quality:
 
 ## Manuscript teleprompter: direction cues, phonetics and dossier context
 
-The current-main teleprompter combines the manuscript reading view, saved
+The teleprompter combines the manuscript reading view, saved
 direction, pronunciation cues and linked research context. It can be used
 without synthesizing speech:
 
@@ -776,9 +771,10 @@ without synthesizing speech:
 5. **Integrated Recording:**
    Click **Take record** (**Take aufnehmen** in German, `R`) in the prompter
    header and grant microphone access. The Desktop app uses its Rust recorder
-   and stops the take automatically after 60 seconds. The browser uses its
-   microphone capture and the portable WAV size limit. Pending, recording and
-   failed states appear beside the control. Stop to review the PCM WAV take.
+   and stops the take automatically after 60 seconds. Browser capture stops at
+   the 64 MiB portable WAV limit. The project recording default applies to
+   **Author's voice** capture. Pending, recording and failed states appear
+   beside the control. Stop to review the PCM WAV take.
    Playback starts only when requested.
 
 6. **Take export, import and author-reference review:**
@@ -884,9 +880,11 @@ project. CLI one-off engine overrides do not change project settings.
 Neither Coqui profile interprets free-text delivery instructions. Saved passage
 instructions fail explicitly; `--no-direction` also omits passage voice
 assignments and extra pauses. Pronunciation substitutions, explicit pauses and
-playback speed use the existing Lixity pipeline. Playback speed is applied after
-synthesis with FFmpeg; the 1.2 default is a product default, not a tuned value
-for Thorsten, so compare 1.0 with listening. The worker stays silent about the
+playback speed use the existing Lixity pipeline. FFmpeg applies playback speed
+after synthesis. Listen at `1.0` as well as your chosen rate.
+[Tempo controls and profile defaults](#cache-tempo-and-saved-settings)
+
+The worker stays silent about the
 expected discards of the phonetic tie bar, the non-syllabic mark and
 typographic quotation marks, which Thorsten's vocabulary cannot represent, and
 logs a count of other distinct discarded character types. Listen to the
@@ -1136,7 +1134,7 @@ lixity read-aloud --project ./novel --chapter 1 --no-direction --fresh-audio -o 
 `audio-direction inspect` returns paragraph anchors/spoken text, saved ranges,
 stale flags, and the `source_sha256`, `settings_sha256`, `direction_sha256`
 snapshots. Its JSON and plan output contain private prose and instructions.
-In 0.8.0, `audio-direction add --project ./novel --chapter 2 --line 42
+`audio-direction add --project ./novel --chapter 2 --line 42
 --instruction "Quietly." --pause-after 0.4` selects the spoken passage at that
 source line and saves the direction without manually copying hashes. Optional
 `--start` and `--end` select offsets in Unicode code points in the spoken
@@ -1279,13 +1277,10 @@ reference data and cache keys retain their behavior.
 
 ### MLX-Audio on Apple Silicon
 
-Start the MLX-Audio service for speech recognition as described in
-[Installation](INSTALLATION.md#external-speech-providers-and-local-audio-inspection).
-TTS uses a separate short-lived worker and imports MLX only in the isolated Python
-3.11 runtime. This is deliberate: the tested MLX-Audio 0.6.6 HTTP broker returned
-silent ZONOS3 WAV output, while the direct model path returned valid 44.1 kHz audio.
-Lixity does not use that broken broker path for the fixed local ZONOS3 binding.
-The service at port 8000 remains the STT transport.
+Use the isolated runtime for local ZONOS3 synthesis. Lixity starts a short-lived
+worker that calls the model directly and returns 44.1 kHz audio for
+normalization. For speech recognition, start the separate MLX-Audio HTTP
+service at port 8000. [Apple Silicon runtime setup](INSTALLATION.md#mlx-audio-on-apple-silicon)
 
 | Lixity language | Fixed voices | Reference |
 | --- | --- | --- |
@@ -1479,6 +1474,16 @@ configuration. Use [private audio backup](PROJECT_BACKUP.md#back-up-private-audi
 for recordings and directions and [configuration recovery](#audio-configuration-recovery)
 to check the restored settings in a project copy.
 
+In the development checkout, **Review update** and **Apply reviewed audio
+upgrade** can keep an unfinished profile open while updating the saved format.
+Choose **Save profiles** afterwards to retain the pending edits. In v0.9.3,
+copy any unsaved profile text before discarding that draft, apply the format
+upgrade, then reopen **Voice profiles** and enter the changes again.
+
+An upgraded profile still needs its matching synthesis runtime. Check **Speech
+service** in **Voice profiles** and follow its setup guide if the local worker
+is unavailable. Preview a short passage before rendering the chapter.
+
 ### Replace removed Piper profiles
 
 Piper has been removed. Existing saved Piper profiles fail with migration
@@ -1543,13 +1548,13 @@ different lifetimes.
 
 | Symptom | What to check next |
 | --- | --- |
-| Worker unavailable or model mismatch | Refresh **Services & audio queue** or run `audio-status`; have the operator start the exact selected model through [Installation](INSTALLATION.md#optional-qwen-audio-worker). A listening port alone is not model readiness. |
+| Worker unavailable or model mismatch | Refresh **Services & audio queue** or run `audio-status`. Confirm the worker serves the exact selected model, then test a short render. [Worker lifecycle](INSTALLATION.md#native-audio-model-lifecycle) |
 | Unsupported delivery or IPA | Inspect the plan and chosen engine. Remove incompatible profile instructions explicitly; `--no-direction` removes saved passage direction only. IPA/prosody require Toucan. |
 | Voice changes between segments | Compare several short directed/undirected previews. Check reference speaker, preset/description and delivery profiles; see [continuity review](#check-narration-continuity-before-a-chapter-render). |
 | Source, profile or direction changed during render | Reopen the current project and inspect the updated plan, then start a new job. Context guards prevent publishing audio for stale inputs. |
 | Saved passage is stale | Review the manuscript location and remove or replace the stale direction explicitly. Lixity does not relocate it by similar wording. |
 | No microphone or permission denied | Use browser site/system permissions for browser capture; use **Mic & levels** for the server's hardware. See [recording recovery](#author-voice-recording-and-listening). |
-| Take cannot become a reference | Check exact transcript confirmation, 1–60 second duration, 24 kHz mono 16-bit PCM and transcript length. Export and prepare an excerpt deliberately; no automatic trimming/conversion occurs. |
+| Take cannot become a reference | Check exact transcript confirmation, 1–60 second duration, 24 kHz mono 16-bit PCM and transcript length. Prepare an excerpt if needed. [Trim with SoundCraft](#trim-a-take-locally-with-soundcraft) · [Prepare a reference file](#experimental-reference-voices) |
 | Calibration or capture unavailable | Check optional host tools and the actual device/mixer; choose the device and control explicitly. Browser capture may still be available. |
 | Chapter render interrupted | Start it again to reuse matching completed segments. `--fresh-audio` or the UI reuse switch requests a new interpretation; previews are always fresh. |
 | CLI says audio was written but chapter retention failed | Keep the completed output, resolve the project storage/context error, and use `audio-import` with the reviewed source hash. The output may exist even though the command reports failure. |

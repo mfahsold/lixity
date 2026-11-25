@@ -1,9 +1,8 @@
 # Verified project backup and restore
 
-Choose the procedure by what you need to recover. The project bundle is available
-from 0.8.1. Save your changes and stop manuscript editing and other project writers
-before capture. The bundle checks selected files during copying. It captures a
-declared inventory of saved files.
+Choose the procedure by what you need to recover. Save your changes and stop
+project writers before capture. The project bundle verifies its declared inventory
+of saved files during copying.
 
 | What you need to recover | Backup and restore |
 | --- | --- |
@@ -81,7 +80,7 @@ profiles.
 
 | Project path | What to keep and check |
 | --- | --- |
-| `.lixity/audio-references/` | The recorded voice and reviewed transcript in each immutable reference record. Open **Voice profiles** or use `lixity audio-reference inspect --project ./restored-novel --reference-id ID` to verify a selected reference. |
+| `.lixity/audio-references/` | The recorded voice and reviewed transcript in each immutable reference record. Check **Author’s voice → Choose from recordings** or run `lixity audio-reference inspect --project ./restored-novel --reference-id ID`. |
 | `.lixity/audio-directions.json` | Passage range choices bound to the saved manuscript. Review them with `lixity audio-direction inspect --project ./restored-novel`. |
 | `.lixity/audio/exports/` | Complete chapter WAVs and their source-bound metadata. Open the intended chapter and check that **Chapter recording** is ready for reader export. |
 

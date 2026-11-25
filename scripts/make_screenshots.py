@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
-"""
-scripts/make_screenshots.py
-===========================
-Regenerates the public product screenshots reproducibly.
+"""Capture reviewed public screenshots and walkthroughs or package their existing assets.
 
-Requires Node.js, Playwright with Chromium, and the public sample manuscript.
-Set PLAYWRIGHT_MODULE when Playwright is installed outside the repository.
-
-Usage:
-    python3 scripts/make_screenshots.py
-    python3 scripts/make_screenshots.py --manuscript samples/effi-briest.md
+Use the checkout development environment and ``make browser-tools`` for capture.
+``docs/screenshots/manifest.json`` selects the reviewed stills. The default
+source is the synthetic Warehouse 4 manuscript, and research captures always
+use its shared project fixture. Raw recordings stay in ``.artifacts/screenshots/``.
+See ``docs/screenshots/README.md`` for capture and package commands.
 """
 
 import argparse

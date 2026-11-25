@@ -819,7 +819,7 @@ class TestPublicLanguages(unittest.TestCase):
         for language in LANGUAGES:
             with self.subTest(language=language):
                 guide_lang, guide_path, fragment = (
-                    ("de", "guides/first-look-de.html", "rhythmus") if language == "de"
+                    ("de", "guides/first-look-de.html", "beleg") if language == "de"
                     else ("en", "guides/first-look.html", "passage")
                 )
                 content = json.loads((ROOT / f"docs/locales/{language}.json").read_text(encoding="utf-8"))

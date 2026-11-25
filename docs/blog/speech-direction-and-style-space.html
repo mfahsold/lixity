@@ -16,7 +16,7 @@
 <meta property="og:site_name" content="Lixity"/>
 <meta property="article:author" content="https://github.com/mfahsold"/>
 <meta property="article:published_time" content="2026-11-02"/>
-<meta property="article:modified_time" content="2026-11-02"/>
+<meta property="article:modified_time" content="2026-11-25"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png"/>
 <meta property="og:image:width" content="2642"/>
 <meta property="og:image:height" content="1199"/>
@@ -43,7 +43,7 @@
   "mainEntityOfPage": "https://mfahsold.github.io/lixity/blog/speech-direction-and-style-space.html",
   "inLanguage": "en",
   "datePublished": "2026-11-02",
-  "dateModified": "2026-11-05",
+  "dateModified": "2026-11-25",
   "author": {
     "@type": "Person",
     "name": "Matthias Fahsold",
@@ -74,13 +74,13 @@
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="index.html">Articles</a></li><li><span aria-current="page">Style space and speech plans</span></li></ol></nav>
 <h1>From chapter comparisons to spoken direction: 3D style space and speech-plan export</h1>
-<p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · Published <time datetime="2026-11-02">2 November 2026</time> · Updated <time datetime="2026-11-05">5 November 2026</time> · 7 minutes</p>
+<p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · Published <time datetime="2026-11-02">2 November 2026</time> · Updated <time datetime="2026-11-25">25 November 2026</time> · 7 minutes</p>
 
 <p>When an author revises a long draft, two questions often meet in the same chapter. Why does this chapter stand apart in the book's own style comparison? And how does the passage sound when read aloud with deliberate pacing and voice direction?</p>
 <p>Lixity makes both steps inspectable without turning exploratory statistics or synthetic audio into automated verdicts. Every number points back to a specific chapter or paragraph so a human reader can decide whether the difference belongs to the scene.</p>
 
 <h2 id="style-space-spread">1. Read 3D chapter coordinates alongside each axis's spread</h2>
-<p>In the <strong>Analysis overview</strong>, the review entry links directly to the exploratory 3D style space when chapter dimension scores are available. Each point represents one eligible chapter projected onto the first three principal axes of standardized low-to-high feature ranks. A solid ring identifies the currently selected chapter. A dashed ring marks chapters whose absolute score reaches the active raw coordinate cutoff (<code>|Score| &ge; 2.5</code> by default) on any computed axis, including axes beyond the first three.</p>
+<p>Open <strong>Analysis overview → Compare chapters → Style</strong> to see the exploratory 3D style space when chapter dimension scores are available. Each point represents one eligible chapter projected onto the first three principal axes of standardized low-to-high feature ranks. A solid ring identifies the currently selected chapter. A dashed ring marks chapters whose absolute score reaches the active raw coordinate cutoff (<code>|Score| &ge; 2.5</code> by default) on any computed axis, including axes beyond the first three.</p>
 <p>Because principal components have different eigenvalues, a raw coordinate of <code>2.5</code> does not represent the same relative distance on every axis. On the first dimension, whose variance across chapters is larger, <code>2.5</code> may sit little more than one sample standard deviation from zero. On a third dimension with tighter spread, the same <code>2.5</code> cutoff can sit more than two sample standard deviations out.</p>
 <p>Each style-dimension card and the cutoff explanation report the raw threshold together with its multiple of that axis's sample standard deviation. For example, <code>|Score| &ge; 2.5 (&approx; 1.18 SD)</code> on Dimension 1 versus <code>|Score| &ge; 2.5 (&approx; 2.09 SD)</code> on Dimension 3. That context shows why a chapter crosses the raw threshold on one axis more readily than on another. The exploratory coordinate ring stays separate from the noise-adjusted <code>z*</code> heatmap and Benjamini–Hochberg FDR selections. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md#5-exploratory-style-dimensions">methods reference</a> and <a href="../guides/interpretation.html#visuals">interpretation guide</a>.</p>
 
@@ -94,11 +94,11 @@
 
 <h2 id="speech-plan-export">3. Export speech direction without locking into one audio engine</h2>
 <p>Reading a scene aloud is one of the oldest ways to test sentence rhythm, dialogue turns and local word echoes. Lixity stores project-local passage direction in <code>.lixity/audio-directions.json</code>. It shares voice profiles between the CLI and browser workbench and supports FFmpeg tempo post-processing (<code>--speed</code>) without altering explicit pauses, and connects to separately installed speech workers. Qwen VoiceDesign, Qwen Base, Coqui/OpenVoice and IMS-Toucan have distinct voice and direction capabilities; selecting a profile does not start or replace a worker.</p>
-<p>At the same time, Lixity's core strength is understanding manuscript structure (scenes, paragraphs, pronunciation rules, pause timing and authored delivery notes), not bundling every neural TTS stack inside the analysis engine:</p>
+<p>Lixity uses manuscript structure to carry paragraph context, pronunciation rules, pauses and delivery notes into the plan. Choose the export, render or inspection workflow for the passage you are reviewing.</p>
 <ol>
-<li><strong>Provider-independent JSON and SSML export.</strong> In <strong>Listen &amp; direct &rarr; Export direction</strong> (or via <code>lixity audio-export-plan</code> and <code>lixity read-aloud --timeline</code> / <code>--ssml</code>), export the effective speech plan for a passage, a chapter or the entire manuscript. No synthesis service is contacted. The <code>lixity-audio-timeline</code> JSON format preserves source-line provenance, spoken-form pronunciation substitutions, authored passage direction, voice bindings and explicit pause durations. The W3C SSML export projects supported breaks and substitutions while listing explicit portability warnings for controls that portable SSML cannot represent.</li>
-<li><strong>Configurable OpenAI-compatible HTTP speech providers:</strong> projects using audio settings schema <code>/4</code> (via the reviewed, backed-up <code>audio-migrate --to-schema-4</code> workflow) can bind a profile to an explicit HTTP speech endpoint, model and voice. Any API key is referenced by environment-variable name. Credentials are never written into project files, and prose is sent only when you explicitly start a render.</li>
-<li><strong>Local recording inspection and transcript-bound verification:</strong> <code>lixity audio-inspect</code> measures local WAV, FLAC or MP3 recordings (duration, peak/RMS levels, clipping and silence spans). When you also supply a timestamped transcript bound to the recording's SHA-256 hash, <code>lixity audio-verify</code> compares planned words and pause spans against the transcript. Lixity runs no automatic speech recognizer; missing transcript evidence is reported as unknown rather than as a passed check.</li>
+<li><strong>Provider-independent JSON and SSML export.</strong> Use <strong>Listen and direct → Export direction</strong> for a chapter or the manuscript. In the CLI, <code>lixity audio-export-plan</code> exports the same scopes, and <code>--preview-line</code> can select an anchored passage. No synthesis service is contacted. Timeline JSON preserves source lines, spoken-form pronunciation substitutions, authored direction, voice bindings and explicit pauses. SSML projects compatible controls and reports portability limits.</li>
+<li><strong>OpenAI-compatible HTTP speech providers.</strong> Audio settings schema <code>/4</code> or later can bind a profile to an explicit speech endpoint, model and voice. Set any API key through the profile's named environment variable. The service receives the selected prose when you start a render.</li>
+<li><strong>Local recording inspection and transcript-bound verification.</strong> <code>lixity audio-inspect</code> reports duration, peak and RMS levels, clipping and silence spans for WAV, FLAC or MP3 files. With a timestamped transcript bound to the recording's SHA-256 hash, <code>lixity audio-verify</code> compares planned words and pauses against that evidence. Missing transcript evidence is reported as unknown. To prepare transcript evidence separately, <code>lixity audio-transcribe</code> can send one selected file to its configured transcription service.</li>
 </ol>
 <pre><code># Export a chapter's speech plan as JSON or portable SSML without synthesis
 lixity audio-export-plan manuscript.md --project ./novel --chapter 2 -o ch2-plan.json
@@ -106,17 +106,17 @@ lixity audio-export-plan manuscript.md --project ./novel --chapter 2 --ssml -o c
 
 # Inspect a rendered WAV/FLAC/MP3 recording locally
 lixity audio-inspect ./ch2-recording.wav --json</code></pre>
-<p>See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#audio-export-and-external-providers-unreleased">audio export and provider guide</a> for exact schema migration steps, privacy boundaries and recovery instructions.</p>
+<p>The audio manual covers provider configuration, privacy boundaries and reviewed settings upgrades. <a href="https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#audio-export-and-external-providers">Audio export and provider guide</a></p>
 
 <h2 id="phonetic-direction">4. Separate spoken words, IPA and delivery controls</h2>
-<p><strong>In development (unreleased):</strong> IMS-Toucan adds a German/English author-reference path with real IPA overrides and structured passage-level duration, pitch-variation, energy-variation and pause controls. Spelling substitutions remain a separate field. Free acting prompts are preserved for export but rejected for Toucan synthesis; they are not silently translated into emotions or numeric controls.</p>
-<p>The reviewed audio-settings schema <code>/5</code> migration preserves existing profiles. Plans using the new controls use version <code>/2</code>; older-feature plans keep their existing contract. The Teleprompter and export preview consume the same canonical spoken text and control summaries. <a href="https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#ims-toucan-phonetics-and-structured-direction-unreleased">Controls, examples and limits</a>.</p>
+<p>The optional IMS-Toucan worker uses a saved author reference for German or English. It supports IPA overrides and passage-level duration, pitch variation, energy variation and pause controls. Spelling substitutions have their own field. Free acting prompts are preserved in exports, and Toucan synthesis reports them as unsupported. <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction">IMS-Toucan setup</a></p>
+<p>The reviewed audio settings schema <code>/5</code> migration preserves existing profiles. Timelines containing phonetic or prosody controls use schema <code>/2</code>. The teleprompter and export preview use the same spoken text and control summaries. <a href="https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#ims-toucan-phonetics-and-structured-direction">Controls, examples and limits</a></p>
 <p>Microphone takes and paired WAV/JSON imports use one review path. A transcript must describe the actual recording and be explicitly confirmed; a reading script alone is not evidence. The <a href="https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening">author-voice workflow</a> explains capture, playback, review and save.</p>
-<p><strong>Reader audio, unreleased:</strong> a static reading copy can opt into existing chapter recordings matching its manuscript and chapter cap. This distributes audio for listening; it does not export the author’s private voice reference or start synthesis on the reader’s device. <a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings-unreleased">Choose recorded chapter audio</a>.</p>
+<p>A static reading copy can include existing chapter recordings that match its manuscript revision and chapter selection. Listeners receive the selected chapter WAVs. The author’s reference recording stays in the project. <a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#include-existing-chapter-recordings">Choose recorded chapter audio</a></p>
 
-<h2 id="try">Try the workflow in the updated demo</h2>
-<p>The read-only <a href="../demo/report.html">Warehouse 4 demo workspace</a> has been regenerated from the current development checkout. Open <strong>Analysis overview</strong>, follow the direct link into the <strong>3D style space</strong> to inspect the per-axis standard-deviation labels, test the localized tooltips along the analysis bar, or follow a saved quotation into its <a href="../guides/first-look.html#decision">linked research dossier</a>.</p>
-<p>For your own manuscript, install the published release or test the development branch locally via the <a href="../guides/installation.html#development-builds">installation guide</a>.</p>
+<h2 id="try">Explore the chapter comparison in the demo</h2>
+<p>In the read-only demo, open <strong>Analysis overview → Compare chapters → Style</strong> to inspect the per-axis labels, or follow a saved quotation into its research dossier. <a href="../demo/report.html">Warehouse 4 demo</a> · <a href="../guides/first-look.html#decision">Follow a research link</a></p>
+<p>To direct and record your own manuscript, open it in the installed app. <a href="../guides/installation.html">Install Lixity</a></p>
 
 <footer class="site-footer"><nav aria-label="Project resources"><a href="../#guides">All guides</a><a href="index.html">Articles</a><a href="https://github.com/mfahsold/lixity">Source code</a><a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">License</a><a href="../#website-measurement">Website measurement</a><a href="../#impressum">Legal notice</a></nav></footer>
 </main>

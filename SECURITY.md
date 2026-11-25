@@ -8,10 +8,11 @@ disclosure with the maintainer.
 
 ## Versions and scope
 
-[v0.9.2](https://github.com/mfahsold/lixity/releases/tag/v0.9.2) is the current
-published Python package for the CLI, API and local browser workspace. Desktop
-installers are available as test builds. This policy also covers safeguards in
-the current source, including desktop and audio changes awaiting release.
+The [latest published release](https://github.com/mfahsold/lixity/releases/latest)
+identifies the Python package for the CLI, API and local browser workspace.
+Desktop test installers identify their source commit in their build manifest.
+This policy also covers the current source. Include the exact desktop build
+or installed package version when reporting a finding.
 Fixes are developed on `main` and backports are evaluated case by case.
 
 ## Trust boundaries

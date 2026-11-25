@@ -74,7 +74,7 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
         fields['home_path'] = './' if lang == 'en' else page_path(lang)
         fields['sandbox_language'] = 'de' if lang == 'de' else 'en'
         fields['passage_guide_language'], fields['passage_guide_path'] = (
-            ('de', 'guides/first-look-de.html#rhythmus') if lang == 'de'
+            ('de', 'guides/first-look-de.html#beleg') if lang == 'de'
             else ('en', 'guides/first-look.html#passage')
         )
         fields['alternates'] = '\n'.join(

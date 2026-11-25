@@ -388,7 +388,7 @@ def audio_capabilities() -> dict[str, Any]:
                    for language, voices in MLX_AUDIO_VOICES.items() for voice in voices},
                 "reference": {"name": "Project voice reference", "languages": list(MLX_AUDIO_LANGUAGES)},
             },
-            "guide_url": "https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#external-speech-providers-and-local-audio-inspection-unreleased",
+            "guide_url": "https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#mlx-audio-on-apple-silicon",
             "configurable_model": True, "provider_fields": False,
             "configurable_voice": True, "configurable_language": True,
             "reference_supported": True, "local_worker": "isolated-mlx-audio",

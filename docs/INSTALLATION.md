@@ -36,7 +36,9 @@ writing. A separate written commercial license covers closed-source integrations
 | Start, stop, restart, inspect logs or change ports | [Running the server](#running-the-server) |
 | Start automatically after login | [Optional login startup](#optional-startup-at-login) |
 | Add PDF/OCR or Zotero support | [Research prerequisites](#optional-research-prerequisites) · [Server access](#server-environment-and-project-access) |
-| Configure speech generation | [Qwen](#optional-qwen-audio-worker) · [Coqui/OpenVoice](#experimental-coqui-and-openvoice-audio-unreleased) · [IMS-Toucan](#ims-toucan-author-voice-and-phonetic-direction) · [External providers](#external-speech-providers-and-local-audio-inspection-unreleased) |
+| Configure speech generation | [Qwen](#optional-qwen-audio-worker) · [Coqui/OpenVoice](#experimental-coqui-and-openvoice-audio) · [IMS-Toucan](#ims-toucan-author-voice-and-phonetic-direction) · [External providers](#external-speech-providers-and-local-audio-inspection) |
+| Set up ZONOS3 synthesis or transcription on Apple Silicon | [MLX-Audio](#mlx-audio-on-apple-silicon) |
+| Check a native speech worker | [Model lifecycle and health](#native-audio-model-lifecycle) |
 | Use a separate Jetson worker | [Authenticated forward](#jetson-audio-worker) |
 | Use Lixity from Python or develop it | [Python API environment](#python-api-project-environment) · [Editable checkout](#editable-checkout) |
 | Resolve a setup problem | [Troubleshooting](#troubleshooting) · [Offline help](#read-documentation-offline) |
@@ -374,10 +376,15 @@ environment variable. Supply the secret to the process that will render. The
 managed systemd launcher forwards variables with the `LIXITY_` prefix by name,
 so use a name such as `LIXITY_SPEECH_API_KEY` when launching that service.
 A running app keeps the environment it received at startup.
-[Provider configuration](AUDIO.md#audio-export-and-external-providers-unreleased)
+[Provider configuration](AUDIO.md#audio-export-and-external-providers)
 
-For the development checkout's local ZONOS3 path on Apple Silicon, use a
-separate Python 3.11+ environment:
+Install FFmpeg for audio workflows that use WAV normalization, MP3 export or
+FLAC/MP3 inspection. [Audio formats and limits](AUDIO.md#troubleshooting-and-limits)
+
+### MLX-Audio on Apple Silicon
+
+For local ZONOS3 synthesis or optional transcription, create a separate Python
+3.11+ environment:
 
 ```sh
 uv venv --python 3.11 "$HOME/.local/share/lixity/runtimes/mlx-audio"
@@ -400,10 +407,8 @@ For optional transcription, run the MLX-Audio HTTP service in that environment:
   --host 127.0.0.1 --port 8000
 ```
 
-Use the [MLX-Audio workflow](AUDIO.md#mlx-audio-on-apple-silicon) for render and
-transcription commands, supported direction, model downloads and licensing.
-Install FFmpeg if your workflow requires [WAV normalization or audio formats
-beyond PCM WAV](AUDIO.md#audio-export-and-external-providers-unreleased).
+The audio manual covers model downloads, licensing, and examples for render and
+transcription. [MLX-Audio workflow](AUDIO.md#mlx-audio-on-apple-silicon)
 
 <a id="native-audio-model-lifecycle-unreleased"></a>
 
@@ -444,27 +449,19 @@ request can retry in a fresh child. No checkpoint is downloaded automatically.
 
 ### Optional Qwen audio worker
 
-Version 0.7.7 supports `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` and also
-supports separate VoiceDesign and reference-based Base checkpoints. The application and
-CLI share its project profiles and rendering controls. Audio runtime dependencies
-are optional: use a separate Python 3.12 environment with `qwen-tts`, a compatible
-PyTorch build and a complete local checkpoint, including its speech tokenizer.
-The core application install does not install or download model weights.
+The Qwen worker supports `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` and separate
+VoiceDesign and reference-based Base checkpoints. The application and CLI share
+the same project profiles and rendering controls.
 
 Run the loopback-only worker explicitly on this computer, or on a configured
 Jetson reached through an authenticated SSH forward. Neither target is an
 automatic fallback. Start with a short preview and verify actual synthesis and
 memory headroom; model size and machine memory do not establish throughput.
-The commands below own worker setup; [the audio manual](AUDIO.md#lixity-read-aloud)
-owns profiles, reference recordings, synthesis and output inspection.
-In 0.7.7, new audio profiles default to a 1.2 playback tempo factor;
-FFmpeg is required on the Lixity host for any factor other than 1.0 and for MP3.
-The factor is applied after synthesis, not by the Qwen model.
+Install FFmpeg on the Lixity computer for MP3 export and Qwen tempo changes.
+[Tempo controls and profile defaults](AUDIO.md#cache-tempo-and-saved-settings)
 
-Piper support has been removed. Existing Piper profiles require an explicit
-`audio-migrate` dry run and reviewed apply with a new backup outside the project.
-The migration preserves source files and never assumes an equivalent Qwen timbre
-or precise speed; see the same [read-aloud guide](AUDIO.md#lixity-read-aloud).
+For a project with Piper profiles, use the reviewed migration before rendering.
+[Replace removed Piper profiles](AUDIO.md#replace-removed-piper-profiles)
 
 Qwen runs in an optional isolated Python 3.12 environment with `qwen-tts` and a
 hardware-appropriate PyTorch installation. Install the same Lixity version as
@@ -595,11 +592,11 @@ a time. A reference profile uses `voice = "reference"` and an existing
 the CLI. `audio-status --engine coqui-reference` checks the actual worker.
 
 For settings migration, recording requirements and a first preview, continue with
-[Coqui/OpenVoice operation](AUDIO.md#experimental-coqui-and-openvoice-audio-unreleased).
+[Coqui/OpenVoice operation](AUDIO.md#experimental-coqui-and-openvoice-audio).
 
 ### IMS-Toucan author voice and phonetic direction
 
-**Available in 0.8.0.** The optional `ims-toucan` worker supports German and English with
+The optional `ims-toucan` worker supports German and English with
 an explicitly saved author reference, IPA overrides and structured prosody. It
 uses local loopback port **8772**, independently of Qwen/Coqui (8769) and F5 (8771).
 The worker is separate from the normal Lixity environment; no inference dependency
@@ -644,7 +641,7 @@ Check the service with `lixity audio-status --engine ims-toucan`.
 In the audio dialog, review and apply the backed-up settings upgrade to schema
 `/5`, then create a reference profile and choose a named recording. Existing
 profiles are retained. See the
-[phonetics and direction workflow](AUDIO.md#ims-toucan-phonetics-and-structured-direction-unreleased).
+[phonetics and direction workflow](AUDIO.md#ims-toucan-phonetics-and-structured-direction).
 Free-text acting instructions remain export metadata and cannot be rendered by
 this adapter. The structured controls scale duration and prosodic variation;
 they do not prescribe an exact emotion, calibrated pitch or words per minute.
@@ -830,7 +827,7 @@ view URL belongs to the earlier process.
 Optional audio workers retain their own environments; verify the selected
 engine using `lixity audio-status --project ./my-novel --json` and perform a short
 explicit synthesis check. A healthy app service does not establish worker readiness.
-See [experimental Coqui/OpenVoice setup](AUDIO.md#experimental-coqui-and-openvoice-audio-unreleased)
+See [experimental Coqui/OpenVoice setup](#experimental-coqui-and-openvoice-audio)
 for the separate German synthesis and reference-conversion dependencies.
 
 Remove only specifically identified unused build/test environments or old

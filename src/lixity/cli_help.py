@@ -143,8 +143,12 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
         ('lixity scenes --project ./novel --latest', 'lixity scenes manuscript.md --scene 1:1 --json'),
     ),
     'canvas': (
-        'WORKSPACE.md',
-        'Export narrative scenes and chapter progression into an open JSON Canvas 1.0 file (.canvas).',
+        'USAGE.md#lixity-canvas',
+        (
+            'Export manuscript scenes and chapters as JSON Canvas 1.0. Use -o to write a .canvas '
+            'file or omit it to print the canvas to stdout. Use lixity research canvas for dossiers '
+            'and their relationships.'
+        ),
         ('lixity canvas --project ./novel', 'lixity canvas --project ./novel -o ./story.canvas'),
     ),
     'motifs': (
@@ -239,15 +243,15 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
         ('lixity doctor', 'lixity doctor --port 9000 --json'),
     ),
     'about': (
-        'AGENTS.md',
+        'AGENTS.md#choose-the-interface',
         (
-            'Describes this installed interface and its heuristic limits. --section implies JSON. This '
-            'is command/feature discovery, not an analysis-result JSON Schema.'
+            'Describes this installed interface and its heuristic limits. --section commands lists '
+            'registered commands and output formats. --section implies JSON.'
         ),
         ('lixity about --json', 'lixity about --section commands'),
     ),
     'schema': (
-        'AGENTS.md',
+        'AGENTS.md#choose-the-interface',
         (
             'Same metadata as about --json. For research entity JSON Schema, use lixity research '
             'schema.'
@@ -286,7 +290,7 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
          'lixity read-aloud --project ./novel --preview --speed 1.0 -o preview.wav'),
     ),
     'audio-export-plan': (
-        'AUDIO.md#audio-export-and-external-providers-unreleased',
+        'AUDIO.md#audio-export-and-external-providers',
         (
             'Defaults to timeline JSON on stdout; use -o to write a file. Reads project settings and '
             'saved directions but no saved reference audio. No worker/provider is contacted. --ssml is '
@@ -299,7 +303,7 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
          'lixity audio-export-plan --project ./novel --chapter 2 --ssml -o chapter-2.ssml'),
     ),
     'audio-status': (
-        'AUDIO.md',
+        'AUDIO.md#audio-status',
         (
             "Omitting --project probes Qwen endpoints by default; --engine chooses another engine's "
             'endpoints. The fixed MLX ZONOS3 path reports isolated-worker, runtime and model-cache '
@@ -310,7 +314,7 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
         ('lixity audio-status --project ./novel --json', 'lixity audio-status --engine qwen3-base --json'),
     ),
     'audio-microphone': (
-        'AUDIO.md',
+        'AUDIO.md#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record',
         (
             'The status and devices actions inspect hardware. set changes the ALSA mixer immediately '
             'and requires --gain. --card and --control apply to status and set. Without --card, ALSA '
@@ -323,7 +327,7 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
          'lixity audio-microphone set --card 1 --control Mic --gain 35'),
     ),
     'audio-calibrate': (
-        'AUDIO.md',
+        'AUDIO.md#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record',
         (
             'Uses local capture tools after a configurable countdown. --gain requests an immediate '
             'ALSA capture mixer change before recording. An explicit --device keeps capture on the '
@@ -333,14 +337,14 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
         ('lixity audio-calibrate --duration 8 --countdown 4 --json', 'lixity audio-calibrate --gain 35'),
     ),
     'audio-reference': (
-        'AUDIO.md',
+        'AUDIO.md#experimental-reference-voices',
         (
             'All actions except calibration-text require --project. create needs --audio and '
             '--transcript-file and saves immutable audio plus exact transcript under '
             '.lixity/audio-references/. inspect needs --reference-id and only reads it. record uses '
-            'optional local capture tools; a supplied transcript saves a reference, while no transcript '
-            'requires -o to retain the raw WAV. generate calls the local Qwen VoiceDesign worker and '
-            'saves a synthetic reference; its default text is phonetic calibration text. '
+            'optional local capture tools. A supplied transcript saves a reference. Use -o to retain '
+            'the raw WAV when recording without a transcript. generate calls the local Qwen '
+            'VoiceDesign worker and saves a synthetic reference using phonetic calibration text by default. '
             'calibration-text prints plain text; other actions emit JSON. Review transcript fidelity '
             'yourself.'
         ),
@@ -349,7 +353,7 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
          'reference.txt'),
     ),
     'audio-import': (
-        'AUDIO.md#retain-or-import-chapter-audio-unreleased',
+        'AUDIO.md#retain-or-import-chapter-audio',
         (
             'Requires an explicit project and reviewed source_sha256 from audio-direction inspect; '
             'select the same --manuscript for both. Copies up to 200 MiB of mono/stereo 16-bit PCM WAV '
@@ -361,7 +365,7 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
          'REVIEWED_FULL_MANUSCRIPT_SHA256'),
     ),
     'audio-transcribe': (
-        'AUDIO.md',
+        'AUDIO.md#mlx-audio-on-apple-silicon',
         (
             'Sends one explicitly selected audio file to an OpenAI-compatible MLX-Audio service. '
             'The default model is Parakeet TDT v3 for 25 European languages and the default endpoint '
@@ -374,7 +378,7 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
          'chapter-2.words.json'),
     ),
     'audio-import-transcript': (
-        'AUDIO.md',
+        'AUDIO.md#inspect-and-compare-externally-generated-audio',
         (
             'Reads an ASR JSON object containing words[] or segments[].words[] and hashes the audio; '
             'does not run recognition, decode the audio, or certify word/timing fidelity. Output is '
@@ -388,7 +392,7 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
          'lixity audio-import-transcript chapter-2.wav whisper-output.json --model local-recognizer'),
     ),
     'audio-inspect': (
-        'AUDIO.md',
+        'AUDIO.md#inspect-and-compare-externally-generated-audio',
         (
             'Reads WAV/FLAC/MP3 and prints lixity-audio-audit/1 JSON without speech recognition or '
             'network calls. FFmpeg is needed for compressed formats and unsupported WAV encodings. '
@@ -401,7 +405,7 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
          'chapter-2.words.json --language en'),
     ),
     'audio-verify': (
-        'AUDIO.md',
+        'AUDIO.md#inspect-and-compare-externally-generated-audio',
         (
             'Requires --plan; use audio-export-plan to create it. Prints lixity-audio-audit/1 JSON. '
             'Text and plan-pause checks remain unknown unless --transcript supplies '
@@ -414,7 +418,7 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
          'chapter-2.words.json --language en'),
     ),
     'audio-direction': (
-        'AUDIO.md',
+        'AUDIO.md#passage-direction',
         (
             'inspect is the read-only default and returns passage anchors plus '
             'source/settings/direction hashes. add requires --chapter, --line, and an instruction, '
@@ -427,7 +431,7 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
          "lixity audio-direction add --project ./novel --chapter 1 --line 5 --instruction 'Read calmly.'"),
     ),
     'audio-migrate': (
-        'AUDIO.md',
+        'AUDIO.md#audio-settings-upgrades-and-recovery',
         (
             'Default preview prints JSON without writes. Schema switches are mutually exclusive and '
             'cannot be combined with --replace/--instructions. Applying requires the reviewed snapshot '

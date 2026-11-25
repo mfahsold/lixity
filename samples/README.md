@@ -29,16 +29,13 @@ added.
 
 ## Generated artifacts
 
-Generated analysis artifacts (dashboards, metrics JSON) are normally not
-committed. The synthetic [`first-look.md`](first-look.md) is an explicit exception:
-[`docs/demo/report.html`](../docs/demo/report.html) combines analysis and research
-in one read-only project. Its [regeneration recipe](../docs/demo/README.md) also
-produces four PDF layouts and the identical public manuscript copy. It uses
-explicit English defaults, without discovering local project settings.
-The example is not a benchmark or calibration corpus.
-An [editable local project](../docs/demo/README.md#open-the-synthetic-project-locally)
-can be created separately from screenshots and opened or exported with the normal
-application. The public example remains synthetic; no private book is included.
+Generated analysis artifacts ordinarily stay in local output directories.
+[`docs/demo/report.html`](../docs/demo/report.html) is the reviewed public
+exception for Warehouse 4. The [demo guide](../docs/demo/README.md) owns its
+artifact inventory, generation order and
+[editable local project setup](../docs/demo/README.md#open-the-synthetic-project-locally).
+The fixture supplies its own English settings, with the same manuscript bytes
+in the public copy.
 
 Two public-domain case studies remain available for their corresponding articles:
 [`docs/examples/effi-briest.html`](../docs/examples/effi-briest.html) and
@@ -46,9 +43,9 @@ Two public-domain case studies remain available for their corresponding articles
 show the first three chapters each, with the complete work as a PDF report next
 to them. `make examples` regenerates the project demo and the case-study artifacts.
 
-Regenerate the historical examples locally:
+Generate standalone CLI output from a local checkout:
 
 ```bash
-lixity dashboard samples/effi-briest.md -o /tmp/effi-briest-dashboard.html
-lixity build samples/pride-and-prejudice.md
+lixity dashboard samples/effi-briest.md --language de -o /tmp/effi-briest-dashboard.html
+lixity build samples/pride-and-prejudice.md --language en
 ```

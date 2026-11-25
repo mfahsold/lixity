@@ -4,8 +4,8 @@
 The output mirrors the published GitHub Pages layout: ``docs/<name>`` is
 flattened to ``/<name>``. A relative link inside the published documentation
 therefore resolves only if its target is also published, which is why nothing
-outside ``docs/`` is staged except the canonical packaged design-token stylesheet;
-repository documents are referenced by absolute URL instead.
+outside ``docs/`` is staged except the canonical packaged design-token and
+component stylesheets. Use absolute repository URLs for repository documents.
 ``tests/test_documentation.py`` enforces the result against the
 staged tree rather than the checkout, because a link can be correct in the
 checkout and still break on the site.
@@ -31,7 +31,7 @@ except ModuleNotFoundError:
 
 #: Approved files inside ``docs/``, keyed by their path relative to it.
 #:
-#: Only the explicitly selected design-token asset comes from outside ``docs/``.
+#: The packaged design-token and component stylesheets come from outside ``docs/``.
 #: Repository-root documents (README,
 #: CONTRIBUTING, SECURITY, LICENSE, CHANGELOG) are written for browsing inside
 #: the checkout, where ``docs/`` is a real subdirectory; flattening them onto the

@@ -176,6 +176,19 @@ offset. Profile server startup for the large fixture before choosing the next
 optimization. The click and return results describe this counted-result
 workload under the macOS probe.
 
+The v0.9.3 candidate `4efec747` was measured on the same host during the release
+test campaign. Its runtime code matches the release commit `2d55e564`. Three
+cold runs per size gave the following medians while other tests were running.
+
+| Prose words | Server ready | Navigation to readable text | First evidence jump | Return to passage |
+| ---: | ---: | ---: | ---: | ---: |
+| 50,035 | 3,274 ms | 385 ms | 114 ms | 44 ms |
+| 150,047 | 9,309 ms | 784 ms | 209 ms | 127 ms |
+| 300,043 | 13,656 ms | 1,443 ms | 444 ms | 257 ms |
+
+Server readiness was the longest measured stage at each size. Profile it in
+an isolated run before selecting a component to move or estimating a speedup.
+
 ## Acceptance criteria
 
 1. Set targets before writing the spike. Measure stage time, end-to-end

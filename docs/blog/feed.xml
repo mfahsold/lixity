@@ -5,9 +5,18 @@
   <subtitle>Articles on revision, measurement, research workflow and the example project.</subtitle>
   <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/index.html"/>
   <link rel="self" type="application/atom+xml" href="https://mfahsold.github.io/lixity/blog/feed.xml"/>
-  <updated>2026-11-20T00:00:00Z</updated>
+  <updated>2026-11-25T00:00:00Z</updated>
   <icon>https://mfahsold.github.io/lixity/favicon.ico</icon>
   <author><name>Matthias Fahsold</name><uri>https://github.com/mfahsold</uri></author>
+  <entry>
+    <id>https://mfahsold.github.io/lixity/blog/speech-direction-and-style-space.html</id>
+    <title xml:lang="en">From chapter comparisons to spoken direction: 3D style space and speech-plan export | Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/speech-direction-and-style-space.html"/>
+    <published>2026-11-02T00:00:00Z</published>
+    <updated>2026-11-25T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">Explore chapter differences in Lixity's 3D style space with per-axis spread context, inspect refined quotation and tense heuristics, and export speech direction as JSON or SSML.</summary>
+  </entry>
   <entry>
     <id>https://mfahsold.github.io/lixity/blog/revision-aware-workspace.html</id>
     <title xml:lang="en">Adding a manuscript editor changes more than the text box: Lixity blog</title>
@@ -43,15 +52,6 @@
     <updated>2026-11-05T00:00:00Z</updated>
     <author><name>Matthias Fahsold</name></author>
     <summary xml:lang="en" type="text">Prepare passage-anchored speech direction and JSON/SSML plans, interpret two separate analysis layers, and inspect project structure in Lixity.</summary>
-  </entry>
-  <entry>
-    <id>https://mfahsold.github.io/lixity/blog/speech-direction-and-style-space.html</id>
-    <title xml:lang="en">From chapter comparisons to spoken direction: 3D style space and speech-plan export | Lixity blog</title>
-    <link rel="alternate" type="text/html" href="https://mfahsold.github.io/lixity/blog/speech-direction-and-style-space.html"/>
-    <published>2026-11-02T00:00:00Z</published>
-    <updated>2026-11-05T00:00:00Z</updated>
-    <author><name>Matthias Fahsold</name></author>
-    <summary xml:lang="en" type="text">Explore chapter differences in Lixity's 3D style space with per-axis spread context, inspect refined quotation and tense heuristics, and export speech direction as JSON or SSML.</summary>
   </entry>
   <entry>
     <id>https://mfahsold.github.io/lixity/blog/why-this-passage.html</id>

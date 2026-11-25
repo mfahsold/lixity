@@ -291,7 +291,7 @@ COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
         "Manuscript associations",
         (),
     ),
-    ("search", "Search the latest source versions with literal words", "Search and review", ()),
+    ("search", "Find literal words in source passages or authored records", "Search and review", ()),
     ("cite", "Resolve an immutable source passage", "Search and review", ()),
     (
         "timeline",
@@ -598,7 +598,8 @@ _COMMAND_HELP: dict[str, tuple[str, tuple[str, ...]]] = {
     ),
     "search": (
         "Search literal words in current source versions, or select authored records with --scope.\n"
-        "The disposable search index may refresh automatically; --strict rejects a stale index.\n"
+        "The disposable search index may refresh automatically. With --strict, rebuild it with\n"
+        "research reindex if it is missing, stale or unreadable.\n"
         "Results are candidates for review, not semantic matches or accepted claims.",
         ('search --project ./novel --query "reading room" --scope all',),
     ),
@@ -661,9 +662,9 @@ _COMMAND_HELP: dict[str, tuple[str, tuple[str, ...]]] = {
         ("dashboard --project ./novel --source-id SOURCE_ID > source-report.html",),
     ),
     "compare": (
-        "Compare retained source text with the selected project's manuscript. Lexical overlap and\n"
-        "grounding are review signals, not proof of influence or factual correctness. --output\n"
-        "writes a report file (overwriting an existing file) and prints a JSON receipt.",
+        "Compare retained source text with the selected project's manuscript. Matching language\n"
+        "profiles enable vocabulary overlap and keyness for human review. Use --output to write\n"
+        "a report file (overwriting an existing file) and print a JSON receipt.",
         ("compare --project ./novel --source-id SOURCE_ID --manuscript draft.md --format md",),
     ),
     "audit": (
@@ -1373,7 +1374,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument(
                 "--strict",
                 action="store_true",
-                help="Fail if search index is stale instead of refreshing automatically",
+                help="Require an existing, readable and current search index",
             )
         elif name == "cite":
             selection = command.add_mutually_exclusive_group(required=True)

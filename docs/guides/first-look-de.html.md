@@ -2,7 +2,7 @@
 
 Mit Lixity liest du dein Manuskript, vergleichst Sprachmuster und findest die Quellen zu einem Szenendetail wieder. Die lokale Browser-App verbindet Textstellen, Recherche und eigene Entscheidungen. Ihre Sprachhinweise sind Heuristiken zur Prüfung; sie bewerten weder literarische Qualität noch die Wahrheit einer Aussage.
 
-Aktualisiert am 20. November 2026
+Aktualisiert am 25. November 2026
 
 <a id="frage"></a>
 
@@ -14,7 +14,19 @@ Warum klingt dieses Kapitel anders als der Rest? Ist eine Wiederholung beabsicht
 
 Die schreibgeschützte Demo verwendet ein erfundenes englisches Hafenmanuskript und englische Bedienelemente. Diese Seite erklärt den Einstieg auf Deutsch; sie ist keine deutsche Fassung des Demo-Manuskripts. Kein Konto, keine Installation und kein Upload sind zum Ausprobieren nötig.
 
-Wähle für den Einstieg eine Frage: [Auf welcher Quellenfassung beruht die Szene?](#recherche) Oder: [Wie verändert sich der Satzrhythmus?](#rhythmus) Beide Wege führen von einem Hinweis zurück zum Text, damit du eine eigene Entscheidung treffen kannst.
+Wähle für den Einstieg eine Frage. [Warum ist dieser Satz markiert?](#beleg) [Auf welcher Quellenfassung beruht die Szene?](#recherche) [Wie unterscheidet sich der Satzrhythmus zweier Kapitel?](#rhythmus)
+
+<a id="beleg"></a>
+
+## Warum ist dieser Satz markiert?
+
+1. Öffne die [englische Demo](../demo/report.html). Wähle **Try the draft examples → Check a sticky sentence**.
+
+2. Öffne am markierten Absatz **… → Paragraph details → Explain this passage**. Unter **Why this is marked** siehst du, welche 22 der 31 Wörter Lixity als Funktionswörter gezählt hat.
+
+3. Schließe die Erklärung mit Escape und lies den ganzen Absatz. Sind die Zusammenhänge im Satz beim Lesen leicht zu verfolgen?
+
+Wenn du sehen möchtest, wie sich eine Änderung auf die Zählung auswirkt, bearbeite ein Beispiel in der [deutschen Browser-Sandbox](../sandbox/index.html?lang=de).
 
 <a id="recherche"></a>
 
@@ -46,7 +58,7 @@ Die Demo startet in derselben Manuskriptansicht wie die lokale App. Öffne in de
 
 1. In der Demo **Inspect chapter 2** wählen und den Anfang von *The Loose Board* lesen: „A board moved. Mara turned.“ Mara versucht, eine Kiste festzuhalten.
 
-2. Beim Absatz **… → Paragraph details → Explain measurement** öffnen. Die Karte zählt „A board moved.“ als drei Wörter. Unter **Why this is marked** steht der Grund für die Markierung. **What to check while reading** gibt eine Lesefrage.
+2. Beim Absatz **… → Paragraph details → Explain this passage** öffnen. Die Karte zählt „A board moved.“ als drei Wörter. Unter **Why this is marked** steht der Grund für die Markierung. **What to check while reading** gibt eine Lesefrage.
 
 3. Über **opening chapter** in der Aufgabenkarte die Hafenbeschreibung im ersten Kapitel vergleichen. Was ändert sich beim Lesen, nicht nur in der Zahl?
 
