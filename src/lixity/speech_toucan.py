@@ -10,6 +10,7 @@ import hashlib
 import importlib
 import io
 import os
+import re
 import sys
 from collections.abc import Callable, Collection, Mapping
 from functools import partial
@@ -29,6 +30,7 @@ from .speech_references import SpeechReference
 from .speech_worker import SAMPLE_RATE, _decode_reference, synthesize_native
 
 UPSTREAM_REVISION = "3cc2094d9c7123336eda7e299ac0bc90319ca9ff"
+_MIN_CHECKPOINT_TORCH = (2, 6, 0)
 _LANGUAGES = {"de": ("deu", "de"), "en": ("eng", "en-us")}
 _SPEAKER_FILES = ("hyperparams.yaml", "embedding_model.ckpt", "classifier.ckpt",
                   "mean_var_norm_emb.ckpt", "label_encoder.txt")
@@ -127,6 +129,12 @@ def load_renderer(source_dir: Path, model_dir: Path, speaker_dir: Path, *, devic
 
 def _load_runtime(model_dir: Path, speaker_dir: Path, *, device: str, threads: int) -> Callable[[dict[str, Any]], bytes]:
     torch = importlib.import_module("torch")
+    # PyTorch through 2.5.1 is affected even with weights_only=True (CVE-2025-32434).
+    reported_version = str(getattr(torch, "__version__", ""))
+    version = re.fullmatch(r"([0-9]+)\.([0-9]+)\.([0-9]+)(?:\+[A-Za-z0-9.]+)?", reported_version)
+    if version is None or tuple(map(int, version.groups())) < _MIN_CHECKPOINT_TORCH:
+        minimum = ".".join(map(str, _MIN_CHECKPOINT_TORCH))
+        raise ValueError(f"IMS Toucan checkpoint loading requires PyTorch {minimum} or later (stable release)")
     if device == "cuda" and not torch.cuda.is_available():
         raise ValueError("CUDA was requested but is unavailable")
     torch.set_num_threads(threads)

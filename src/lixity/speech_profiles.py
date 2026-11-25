@@ -53,7 +53,8 @@ QWEN_LANGUAGES = {
     "de": "German", "fr": "French", "ru": "Russian", "pt": "Portuguese",
     "es": "Spanish", "it": "Italian",
 }
-QWEN_VOICES = ("Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric", "Ryan", "Aiden", "Ono_Anna", "Sohee")
+QWEN_DEFAULT_VOICE = "Ryan"
+QWEN_VOICES = ("Vivian", "Serena", "Uncle_Fu", "Dylan", "Eric", QWEN_DEFAULT_VOICE, "Aiden", "Ono_Anna", "Sohee")
 MLX_AUDIO_BASE_URL = "http://127.0.0.1:8000/v1"
 MLX_AUDIO_TTS_MODEL = "mlx-community/ZONOS3-Mini"
 MLX_AUDIO_DEFAULT_VOICE = "liesel"
@@ -72,6 +73,9 @@ MLX_AUDIO_DEFAULT_MODEL_SPEED = 1.1
 DEFAULT_PLAYBACK_SPEED = 1.1
 MIN_PLAYBACK_SPEED = 0.5
 MAX_PLAYBACK_SPEED = 2.0
+DEFAULT_PARAGRAPH_PAUSE = 0.45
+DEFAULT_SCENE_PAUSE = 1.2
+MAX_AUDIO_PROFILES = 32
 _PROFILE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z")
 _REMOVED_ENGINE = ("Piper audio profiles are no longer supported. Make a backup and explicitly migrate "
                    "each profile to a Qwen preset voice; the old voice and precise speed are not equivalent. "
@@ -131,7 +135,7 @@ class AudioProfile(BaseModel):
     name: str = Field(default="Narrator", min_length=1, max_length=100)
     engine: Literal["qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "ims-toucan", "openai-compatible", "mlx-audio"] = "qwen3"
     language: str = "en"
-    voice: str = Field(default="Ryan", min_length=1, max_length=100)
+    voice: str = Field(default=QWEN_DEFAULT_VOICE, min_length=1, max_length=100)
     voice_description: str = Field(default="", max_length=2000)
     reference_id: str = ""
     base_url: str = Field(default="", max_length=2048)
@@ -142,8 +146,8 @@ class AudioProfile(BaseModel):
     # profile uses DEFAULT_PLAYBACK_SPEED in parse_audio_settings below.
     speed: float = Field(default=1.0, ge=MIN_PLAYBACK_SPEED, le=MAX_PLAYBACK_SPEED)
     instructions: str = Field(default="", max_length=2000)
-    paragraph_pause: ExplicitPauseSeconds = 0.45
-    scene_pause: ExplicitPauseSeconds = 1.2
+    paragraph_pause: ExplicitPauseSeconds = DEFAULT_PARAGRAPH_PAUSE
+    scene_pause: ExplicitPauseSeconds = DEFAULT_SCENE_PAUSE
     pronunciations: PronunciationMap = Field(default_factory=dict, max_length=200)
     phonemes: PronunciationMap = Field(default_factory=dict, max_length=200)
     prosody: SpeechProsody = Field(default_factory=SpeechProsody)
@@ -284,7 +288,7 @@ class AudioSettings(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True)
     schema_name: Literal["lixity-audio-settings/1", "lixity-audio-settings/2", "lixity-audio-settings/3", "lixity-audio-settings/4", "lixity-audio-settings/5"] = Field(default="lixity-audio-settings/1", alias="schema_version")
     selected: str
-    profiles: dict[str, AudioProfile] = Field(max_length=32)
+    profiles: dict[str, AudioProfile] = Field(max_length=MAX_AUDIO_PROFILES)
     pronunciations: PronunciationMap = Field(default_factory=dict, max_length=200)
     pronunciation_matching: PronunciationMatching = Field(default_factory=PronunciationMatching)
 
@@ -377,7 +381,7 @@ def audio_capabilities() -> dict[str, Any]:
     """
     return {
         "mlx-audio": {
-            "name": "MLX-Audio ZONOS3 TTS", "tier": "recommended", "targets": ["local"],
+            "name": "MLX-Audio ZONOS3 TTS", "short_name": "ZONOS3", "tier": "recommended", "targets": ["local"],
             "languages": list(MLX_AUDIO_LANGUAGES),
             "voices": {
                 **{voice: {"name": voice.title(), "languages": [language]}
@@ -395,7 +399,8 @@ def audio_capabilities() -> dict[str, Any]:
             "model": MLX_AUDIO_TTS_MODEL, "default_base_url": MLX_AUDIO_BASE_URL,
         },
         "openai-compatible": {
-            "name": "OpenAI-compatible speech provider", "tier": "recommended", "targets": ["local"],
+            "name": "OpenAI-compatible speech provider", "short_name": "OpenAI-compatible",
+            "tier": "recommended", "targets": ["local"],
             "languages": [], "voices": {}, "configurable_model": True,
             "configurable_voice": True, "configurable_language": True,
             "instructions": False, "configurable_instructions": True,
@@ -405,9 +410,10 @@ def audio_capabilities() -> dict[str, Any]:
             "model": None,
         },
         "qwen3": {
-            "name": "Qwen3-TTS 1.7B CustomVoice", "tier": "recommended",
+            "name": "Qwen3-TTS 1.7B CustomVoice", "short_name": "Qwen3 CustomVoice", "tier": "recommended",
             "targets": ["local", "jetson"], "languages": list(QWEN_LANGUAGES),
             "voices": {voice: {"name": voice, "languages": list(QWEN_LANGUAGES)} for voice in QWEN_VOICES},
+            "default_voice": QWEN_DEFAULT_VOICE,
             "instructions": True,
             "control_support": speech_control_support("qwen3").as_dict(),
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
@@ -425,19 +431,19 @@ def audio_capabilities() -> dict[str, Any]:
             "model": TOUCAN_MODEL,
         },
         **{engine: {
-            "name": name, "tier": "advanced", "targets": ["local"], "languages": ["de"],
+            "name": name, "short_name": short_name, "tier": "advanced", "targets": ["local"], "languages": ["de"],
             "voices": {voice: {"name": voice_name, "languages": ["de"]}},
             "reference_required": engine == "coqui-reference", "instructions": False,
             "control_support": speech_control_support(engine).as_dict(),
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": model,
-        } for engine, name, voice, voice_name, model in (
-            ("coqui", "Coqui Thorsten VITS", "thorsten", "Thorsten", COQUI_MODEL),
-            ("coqui-reference", "Coqui Thorsten + OpenVoice V2", "reference", "Reference", COQUI_REFERENCE_MODEL),
+        } for engine, name, short_name, voice, voice_name, model in (
+            ("coqui", "Coqui Thorsten VITS", "Coqui Thorsten", "thorsten", "Thorsten", COQUI_MODEL),
+            ("coqui-reference", "Coqui Thorsten + OpenVoice V2", "Coqui OpenVoice", "reference", "Reference", COQUI_REFERENCE_MODEL),
         )},
         "f5-tts": {
-            "name": "F5-TTS Flow-Matching", "tier": "retired", "targets": ["local"], "languages": ["de", "en"],
+            "name": "F5-TTS Flow-Matching", "short_name": "F5-TTS", "tier": "retired", "targets": ["local"], "languages": ["de", "en"],
             "creation_enabled": False, "runtime_status": "unavailable",
             "runtime_reason": "The bundled F5-TTS runtime is unavailable; existing profiles remain readable for export and cached audio.",
             "voices": {"reference": {"name": "Reference", "languages": ["de", "en"]}},
@@ -448,7 +454,7 @@ def audio_capabilities() -> dict[str, Any]:
             "model": F5_MODEL,
         },
         "qwen3-design": {
-            "name": "Qwen3-TTS 1.7B VoiceDesign", "tier": "advanced",
+            "name": "Qwen3-TTS 1.7B VoiceDesign", "short_name": "Qwen3 VoiceDesign", "tier": "advanced",
             "targets": ["local", "jetson"], "languages": list(QWEN_LANGUAGES), "voices": {}, "voice_design": True,
             "instructions": True,
             "control_support": speech_control_support("qwen3-design").as_dict(),
@@ -457,7 +463,7 @@ def audio_capabilities() -> dict[str, Any]:
             "model": QWEN_DESIGN_MODEL,
         },
         "qwen3-base": {
-            "name": "Qwen3-TTS 1.7B Base", "tier": "advanced",
+            "name": "Qwen3-TTS 1.7B Base", "short_name": "Qwen3 Base", "tier": "advanced",
             "targets": ["local", "jetson"], "languages": list(QWEN_LANGUAGES),
             "voices": {"reference": {"name": "Reference", "languages": list(QWEN_LANGUAGES)}},
             "reference_required": True, "instructions": False,

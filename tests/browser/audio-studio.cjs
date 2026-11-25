@@ -19,6 +19,7 @@ root = Path(sys.argv[1]); source = root / 'manuscript.md'
 os.environ['XDG_DATA_HOME'] = str(root / 'app-data')
 source.write_text('## One\\n\\nA synthetic passage.\\n')
 from lixity.speech import generate_silence_wav
+from lixity.speech_profiles import audio_capabilities
 from lixity.speech_references import save_reference
 reference = save_reference(root, generate_silence_wav(1), 'Initial synthetic reference.')
 (root / 'lixity.toml').write_text(f'''language = "de"
@@ -48,7 +49,8 @@ LixityServerHandler.exports_dir = str(root / 'exports')
 LixityServerHandler.language = 'de'
 LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1',0), LixityServerHandler)
-print(json.dumps({'url':f'http://127.0.0.1:{server.server_port}', 'source':str(source), 'reference':reference.id}), flush=True)
+print(json.dumps({'url':f'http://127.0.0.1:{server.server_port}', 'source':str(source), 'reference':reference.id,
+                  'capabilities':audio_capabilities()}), flush=True)
 server.serve_forever()
 `, artifacts);
   const useFirefox = process.argv.includes('--firefox');
@@ -66,8 +68,11 @@ server.serve_forever()
       page.on('pageerror', error => errors.push(error.message));
       try {
         const customDefault = width === 320 && !useFirefox;
-        const modelDefault = customDefault ? 1.27 : 1.1;
-        const pauseMaximum = customDefault ? 8.75 : 10;
+        const capabilities = server.fixture.capabilities;
+        const profile = capabilities['qwen3-base'];
+        const modelDefault = customDefault ? 1.27 : capabilities['mlx-audio'].speed.default;
+        const pauseBounds = profile.control_support.pause_seconds;
+        const pauseMaximum = customDefault ? 8.75 : pauseBounds.maximum;
         if (customDefault) await page.route('**/api/speech?*', async route => {
           const response = await route.fetch();
           const data = await response.json();
@@ -105,8 +110,11 @@ server.serve_forever()
           'Recording must not show synthesis or provider controls');
         assert.equal(await page.locator('#speech-microphone-section').isVisible(), false,
           'Hardware settings belong only to the microphone tab');
-        const tabs = page.locator('#modal-speech [role=tab]');
-        assert.equal(await tabs.count(), 4);
+        const tabs = page.locator('#modal-speech [role=tab]:visible');
+        assert.equal(await tabs.count(), 3);
+        assert.equal(await page.locator('#speech-tab-reader').isVisible(), true);
+        assert.equal(await page.locator('#speech-tab-reader').getAttribute('role'), null,
+          'The manuscript shortcut leaves the project settings tablist');
         assert.equal(await tabs.nth(0).getAttribute('aria-selected'), 'true');
         assert.equal(await tabs.nth(0).getAttribute('tabindex'), '0');
         await tabs.nth(0).focus();
@@ -114,6 +122,21 @@ server.serve_forever()
         assert.equal(await tabs.nth(1).getAttribute('aria-selected'), 'true');
         assert.equal(await tabs.nth(1).evaluate(element => element === document.activeElement), true);
         assert.equal(await page.locator('#speech-engine').isVisible(), true);
+        assert.equal(await page.locator('#speech-profile').isVisible(), false,
+          'A project with one profile shows its name without a picker');
+        assert.equal(await page.locator('.speech-profile-picker .speech-choice-readout strong').textContent(), 'Narrator');
+        const removeProfile = page.locator('[data-speech-action=remove_profile]');
+        assert.equal(await removeProfile.isVisible(), true);
+        await removeProfile.click();
+        assert.equal(await page.locator('#speech-status').textContent(), labels.speech_profile_remove_last_schema,
+          'Older audio settings explain the review needed before removing the last profile');
+        assert.equal(await page.locator('#speech-engine option[value=qwen3-base]').evaluate(option => option.parentElement.label),
+          labels.speech_engine_group_reference);
+        assert.equal(await page.locator('#speech-recording_duration').isVisible(), false,
+          'Project recording preferences stay with Author’s Voice');
+        assert.equal(await page.locator('#speech-worker-status').isVisible(), false,
+          'Service diagnostics start collapsed');
+        assert.equal(await page.locator('.speech-profile-footer [data-speech-action=save]').isVisible(), true);
         assert.equal(await page.locator('.author-voice-studio').isVisible(), false);
         assert.equal(await page.locator('.speech-export-section').isVisible(), false);
         assert.equal(await page.locator('#speech-microphone-section').isVisible(), false);
@@ -129,11 +152,11 @@ server.serve_forever()
           assert.equal(await speed.getAttribute('aria-describedby'), 'speech-speed-hint');
           assert.ok(await speed.evaluate(input => input.closest('label').scrollWidth <= input.closest('label').clientWidth));
         }
-        await assertTempo('speech_speed', 'speech_speed_hint', 1.1);
+        await assertTempo('speech_speed', 'speech_speed_hint', profile.speed.default);
         async function assertPauseBounds(keys, required) {
           for (const key of keys) {
             const input = page.locator('#speech-' + key);
-            assert.equal(await input.getAttribute('min'), '0');
+            assert.equal(await input.getAttribute('min'), String(pauseBounds.minimum));
             assert.equal(await input.getAttribute('max'), String(pauseMaximum));
             assert.equal(await input.getAttribute('step'), 'any');
             assert.equal(await input.getAttribute('required'), required ? '' : null);
@@ -173,14 +196,20 @@ server.serve_forever()
         assert.equal(await tabs.nth(1).getAttribute('aria-selected'), 'true');
         assert.equal(await page.locator('#speech-status').textContent(), labels.speech_profiles_unsaved);
         await page.locator('[data-speech-action=profiles_discard]').click();
-        await assertTempo('speech_speed', 'speech_speed_hint', 1.1);
+        await assertTempo('speech_speed', 'speech_speed_hint', profile.speed.default);
         await auditDialog('profiles');
         await page.locator('#modal-speech').screenshot({path: path.join(artifacts, `profiles-${width}.png`)});
-        await tabs.nth(2).click();
+        await page.locator('#speech-tab-reader').click();
+        assert.deepEqual(await tabs.evaluateAll(items => items.map(tab => tab.id)),
+          ['speech-tab-direction', 'speech-tab-output']);
+        assert.equal(await page.locator('#modal-speech').evaluate(dialog => dialog.matches('.speech-docked[open]:not(:modal)')), true);
         assert.equal(await page.locator('#speech-chapter').isVisible(), true);
         assert.equal(await page.locator('.speech-export-section').isVisible(), true);
+        assert.equal(await page.locator('#speech-export_scope').inputValue(), 'preview');
         assert.equal(await page.locator('#speech-engine').isVisible(), false);
         assert.equal(await page.locator('#speech-microphone-section').isVisible(), false);
+        assert.equal(await page.locator('#speech-chapter_audio_file').isVisible(), false);
+        assert.match(await page.locator('#speech-project-profile').textContent(), /Narrator/);
         await assertPauseBounds(['direction_before', 'direction_after'], false);
         assert.equal(await page.locator('#speech-direction_after').inputValue(), '',
           'A blank direction override inherits the profile pause');
@@ -189,23 +218,39 @@ server.serve_forever()
         const scrollPanel = page.locator('#speech-panel');
         await scrollPanel.evaluate(element => { element.scrollTop = element.scrollHeight; });
         assert.ok(await scrollPanel.evaluate(element => element.scrollTop > 0));
-        await tabs.nth(0).click();
+        const directionTab = page.locator('#speech-tab-direction');
+        const outputTab = page.locator('#speech-tab-output');
+        await directionTab.focus();
+        await page.keyboard.press('End');
+        assert.equal(await outputTab.getAttribute('aria-selected'), 'true');
+        assert.equal(await page.locator('#speech-chapter_audio_file').isVisible(), true);
+        assert.equal(await page.locator('#speech-direction_text').isVisible(), false);
         assert.equal(await scrollPanel.evaluate(element => element.scrollTop), 0,
           'Switching audio tabs starts the new section at its heading');
-        await tabs.nth(2).click();
-        await tabs.nth(2).focus();
+        await auditDialog('output');
+        await directionTab.click();
+        await page.locator('#speech-edit-project-voice').click();
+        const profileTab = page.locator('#speech-tab-profiles');
+        const microphoneTab = page.locator('#speech-tab-microphone');
+        assert.equal(await page.locator('#modal-speech').evaluate(dialog => dialog.matches(':modal')), true);
+        assert.equal(await profileTab.getAttribute('aria-selected'), 'true');
+        await profileTab.focus();
         await page.keyboard.press('End');
-        assert.equal(await tabs.nth(3).getAttribute('aria-selected'), 'true');
+        assert.equal(await microphoneTab.getAttribute('aria-selected'), 'true');
         assert.equal(await page.locator('#speech-microphone-section').isVisible(), true);
         assert.equal(await page.locator('.speech-export-section').isVisible(), false);
         assert.equal(await page.locator('.speech-render-section').isVisible(), false);
         assert.equal(await page.locator('.author-voice-studio').isVisible(), false);
-        assert.ok(await page.locator('#speech-microphone-section > .setting-field').evaluateAll(fields =>
-          fields[1].getBoundingClientRect().top - fields[0].getBoundingClientRect().bottom >= 8),
-        'Disclosure fields retain separation between one control and the next label');
+        const refreshMicrophones = page.locator('[data-speech-action=microphone_refresh]');
+        assert.equal(await refreshMicrophones.isVisible(), true);
+        assert.ok(await refreshMicrophones.evaluate(control => {
+          const button = control.getBoundingClientRect();
+          const section = control.closest('#speech-microphone-section').getBoundingClientRect();
+          return button.left >= section.left && button.right <= section.right && control.scrollWidth <= control.clientWidth;
+        }), 'The refresh control fits the microphone panel');
         await auditDialog('microphone');
         await page.locator('#modal-speech').screenshot({path: path.join(artifacts, `microphone-${width}.png`)});
-        await tabs.nth(3).focus();
+        await microphoneTab.focus();
         await page.keyboard.press('Home');
         assert.equal(await tabs.nth(0).getAttribute('aria-selected'), 'true');
         assert.ok((await page.locator('.voice-rec-btn').getAttribute('data-help'))?.length > 20,
@@ -245,6 +290,36 @@ server.serve_forever()
         assert.equal(await page.evaluate(() => window.microphoneAttempts), 2);
         await page.locator('#modal-speech').screenshot({path: path.join(artifacts, `permission-${width}.png`)});
 
+        await page.locator('[data-speech-action=recording_duration_edit]').click();
+        const recordingDuration = page.getByRole('spinbutton', {name:labels.speech_recording_duration});
+        assert.equal(await recordingDuration.evaluate(input => input === document.activeElement), true);
+        assert.equal(await tabs.nth(0).getAttribute('aria-selected'), 'true',
+          'Changing the recording limit stays in Author’s Voice');
+        assert.equal(await recordingDuration.inputValue(), '');
+        assert.equal(await recordingDuration.getAttribute('placeholder'), '60');
+        assert.ok(await recordingDuration.evaluate(input => input.closest('label').scrollWidth <= input.closest('label').clientWidth));
+        await recordingDuration.fill('61');
+        assert.equal(await recordingDuration.evaluate(input => input.checkValidity()), false);
+        await recordingDuration.fill('28');
+        await tabs.nth(1).click();
+        assert.equal(await tabs.nth(0).getAttribute('aria-selected'), 'true');
+        assert.equal(await page.locator('#speech-status').textContent(), labels.speech_recording_duration_unsaved);
+        const durationSave = page.locator('[data-speech-action=recording_duration_save]');
+        async function persistRecordingDuration(expected) {
+          const posted = page.waitForRequest(request => new URL(request.url()).pathname === '/api/settings');
+          const reloaded = page.waitForEvent('load');
+          await durationSave.click();
+          const payload = (await posted).postDataJSON();
+          assert.deepEqual(payload.audio_recording, expected);
+          assert.equal(Object.hasOwn(payload, 'audio'), false, 'Saving a project limit does not save edited voice profiles');
+          await reloaded;
+          await page.locator('#tab-view-project').click();
+          await page.locator('#btn-project-record-voice').click();
+          await page.waitForFunction(() => document.querySelector('#speech-name')?.value === 'Narrator');
+          await page.locator('.voice-rec-btn:enabled').waitFor();
+        }
+        await persistRecordingDuration({reference_seconds:28});
+
         // Real Web Audio signal with a synthetic stream; never use physical input devices.
         await page.evaluate(async () => {
           window.syntheticAudio = new AudioContext();
@@ -261,14 +336,22 @@ server.serve_forever()
             return stream;
           };
         });
-        await page.locator('.voice-rec-btn').click();
+        await page.getByRole('button', {name:labels.speech_sample_full, exact:true}).click();
+        const record = page.locator('.voice-rec-btn');
+        assert.match(await page.locator('#speech-record-limit').innerText(), /28 Sekunden/);
+        await record.focus();
+        await page.keyboard.press('Enter');
         await page.waitForFunction(() => document.querySelector('.voice-rec-btn')?.classList.contains('is-recording'));
+        assert.equal(await record.evaluate(button => button === document.activeElement), true);
+        assert.equal(await record.getAttribute('data-help'), labels.speech_record_stop_help);
+        assert.match(await page.locator('.voice-rec-timer').innerText(), /^\d\d:\d\d \/ 00:28$/);
+        assert.equal(await page.locator('.voice-record-controls').evaluate(controls => controls.scrollWidth <= controls.clientWidth + 1), true);
         await tabs.nth(0).click();
         assert.equal(await page.locator('#speech-status').textContent(),
           await page.evaluate(() => uiLabel('speech_record_running')),
           'Selecting the active tab preserves the running recording feedback');
         await page.waitForFunction(() => document.querySelector('.voice-rec-timer')?.textContent.startsWith('00:02'));
-        await page.locator('.voice-rec-btn').click();
+        await record.press('Space');
         await page.waitForFunction(() => Boolean(document.querySelector('.voice-take-card audio')?.getAttribute('src')));
         assert.equal(await page.locator('.voice-take-card').isVisible(), true);
         assert.equal(await page.evaluate(() => window.recordingTracks.every(track => track.readyState === 'ended')), true,
@@ -297,6 +380,18 @@ server.serve_forever()
         assert.equal(await page.locator('.voice-save-btn').isEnabled(), false,
           'An empty replacement take cannot save the previous audio with a new transcript');
         await page.evaluate(() => {window.AudioWorkletNode = window.originalProcessor;});
+        await record.click();
+        await page.waitForFunction(() => document.querySelector('.voice-rec-timer')?.textContent.startsWith('00:01'));
+        await record.click();
+        const discardTake = page.locator('[data-speech-action=take_discard]');
+        await discardTake.waitFor();
+        await page.locator('#modal-speech [data-speech-action=close]').focus();
+        await page.keyboard.press('Escape');
+        assert.equal(await page.locator('#speech-status').textContent(), labels.speech_take_unsaved);
+        await discardTake.click();
+        assert.equal(await page.locator('.voice-take-card').isVisible(), false);
+        assert.equal(await record.evaluate(button => button === document.activeElement), true);
+        assert.equal(await page.locator('#speech-status').textContent(), labels.speech_take_discarded);
         await page.locator('.voice-rec-btn').click();
         await page.waitForFunction(() => document.querySelector('.voice-rec-btn')?.classList.contains('is-recording'));
         await page.locator('#modal-speech [data-speech-action=close]').click();
@@ -304,6 +399,7 @@ server.serve_forever()
         assert.equal(await page.locator('#modal-speech').isVisible(), false);
 
         // A permission response may arrive after dismissal. It must not reopen recording.
+        await page.locator('#tab-view-project').click();
         await page.locator('#btn-project-record-voice').click();
         await page.waitForFunction(() => document.querySelector('#speech-name')?.value === 'Narrator');
         await page.evaluate(() => {
@@ -405,6 +501,11 @@ server.serve_forever()
         await page.locator('.author-voice-studio .voice-active-card').scrollIntoViewIfNeeded();
         await auditDialog('saved author voice');
         await page.locator('#modal-speech').screenshot({path: path.join(artifacts, `saved-${width}.png`)});
+        await page.locator('[data-speech-action=recording_duration_edit]').click();
+        assert.equal(await recordingDuration.inputValue(), '28', 'Saving the take retains the recording preference');
+        await recordingDuration.fill('');
+        await persistRecordingDuration({});
+        assert.match(await page.locator('#speech-record-limit').innerText(), /60 Sekunden/);
         assert.deepEqual(errors, []);
       } finally { await page.close(); }
     }

@@ -200,10 +200,11 @@ pub fn bridge_init_script(platform_name: &str, app_version: &str) -> String {
           filename: filename ? String(filename) : "recording.wav"
         }});
       }},
-      startRecording: function (deviceName, filename) {{
+      startRecording: function (deviceName, filename, maxDurationSeconds) {{
         return invoke("audio_capture_start_recording", {{
           deviceName: deviceName || null,
-          filename: filename ? String(filename) : "author-voice.wav"
+          filename: filename ? String(filename) : "author-voice.wav",
+          maxDurationSeconds: maxDurationSeconds ?? null
         }});
       }},
       recordingStatus: function () {{

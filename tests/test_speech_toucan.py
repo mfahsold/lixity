@@ -28,6 +28,35 @@ def test_missing_toucan_assets_fail_before_importing_optional_dependencies(tmp_p
         speech_toucan.load_renderer(tmp_path, tmp_path, tmp_path)
 
 
+@pytest.mark.parametrize("version", ["2.4.1", "2.5.1+cpu", "2.6.0rc1", "unknown"])
+def test_toucan_refuses_unsupported_torch_before_checkpoint_loading(tmp_path, monkeypatch, version):
+    from lixity import speech_toucan
+
+    def load_module(name):
+        assert name == "torch"
+        return SimpleNamespace(__version__=version, load=lambda *args, **kw: pytest.fail("checkpoint load"))
+
+    monkeypatch.setattr(speech_toucan.importlib, "import_module", load_module)
+    with pytest.raises(ValueError, match=r"requires PyTorch 2\.6\.0 or later"):
+        speech_toucan._load_runtime(tmp_path, tmp_path, device="cpu", threads=1)
+
+
+def test_toucan_recognizes_stable_patched_torch_with_platform_suffix(tmp_path, monkeypatch):
+    from lixity import speech_toucan
+
+    setup = []
+
+    def load_module(name):
+        if name == "torch":
+            return SimpleNamespace(__version__="2.6.0+cpu", set_num_threads=setup.append)
+        raise ImportError(name)
+
+    monkeypatch.setattr(speech_toucan.importlib, "import_module", load_module)
+    with pytest.raises(ImportError, match="soundfile"):
+        speech_toucan._load_runtime(tmp_path, tmp_path, device="cpu", threads=1)
+    assert setup == [1]
+
+
 def test_phoneme_overrides_are_exact_longest_whole_word_and_plain_gaps_use_g2p():
     module = importlib.import_module("lixity.speech_toucan")
     calls = []

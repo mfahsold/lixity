@@ -5,9 +5,9 @@
 > share an offline analysis engine. Measurements describe the supplied text and
 > help an author decide what to review.
 
-Documentation source version: 0.9.2. Check the [latest GitHub release](https://github.com/mfahsold/lixity/releases/latest)
+Documentation source version: 0.9.3. Check the [latest GitHub release](https://github.com/mfahsold/lixity/releases/latest)
 and [PyPI](https://pypi.org/project/lixity/) for published packages.
-[Release notes](https://mfahsold.github.io/lixity/releases/v0.9.2.md) describe this
+[Release notes](https://mfahsold.github.io/lixity/releases/v0.9.3.md) describe this
 source version. Product versions, response schemas and archive schemas are separate.
 
 ## Discover the installed interface

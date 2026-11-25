@@ -188,17 +188,21 @@ def strip_runtime_bloat(python_root: Path, *, keep_exe_name: str = "python3.12")
 
 
 def bundled_python_exe(bundle_root: Path, relpath: str) -> Path:
-    candidate = bundle_root / relpath
-    if candidate.exists():
-        return candidate
-    for fallback in (
-        bundle_root / "python" / "bin" / "python3.12",
-        bundle_root / "python" / "bin" / "python3",
-        bundle_root / "python" / "bin" / "python",
-        bundle_root / "python" / "python.exe",
+    root = bundle_root.resolve()
+    for relative in (
+        relpath,
+        "python/bin/python3.12",
+        "python/bin/python3",
+        "python/bin/python",
+        "python/python.exe",
     ):
-        if fallback.exists():
-            return fallback
+        candidate = bundle_root / relative
+        try:
+            resolved = candidate.resolve(strict=True)
+        except (OSError, RuntimeError):
+            continue
+        if resolved.is_relative_to(root) and resolved.is_file():
+            return candidate
     raise FileNotFoundError(f"Could not locate bundled Python executable under {bundle_root}")
 
 

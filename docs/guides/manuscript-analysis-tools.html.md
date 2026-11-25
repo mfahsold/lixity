@@ -1,28 +1,27 @@
 # Which manuscript analysis tool fits your work?
 
-Four families of tools answer different questions about a manuscript. This page compares them by workflow: what each is good at, what it does not do, and where Lixity fits. None of them replaces an editor, and none of the descriptions below rank the tools against each other.
+Start with the decision you want to make. Finding a repeated phrase, revising a scene and sharing a draft with an editor each call for a different workflow. Use these examples to decide what to try with your own text.
 
-Updated 23 October 2026
+Updated 25 November 2026
 
 <a id="families"></a>
 
-## The families at a glance
+## Choose a tool by task
 
-**Grammar and style checkers** focus on sentences and phrasing. **Corpus and concordance tools** explore texts and collections quantitatively. **Stylometry and NLP packages** measure text through scripts. **Story and structure tools** focus on plot, scenes and characters. These categories overlap; they describe starting workflows, not exclusive feature lists. Lixity's focus is comparing language patterns within a manuscript and following their exact text and research context.
-
-| Tool family | Primary focus | Runs locally | Account needed | Typical fit |
-| --- | --- | --- | --- | --- |
-| Grammar and style checkers | Sentence corrections, style suggestions | Partly (offline editions exist) | Usually yes | Line-level polishing |
-| Corpus and concordance tools | Concordances, frequencies, collections | Yes | No | Research on text collections |
-| Stylometry and NLP packages | Scriptable measurement and models | Yes | No | Academic and automated analysis |
-| Story and structure tools | Plot, scenes, characters, planning | Partly | Often yes | Developmental editing and outlining |
-| Lixity | Language patterns across one manuscript, linked to passages | Yes | No | Revision review with evidence |
+| Your task | Examples to evaluate | What to try |
+| --- | --- | --- |
+| Polish sentences or review an entire draft | [ProWritingAid](https://help.prowritingaid.com/article/318-what-is-manuscript-analysis), [AutoCrit](https://www.autocrit.com/story-analyzer-plus/), [Papyrus](https://papyrus.de/features/style-analysis) | Open a passage-level suggestion and review the same issue across the book. |
+| Draft and organize chapters | [Scrivener](https://www.literatureandlatte.com/scrivener/overview), [Papyrus](https://papyrus.de/) | Move a scene, compare an earlier version and export the draft. |
+| Review story structure | [Fictionary](https://fictionary.co/writers-software/) | Tag a scene, inspect the arc across scenes and check the editorial notes. |
+| Collaborate or keep Markdown notes | [Ellipsus](https://help.ellipsus.com/support/solutions/articles/205000067329), [Obsidian](https://obsidian.md/help/data-storage) | Use Ellipsus to review a shared draft and comments. Use Obsidian to link and read notes stored as local files. |
+| Explore a collection or run a study | [AntConc](https://www.laurenceanthony.net/software/antconc/), [Voyant](https://docs.voyant-tools.org/docs/tutorial-local.html), [stylo](https://cran.r-project.org/package=stylo) | Inspect a concordance or reproduce a measurement across a collection. Voyant also offers a local server. |
+| Review a passage and keep the reasoning with your project | [Lixity](#lixity) | Follow counted text, decide on a revision, open an exact source citation and share the selected reading copy. |
 
 <a id="checkers"></a>
 
 ## Choose a grammar or style checker if…
 
-…you want sentence-level corrections, readability scores and phrasing suggestions while you write. Established examples are [LanguageTool](https://languagetool.org/), [ProWritingAid](https://prowritingaid.com/), [AutoCrit](https://www.autocrit.com/) and [Grammarly](https://www.grammarly.com/). They typically work through an account, and several offer manuscript-level reports in addition to in-line checking. Their suggestions are prescriptive by design: the tool proposes a change.
+…you want suggested corrections, clarity feedback or a broader editorial report. AutoCrit and ProWritingAid document whole-manuscript reports and passage-level findings. Papyrus combines in-text style and readability analysis with book-writing tools. Check the edition and its operating requirements. ProWritingAid, for example, documents internet access as a requirement. [AutoCrit reports](https://help.autocrit.com/en/collections/2339242-interpreting-autocrit-results) · [ProWritingAid requirements](https://help.prowritingaid.com/article/99-what-do-i-need-to-use-prowritingaid) · [Papyrus style analysis](https://papyrus.de/features/style-analysis)
 
 <a id="corpus"></a>
 
@@ -40,7 +39,7 @@ Updated 23 October 2026
 
 ## Choose a story or structure tool if…
 
-…your next decision is about plot, scenes or character arcs. [Fictionary](https://fictionary.co/) and [Scrivener](https://www.literatureandlatte.com/scrivener/) offer story-development or writing workflows. Their language and pacing features can overlap with other categories. Compare the current product documentation and a concrete task rather than assuming that a story tool cannot measure language.
+…your next decision is about plot, scenes or character arcs. Fictionary visualizes scene-level story elements. Scrivener combines chapter and scene organization with snapshots and section comparison. If you already draft in another app, export a chapter as Word, Markdown or plain text to review a copy in Lixity. [Fictionary](https://fictionary.co/writers-software/) · [Scrivener](https://www.literatureandlatte.com/scrivener/overview) · [Import a manuscript](installation.html#first-dashboard)
 
 <a id="assistants"></a>
 
@@ -54,7 +53,9 @@ Lixity’s built-in analysis computes documented statistics from your manuscript
 
 ## Choose Lixity if…
 
-…you want to see how *your* manuscript behaves over its chapters and keep the evidence next to your decisions: sentence rhythm, vocabulary, dialogue and tense; comparisons against the book’s own baseline; paragraph text and measurements for review; and a local research archive connecting sources and quotations to claims and writing decisions. Built-in analysis runs on your computer without cloud calls or an account. German and English have the deepest language profiles.
+…you want to follow a difference back to the words that produced it. Inspect a measurement such as sentence length, quoted words or a repeated phrase. Compare chapters against the manuscript's own reference, or compare a draft and its saved revision using the same settings. Treat the measurement as a prompt for reading. [Methods and limits](interpretation.html)
+
+Keep the background beside the passage when it affects your decision. Open a dossier or the exact retained source revision behind a saved link. In **Story rehearsal**, write a beat such as a delayed answer or a revelation and try a different order for your cards. Save the cards when you want to keep the experiment. Share a dossier PDF or a reading copy with the chapters and notes you select. Built-in analysis runs on your computer without a Lixity account. German and English have the deepest language profiles. [Research and exports](research-pdf.html) · [Story rehearsal](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#compare-scene-evidence-and-rehearse-an-intent)
 
 Explore [*The Crate at Warehouse 4*](../demo/report.html), one read-only project with manuscript analysis, research and PDF layouts, using the [first-look walkthrough](first-look.html). No installation is needed. The separate [Fontane case study](../blog/effi-briest-case-study.html) examines a public-domain novel; it is not another product demo.
 
@@ -96,6 +97,6 @@ German and English have the deepest linguistic resources; French, Spanish, Itali
 
 No. Lixity computes deterministic statistics from your text and documents their limits. It generates no prose and produces no quality score; the author judges the text.
 
-Tool names link to official project/vendor pages. This is a workflow comparison, not a complete or continuously verified feature inventory, ranking or endorsement. Check current versions, platform support and data handling before choosing.
+The links document the workflows cited here. Check the current edition, platform support and data handling when evaluating a tool. Try the same passage in the tools that look relevant and compare how easily you can find the evidence and return to your draft.
 
 [All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

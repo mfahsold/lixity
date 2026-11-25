@@ -4,7 +4,9 @@ import json
 import re
 import shutil
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
+from threading import Event
 from urllib.parse import urlencode
 
 import pytest
@@ -299,6 +301,38 @@ def test_manuscript_delta_can_bind_measurements_to_the_review_page(project):
         assert unbound.json["current"]["asl"] == 1.0
         assert original.json["current"]["asl"] != unbound.json["current"]["asl"]
         assert server.request("/api/manuscript-delta" + review_query()).json == unbound.json
+
+
+def test_pending_manuscript_delta_allows_open_and_rechecks_the_review_context(project, monkeypatch):
+    from lixity.manuscript_editing import ManuscriptStore
+    from lixity.server.pdf_context import manuscript_pdf_token
+
+    source = project / "manuscript.md"
+    settings = project / "lixity.toml"
+    handler = make_handler(project, source_input=source)
+    handler.refresh()
+    token = manuscript_pdf_token(str(source), project_root=project, language=handler.language,
+                                title=handler.title, thresholds=handler.thresholds)
+    measuring, release = Event(), Event()
+    measure = ManuscriptStore._measure_snapshot
+
+    def pending_measurement(store, text, config):
+        measuring.set()
+        assert release.wait(timeout=5)
+        return measure(store, text, config)
+
+    monkeypatch.setattr(ManuscriptStore, "_measure_snapshot", pending_measurement)
+    with LoopbackServer(handler) as server, ThreadPoolExecutor(max_workers=2) as pool:
+        comparison = pool.submit(server.request, "/api/manuscript-delta?" + urlencode({"project_token": token}))
+        try:
+            assert measuring.wait(timeout=3)
+            opened = pool.submit(server.request, "/api/manuscript-edit").result(timeout=2)
+            assert opened.status == 200
+            assert opened.json["text"] == TEXT
+            settings.write_text(settings.read_text() + 'word_regex = "[A-Z][a-z]+"\n')
+        finally:
+            release.set()
+        assert comparison.result(timeout=3).status == 409
 
 
 @pytest.mark.parametrize("route", ["analysis-review", "manuscript-delta"])

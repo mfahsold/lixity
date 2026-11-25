@@ -19,7 +19,9 @@ use std::time::{Duration, Instant};
 
 pub const TARGET_SAMPLE_RATE: u32 = 24_000;
 const MIN_DURATION_SEC: f32 = 1.0;
-const MAX_DURATION_SEC: f32 = 30.0;
+const MAX_DURATION_SEC: f32 = 60.0;
+const MAX_CALIBRATION_DURATION_SEC: f32 = 30.0;
+const NO_SIGNAL_DBFS: f64 = -120.0;
 
 #[derive(Debug, Serialize)]
 pub struct CaptureDeviceInfo {
@@ -41,6 +43,7 @@ pub struct CalibrationReport {
     pub schema_version: &'static str,
     pub duration_seconds: f64,
     pub sample_rate: u32,
+    pub signal_present: bool,
     pub peak_dbfs: f64,
     pub clipping_samples: usize,
     pub noise_floor_dbfs: f64,
@@ -67,6 +70,7 @@ pub struct RecordedTakeResult {
 pub struct RecordingLiveStatus {
     pub recording: bool,
     pub elapsed_seconds: f64,
+    pub signal_present: bool,
     pub peak_dbfs: f64,
     pub rms_dbfs: f64,
     pub auto_stopped: bool,
@@ -78,8 +82,9 @@ impl Default for RecordingLiveStatus {
         Self {
             recording: false,
             elapsed_seconds: 0.0,
-            peak_dbfs: -120.0,
-            rms_dbfs: -120.0,
+            signal_present: false,
+            peak_dbfs: NO_SIGNAL_DBFS,
+            rms_dbfs: NO_SIGNAL_DBFS,
             auto_stopped: false,
             max_duration_seconds: MAX_DURATION_SEC,
         }
@@ -90,6 +95,7 @@ type CaptureResult = Result<(Vec<f32>, u32), String>;
 
 struct ActiveCapture {
     window: String,
+    max_duration_seconds: f32,
     stop_flag: Arc<AtomicBool>,
     auto_stopped: Arc<AtomicBool>,
     live_peak_bits: Arc<AtomicU32>,
@@ -114,7 +120,11 @@ impl InteractiveRecorder {
         window: String,
         device_name: Option<String>,
         filename: String,
+        max_duration_seconds: Option<u32>,
     ) -> Result<(), String> {
+        let max_duration_seconds =
+            max_duration_seconds.map_or(MAX_DURATION_SEC, |seconds| seconds as f32);
+        validate_duration(max_duration_seconds, MAX_DURATION_SEC)?;
         let mut guard = self
             .active
             .lock()
@@ -137,6 +147,7 @@ impl InteractiveRecorder {
         let join_handle = thread::spawn(move || {
             run_capture_loop(
                 device_name.as_deref(),
+                max_duration_seconds,
                 thread_stop,
                 thread_auto,
                 thread_peak,
@@ -147,6 +158,7 @@ impl InteractiveRecorder {
 
         *guard = Some(ActiveCapture {
             window,
+            max_duration_seconds,
             stop_flag: Arc::clone(&stop_flag),
             auto_stopped,
             live_peak_bits,
@@ -198,11 +210,17 @@ impl InteractiveRecorder {
         let rms_amp = f32::from_bits(active.live_rms_bits.load(Ordering::Relaxed)) as f64;
         RecordingLiveStatus {
             recording: !auto && !active.join_handle.is_finished(),
-            elapsed_seconds: round2(started_at.elapsed().as_secs_f64()),
+            elapsed_seconds: round2(
+                started_at
+                    .elapsed()
+                    .as_secs_f64()
+                    .min(f64::from(active.max_duration_seconds)),
+            ),
+            signal_present: peak_amp > 0.0,
             peak_dbfs: round1(dbfs(peak_amp * 32_768.0)),
             rms_dbfs: round1(dbfs(rms_amp * 32_768.0)),
             auto_stopped: auto,
-            max_duration_seconds: MAX_DURATION_SEC,
+            max_duration_seconds: active.max_duration_seconds,
         }
     }
 
@@ -352,7 +370,11 @@ pub fn encode_mono_pcm16_wav(samples: &[i16], sample_rate: u32) -> Result<Vec<u8
 }
 
 pub fn dbfs(value: f64) -> f64 {
-    20.0 * (value.max(1.0) / 32768.0).log10()
+    if value == 0.0 {
+        NO_SIGNAL_DBFS
+    } else {
+        20.0 * (value.max(1.0) / 32768.0).log10()
+    }
 }
 
 fn round1(v: f64) -> f64 {
@@ -370,9 +392,10 @@ pub fn analyze_pcm16_signal(samples: &[i16], sample_rate: u32) -> CalibrationRep
             schema_version: "lixity-audio-calibration/1",
             duration_seconds: 0.0,
             sample_rate,
-            peak_dbfs: -120.0,
+            signal_present: false,
+            peak_dbfs: NO_SIGNAL_DBFS,
             clipping_samples: 0,
-            noise_floor_dbfs: -120.0,
+            noise_floor_dbfs: NO_SIGNAL_DBFS,
             snr_db: 0.0,
             segments: Vec::new(),
             verdict: "too_quiet",
@@ -413,7 +436,7 @@ pub fn analyze_pcm16_signal(samples: &[i16], sample_rate: u32) -> CalibrationRep
         .into_iter()
         .reduce(f64::min)
         .map(dbfs)
-        .unwrap_or(-120.0);
+        .unwrap_or(NO_SIGNAL_DBFS);
     let snr_db = (peak_db - floor_db).max(0.0);
 
     let (verdict, verdict_label) = if (-13.0..=-7.0).contains(&peak_db) {
@@ -428,6 +451,7 @@ pub fn analyze_pcm16_signal(samples: &[i16], sample_rate: u32) -> CalibrationRep
         schema_version: "lixity-audio-calibration/1",
         duration_seconds: round2(samples.len() as f64 / sample_rate as f64),
         sample_rate,
+        signal_present: peak_val > 0.0,
         peak_dbfs: round1(peak_db),
         clipping_samples: clipping,
         noise_floor_dbfs: round1(floor_db),
@@ -572,6 +596,7 @@ fn finish_capture(
 
 fn run_capture_loop(
     device_name: Option<&str>,
+    max_duration_seconds: f32,
     stop_flag: Arc<AtomicBool>,
     auto_stopped: Arc<AtomicBool>,
     live_peak_bits: Arc<AtomicU32>,
@@ -597,10 +622,10 @@ fn run_capture_loop(
     let channels = supported.channels() as usize;
     let sample_format = supported.sample_format();
     let config: cpal::StreamConfig = supported.into();
-    let max_samples = (sample_rate as f64 * MAX_DURATION_SEC as f64) as usize;
+    let max_samples = capture_frame_limit(sample_rate, max_duration_seconds);
 
     let captured: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::with_capacity(
-        (sample_rate as usize).saturating_mul(10),
+        max_samples.min((sample_rate as usize).saturating_mul(10)),
     )));
     let stream_err: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
 
@@ -638,7 +663,7 @@ fn run_capture_loop(
     let _ = ready_tx.send(Ok(()));
 
     let started = Instant::now();
-    let max_dur = Duration::from_secs_f32(MAX_DURATION_SEC);
+    let max_dur = Duration::from_secs_f32(max_duration_seconds);
     while !stop_flag.load(Ordering::Relaxed)
         && !auto_stopped.load(Ordering::Relaxed)
         && stream_err.lock().is_ok_and(|error| error.is_none())
@@ -652,12 +677,25 @@ fn run_capture_loop(
     finish_capture(stream, &captured, &stream_err, sample_rate)
 }
 
-fn record_mono_f32(device_name: Option<&str>, duration_seconds: f32) -> Result<(Vec<f32>, u32), String> {
-    if !(MIN_DURATION_SEC..=MAX_DURATION_SEC).contains(&duration_seconds) {
+fn capture_frame_limit(sample_rate: u32, duration_seconds: f32) -> usize {
+    (f64::from(sample_rate) * f64::from(duration_seconds)) as usize
+}
+
+fn validate_duration(seconds: f32, maximum: f32) -> Result<(), String> {
+    if !(MIN_DURATION_SEC..=maximum).contains(&seconds) {
         return Err(format!(
-            "Recording duration must be between {MIN_DURATION_SEC} and {MAX_DURATION_SEC} seconds"
+            "Recording duration must be between {MIN_DURATION_SEC} and {maximum} seconds"
         ));
     }
+    Ok(())
+}
+
+fn record_mono_f32(
+    device_name: Option<&str>,
+    duration_seconds: f32,
+    maximum_seconds: f32,
+) -> CaptureResult {
+    validate_duration(duration_seconds, maximum_seconds)?;
     let device = select_input_device(device_name)?;
     let supported = device
         .default_input_config()
@@ -666,7 +704,7 @@ fn record_mono_f32(device_name: Option<&str>, duration_seconds: f32) -> Result<(
     let channels = supported.channels() as usize;
     let sample_format = supported.sample_format();
     let config: cpal::StreamConfig = supported.into();
-    let max_samples = (sample_rate as f32 * (duration_seconds + 0.5)) as usize;
+    let max_samples = capture_frame_limit(sample_rate, duration_seconds);
 
     let captured: Arc<Mutex<Vec<f32>>> = Arc::new(Mutex::new(Vec::with_capacity(max_samples)));
     let stream_err: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
@@ -728,7 +766,7 @@ pub fn calibrate_microphone(
     device_name: Option<&str>,
     duration_seconds: f32,
 ) -> Result<CalibrationReport, String> {
-    let (raw, rate) = record_mono_f32(device_name, duration_seconds)?;
+    let (raw, rate) = record_mono_f32(device_name, duration_seconds, MAX_CALIBRATION_DURATION_SEC)?;
     let pcm = f32_to_pcm16(&raw);
     Ok(analyze_pcm16_signal(&pcm, rate))
 }
@@ -738,13 +776,24 @@ pub fn record_wav_take(
     duration_seconds: f32,
     filename: &str,
 ) -> Result<RecordedTakeResult, String> {
-    let (raw, rate) = record_mono_f32(device_name, duration_seconds)?;
+    let (raw, rate) = record_mono_f32(device_name, duration_seconds, MAX_DURATION_SEC)?;
     finalize_wav_take(&raw, rate, filename)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn recording_status_and_buffer_share_the_sixty_second_limit() {
+        let status = InteractiveRecorder::default().status("synthetic-window");
+        assert_eq!(status.max_duration_seconds, 60.0);
+        assert_eq!(
+            capture_frame_limit(48_000, status.max_duration_seconds),
+            2_880_000
+        );
+        assert_eq!(capture_frame_limit(48_000, 31.5), 1_512_000);
+    }
 
     #[test]
     fn capture_keeps_only_the_first_channel_and_stops_at_the_sample_limit() {
@@ -763,6 +812,7 @@ mod tests {
         let calibrated = vec![10_362_i16; 24_000];
         let report = analyze_pcm16_signal(&calibrated, 24_000);
         assert_eq!(report.verdict, "calibrated");
+        assert!(report.signal_present);
         assert_eq!(report.clipping_samples, 0);
 
         // Clipping signal -> too_hot
@@ -772,6 +822,12 @@ mod tests {
         // Quiet signal -> too_quiet
         let quiet = vec![500_i16; 24_000];
         assert_eq!(analyze_pcm16_signal(&quiet, 24_000).verdict, "too_quiet");
+
+        let silent = vec![0_i16; 24_000];
+        let report = analyze_pcm16_signal(&silent, 24_000);
+        assert!(!report.signal_present);
+        assert_eq!(report.peak_dbfs, -120.0);
+        assert_eq!(report.noise_floor_dbfs, -120.0);
     }
 
     #[test]
@@ -810,6 +866,7 @@ mod tests {
         let capture_stop = Arc::clone(&stop_flag);
         ActiveCapture {
             window: "recording-window".to_string(),
+            max_duration_seconds: 37.0,
             stop_flag,
             auto_stopped: Arc::new(AtomicBool::new(false)),
             live_peak_bits: Arc::new(AtomicU32::new(0)),
@@ -835,13 +892,36 @@ mod tests {
         assert_eq!(recorder.status("other"), RecordingLiveStatus::default());
         assert!(recorder.stop("other").is_err());
         recorder.cancel("other");
-        assert!(recorder.status("recording-window").recording);
+        let status = recorder.status("recording-window");
+        assert!(status.recording);
+        assert_eq!(status.max_duration_seconds, 37.0);
+        assert_eq!(
+            capture_frame_limit(48_000, status.max_duration_seconds),
+            1_776_000
+        );
         assert!(!stopped.load(Ordering::SeqCst));
 
         let take = recorder.stop("recording-window").unwrap();
         assert_eq!(take.frames, 240);
         assert!(stopped.load(Ordering::SeqCst));
         assert!(!recorder.owns_capture("recording-window"));
+    }
+
+    #[test]
+    fn invalid_interactive_limits_are_rejected_before_opening_the_device() {
+        let recorder = InteractiveRecorder::default();
+        for seconds in [0, 61] {
+            let error = recorder
+                .start(
+                    "synthetic-window".to_string(),
+                    None,
+                    "synthetic.wav".to_string(),
+                    Some(seconds),
+                )
+                .unwrap_err();
+            assert_eq!(error, "Recording duration must be between 1 and 60 seconds");
+            assert!(!recorder.owns_capture("synthetic-window"));
+        }
     }
 
     #[test]

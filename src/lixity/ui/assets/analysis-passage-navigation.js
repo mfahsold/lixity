@@ -22,6 +22,7 @@
   // --- Step 2: Rhythm sentences, sticky sentences & word-pattern jumps ----
   var craftBar = C.ensureJumpBar("craft-jump-bar", "craft-jump-bar", chapters);
   var readerResults = document.getElementById("reader-counted-results");
+  var readerEmpty = document.getElementById("reader-counted-empty");
   var readerChapters = Array.from(chapters.querySelectorAll("[data-chapter-counted-results]"), function(button) {
     return {button:button, chapter:button.closest(".chapter").id.slice(3), status:button.parentElement};
   });
@@ -181,7 +182,8 @@
     var key = select?.value && select.selectedOptions[0]?.dataset.available !== "0" ? select.value : "";
     var state = window.LixityWorkbench?.state();
     var active = Boolean(key && state?.view === "analysis" && state.surface === "document" && state.analysisVisible && !state.focus);
-    var groups = active ? layerPassages(key).filter(function(group) {return !passageBlocker(group.panel);}) : [];
+    var matches = active ? layerPassages(key) : [];
+    var groups = matches.filter(function(group) {return !passageBlocker(group.panel);});
     if (activeJump?.reader && (!active || key !== readerLayer || groups.length !== readerGroups.length ||
         groups.some(function(group, index) {return group !== readerGroups[index];}))) clearCraftJump(false);
     readerGroups = groups;
@@ -191,10 +193,15 @@
       total += group.count;
       byChapter.set(group.chapter, (byChapter.get(group.chapter) || 0) + group.count);
     });
-    readerResults.hidden = !active;
+    readerResults.hidden = !active || !total;
     readerResults.disabled = !total;
     readerResults.textContent = uiFormat("reader_evidence_results", {total:total});
-    readerResults.dataset.help = L(total ? "reader_evidence_results_help" : "reader_evidence_results_empty");
+    if (readerEmpty) {
+      readerEmpty.hidden = !active || Boolean(total);
+      var emptyMessage = readerEmpty.hidden ? "" :
+        L(matches.length ? "reader_evidence_results_filtered" : "reader_evidence_results_empty");
+      if (readerEmpty.textContent !== emptyMessage) readerEmpty.textContent = emptyMessage;
+    }
     readerChapters.forEach(function(item) {
       var count = byChapter.get(item.chapter) || 0;
       item.button.hidden = item.status.hidden || !count;

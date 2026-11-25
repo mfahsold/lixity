@@ -343,6 +343,7 @@ server.serve_forever()
       const dialog=page.locator('#modal-speech');
       await page.waitForFunction(()=>document.querySelector('#speech-name')?.value==='Narrator');
       assert.equal(await dialog.isVisible(),true);
+      assert.equal(await dialog.evaluate(el=>el.matches(':modal')),true,'Project audio settings keep their modal surface');
       assert.equal(await page.locator('#speech-name').isVisible(),true, 'Project audio opens the profile editor');
       assert.equal(await page.locator('#speech-direction_text').isVisible(),false, 'Passage direction is reserved for the reader');
       assert.equal(await page.locator('#speech-chapter').isVisible(),false, 'Chapter output has a separate entry');
@@ -353,16 +354,23 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-worker-guide').textContent(),labels.speech_worker_guide);
       assert.ok((await page.locator('#speech-worker-guide').getAttribute('href')).endsWith('/USAGE.md#lixity-read-aloud'));
       assert.equal(await page.locator('#speech-worker-guide').getAttribute('rel'),'noopener noreferrer');
-      assert.equal(await page.locator('#speech-engine option[value=qwen3]').textContent(),data.audioCapabilities['qwen3'].name);
-      assert.equal(await page.locator('#speech-engine option[value=qwen3-design]').textContent(),data.audioCapabilities['qwen3-design'].name);
-      assert.equal(await page.locator('#speech-engine option[value=qwen3-base]').textContent(),data.audioCapabilities['qwen3-base'].name);
-      assert.equal(await page.locator('#speech-engine option[value=coqui]').textContent(),data.audioCapabilities.coqui.name);
-      assert.equal(await page.locator('#speech-engine option[value=coqui-reference]').textContent(),data.audioCapabilities['coqui-reference'].name);
+      for (const engine of ['qwen3', 'qwen3-design', 'qwen3-base', 'coqui', 'coqui-reference']) {
+        assert.equal(await page.locator('#speech-engine option[value=' + engine + ']').textContent(),
+          data.audioCapabilities[engine].short_name,
+          'The picker uses the short model name');
+      }
+      assert.ok((await page.locator('#speech-engine').getAttribute('data-help')).includes(data.audioCapabilities.qwen3.name),
+        'Full model name remains available in help');
       const originalSpeechLanguage = await page.locator('#speech-language').inputValue();
       await page.locator('#speech-engine').selectOption('coqui');
       assert.ok((await page.locator('#speech-worker-guide').getAttribute('href')).endsWith('/USAGE.md#experimental-coqui-and-openvoice-audio-unreleased'));
       assert.equal(await page.locator('#speech-language').inputValue(),'de');
       assert.equal(await page.locator('#speech-voice').inputValue(),'thorsten');
+      assert.equal(await page.locator('#speech-language').isVisible(),false);
+      assert.equal(await page.locator('#speech-voice').isVisible(),false);
+      assert.deepEqual(await page.locator('.speech-profile-voice-grid .speech-choice-readout:visible strong').allTextContents(),
+        [new Intl.DisplayNames([locale], {type:'language'}).of('de'),data.audioCapabilities.coqui.voices.thorsten.name],
+        'Fixed language and voice are readable without artificial choices');
       assert.equal(await page.locator('#speech-instructions').isVisible(),false);
       assert.equal(await page.locator('#speech-runtime-hint').textContent(),labels.speech_runtime_hint);
       assert.equal(await page.locator('#speech-direction-hint').textContent(),labels.speech_instructions_export_only);
@@ -373,7 +381,8 @@ server.serve_forever()
       assert.ok((await page.locator('#speech-worker-guide').getAttribute('href')).endsWith('/USAGE.md#lixity-read-aloud'));
       assert.equal(await page.locator('#speech-direction-hint').textContent(),labels.speech_direction_hint);
       await page.locator('#speech-language').selectOption(originalSpeechLanguage);
-      assert.equal(await page.locator('#speech-engine').getAttribute('aria-describedby'),'speech-model-hint speech-worker-status');
+      assert.equal(await page.locator('#speech-language').isVisible(),true);
+      await page.locator('#speech-service > summary').click();
       assert.ok(await page.locator('#speech-worker-status').isVisible());
       const workerText = (key, model) => labels['speech_worker_' + key]
         .replace('{target}', labels.speech_target_local).replace('{model}', model);
@@ -393,10 +402,12 @@ server.serve_forever()
       await page.waitForFunction(text => document.querySelector('#speech-worker-status').textContent === text,
         workerText('match',data.audioCapabilities.qwen3.name));
 
-      assert.equal(await page.locator('#speech-target').isVisible(),true, 'Profile work can inspect either worker without changing saved settings');
-      await page.locator('#speech-target').selectOption('jetson');
+      const workerTarget=page.locator('#speech-worker_target');
+      assert.equal(await workerTarget.isVisible(),true, 'Profile work can inspect either worker without changing saved settings');
+      assert.equal(await page.locator('#speech-target').isVisible(),false, 'Render target is selected beside the render action');
+      await workerTarget.selectOption('jetson');
       assert.equal(await page.locator('#speech-worker-status').textContent(),labels.speech_worker_unavailable.replace('{target}', labels.speech_target_jetson));
-      await page.locator('#speech-target').selectOption('local');
+      await workerTarget.selectOption('local');
       if (locale === 'en' && width === 1440) {
         let releaseRefresh, markRefresh;
         const heldRefresh = new Promise(resolve => { markRefresh = resolve; });
@@ -404,12 +415,12 @@ server.serve_forever()
         await page.route('**/api/speech?*', async route => { markRefresh(); await refreshGate; await route.fallback(); }, {times:1});
         await page.locator('[data-speech-action=worker_refresh]').click();
         await heldRefresh;
-        await page.locator('#speech-target').selectOption('jetson');
+        await workerTarget.selectOption('jetson');
         const response = page.waitForResponse(result=>new URL(result.url()).pathname.endsWith('/api/speech'));
         releaseRefresh(); await response;
         await page.waitForFunction(()=>!document.querySelector('[data-speech-action=worker_refresh]').disabled);
         assert.equal(await page.locator('#speech-worker-status').textContent(),labels.speech_worker_unavailable.replace('{target}', labels.speech_target_jetson), 'Refresh follows the current target');
-        await page.locator('#speech-target').selectOption('local');
+        await workerTarget.selectOption('local');
       }
       await page.locator('#speech-engine').evaluate(el=>el.scrollIntoView({block:'center'}));
       await dialog.screenshot({path:path.join(artifacts,`voice-preset-${locale}-${width}.png`)});
@@ -491,7 +502,7 @@ server.serve_forever()
         await page.route('**/api/speech?*', async route => { markOldRefresh(); await oldRefreshGate; await route.fallback(); }, {times:1});
         await page.locator('[data-speech-action=worker_refresh]').click();
         await heldOldRefresh;
-      }
+      } else await workerTarget.selectOption('jetson');
       await page.locator('[data-speech-action=profiles_discard]').click();
       await page.keyboard.press('Escape');
       await page.locator('#tab-view-analysis').click();
@@ -513,22 +524,28 @@ server.serve_forever()
         assert.equal(await page.locator('[data-speech-action=worker_refresh]').isDisabled(),true, 'A late refresh cannot enable the new dialog');
         releaseSpeech();
       } else await page.locator('#reader-speech').click();
-      await page.waitForFunction(()=>!document.querySelector('#speech-name')?.disabled && document.querySelector('#speech-direction_text')?.value.includes('bird'));
+      await page.waitForFunction(() => document.querySelector('#speech-project-profile')?.textContent.includes('Narrator') &&
+        document.querySelector('#speech-direction_text')?.value.includes('bird') &&
+        !document.querySelector('#speech-direction_text')?.matches(':disabled'));
+      assert.equal(await dialog.evaluate(el=>el.matches('.speech-docked[open]')&&!el.matches(':modal')),true,
+        'Reader direction keeps the manuscript available outside the audio panel');
       assert.equal(await page.locator('#speech-name').isVisible(),false, 'Reader keeps the profile editor out of passage work');
       assert.equal(await page.locator('#speech-profile').isVisible(),false, 'Profile selection belongs to the profiles tab');
+      assert.match(await page.locator('#speech-project-profile').textContent(),/Narrator/);
+      assert.equal(await page.locator('#speech-worker_target').isVisible(),false, 'Worker inspection belongs to project settings');
       assert.equal(await page.locator('#speech-direction_instructions').getAttribute('aria-describedby'),'speech-direction-hint');
       assert.equal(await page.locator('#speech-direction-hint').textContent(), labels.speech_direction_hint);
       assert.equal(await page.locator('#speech-ignore-direction').isChecked(),false, 'Saved direction applies by default');
       assert.ok((await page.locator('#speech-ignore-direction').locator('..').textContent()).includes(labels.speech_ignore_direction));
       assert.equal(await page.locator('[data-speech-action=chapter_render]').isVisible(),false);
-      assert.equal(await dialog.locator('[data-speech-action=output_title]').textContent(), labels.speech_open_output, 'Opening chapter output is labeled as navigation');
-      assert.notEqual(labels.speech_open_output, labels.speech_chapter_render, 'Navigation and rendering have distinct labels');
+      assert.equal(await dialog.locator('[data-speech-action=output_title]').textContent(), labels.speech_chapter_output, 'Opening chapter output is labeled as navigation');
+      assert.notEqual(labels.speech_chapter_output, labels.speech_chapter_render, 'Navigation and rendering have distinct labels');
       assert.equal(await dialog.locator('#speech-status').evaluate(el => el.parentElement.classList.contains('modal-card')), true, 'Audio status stays outside the scrolling body');
       assert.equal(await page.locator('#speech-target').isDisabled(),false);
       assert.equal(await page.locator('#speech-runtime-hint').isVisible(),true);
       assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes(labels.speech_runtime_hint));
-      assert.equal(await page.locator('#speech-target').isVisible(),false, 'Execution target belongs to the profiles tab');
-      assert.equal(await page.locator('#speech-target').inputValue(),'local','Execution defaults to this computer');
+      assert.equal(await page.locator('#speech-target').isVisible(),true, 'Execution target is visible beside playback controls');
+      assert.equal(await page.locator('#speech-target').inputValue(),'local','Worker inspection does not change the render target');
       await page.waitForFunction(()=>document.querySelector('#speech-direction_text')?.value.includes('bird'));
       assert.equal(await page.locator('#speech-direction_text').getAttribute('readonly'),'');
       await page.locator('#speech-direction_style').selectOption('tense');
@@ -563,6 +580,8 @@ server.serve_forever()
       await page.locator('[data-speech-action=direction_plan]').click();
       const noDirectionPayload=(await withoutDirection).postDataJSON();
       assert.equal(noDirectionPayload.ignore_direction,true);
+      assert.equal(noDirectionPayload.profile_id,'narrator');
+      assert.equal(Object.hasOwn(noDirectionPayload,'profile'),false,'A plan uses the saved project voice by ID');
       assert.equal(Object.hasOwn(noDirectionPayload,'draft_direction'),false, 'Excluded directions do not send a draft');
       assert.equal(await page.locator('#speech-direction_instructions').inputValue(),draftInstructions, 'The excluded draft remains editable');
       await page.waitForFunction(()=>!document.querySelector('.speech-plan').hidden);
@@ -580,17 +599,30 @@ server.serve_forever()
         await extra.locator('#tab-view-analysis').click();
         await extra.locator('#reader-speech').click();
         await extra.waitForFunction(()=>document.querySelector('#speech-direction_text')?.value.includes('bird'));
-        await extra.locator('#speech-direction_instructions').fill('A draft that must remain visible.');
-        await extra.locator('#speech-ignore-direction').check();
+        const anchorBeforeOutput=await extra.locator('#speech-direction_passage').inputValue();
+        await extra.locator('#speech-direction_instructions').fill('A draft that must remain editable.');
+        await extra.locator('#speech-edit-project-voice').click();
+        assert.equal(await extra.locator('#speech-direction_instructions').isVisible(),true,
+          'Project settings cannot replace an unsaved direction draft');
         await extra.locator('#modal-speech [data-speech-action=output_title]').click();
-        assert.equal(await extra.locator('#speech-direction_instructions').isVisible(),true, 'The draft stays accessible in chapter output');
+        assert.equal(await extra.locator('#modal-speech').evaluate(el=>el.matches('.speech-docked[open]')&&!el.matches(':modal')),true,
+          'Output opened from the reader keeps the manuscript accessible');
+        assert.equal(await extra.locator('#speech-direction_instructions').isVisible(),false, 'Chapter output has its own controls');
+        await extra.locator('[data-speech-action=chapter_render]').click();
+        assert.equal(await extra.locator('#speech-status').textContent(),labels.speech_direction_save_first,
+          'Opening Output keeps the draft without using it for a chapter render');
+        await extra.locator('#speech-ignore-direction').check();
         const chapterRequest=extra.waitForRequest(request=>request.url().endsWith('/api/speech-render'));
         await extra.locator('[data-speech-action=chapter_render]').click();
         const chapterPayload=(await chapterRequest).postDataJSON();
         assert.equal(chapterPayload.ignore_direction,true);
         assert.equal(Object.hasOwn(chapterPayload,'draft_direction'),false);
         await extra.waitForFunction(()=>!document.querySelector('#speech-audio-player').hidden);
-        assert.equal(await extra.locator('#speech-direction_instructions').inputValue(),'A draft that must remain visible.');
+        await extra.locator('#speech-ignore-direction').uncheck();
+        await extra.locator('#speech-tab-direction').click();
+        assert.equal(await extra.locator('#speech-direction_instructions').isVisible(),true);
+        assert.equal(await extra.locator('#speech-direction_instructions').inputValue(),'A draft that must remain editable.');
+        assert.equal(await extra.locator('#speech-direction_passage').inputValue(),anchorBeforeOutput);
         await extra.locator('[data-speech-action=direction_discard]').click();
         await extra.locator('#modal-speech [data-speech-action=close]').click();
         await extra.close();
@@ -623,7 +655,9 @@ server.serve_forever()
       await page.waitForFunction(()=>document.querySelector('#speech-direction_entries').options.length===2);
       assert.equal(await page.locator('#speech-chapter').isDisabled(), false, 'Chapter selection returns after save');
       const ledger=path.join(project.root,'.lixity','audio-directions.json');
-      assert.equal(JSON.parse(fs.readFileSync(ledger)).entries.length,1);
+      const savedDirection=JSON.parse(fs.readFileSync(ledger)).entries;
+      assert.equal(savedDirection.length,1);
+      assert.deepEqual(savedDirection[0].direction.anchor,JSON.parse(originalPassage),'The saved direction retains the selected manuscript anchor');
       await page.locator('#speech-direction_entries').selectOption({index:1});
       const originalEntry = await page.locator('#speech-direction_entries').inputValue();
       await page.locator('#speech-direction_instructions').fill('A synthetic draft direction.');
@@ -655,18 +689,12 @@ server.serve_forever()
       await page.locator('[data-speech-action=preview]').click();
       await page.waitForFunction(()=>!document.querySelector('#speech-audio-player').hidden);
       const audio=page.locator('#speech-audio-player');
-      async function selectExecutionTarget(target) {
-        const output = await page.locator('[data-speech-action=chapter_render]').isVisible();
-        await page.locator('#speech-tab-profiles').click();
-        await page.locator('#speech-target').selectOption(target);
-        await page.locator('#speech-tab-reader').click();
-        if (output) await dialog.locator('[data-speech-action=output_title]').click();
-      }
+      const renderTarget=page.locator('#speech-target');
       const response=await page.request.get(new URL(await audio.getAttribute('src'),server.fixture.url).href);
       assert.equal(response.status(),200);
       assert.equal((await response.body()).subarray(0,4).toString(),'RIFF');
       assert.ok((await page.locator('#modal-speech').textContent()).includes(labels.speech_paragraph_preview));
-      await selectExecutionTarget('jetson');
+      await renderTarget.selectOption('jetson');
       assert.equal(await audio.evaluate(element => element.hidden),true,'Changing execution target removes audio from the previous target');
       assert.equal(await page.locator('#speech-runtime-hint').textContent(), labels.speech_runtime_hint,
         'The render hint stays capability-neutral while the explicit execution target changes');
@@ -674,21 +702,20 @@ server.serve_forever()
       await page.locator('[data-speech-action=preview]').click();
       const jetsonPayload=(await jetsonRequest).postDataJSON();
       assert.equal(jetsonPayload.target,'jetson');
-      assert.equal(jetsonPayload.profile.engine,'qwen3');
-      assert.equal(jetsonPayload.profile.speed,1);
-      assert.equal(Object.hasOwn(jetsonPayload.profile,'target'),false,'Execution selection is separate from the portable narrator');
+      assert.equal(jetsonPayload.profile_id,'narrator');
+      assert.equal(Object.hasOwn(jetsonPayload,'profile'),false,'Execution selection is separate from the saved narrator');
       await page.waitForFunction(()=>!document.querySelector('#speech-audio-player').hidden);
       await dialog.locator('.modal-body').evaluate(el=>{el.scrollTop=el.scrollHeight;});
       await dialog.screenshot({path:path.join(artifacts,`audio-jetson-${locale}-${width}.png`)});
-      await selectExecutionTarget('local');
+      await renderTarget.selectOption('local');
       assert.equal(await audio.evaluate(element => element.hidden),true,'Returning to local clears the Jetson result');
       assert.equal((await page.locator('#modal-speech').textContent()).includes(labels.speech_target_jetson + ' ·'),false,'Returning to local clears the previous result context');
       assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes(labels.speech_runtime_hint));
-      await selectExecutionTarget('jetson');
+      await renderTarget.selectOption('jetson');
       const targetRace=await holdReadySpeechStatus(page);
       await page.locator('[data-speech-action=preview]').click();
       const targetRaceId=await targetRace.ready();
-      await selectExecutionTarget('local');
+      await renderTarget.selectOption('local');
       await targetRace.deliver(targetRaceId);
       assert.equal(await audio.evaluate(element => element.hidden),true,'A late result cannot attach after switching targets');
       const localRequest=page.waitForRequest(request=>request.url().endsWith('/api/speech-render'));
@@ -712,7 +739,7 @@ server.serve_forever()
       await page.locator('[data-speech-action=chapter_render]').click();
       assert.equal((await resumedRequest).postDataJSON().fresh_audio,false,'Chapter retries reuse completed segments by default');
       await page.waitForFunction(()=>!document.querySelector('#speech-audio-player').hidden);
-      await selectExecutionTarget('jetson');
+      await renderTarget.selectOption('jetson');
       assert.equal(await audio.evaluate(element => element.hidden),true,'Changing target removes completed audio');
       assert.equal((await page.request.get(server.fixture.url+'/test/render-hold')).status(),204);
       await page.locator('[data-speech-action=preview]').click();
@@ -730,7 +757,7 @@ server.serve_forever()
       const secondTargetRace=await holdReadySpeechStatus(page);
       await page.locator('[data-speech-action=preview]').click();
       const secondTargetRaceId=await secondTargetRace.ready();
-      await selectExecutionTarget('local');
+      await renderTarget.selectOption('local');
       await secondTargetRace.deliver(secondTargetRaceId);
       assert.equal(await audio.evaluate(element => element.hidden),true,'Late results cannot attach after another target change');
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
@@ -738,6 +765,8 @@ server.serve_forever()
       await dialog.screenshot({path:path.join(artifacts,`audio-${locale}-${width}.png`)});
       await dialog.locator('.modal-body').evaluate(el=>{el.scrollTop=el.scrollHeight;});
       await dialog.screenshot({path:path.join(artifacts,`audio-actions-${locale}-${width}.png`)});
+      await renderTarget.selectOption('jetson');
+      await page.locator('#speech-tab-output').focus();
       await page.keyboard.press('Escape');
       assert.equal(await dialog.isVisible(),false);
       await page.locator('#tab-view-analysis').click();
@@ -747,9 +776,50 @@ server.serve_forever()
       assert.equal(await dialog.isVisible(),true,'Reader and settings use one dialog');
       assert.equal(await page.locator('#speech-chapter').inputValue(),'2','Audio retains the reader chapter');
       assert.equal(await page.locator('#speech-direction_text').inputValue(),'The garden is still.');
+      assert.equal(await renderTarget.inputValue(),'local','A new run starts with the default render target');
+      assert.equal(await page.locator('#speech-export_scope').inputValue(),'preview');
       assert.equal(await page.locator('#modal-speech').count(),1);
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#reader-speech').evaluate(el=>el===document.activeElement),true,'Escape returns focus to the reader entry');
+      await page.locator('#reader-chapter').selectOption('ch-1');
+      const passage=page.locator('#chapters .ptext').filter({hasText:'A second bird follows.'});
+      const passageTrigger=passage.locator('[data-reader-paragraph]');
+      await passageTrigger.scrollIntoViewIfNeeded();
+      await passageTrigger.focus();
+      await page.keyboard.press('Enter');
+      const editDirection=page.locator('#manuscript-context-menu [data-reader-action="direction"]');
+      await editDirection.waitFor({state:'visible'});
+      await editDirection.press('Enter');
+      await page.waitForFunction(()=>document.querySelector('#speech-direction_text')?.value==='A second bird follows.');
+      assert.equal(await dialog.evaluate(el=>el.contains(document.activeElement)),true,
+        'The keyboard passage action places focus inside the direction panel');
+      const passageId=await passage.getAttribute('id');
+      const exactAnchor=await passage.evaluate(el=>({
+        start_line:Number(el.dataset.start),end_line:Number(el.dataset.end),paragraph_sha256:el.dataset.paragraphSha256,
+      }));
+      assert.deepEqual(JSON.parse(await page.locator('#speech-direction_passage').inputValue()),exactAnchor,
+        'The paragraph action edits the exact chosen passage in its chapter');
+      assert.deepEqual(await page.locator('#chapters .speech-direction-target').evaluateAll(elements=>elements.map(el=>el.id)),
+        [passageId],'Only the target passage is indicated');
+      await page.waitForFunction(id=>{
+        const source=document.getElementById(id);
+        const prose=source?.querySelector('.ptext-inner > p');
+        if(!prose)return false;
+        const rect=prose.getBoundingClientRect();
+        const x=(Math.max(0,rect.left)+Math.min(innerWidth,rect.right))/2;
+        const top=Math.max(0,rect.top),bottom=Math.min(innerHeight,rect.bottom);
+        return bottom>top&&[0.25,0.5,0.75].some(fraction=>prose.contains(document.elementFromPoint(x,top+(bottom-top)*fraction)));
+      },passageId);
+      assert.equal(await dialog.evaluate(el=>el.matches('.speech-docked[open]')&&!el.matches(':modal')),true);
+      const proseBounds=await passage.locator('.ptext-inner > p').boundingBox(), directionBounds=await dialog.boundingBox();
+      assert.ok(width>900 ? proseBounds.x+proseBounds.width<=directionBounds.x+1 : proseBounds.y+proseBounds.height<=directionBounds.y+1,
+        'The direction panel sits beside the prose at desktop width and below it at phone width');
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Manuscript and direction panel fit the viewport');
+      if(locale==='de') await page.screenshot({path:path.join(artifacts,`direction-in-manuscript-${width}.png`)});
+      await page.keyboard.press('Escape');
+      await dialog.waitFor({state:'hidden'});
+      await page.waitForFunction(id=>document.activeElement?.dataset.readerParagraph===id,passageId);
+      assert.equal(await page.locator('#chapters .speech-direction-target').count(),0,'Closing clears the active passage indication');
       await page.evaluate(()=>{
         const paragraph=document.querySelector('#chapters .ptext');
         const range=document.createRange(); range.selectNodeContents(paragraph);
@@ -833,13 +903,15 @@ server.serve_forever()
     assert.ok(await savedPage.locator('#speech-reference_id').isVisible());
     assert.equal(await savedPage.locator('#speech-reference_id').getAttribute('aria-describedby'), 'speech-reference-hint');
     await savedPage.locator('#speech-reference_id').selectOption(server.fixture.reference_id);
-    assert.ok((await savedPage.locator('#modal-speech').textContent()).includes(data.audioCapabilities['qwen3-base'].name));
+    assert.equal(await savedPage.locator('#speech-engine option:checked').textContent(), data.audioCapabilities['qwen3-base'].short_name);
+    assert.ok((await savedPage.locator('#speech-engine').getAttribute('data-help')).includes(data.audioCapabilities['qwen3-base'].name));
     await Promise.all([savedPage.waitForNavigation(),savedPage.locator('[data-speech-action=save]').click()]);
     await savedPage.locator('#tab-view-project').click();
     await savedPage.locator('#settings-speech').click();
     await savedPage.waitForFunction(()=>document.querySelector('#speech-name').value==='Reference narrator');
     assert.equal(await savedPage.locator('#speech-engine').inputValue(),'qwen3-base');
     assert.equal(await savedPage.locator('#speech-reference_id').inputValue(),server.fixture.reference_id);
+    const referenceProfile=await savedPage.locator('#speech-profile').inputValue();
     await savedPage.keyboard.press('Escape');
     await savedPage.locator('#settings-speech-output').click();
     await savedPage.waitForFunction(()=>document.querySelector('#speech-profile')?.value);
@@ -847,7 +919,9 @@ server.serve_forever()
     await savedPage.locator('#speech-ignore-direction').check();
     const baseStart=savedPage.waitForRequest(request=>request.url().endsWith('/api/speech-render'));
     await savedPage.locator('[data-speech-action=chapter_render]').click();
-    assert.equal((await baseStart).postDataJSON().profile.engine,'qwen3-base', 'Chapter starts using the selected reference profile');
+    const basePayload=(await baseStart).postDataJSON();
+    assert.equal(basePayload.profile_id,referenceProfile,'Chapter starts using the selected reference profile');
+    assert.equal(Object.hasOwn(basePayload,'profile'),false);
     await savedPage.waitForFunction(()=>!document.querySelector('#speech-audio-player').hidden);
     assert.equal(/^target\s*=/m.test(fs.readFileSync(savedProject.config,'utf8')),false,'Project TOML excludes the per-render target');
     assert.ok(fs.readFileSync(savedProject.config,'utf8').includes('Saved synthetic narrator'));

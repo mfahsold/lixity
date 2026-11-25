@@ -1983,6 +1983,10 @@ when numerous source hits obscure authored records.
 CLI search automatically refreshes stale or missing indexes by default to avoid
 interrupting research tasks with manual maintenance detours. Callers who require
 strict validation can pass `--strict` to fail fast when the index is not up to date.
+Search reads the cache's snapshot identity and hit rows in one SQLite
+transaction. If a rebuild publishes during opening, search can use that index
+after confirming it matches the latest accepted archive snapshot. The SQLite
+connection closes before Lixity resolves selected hits against the archive.
 When a query produces zero passage hits under the default `sources` scope, the
 response warnings suggest trying `--scope all` to search authored records.
 
@@ -2139,8 +2143,11 @@ bytes and removes unshared extraction text as well as originals. A dry run's
 `deleted_blobs` lists planned deletions, not a completed erase operation.
 
 **Since v0.7.1:** `withdraw` also retires a dossier through the same
-tombstone mechanism. Inspect its revision and snapshot, preview, then repeat the
-command without `--dry-run` to accept the retirement:
+tombstone mechanism. In the active dossier details or current revision viewer,
+choose **Withdraw dossier**, review the effect and confirm. **Discard draft**
+in **New dossier** and **Discard changes** in the revision editor clear the
+unsaved form. For the CLI, inspect the revision and snapshot, preview, then
+repeat the command without `--dry-run` to accept the retirement:
 
 ```sh
 lixity research dossier inspect DOSSIER_ID --project ./novel

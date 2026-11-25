@@ -17,13 +17,30 @@ async function startNativeServer(source, artifactDir, {
   startupTimeoutMs = 15000,
   shutdownTimeoutMs = 3000,
 } = {}) {
+  const keepDiagnostics = process.env.LIXITY_TEST_AUDIO_DIAGNOSTICS === '1';
   const child = spawn(python, ['-u', '-c', source, artifactDir], {
-    cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')},
+    cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src'),
+      ...(keepDiagnostics ? {LIXITY_LOG_FORMAT: 'json'} : {})},
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const lines = createInterface({input: child.stdout});
   let stderr = '', closing;
   child.stderr.on('data', data => { stderr = (stderr + data).slice(-8000); });
+  const stderrLines = keepDiagnostics ? createInterface({input: child.stderr}) : null;
+  stderrLines?.on('line', line => {
+    let record;
+    try { record = JSON.parse(line); } catch { return; }
+    // Forward only the structured audio HTTP envelope to the bounded suite log.
+    if (record?.event !== 'audio_operation' || record.logger !== 'lixity.server' ||
+        typeof record.id !== 'string' || !/^[0-9a-f]{16}$/.test(record.id) ||
+        typeof record.route !== 'string' || !/^(audio|speech)-[a-z-]{1,40}$/.test(record.route) ||
+        !Number.isInteger(record.status) || record.status < 100 || record.status > 599 ||
+        !Number.isSafeInteger(record.duration_ms) || record.duration_ms < 0) return;
+    const {event, id, route, status, duration_ms} = record;
+    const operation = typeof record.operation === 'string' && /^[a-z_]{1,24}$/.test(record.operation)
+      ? record.operation : undefined;
+    console.error(JSON.stringify({event, id, route, operation, status, duration_ms}));
+  });
   // Subscribe before readiness: a fixture may already have exited by cleanup.
   const closed = new Promise(resolve => { child.once('close', resolve); });
   const ready = new Promise((resolve, reject) => {
@@ -48,7 +65,10 @@ async function startNativeServer(source, artifactDir, {
           child.kill('SIGKILL');
           await deadline(closed, shutdownTimeoutMs, () => 'Synthetic server failed to stop after SIGKILL');
         }
-      } finally { lines.close(); }
+      } finally {
+        lines.close();
+        stderrLines?.close();
+      }
     })();
     return closing;
   }

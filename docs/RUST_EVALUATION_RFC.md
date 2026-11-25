@@ -92,7 +92,35 @@ before profiling a different native boundary.
   Each comparison preserved the snapshot JSON digests, revision hashes and
   idempotent retry results. Use the same input and save sequence to compare
   future changes.
+  Revision comparison now selects from IDs and timestamps and decodes two
+  snapshots. On macOS arm64 with Python 3.12.16 and SQLite 3.53.1, a synthetic
+  history of 100 snapshots with 300 chapters each took a median of 50.98 ms
+  before this change and 2.46 ms after it for automatic baseline comparison
+  (30 alternating timed calls per variant, with matching responses). The full
+  30-snapshot timeline took 14.02 ms and 14.37 ms, respectively. The benchmarks
+  include chapter matching and omit HTTP and rendering.
+  Historical revision remeasurement now closes the SQLite read transaction
+  and releases the document lock after capture. In six alternating pairs with
+  *Effi Briest*, the median time to open the document during remeasurement fell
+  from 408 ms to 124 ms. The comparison took 421 ms and 420 ms, respectively.
+  An HTTP regression verifies a parallel open and a conflict after settings change.
+  An interleaved local run with 6,000 synthetic dossiers reduced warm all-scope
+  one-hit search from 0.62 ms to 0.28 ms and a broad 20-hit search from 5.01 ms
+  to 4.33 ms. Cold lookup still includes canonical archive verification. Keep
+  investigating that cost at the archive I/O boundary before adding a native
+  storage binding.
+  In a later warm-file-cache test, a fresh repository with 7,249 revisions took
+  455 ms before path assembly was streamlined and 439 ms afterward. Preparing
+  1,200 new entries took 60.9 ms and 53.0 ms, respectively, with matching manifest
+  bytes and SHA-256 digests. Full record and path validation remain part of each
+  accepted snapshot.
   [Research storage](research/DATA_MODEL.md) · [SQLite WAL](https://www.sqlite.org/wal.html)
+- **Scene transitions.** Reuse each paragraph's tokens and configured name cues
+  across the adjacent cohesion windows. Across 30 alternating local pairs per
+  input, this isolated stage took 64–67% less time for two public-domain books
+  and a synthetic manuscript. The three workspace outputs matched. Whole-view
+  timing varied with host load. Use a fresh-process, end-to-end comparison to
+  evaluate release latency separately from this stage.
 - **Computation candidates.** Profile the shared chapter and paragraph
   measurements after removing equivalent sentence and quotation preparation
   across report stages. Compare a Rust kernel only at a batch
@@ -105,6 +133,48 @@ Run the combined workspace benchmark with
 `PYTHONPATH=src .venv/bin/python scripts/benchmark_pipeline.py --workspace --json`.
 It measures analysis with evidence and supplementary reports, excluding HTTP
 and rendering. Compare the result digests as well as the median times.
+For changes near the first readable view, measure startup, text display, the
+first evidence response and return as separate stages. Profile to locate work,
+then compare alternating unprofiled runs with the same fixture and complete
+output. Keep raw timings and distinguish repeated calls from independent
+process starts. [Python profiler guidance](https://docs.python.org/3.12/library/profile.html) ·
+[Kalibera and Jones, Rigorous Benchmarking in Reasonable Time](https://kar.kent.ac.uk/33611/)
+
+### Live reader benchmark on macOS
+
+Run `.venv/bin/python desktop/scripts/benchmark_macos_reader.py` from the
+checkout in an active macOS desktop session. The probe uses the system
+WKWebView, the authenticated checkout server and a disposable profile. It
+starts a fresh server and WebView for each run. Use `--words` to select
+synthetic manuscript sizes and `--runs` to set repeats. The defaults are
+50,000, 150,000 and 300,000 words with three runs each.
+
+The probe opens the visible manuscript, selects quoted-word share and follows
+**Counted results** to a distant two-word quotation. It requires one real,
+cold evidence batch request, checks the visible quotation, count and focus,
+then closes the jump bar. The return must restore the same paragraph within
+two CSS pixels and focus the counted-results button. The JSON reports server
+readiness, navigation to readable prose, click to visible evidence and return
+latencies separately. It also records the batch size, checkout identity and
+the individual runs. The measurement covers the checkout reader in the native
+WebView. Packaged Rust host startup, physical input and other WebViews require
+their own measurements.
+
+The November 25 baseline used Apple Silicon, macOS 27.2.1 and Python 3.12.16
+with a 1200 × 780 CSS-pixel viewport. The following figures are medians across
+three runs per size in the checkout based on `9a2e225d`.
+
+| Prose words | Server ready | Navigation to readable text | First evidence jump | Return to passage |
+| ---: | ---: | ---: | ---: | ---: |
+| 50,035 | 2,190 ms | 319 ms | 81 ms | 42 ms |
+| 150,047 | 5,977 ms | 743 ms | 155 ms | 113 ms |
+| 300,043 | 11,804 ms | 1,292 ms | 372 ms | 228 ms |
+
+The loopback evidence request took a median of 2 ms in each case. All nine
+runs returned to the original paragraph and control with zero measured vertical
+offset. Profile server startup for the large fixture before choosing the next
+optimization. The click and return results describe this counted-result
+workload under the macOS probe.
 
 ## Acceptance criteria
 

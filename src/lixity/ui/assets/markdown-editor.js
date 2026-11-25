@@ -73,10 +73,10 @@
     toolbar.setAttribute("aria-label", label("formatting", "Markdown formatting"));
 
     var tools = [
-      { id: "bold", label: "Bold (Ctrl+B)", icon: "bold", action: function () { wrapSelection(textarea, "**", "**"); } },
-      { id: "italic", label: "Italic (Ctrl+I)", icon: "italic", action: function () { wrapSelection(textarea, "*", "*"); } },
-      { id: "heading", label: "Heading (Ctrl+H)", icon: "heading", action: function () { prefixLines(textarea, "### "); } },
-      { id: "link", label: "Link (Ctrl+K)", icon: "link", action: function () { wrapSelection(textarea, "[", "](https://)"); } },
+      { id: "bold", label: "Bold", icon: "bold", key: "B", action: function () { wrapSelection(textarea, "**", "**"); } },
+      { id: "italic", label: "Italic", icon: "italic", key: "I", action: function () { wrapSelection(textarea, "*", "*"); } },
+      { id: "heading", label: "Heading", icon: "heading", key: "H", action: function () { prefixLines(textarea, "### "); } },
+      { id: "link", label: "Link", icon: "link", key: "K", action: function () { wrapSelection(textarea, "[", "](https://)"); } },
       { id: "wikilink", label: "Wikilink", icon: "book-open", action: function () { wrapSelection(textarea, "[[", "]]"); } },
       { id: "code", label: "Code", icon: "code", action: function () {
         var start = textarea.selectionStart, end = textarea.selectionEnd;
@@ -86,12 +86,15 @@
           wrapSelection(textarea, "`", "`");
         }
       }},
-      { id: "math", label: "Math ($)", icon: "sigma", action: function () { wrapSelection(textarea, "$", "$"); } },
+      { id: "math", label: "Math", icon: "sigma", action: function () { wrapSelection(textarea, "$", "$"); } },
       { id: "bullet-list", label: "Bullet list", icon: "list", action: function () { prefixLines(textarea, "- "); } },
       { id: "numbered-list", label: "Numbered list", icon: "list-ordered", action: function () { prefixLines(textarea, "1. "); } },
       { id: "task-list", label: "Task list", icon: "check-square", action: function () { prefixLines(textarea, "- [ ] "); } },
       { id: "callout", label: "Callout", icon: "info", action: function () { prefixLines(textarea, "> [!NOTE]\n> "); } }
     ];
+    function shortcuts(tool) {
+      return tool.key ? "Control+" + tool.key + " Meta+" + tool.key : null;
+    }
 
     var components = window.LixityComponents;
     if (components && typeof components.html === "function" && typeof components.mount === "function") {
@@ -99,8 +102,7 @@
       components.mount(
         toolbar,
         tools.map(function (tool) {
-          var shortcut = tool.label.match(/ \(Ctrl\+[A-Z]\)/);
-          var localized = label(tool.id, tool.label.replace(/ \(.*\)$/, "")) + (shortcut ? shortcut[0] : "");
+          var localized = label(tool.id, tool.label);
           var iconMarkup = window.LixityIcons ? window.LixityIcons.svg(tool.icon, { size: 14 }) : localized.slice(0, 1);
           return html`
             <button
@@ -109,6 +111,7 @@
               class="editor-tool-btn"
               title=${localized}
               aria-label=${localized}
+              aria-keyshortcuts=${shortcuts(tool)}
               onClick=${function (e) { e.preventDefault(); tool.action(); }}
               dangerouslySetInnerHTML=${{ __html: iconMarkup }}
             ></button>
@@ -120,14 +123,14 @@
         var btn = document.createElement("button");
         btn.type = "button";
         btn.className = "editor-tool-btn";
-        var shortcut = tool.label.match(/ \(Ctrl\+[A-Z]\)/);
-        tool.label = label(tool.id, tool.label.replace(/ \(.*\)$/, "")) + (shortcut ? shortcut[0] : "");
-        btn.title = tool.label;
-        btn.setAttribute("aria-label", tool.label);
+        var localized = label(tool.id, tool.label);
+        btn.title = localized;
+        btn.setAttribute("aria-label", localized);
+        if (tool.key) btn.setAttribute("aria-keyshortcuts", shortcuts(tool));
         if (window.LixityIcons) {
           btn.innerHTML = window.LixityIcons.svg(tool.icon, { size: 14 });
         } else {
-          btn.textContent = tool.label.slice(0, 1);
+          btn.textContent = localized.slice(0, 1);
         }
         btn.addEventListener("click", function (e) {
           e.preventDefault();
@@ -160,17 +163,18 @@
     // Auto-closing brackets and smart list continuation
     var PAIRS = { "(": ")", "[": "]", "{": "}", "\"": "\"", "'": "'", "`": "`", "$": "$" };
     textarea.addEventListener("keydown", function (e) {
+      if (e.defaultPrevented || e.isComposing) return;
       var start = textarea.selectionStart;
       var end = textarea.selectionEnd;
       var value = textarea.value;
 
-      // Shortcuts: Ctrl/Cmd + B, I, K, H
-      if ((e.ctrlKey || e.metaKey) && !e.altKey) {
-        var key = e.key.toLowerCase();
-        if (key === "b") { e.preventDefault(); wrapSelection(textarea, "**", "**"); return; }
-        if (key === "i") { e.preventDefault(); wrapSelection(textarea, "*", "*"); return; }
-        if (key === "k") { e.preventDefault(); wrapSelection(textarea, "[", "](https://)"); return; }
-        if (key === "h") { e.preventDefault(); prefixLines(textarea, "### "); return; }
+      if (e.ctrlKey !== e.metaKey && !e.altKey && !e.shiftKey) {
+        var tool = tools.find(function (candidate) { return candidate.key === e.key.toUpperCase(); });
+        if (tool) {
+          e.preventDefault();
+          if (!e.repeat) tool.action();
+          return;
+        }
       }
 
       // Tab remains native focus navigation, including inside modal dialogs.

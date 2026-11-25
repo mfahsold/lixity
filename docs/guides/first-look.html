@@ -46,7 +46,7 @@
     "name": "Lixity",
     "url": "https://mfahsold.github.io/lixity/"
   },
-  "dateModified": "2026-11-20",
+  "dateModified": "2026-11-25",
   "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
   "mainEntityOfPage": "https://mfahsold.github.io/lixity/guides/first-look.html",
   "image": {
@@ -95,16 +95,21 @@
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">First look</span></li></ol></nav>
 <h1>A three-minute first look</h1>
-<p>Start with one question: does chapter 2's shorter rhythm fit its action?</p>
+<p>Open one marked sentence. See which words counted, read the sentence in its scene, and decide whether to keep it as it is or revisit it.</p>
 <p><a href="first-look-de.html" lang="de" hreflang="de">Kurze Einführung auf Deutsch</a></p>
-<p class="updated">Updated <time datetime="2026-11-20">20 November 2026</time></p>
+<p class="updated">Updated <time datetime="2026-11-25">25 November 2026</time></p>
 
 <p class="section-note">This walkthrough follows the generated demo. It uses the same reading website export available in <strong>Project actions → Reading website</strong>. Its manuscript, analysis and chosen Research are a fixed snapshot; importing and saving require a local project. See <a href="research-pdf.html#reading-website">how to make your own reading website</a>.</p>
 
-<h2 id="example">1. Open the example and read a chapter</h2>
+<a id="example"></a>
+<h2 id="passage">1. Check a marked sentence</h2>
 <p><a class="ctl primary" href="../demo/report.html">Open the demo project</a></p>
-<p><em>The Crate at Warehouse 4</em> has six invented English chapters. The demo opens directly in the same manuscript view as the local app. In the workspace navigation, open <strong>Try the draft examples</strong> and choose <strong>Inspect chapter 2</strong> to jump to the scene and turn on sentence-length analysis.</p>
-<p>In the same list, choose <strong>Compare chapters 1 and 2</strong> to see the average words per sentence for the harbour description and the action scene. You can also <a href="../sandbox/index.html">try a passage of your own in the browser sandbox</a>.</p>
+<ol>
+<li>Open <strong>Try the draft examples</strong> and choose <strong>Check a sticky sentence</strong> to jump to the marked sentence.</li>
+<li>For that paragraph, choose <strong>… → Paragraph details → Explain this passage</strong>. Under <strong>Why this is marked</strong>, see the 22 function words that Lixity counted among 31 words. Read the surrounding paragraph and check whether the connections are easy to follow.</li>
+<li>Press Escape or close the explanation to continue reading. In your draft, keep the wording if it fits the scene, or revise it and compare the versions using the same settings.</li>
+</ol>
+<p>Use the <a href="../sandbox/index.html">browser exercise</a> to edit a sample paragraph and see its simplified counts change.</p>
 <figure class="walkthrough">
   <video controls muted loop playsinline preload="metadata" poster="../videos/analysis-review.png" width="1280" height="800">
     <source src="../videos/analysis-review.mp4" type="video/mp4"/>
@@ -113,8 +118,8 @@
   <figcaption>Warehouse 4: explore a passage and compare its chapter using the same app controls as the demo.</figcaption>
 </figure>
 
-<a id="contrast"></a>
-<h2 id="passage">2. Inspect one difference</h2>
+<h2 id="contrast">2. Compare the rhythm of two scenes</h2>
+<p><em>The Crate at Warehouse 4</em> has six invented English chapters. In <strong>Try the draft examples</strong>, choose <strong>Inspect chapter 2</strong>, then read the action scene. <strong>Compare chapters 1 and 2</strong> opens the sentence-length overview.</p>
 <blockquote>A board moved. Mara turned. The crate tipped towards the drain.</blockquote>
 <ol>
 <li>Read the first paragraph of <strong>The Loose Board</strong>. What is Mara doing, and where do you pause?</li>
@@ -164,7 +169,7 @@
 <p><a href="installation.html">Install the local app</a> and launch the workspace. Choose <strong>Open Project</strong> to continue with an existing folder. Choose <strong>Analyze a manuscript</strong> to review a copy before creating a new project. Confirm the analysis language. See <a href="installation.html#restart">running the local service</a> if the browser reopens an older workspace.</p>
 <h2 id="audio">Hear a passage in your own project</h2>
 <p>Open <strong>Project → Settings → Audio and services</strong>, or use <strong>Listen &amp; direct</strong> in the manuscript toolbar. The public demo cannot request your microphone, save a reference or generate speech.</p>
-<p>In 0.8.1, the local audio dialog separates four tasks: <strong>Author voice</strong> records, uploads and manages reference takes; <strong>Voice profiles</strong> configures the voice and speech service; <strong>Listen &amp; direct</strong> contains passage direction, audio output, JSON/SSML export and external recording checks; <strong>Microphone &amp; levels</strong> controls local hardware. Help accompanies the controls. The compact player offers time, seeking, volume and a live frequency spectrum. Browser recording requires microphone permission for the current local address; hardware gain does not grant that permission.</p>
+<p>Start with <strong>Teleprompter</strong> to rehearse a passage. <strong>Author voice</strong> is where you can review a recorded or imported reference take. To set project defaults or connect a voice service, use the <a href="https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md">audio setup guide</a>. The controls depend on the installed build and the microphone or service available to it.</p>
 <p>The state beside the recording button shows pending permission, active recording or a failed start. Remove a saved microphone block using the icon beside the address, then retry and allow access. Failed starts log diagnostics in the browser console. A browser permission refusal sends no server request, so it produces no service-log entry. See <a href="https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening">recording and troubleshooting</a>.</p>
 <p>In <strong>Listen &amp; direct → Export direction</strong>, prepare JSON and SSML for a passage, chapter or manuscript without contacting a speech service. JSON retains direction details; SSML reports controls it cannot carry portably. <strong>Generate audio</strong> uses a configured speech service. Locally inspecting an external recording can compare text only when a timestamped transcript for that recording is supplied. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#audio-export-and-external-providers-unreleased">audio guide</a> for setup and limits.</p>
 <p>Read a passage in the <strong>Teleprompter</strong> (<code>P</code>), record a take and edit the words actually spoken. WAV plus JSON export preserves the audio hash and whether the transcript is missing, a draft or confirmed. Sending the take to <strong>Author voice</strong> opens a review; it does not save automatically.</p>

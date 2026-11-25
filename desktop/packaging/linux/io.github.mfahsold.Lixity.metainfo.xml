@@ -40,6 +40,9 @@
   </keywords>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="0.9.3">
+      <url type="details">https://github.com/mfahsold/lixity/releases/tag/v0.9.3</url>
+    </release>
     <release version="0.9.2" date="2026-11-24">
       <url type="details">https://github.com/mfahsold/lixity/releases/tag/v0.9.2</url>
     </release>

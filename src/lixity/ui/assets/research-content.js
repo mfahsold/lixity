@@ -761,8 +761,13 @@ function researchDossierDetailHtml(detail, readOnly, options) {
     window.LixityDossierImages.actionsHtml(imageContext) : "";
   var bodyHtml = researchDossierBodyHtml(detail.body, imageContext, attachmentActions);
   var pdf = researchDossierPdfContent(detail);
+  var canWithdraw = imageContext.image_editable && researchContextToken() &&
+    detail.id && Number.isInteger(detail.revision) && /^[a-f0-9]{64}$/.test(detail.snapshot);
+  var withdraw = canWithdraw ? '<button type="button" class="ctl" data-dossier-withdraw' +
+    (options.allowWithdraw === false ? ' hidden' : '') + '>' +
+    escapeHtml(uiLabel("research_dossier_withdraw")) + '</button>' : "";
   var dossierActions = (pdf?.action || "") +
-    (!readOnly && window.LixityDossierCharacter ? window.LixityDossierCharacter.updateHtml(detail) : "");
+    (!readOnly && window.LixityDossierCharacter ? window.LixityDossierCharacter.updateHtml(detail) : "") + withdraw;
   var currentManuscript = !options.recordView && !window.LixitySite.readOnly && !detail.availability && researchContextToken();
   var termEvidence = "";
   if (currentManuscript) {
@@ -774,7 +779,8 @@ function researchDossierDetailHtml(detail, readOnly, options) {
   }
   var markup = '<div class="research-dossier-folder">' + reviewAlert +
     (dossierActions ? '<div class="ctl-group research-dossier-toolbar"><div class="row">' +
-      dossierActions + '</div>' + (pdf?.scope || "") + '</div>' : "") +
+      dossierActions + '</div>' + (pdf?.scope || "") +
+      (canWithdraw ? '<p class="ctl-status" role="status" data-dossier-withdraw-status hidden></p>' : "") + '</div>' : "") +
     (currentManuscript && detail.character_analysis_available === true ? window.LixityDossierCharacter?.html() || "" : "") +
     termEvidence +
     '<section class="research-folder-notes"><h4>' + escapeHtml(uiLabel("research_dossier_saved_body")) + '</h4>' +

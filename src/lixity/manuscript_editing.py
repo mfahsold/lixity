@@ -12,10 +12,12 @@ import math
 import os
 import re
 import sqlite3
+import stat
 import time
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from collections.abc import Mapping
-from contextlib import closing
+from contextlib import closing, nullcontext
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
@@ -49,6 +51,7 @@ logger = get_logger("manuscript")
 
 SOURCE_WRITE_LOCK = RLock()
 _DOC_LOCKS_GUARD = RLock()
+_RECOVERY_SCHEMA_LOCK = RLock()
 _DOC_LOCKS: dict[str, tuple[RLock, RLock]] = {}
 
 
@@ -71,10 +74,20 @@ MAX_TEXT_BYTES = 4 * 1024 * 1024
 _ID = re.compile(r"[a-f0-9]{32,64}\Z")
 _MAX_CHAPTER_SIMILARITY_PAIRS = 16_384
 _RECOVERY_SCHEMA_VERSION = 3
+_RECOVERY_BUSY_TIMEOUT = 5.0
+_SELECT_RECOVERY_CONTENT = "SELECT CASE WHEN typeof(content) = 'blob' AND length(content) <= ? THEN content END AS content"
 
 
 class EditConflict(ValueError):
     """The caller's base no longer identifies the selected source."""
+
+
+@dataclass(frozen=True)
+class _ComparisonRevision:
+    revision: str
+    recorded: sqlite3.Row | None
+    text: str | None = None
+    compatible: bool = True
 
 
 def _digest(data: bytes) -> str:
@@ -134,11 +147,10 @@ class ManuscriptStore:
         self.document = _digest((str(self.root) + "\0" + str(self.source)).encode())
         self._state_lock, self._operation_lock = _document_locks(self.source)
         self.directory = self.root / ".lixity" / "editing"
+        self._database_path = self.directory / "recovery.sqlite3"
         self.language = language or "en"
         self.project_config: dict[str, Any] = dict(project_config) if project_config else {}
         self._settings_sha256 = snapshot_settings_digest(self.language, self.project_config)
-        self._snapshot_cache: OrderedDict[tuple[str, str], dict[str, Any]] = OrderedDict()
-        self._schema_ready = False
 
     def _read(self) -> bytes:
         if self.source.is_symlink() or not self.source.resolve(strict=True).is_relative_to(self.root):
@@ -148,8 +160,24 @@ class ManuscriptStore:
         )[0]
 
     def _initialize_schema(self, db: sqlite3.Connection) -> None:
-        db.execute("PRAGMA journal_mode=WAL")
+        deadline = time.monotonic() + _RECOVERY_BUSY_TIMEOUT
+        while True:
+            try:
+                mode = db.execute("PRAGMA journal_mode=WAL").fetchone()[0]
+            except sqlite3.OperationalError as error:  # noqa: PERF203 - bounded journal-mode contention
+                # SQLite may return busy immediately when two connections try to change journal mode.
+                if str(error) != "database is locked" or time.monotonic() >= deadline:
+                    raise
+                time.sleep(0.025)
+            else:
+                break
+        if mode != "wal":
+            raise ValueError("Recovery database requires write-ahead logging")
         db.execute("BEGIN IMMEDIATE")
+        # Another process may have completed an upgrade while this connection waited.
+        if self._recovery_schema_version(db) == _RECOVERY_SCHEMA_VERSION:
+            db.commit()
+            return
         db.execute(
             "CREATE TABLE IF NOT EXISTS recovery (document TEXT, id TEXT, kind TEXT, content BLOB, "
             "created REAL, base_revision TEXT, PRIMARY KEY(document,id))"
@@ -159,16 +187,16 @@ class ManuscriptStore:
         db.execute("CREATE INDEX IF NOT EXISTS idx_recovery_doc_created ON recovery (document, kind, created DESC)")
         db.execute("CREATE TABLE IF NOT EXISTS receipts (document TEXT, id TEXT, request TEXT, response TEXT, created REAL, PRIMARY KEY(document,id))")
         db.execute("CREATE INDEX IF NOT EXISTS idx_receipts_doc_created ON receipts (document, created DESC)")
-        db.execute(
-            "CREATE TABLE IF NOT EXISTS manuscript_revisions ("
+        revision_columns = (
             "document TEXT NOT NULL, revision TEXT NOT NULL, parent_revision TEXT, "
             "created_at REAL NOT NULL, words INTEGER NOT NULL, sentences INTEGER NOT NULL, "
             "asl REAL, asl_cv REAL, dialogue_ratio REAL, mattr REAL, "
             "length_entropy REAL, sticky_pct REAL, indirect_speech_per_1000 REAL, "
             "flags_count INTEGER, chapter_metrics TEXT NOT NULL DEFAULT '[]', "
             "settings_sha256 TEXT, "
-            "PRIMARY KEY(document, revision))"
+            "PRIMARY KEY(document, revision)"
         )
+        db.execute(f"CREATE TABLE IF NOT EXISTS manuscript_revisions ({revision_columns})")
         table_info = db.execute("PRAGMA table_info(manuscript_revisions)").fetchall()
         existing_cols = {str(row[1]) for row in table_info}
         for col_name in ("length_entropy", "sticky_pct", "indirect_speech_per_1000"):
@@ -178,16 +206,7 @@ class ManuscriptStore:
             db.execute("ALTER TABLE manuscript_revisions ADD COLUMN settings_sha256 TEXT")
         flags_col = next((row for row in table_info if str(row[1]) == "flags_count"), None)
         if flags_col is not None and int(flags_col[3]) != 0:
-            db.execute(
-                "CREATE TABLE manuscript_revisions_new ("
-                "document TEXT NOT NULL, revision TEXT NOT NULL, parent_revision TEXT, "
-                "created_at REAL NOT NULL, words INTEGER NOT NULL, sentences INTEGER NOT NULL, "
-                "asl REAL, asl_cv REAL, dialogue_ratio REAL, mattr REAL, "
-                "length_entropy REAL, sticky_pct REAL, indirect_speech_per_1000 REAL, "
-                "flags_count INTEGER, chapter_metrics TEXT NOT NULL DEFAULT '[]', "
-                "settings_sha256 TEXT, "
-                "PRIMARY KEY(document, revision))"
-            )
+            db.execute(f"CREATE TABLE manuscript_revisions_new ({revision_columns})")
             db.execute(
                 "INSERT INTO manuscript_revisions_new "
                 "(document, revision, parent_revision, created_at, words, sentences, "
@@ -205,35 +224,71 @@ class ManuscriptStore:
         db.execute(f"PRAGMA user_version={_RECOVERY_SCHEMA_VERSION}")
         db.commit()
 
-    def _database(self, *, ensure_schema: bool = True) -> sqlite3.Connection:
+    @staticmethod
+    def _recovery_schema_version(db: sqlite3.Connection) -> int:
+        version = int(db.execute("PRAGMA user_version").fetchone()[0])
+        if version > _RECOVERY_SCHEMA_VERSION:
+            raise ValueError("Recovery database requires a newer Lixity version")
+        return version
+
+    def _database_exists(self) -> bool:
+        try:
+            self._database_path.lstat()
+        except FileNotFoundError:
+            return False
+        return True
+
+    def _database(self, *, readonly: bool = False) -> sqlite3.Connection:
         if self.directory.parent.is_symlink() or self.directory.is_symlink():
             raise ValueError("Recovery directory must not be a symlink")
-        self.directory.parent.mkdir(mode=0o700, exist_ok=True)
-        self.directory.mkdir(mode=0o700, exist_ok=True)
-        path = self.directory / "recovery.sqlite3"
-        if path.is_symlink():
-            raise ValueError("Recovery database must not be a symlink")
-        created = not path.exists()
-        if created:
-            self._schema_ready = False
-            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-            os.close(fd)
-        db = sqlite3.connect(path)
+        if not self.directory.resolve().is_relative_to(self.root):
+            raise ValueError("Recovery directory must stay inside the project")
+        path = self._database_path
+        for suffix in ("", "-wal", "-shm", "-journal"):
+            member = path.with_name(path.name + suffix)
+            try:
+                mode = member.lstat().st_mode
+            except FileNotFoundError:
+                continue
+            if not stat.S_ISREG(mode):
+                raise ValueError("Recovery database and journal files must be regular files")
+        if not readonly and not self._database_exists():
+            self.directory.parent.mkdir(mode=0o700, exist_ok=True)
+            self.directory.mkdir(mode=0o700, exist_ok=True)
+            try:
+                fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            except FileExistsError:
+                if not stat.S_ISREG(path.lstat().st_mode):
+                    raise ValueError("Recovery database must be a regular file") from None
+            else:
+                os.close(fd)
+        access = "ro" if readonly else "rw"
+        db = sqlite3.connect(f"{path.as_uri()}?mode={access}", uri=True, timeout=_RECOVERY_BUSY_TIMEOUT)
         try:
             db.row_factory = sqlite3.Row
             db.execute("PRAGMA trusted_schema=OFF")
-            db.execute("PRAGMA busy_timeout=5000")
+            if readonly:
+                try:
+                    if self._recovery_schema_version(db) >= 2:
+                        return db
+                except sqlite3.OperationalError as error:
+                    name = getattr(error, "sqlite_errorname", None)
+                    if name != "SQLITE_READONLY_ROLLBACK" and not (
+                        name is None and str(error) == "attempt to write a readonly database"
+                        and path.with_name(path.name + "-journal").is_file()
+                    ):
+                        raise
+                # Older journals may need SQLite rollback recovery before migration.
+                db.close()
+                with closing(self._database()):
+                    pass
+                return self._database(readonly=True)
             db.execute("PRAGMA synchronous=FULL")
-            if not self._schema_ready:
-                if not created:
-                    version = int(db.execute("PRAGMA user_version").fetchone()[0])
-                    journal_mode = str(db.execute("PRAGMA journal_mode").fetchone()[0]).lower()
-                    if version >= 2 and journal_mode == "wal":
-                        self._schema_ready = version >= _RECOVERY_SCHEMA_VERSION
-                        if self._schema_ready or not ensure_schema:
-                            return db
-                self._initialize_schema(db)
-                self._schema_ready = True
+            # Separately opened manuscripts share the project journal.
+            with _RECOVERY_SCHEMA_LOCK:
+                if (self._recovery_schema_version(db) < _RECOVERY_SCHEMA_VERSION
+                        or db.execute("PRAGMA journal_mode").fetchone()[0] != "wal"):
+                    self._initialize_schema(db)
             return db
         except BaseException:
             db.close()
@@ -257,18 +312,6 @@ class ManuscriptStore:
 
     def _measure_snapshot(self, text: str, config: CorpusConfig | None) -> dict[str, Any]:
         return self.analyze_snapshot(text) if config is None else analyze_manuscript_snapshot(text, config=config)
-
-    def _cached_snapshot(self, text: str, config: CorpusConfig | None = None) -> dict[str, Any]:
-        key = (self._snapshot_settings(config), _digest(text.encode("utf-8")))
-        cached = self._snapshot_cache.get(key)
-        if cached is not None:
-            self._snapshot_cache.move_to_end(key)
-            return dict(cached)
-        snap = self._measure_snapshot(text, config)
-        self._snapshot_cache[key] = snap
-        while len(self._snapshot_cache) > 12:
-            self._snapshot_cache.popitem(last=False)
-        return dict(snap)
 
     def _insert_revision_snapshot(
         self,
@@ -313,30 +356,6 @@ class ManuscriptStore:
             ),
         )
 
-    def _record_revision(
-        self,
-        db: sqlite3.Connection,
-        revision: str,
-        text: str,
-        *,
-        parent_revision: str | None = None,
-        created_at: float | None = None,
-        flags_count: int | None = None,
-    ) -> None:
-        if self._revision_exists(db, revision):
-            return
-        config = self._fixed_auto_config(text)
-        snap = self._cached_snapshot(text, config)
-        self._insert_revision_snapshot(
-            db,
-            revision,
-            snap,
-            settings_sha256=self._snapshot_settings(config),
-            parent_revision=parent_revision,
-            created_at=created_at,
-            flags_count=flags_count,
-        )
-
     def _revision_exists(self, db: sqlite3.Connection, revision: str) -> bool:
         return db.execute(
             "SELECT 1 FROM manuscript_revisions WHERE document=? AND revision=?",
@@ -351,8 +370,8 @@ class ManuscriptStore:
             data = self._read()
             text, _, _ = _decode(data)
             recovery: list[dict[str, Any]] = []
-            if (self.directory / "recovery.sqlite3").exists():
-                with closing(self._database(ensure_schema=False)) as db:
+            if self._database_exists():
+                with closing(self._database(readonly=True)) as db:
                     recovery = [{"id": row["id"], "kind": row["kind"], "created": row["created"]}
                                 for row in db.execute("SELECT id,kind,created FROM recovery WHERE document=? ORDER BY created DESC", (self.document,))]
             log_event(logger, "manuscript_open", level=logging.DEBUG, bytes=len(data), recovery=len(recovery))
@@ -362,13 +381,18 @@ class ManuscriptStore:
     def recover(self, identifier: str) -> dict[str, str]:
         if not _ID.fullmatch(identifier):
             raise ValueError("Invalid recovery identifier")
-        if not (self.directory / "recovery.sqlite3").exists():
+        if not self._database_exists():
             raise ValueError("Recovery entry is unavailable")
-        with self._lock(), closing(self._database(ensure_schema=False)) as db:
-            row = db.execute("SELECT content,kind FROM recovery WHERE document=? AND id=?", (self.document, identifier)).fetchone()
+        with self._lock(), closing(self._database(readonly=True)) as db:
+            row = db.execute(
+                _SELECT_RECOVERY_CONTENT + ",kind FROM recovery WHERE document=? AND id=?",
+                (MAX_TEXT_BYTES, self.document, identifier),
+            ).fetchone()
             if row is None:
                 raise ValueError("Recovery entry is unavailable")
-            content = bytes(row["content"])
+            content = row["content"]
+            if not isinstance(content, bytes):
+                raise ValueError("Recovery content is invalid or exceeds the 4 MiB editing limit")
             return {"schema_version": "lixity-editor/1", "document": self.document,
                     "revision": _digest(content), "id": identifier, "kind": str(row["kind"]),
                     "text": _decode(content)[0]}
@@ -410,10 +434,11 @@ class ManuscriptStore:
             if len(candidate) > MAX_TEXT_BYTES:
                 raise ValueError("Encoded manuscript exceeds the 4 MiB editing limit")
             prior = db.execute(
-                "SELECT content,created,base_revision FROM recovery WHERE document=? AND id=?", (document, operation),
+                _SELECT_RECOVERY_CONTENT + ",created,base_revision FROM recovery WHERE document=? AND id=?",
+                (MAX_TEXT_BYTES, document, operation),
             ).fetchone()
             recorded_base = prior["base_revision"] if prior is not None else None
-            if prior is not None and (bytes(prior["content"]) != candidate
+            if prior is not None and (prior["content"] != candidate
                                       or (recorded_base is not None and recorded_base != revision)):
                 raise ValueError("Operation identifier was reused for different content")
             count = int(db.execute("SELECT count(*) AS n FROM recovery WHERE document=? AND kind='draft'", (document,)).fetchone()["n"])
@@ -514,8 +539,11 @@ class ManuscriptStore:
         """Explicitly remove a selected recovery copy, never the manuscript."""
         if not _ID.fullmatch(identifier):
             raise ValueError("Invalid recovery identifier")
-        with self._operation_lock, self._lock(), closing(self._database()) as db, db:
-            db.execute("DELETE FROM recovery WHERE document=? AND id=?", (self.document, identifier))
+        with self._operation_lock, self._lock():
+            if not self._database_exists():
+                return
+            with closing(self._database()) as db, db:
+                db.execute("DELETE FROM recovery WHERE document=? AND id=?", (self.document, identifier))
         log_event(logger, "manuscript_discard", kind="recovery")
 
     @staticmethod
@@ -541,80 +569,90 @@ class ManuscriptStore:
             "chapter_metrics": json.loads(str(row["chapter_metrics"])),
         }
 
-    def _row_settings_match(self, row: sqlite3.Row, config: CorpusConfig | None) -> bool:
-        recorded = row["settings_sha256"] if "settings_sha256" in set(row.keys()) else None
-        return recorded is not None and str(recorded) == self._snapshot_settings(config)
-
     def _retained_revision_text(self, db: sqlite3.Connection, revision: str) -> str | None:
         rec = db.execute(
-            "SELECT content FROM recovery WHERE document=? AND id=? LIMIT 1",
-            (self.document, revision),
+            _SELECT_RECOVERY_CONTENT + " FROM recovery WHERE document=? AND id=? LIMIT 1",
+            (MAX_TEXT_BYTES, self.document, revision),
         ).fetchone()
         if rec is None:
             return None
-        content = bytes(rec["content"])
-        return _decode(content)[0] if _digest(content) == revision else None
+        content = rec["content"]
+        return _decode(content)[0] if isinstance(content, bytes) and _digest(content) == revision else None
 
-    def _timeline_rows(self, db: sqlite3.Connection, bounded: int) -> list[dict[str, Any]]:
+    def _timeline_rows(self, db: sqlite3.Connection, bounded: int, *, positions_only: bool = False) -> list[sqlite3.Row]:
+        projection = "SELECT revision, created_at" if positions_only else "SELECT *"
         rows = db.execute(
-            "SELECT revision, parent_revision, created_at, words, sentences, asl, asl_cv, "
-            "dialogue_ratio, mattr, length_entropy, sticky_pct, indirect_speech_per_1000, "
-            "flags_count, chapter_metrics "
-            "FROM manuscript_revisions WHERE document=? "
+            projection + " FROM manuscript_revisions WHERE document=? "
             "ORDER BY created_at DESC, revision DESC LIMIT ?",
             (self.document, bounded),
         ).fetchall()
-        return [self._row_to_revision(row) for row in reversed(rows)]
+        rows.reverse()
+        return rows
 
-    def _recorded_revision_from_db(self, db: sqlite3.Connection, revision: str) -> dict[str, Any] | None:
-        row = db.execute(
+    def _revision_row(self, db: sqlite3.Connection, revision: str) -> sqlite3.Row | None:
+        row: sqlite3.Row | None = db.execute(
             "SELECT * FROM manuscript_revisions WHERE document=? AND revision=?",
             (self.document, revision),
         ).fetchone()
-        return self._row_to_revision(row) if row is not None else None
+        return row
 
-    def _resolve_revision_for_compare(
+    def _capture_comparison_revision(
         self,
         db: sqlite3.Connection,
-        revision: str,
-        fallback: dict[str, Any],
+        row: sqlite3.Row,
         *,
         config: CorpusConfig | None = None,
         current_bytes: tuple[str, str] | None = None,
-    ) -> tuple[dict[str, Any], bool]:
+    ) -> _ComparisonRevision:
+        revision = str(row["revision"])
         if config is None and self.language.strip().lower() == "auto":
-            return fallback, False
-        row = db.execute(
-            "SELECT * FROM manuscript_revisions WHERE document=? AND revision=?",
-            (self.document, revision),
-        ).fetchone()
-        if row is None:
-            return fallback, True
-        if self._row_settings_match(row, config):
-            return fallback, True
+            return _ComparisonRevision(revision, row, compatible=False)
+        recorded = row["settings_sha256"] if "settings_sha256" in set(row.keys()) else None
+        if recorded is not None and str(recorded) == self._snapshot_settings(config):
+            return _ComparisonRevision(revision, row)
         text = (current_bytes[1] if current_bytes is not None and current_bytes[0] == revision
                 else self._retained_revision_text(db, revision))
-        if text is None:
-            return fallback, False
-        snap = self._cached_snapshot(text, config)
-        for key in ("revision", "parent_revision", "created_at"):
-            snap[key] = fallback[key]
-        return snap, True
+        return _ComparisonRevision(revision, row, text, compatible=text is not None)
+
+    def _comparison_snapshot(self, captured: _ComparisonRevision, config: CorpusConfig | None) -> dict[str, Any]:
+        row = captured.recorded
+        if row is None:
+            if captured.text is None:
+                raise RuntimeError("Comparison has no captured source text")
+            snap = self._measure_snapshot(captured.text, config)
+            snap.update(revision=captured.revision, created_at=None)
+            return snap
+        if captured.text is None:
+            return self._row_to_revision(row)
+        snap = self._measure_snapshot(captured.text, config)
+        parent = row["parent_revision"]
+        snap.update(revision=captured.revision, parent_revision=str(parent) if parent is not None else None,
+                    created_at=float(row["created_at"]))
+        return snap
+
+    @staticmethod
+    def _implicit_base_id(history: list[sqlite3.Row], target: sqlite3.Row, *, explicit: bool) -> str | None:
+        revision = target["revision"]
+        if len(history) < 2 or (not explicit and revision != history[-1]["revision"]):
+            return None
+        index = next((i for i, item in enumerate(history) if item["revision"] == revision), None)
+        if index is None:
+            return None
+        created = float(target["created_at"])
+        day = datetime.fromtimestamp(created, tz=timezone.utc).date()
+        for item in history:
+            if (item["revision"] != revision and item["created_at"] <= created
+                    and datetime.fromtimestamp(item["created_at"], tz=timezone.utc).date() == day):
+                return str(item["revision"])
+        return str(history[index - 1]["revision"]) if index > 0 else None
 
     def timeline(self, limit: int = 30) -> list[dict[str, Any]]:
         """Return unique content snapshots by first recording time (oldest to newest)."""
         bounded = max(1, min(int(limit), 200))
-        if not (self.directory / "recovery.sqlite3").exists():
+        if not self._database_exists():
             return []
-        with self._lock(), closing(self._database(ensure_schema=False)) as db:
-            return self._timeline_rows(db, bounded)
-
-    def _recorded_revision(self, revision: str) -> dict[str, Any] | None:
-        """Resolve an immutable measurement independently of the timeline window."""
-        if not (self.directory / "recovery.sqlite3").exists():
-            return None
-        with self._lock(), closing(self._database(ensure_schema=False)) as db:
-            return self._recorded_revision_from_db(db, revision)
+        with self._lock(), closing(self._database(readonly=True)) as db:
+            return [self._row_to_revision(row) for row in self._timeline_rows(db, bounded)]
 
     def compare(
         self,
@@ -676,93 +714,51 @@ class ManuscriptStore:
             raise ValueError("Invalid base revision identifier")
         if target_revision is not None and not _ID.fullmatch(target_revision):
             raise ValueError("Invalid target revision identifier")
-        target_compatible = True
-        base_compatible = True
-        with self._lock():
-            db_exists = (self.directory / "recovery.sqlite3").exists()
-            if db_exists:
-                with closing(self._database(ensure_schema=False)) as db:
-                    history = self._timeline_rows(db, 100)
-                    by_rev = {item["revision"]: item for item in history}
-                    current_bytes: tuple[str, str] | None = None
-                    config: CorpusConfig | None = None
-                    if target_revision is not None:
-                        target = by_rev.get(target_revision) or self._recorded_revision_from_db(db, target_revision)
-                        if target is None:
-                            raise ValueError("Target revision not found in manuscript history")
-                        try:
-                            source = self._read()
-                            current_bytes = (_digest(source), _decode(source)[0])
-                        except (OSError, ValueError):
-                            # A historical comparison can still use retained data.
-                            pass
-                        if self.language.strip().lower() == "auto":
-                            target_text = (current_bytes[1] if current_bytes is not None and current_bytes[0] == target_revision
-                                           else self._retained_revision_text(db, target_revision))
-                            if target_text is not None:
-                                config = self._fixed_auto_config(target_text)
-                        target, target_compatible = self._resolve_revision_for_compare(
-                            db, target_revision, target, config=config, current_bytes=current_bytes
-                        )
-                    else:
-                        source = self._read()
-                        text, _, _ = _decode(source)
-                        revision = _digest(source)
-                        current_bytes = (revision, text)
-                        config = self._fixed_auto_config(text)
-                        target = by_rev.get(revision) or self._recorded_revision_from_db(db, revision)
-                        if target is None:
-                            target = self._measure_snapshot(text, config)
-                            target["revision"] = revision
-                            target["created_at"] = None
-                        else:
-                            target, target_compatible = self._resolve_revision_for_compare(
-                                db, revision, target, config=config, current_bytes=current_bytes
-                            )
-                    base: dict[str, Any] | None = None
-                    if base_revision is not None:
-                        base = by_rev.get(base_revision) or self._recorded_revision_from_db(db, base_revision)
-                        if base is None:
-                            raise ValueError("Base revision not found in manuscript history")
-                        base, base_compatible = self._resolve_revision_for_compare(
-                            db, base_revision, base, config=config, current_bytes=current_bytes
-                        )
-                    if (base_revision is None and len(history) >= 2
-                            and any(item["revision"] == target["revision"] for item in history)
-                            and (target_revision is not None or target["revision"] == history[-1]["revision"])):
-                        target_day = datetime.fromtimestamp(target["created_at"], tz=timezone.utc).date()
-                        same_day = [
-                            item for item in history
-                            if item["revision"] != target["revision"]
-                            and item["created_at"] <= target["created_at"]
-                            and datetime.fromtimestamp(item["created_at"], tz=timezone.utc).date() == target_day
-                        ]
-                        candidate_base: dict[str, Any] | None
-                        if same_day:
-                            candidate_base = same_day[0]
-                        else:
-                            idx = next(i for i, item in enumerate(history) if item["revision"] == target["revision"])
-                            candidate_base = history[idx - 1] if idx > 0 else None
-                        if candidate_base is not None:
-                            base, base_compatible = self._resolve_revision_for_compare(
-                                db, candidate_base["revision"], candidate_base, config=config, current_bytes=current_bytes
-                            )
-            else:
-                history = []
-                if target_revision is not None:
-                    raise ValueError("Target revision not found in manuscript history")
+        with self._lock(), (closing(self._database(readonly=True)) if self._database_exists() else nullcontext()) as db:
+            # Capture the revision selection, measurements and any retained text together.
+            if db is not None:
+                db.execute("BEGIN")
+            history = self._timeline_rows(db, 100, positions_only=True) if db is not None else []
+            current_bytes: tuple[str, str] | None
+            if target_revision is None:
                 source = self._read()
-                text, _, _ = _decode(source)
-                revision = _digest(source)
-                target = self.analyze_snapshot(text)
-                target["revision"] = revision
-                target["created_at"] = None
-                base = None
-                if base_revision is not None:
-                    raise ValueError("Base revision not found in manuscript history")
-        if target is None:
-            raise ValueError("Target revision not found in manuscript history")
-        if base is None or not (target_compatible and base_compatible):
+                revision, text = _digest(source), _decode(source)[0]
+                current_bytes = (revision, text)
+                config = self._fixed_auto_config(text)
+                target_row = self._revision_row(db, revision) if db is not None else None
+                current = (self._capture_comparison_revision(db, target_row, config=config, current_bytes=current_bytes)
+                           if db is not None and target_row is not None else _ComparisonRevision(revision, None, text))
+            else:
+                target_row = self._revision_row(db, target_revision) if db is not None else None
+                if db is None or target_row is None:
+                    raise ValueError("Target revision not found in manuscript history")
+                try:
+                    source = self._read()
+                    current_bytes = (_digest(source), _decode(source)[0])
+                except (OSError, ValueError):
+                    # An explicit historical comparison can still use retained data.
+                    current_bytes = None
+                config = None
+                if self.language.strip().lower() == "auto":
+                    target_text = (current_bytes[1] if current_bytes is not None and current_bytes[0] == target_revision
+                                   else self._retained_revision_text(db, target_revision))
+                    if target_text is not None:
+                        config = self._fixed_auto_config(target_text)
+                current = self._capture_comparison_revision(db, target_row, config=config, current_bytes=current_bytes)
+
+            baseline_id = base_revision
+            if baseline_id is None and target_row is not None:
+                baseline_id = self._implicit_base_id(history, target_row, explicit=target_revision is not None)
+            base_row = self._revision_row(db, baseline_id) if db is not None and baseline_id is not None else None
+            if base_revision is not None and base_row is None:
+                raise ValueError("Base revision not found in manuscript history")
+            baseline = (self._capture_comparison_revision(db, base_row, config=config, current_bytes=current_bytes)
+                        if db is not None and base_row is not None else None)
+
+        # Measurements and chapter matching may be expensive. They use captured bytes
+        # after releasing the SQLite snapshot and the document's state lock.
+        target = self._comparison_snapshot(current, config)
+        if baseline is None or not (current.compatible and baseline.compatible):
             return {
                 "schema_version": "lixity-timeline/1",
                 "document": self.document,
@@ -775,6 +771,7 @@ class ManuscriptStore:
                 "chapter_matching": {"clear": True, "matched": 0, "unmatched": 0, "ambiguous": 0},
             }
 
+        base = target if baseline.revision == current.revision else self._comparison_snapshot(baseline, config)
         return {
             "schema_version": "lixity-timeline/1",
             "document": self.document,

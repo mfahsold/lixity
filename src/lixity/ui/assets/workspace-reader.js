@@ -181,6 +181,19 @@
   });
   select.addEventListener("change", function() { loadDossier(select.value); });
   refresh.addEventListener("click", function() { openDossiers(select.value); });
+  document.addEventListener("lixity:dossier-withdrawn", function(event) {
+    var withdrawn = event.detail;
+    if (withdrawn.token !== bridge.contextToken() || (projectId && withdrawn.projectId !== projectId)) return;
+    var selected = select.value;
+    lastCatalogue = null;
+    if (selected === withdrawn.id) {
+      body.replaceChildren();
+      syncTextAssociations(false);
+      select.value = "";
+    }
+    Array.from(select.options).find(function(option) { return option.value === withdrawn.id; })?.remove();
+    if (enabled) openDossiers(select.value);
+  });
   panel.addEventListener("keydown", function(event) {
     if (window.LixityWorkbench.state().view !== "analysis" || event.key !== "Escape" || event.defaultPrevented) return;
     if (event.target.closest("details[open]")) return;

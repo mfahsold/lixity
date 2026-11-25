@@ -10,8 +10,8 @@ own computer. When a sentence runs long or a phrase repeats, go straight to the
 passage and read it in context. Keep the notes and sources behind a scene close
 by, and choose what to share when the draft is ready.
 
-[Try a short passage](https://mfahsold.github.io/lixity/sandbox/index.html) ·
-[Explore a read-only example project in English](https://mfahsold.github.io/lixity/demo/report.html) ·
+[Edit a paragraph in the browser exercise](https://mfahsold.github.io/lixity/sandbox/index.html) ·
+[Follow a finding in the read-only demo](https://mfahsold.github.io/lixity/guides/first-look.html#passage) ·
 [Visit the product website](https://mfahsold.github.io/lixity/)
 
 <a id="choose-what-leaves-the-project"></a>
@@ -37,17 +37,16 @@ on the language. [Language coverage](https://github.com/mfahsold/lixity/blob/mai
 
 ## Install and start
 
-**Desktop app.** Start at the download guide and choose a DMG for macOS
-(Apple Silicon or Intel), an EXE or MSI for Windows x64, or a DEB or AppImage
-for Linux x64. The app includes Python and opens from your system's application
-launcher. The guide shows whether public installers or test builds are
-available for your computer.
+**Desktop app.** Check the download guide for your operating system and
+processor. The guide shows public installers when a qualified release is
+available. The app includes Python and opens from your system's application
+launcher.
 [Desktop downloads and setup](https://mfahsold.github.io/lixity/guides/installation.html#desktop)
 
-**Desktop testing.** Sign in to GitHub and get the installer archive and
-its checksum list from the same Actions run. The platform guides explain
-verification, installation and first launch. Check the bundled offline example in a
-separate account or test machine before opening a working project.
+**Desktop test builds.** Sign in to GitHub and get a build and its checksum list
+from the same Actions run. Choose a macOS DMG for Apple Silicon or Intel, an
+EXE or MSI for Windows x64, or a DEB or AppImage for Linux x64. Try the bundled
+example before opening a working project.
 [macOS](https://mfahsold.github.io/lixity/guides/installation.html#macos)
 · [Windows x64](https://mfahsold.github.io/lixity/guides/installation.html#windows)
 · [Linux x64](https://mfahsold.github.io/lixity/guides/installation.html#linux)
@@ -113,14 +112,14 @@ make check
 
 ## Release, citation and license
 
-> **Version line:** The documentation source version is **v0.9.2**, in the pre-1.0 **0.x** line.
+> **Version line:** The documentation source version is **v0.9.3**, in the pre-1.0 **0.x** line.
 > Historical 1.x and 3.x tags predate the numbering reset. Use the release
 > identified as current on GitHub.
 
 The published package comes from the verified tag. The read-only demo and
 desktop test builds can show changes from the development checkout.
 [Latest GitHub release](https://github.com/mfahsold/lixity/releases/latest) ·
-[v0.9.2 release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.2.md) ·
+[v0.9.3 release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.3.md) ·
 [Changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md)
 
 Lixity is licensed under **AGPL-3.0-or-later**. You can write and sell your

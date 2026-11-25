@@ -230,6 +230,7 @@
   var inspector = document.getElementById("reader-inspector");
   var inspectorBody = document.getElementById("reader-inspector-body");
   var focus = document.getElementById("reader-focus");
+  var focusShortcuts = focus.getAttribute("aria-keyshortcuts") || "";
   var directSpeechBtn = document.getElementById("reader-direct-speech");
   var directSpeechActive = false;
   var directSpeechObserver = null;
@@ -711,10 +712,6 @@
     if (workbench.state().contextTool !== "none") workbench.dispatch({type: "tool", value: "none"});
   }
   function setFocus(value) {
-    if (focus) {
-      if (value) focus.setAttribute("aria-keyshortcuts", "Escape");
-      else focus.removeAttribute("aria-keyshortcuts");
-    }
     retain(function() { workbench.dispatch({type: "focus", value: value}); });
   }
   function openOverview() {
@@ -1009,6 +1006,7 @@
     document.getElementById("workbench-overview-open").hidden = state.surface === "overview";
     document.getElementById("workbench-overview-toolbar").hidden = state.surface !== "overview";
     focus.setAttribute("aria-pressed", String(state.focus));
+    focus.setAttribute("aria-keyshortcuts", state.focus ? (focusShortcuts + " Escape").trim() : focusShortcuts);
     var focusLabel = uiLabel(state.focus ? "reading_focus_exit" : "reading_focus");
     focus.querySelector(".reader-control-label").textContent = focusLabel;
     focus.setAttribute("aria-label", focusLabel); focus.title = focusLabel;
@@ -1087,6 +1085,9 @@
     var fragment = document.createDocumentFragment();
     if (!compact) {
       fragment.appendChild(actionButton("values", "reading_explore_passage", true));
+      if (document.getElementById("reader-speech") && panel.dataset.paragraphSha256) {
+        fragment.appendChild(actionButton("direction", "speech_direction_title", true));
+      }
     }
     if (panel.querySelector("[data-manuscript-link-selection]")) {
       var hasSub = savedRange && Array.from(savedRange.toString()).length > 0 && Array.from(savedRange.toString()).length <= 10000;
@@ -1129,6 +1130,10 @@
     if ((action === "values" || action === "companion") && document.body.classList.contains("reader-focus")) setFocus(false);
     if (action === "values") {
       inspectValues(panel, point, returnTarget);
+    } else if (action === "direction") {
+      document.dispatchEvent(new CustomEvent("lixity:open-speech-studio", {
+        detail: {mode:"reader", passage:panel, opener:returnTarget}
+      }));
     } else if (action === "link") {
       if (!range) {
         var pnode = panel.querySelector(".ptext-inner > p");

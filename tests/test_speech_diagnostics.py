@@ -90,7 +90,7 @@ def test_keyboard_interrupt_is_cancelled_and_propagated(tmp_path, monkeypatch, r
         speech.render_speech_audio(source, tmp_path / "result.wav", profile=profile,
                                    plan=[SpeechSegment("synthetic", profile)])
     log = records.getvalue()
-    assert "status=cancelled error=interrupted" in log
+    assert any("status=cancelled" in line and "error=interrupted" in line for line in log.splitlines())
     assert "PRIVATE-INTERRUPT" not in log
 
 

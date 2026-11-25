@@ -7,15 +7,19 @@ tables drive both dispatch and the content-free API index.
 from __future__ import annotations
 
 import json
+import logging
+import time
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any, ClassVar
 from urllib.parse import parse_qs, unquote, urlparse
 
 from ..io import FileSizeLimitError, FileUtils
+from ..log import diagnostic_scope, log_event
 from ..project_structure import MAX_CONFIG_BYTES, project_artifact_path
 from ..research import api as research_api
 from ..speech_status import native_worker_inventory
+from ..speech_trim import MAX_TRIM_REQUEST_BYTES
 from ..status import LANGUAGE_CODES
 from ..ui.dashboard import DIAGRAM_LIBRARY_FILE, DIAGRAM_LIBRARY_ROUTE, _bundle
 from ..ui.metric_reference import METRIC_REFERENCE_PATH, metric_reference_document
@@ -44,6 +48,15 @@ from .routes_project import ProjectRoutesMixin
 from .routes_site import SiteExportRoutesMixin
 from .routes_speech import SpeechRoutesMixin
 
+_AUDIO_POST_ACTIONS = frozenset({
+    "audio-audit", "audio-schema", "audio-microphone", "audio-take-trim",
+    "speech-audio-delete", "speech-audio-import", "speech-cancel", "speech-direction", "speech-plan", "speech-render",
+})
+_MICROPHONE_OPERATIONS = frozenset({
+    "status", "set_gain", "calibrate", "save_reference", "record_reference", "list_references",
+    "delete_reference",
+})
+
 
 class LixityServerHandler(
     EditingRoutesMixin,
@@ -61,6 +74,8 @@ class LixityServerHandler(
 ):
     """Serves the dashboard and the workspace action endpoints."""
 
+    _audio_request: tuple[str, str, float] | None = None
+    _microphone_operation: str | None = None
 
     #: GET routes: exact path -> handler method name.
     GET_ROUTES: ClassVar[dict[str, str]] = {
@@ -118,6 +133,7 @@ class LixityServerHandler(
         "manuscript-compare": "_handle_editor_compare",
         "workspace-close": "_handle_workspace_close",
         "speech-render": "_handle_speech_render",
+        "speech-audio-delete": "_handle_speech_audio_delete",
         "speech-audio-import": "_handle_speech_audio_import",
         "speech-plan": "_handle_speech_plan",
         "audio-audit": "_handle_audio_audit",
@@ -125,6 +141,7 @@ class LixityServerHandler(
         "speech-direction": "_handle_speech_direction",
         "speech-cancel": "_handle_speech_cancel",
         "audio-microphone": "_handle_audio_microphone_post",
+        "audio-take-trim": "_handle_audio_take_trim",
         "nda-draft": "_handle_nda_draft",
         "manuscript-pdf": "_handle_manuscript_pdf",
         "site-export": "_handle_site_export",
@@ -480,7 +497,20 @@ class LixityServerHandler(
             return
 
         action = path[len("/api/"):].strip("/")
+        if action in _AUDIO_POST_ACTIONS:
+            with diagnostic_scope() as identifier:
+                self._audio_request = (identifier, action, time.monotonic())
+                try:
+                    self._dispatch_post(action)
+                finally:
+                    self._audio_request = None
+                    self._microphone_operation = None
+        else:
+            self._dispatch_post(action)
+
+    def _dispatch_post(self, action: str) -> None:
         maximum = (138 * 1024**2 if action == "audio-audit"
+                   else MAX_TRIM_REQUEST_BYTES if action == "audio-take-trim"
                    else MAX_MEDIA_PAYLOAD_BYTES if action in {"research-media-ingest", "research-dossier-media", "speech-audio-import"}
                    else MAX_IMAGE_PAYLOAD_BYTES if action in {"research-image-ingest", "research-dossier-image"}
                    else MAX_EDITOR_COMPARISON_PAYLOAD_BYTES if action == "manuscript-compare"
@@ -488,6 +518,11 @@ class LixityServerHandler(
         payload = self._read_json_body(maximum=maximum)
         if payload is None:
             return
+        if action == "audio-microphone":
+            operation = payload.get("action", "status")
+            self._microphone_operation = (
+                operation if isinstance(operation, str) and operation in _MICROPHONE_OPERATIONS else "unknown"
+            )
 
         handler_name = self.POST_ROUTES.get(action)
         if handler_name is not None:
@@ -496,7 +531,10 @@ class LixityServerHandler(
                               or (action == "research-revision-batch-apply" and isinstance(payload.get("operations"), list)
                                   and any(isinstance(op, dict) and op.get("kind") == "claim_relation"
                                           for op in payload["operations"])))
-            bound_research = action.startswith("research-") and ("research_token" in payload or relation_write)
+            dossier_withdrawal = action == "research-dossier" and payload.get("action") == "withdraw"
+            bound_research = action.startswith("research-") and (
+                "research_token" in payload or relation_write or dossier_withdrawal
+            )
             if action in self.WORKSPACE_MUTATING_ACTIONS or bound_research:
                 with self._workspace_lock:
                     if bound_research and not self._research_context_matches(payload.get("research_token")):
@@ -553,6 +591,17 @@ class LixityServerHandler(
             self._json({"ok": False, "message": "Invalid JSON body"}, 400)
             return None
         return payload
+
+    def send_response(self, code: int, message: str | None = None) -> None:
+        super().send_response(code, message)
+        if self._audio_request is None:
+            return
+        identifier, route, started = self._audio_request
+        self.send_header("X-Lixity-Diagnostic-Id", identifier)
+        quiet = route == "speech-plan" or self._microphone_operation in ("status", "list_references")
+        level = logging.WARNING if code >= 400 else logging.DEBUG if quiet else logging.INFO
+        log_event(self._log, "audio_operation", level, route=route, operation=self._microphone_operation,
+                  status=code, duration_ms=round((time.monotonic() - started) * 1000))
 
     def log_request(self, code: int | str = "-", size: int | str = "-") -> None:
         """Access-log only a controlled route, method and status."""

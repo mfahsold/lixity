@@ -7,6 +7,88 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.3] - Pending release
+
+### Added
+
+- Add an optional Linux WebKitGTK check for first launch and an exact offline
+  sample import, and a native macOS benchmark for counted evidence and its return.
+- Add optional local SoundCraft trimming in Author's Voice. Keep the original
+  take available for review and require confirmation of the excerpt transcript.
+- Correlate audio requests, jobs and worker events with a server-generated
+  diagnostic ID. Preserve typed fields and include redacted response records in
+  browser test diagnostics.
+
+### Changed
+
+- Qualify the exact release commit with the hosted source, browser, native and
+  dependency checks before tagging. Promote the attested candidate packages by
+  run and artifact ID. Verify published releases independently of build retention.
+- Check Chromium and the accessibility tools before running browser suites.
+  Bound setup and test time, report each step's outcome and rebalance the four
+  shards using v0.9.2 timings.
+- Verify the candidate SBOM's source commit, version and package digests through
+  the same validation before qualification and publication.
+- Retry a failed installer upload once on the runner with the verified files.
+- Keep the book's voice defaults in project settings. Edit direction and run
+  chapter audio work beside the manuscript. Reset render overrides on reopening,
+  and give plan export and recording comparison independent text scopes.
+- Allow up to 60 seconds for author-voice takes and saved references. Show the
+  available recording time and support manual stop. Save a per-project capture
+  limit for desktop, browser and timed CLI recording. Share the accepted
+  reference duration across storage, worker transport and SoundCraft.
+- Explain what writing, comparing, saving and exporting will change in the
+  workspace. Clarify analysis, recording and project help in all seven locales.
+- Group voice models by the way they produce a voice. Show fixed profile,
+  language and voice values directly. Keep the recording limit with Author's
+  voice and place worker diagnostics in a disclosure within Voice profiles.
+- Add explicit discard for audio takes and pending chapter file selections.
+  Allow deletion of the reviewed chapter recording and staged removal of the
+  last voice profile in current audio settings.
+- Allow deletion of unused saved voice references. Add draft discard and
+  reviewed withdrawal to the dossier editor while retaining archive history.
+- Read only the selected manuscript measurements during revision comparison.
+  Keep routine recovery reads read-only and preserve existing project journals.
+- Verify research search results against the matching archive snapshot, then
+  release the index connection before preparing citations and previews.
+- Update supported dependency floors, browser tooling, CodeMirror and the native
+  WebView binding. Reuse the desktop loopback client and bound its control replies.
+- Capture revision comparison inputs before remeasurement so readers and saves
+  can proceed during the comparison. Bound retained recovery content before
+  loading it from SQLite.
+- Reuse neighboring paragraph tokens in scene cohesion windows and validated
+  record bytes while preparing research manifests.
+- Build and verify the desktop wheel and bundled interpreter in one CI action
+  using pinned uv and Python. Update the Rust advisory scanner and verify that
+  bundled interpreter paths resolve inside the runtime.
+
+### Fixed
+
+- Reject PyTorch versions affected by CVE-2025-32434 before IMS-Toucan loads
+  checkpoints. Withdraw the corresponding optional worker setup recipe.
+- Order initial recovery schema setup across manuscripts in the same project.
+  Reject newer recovery schemas and redirected database or journal files.
+- Declare the ALSA runtime required by the Linux DEB. Verify the installed Rust
+  host and bundled Python session on clean Ubuntu before uploading installers.
+- Keep delayed version and draft requests within the current writing session.
+  Explain recovery choices with unsaved changes and confirm before replacing
+  different unsaved text from a comparison.
+- Align the installation guide with the published package and desktop test builds.
+- List native desktop microphones for Author's Voice and level checks. Show a
+  single input by name, label the system default, and refresh connected devices.
+- Explain microphone check results and show pending, confirmed and rejected
+  gain changes beside the control using a read-back from the selected mixer.
+- Keep Linux capture tied to the chosen input, offer gain only for a verified
+  mixer, and report digital silence consistently in native and CLI checks.
+- Keep the Markdown link shortcut in the editor. Show the available focus,
+  search and palette shortcuts in their controls and use platform key labels.
+- Move the native manuscript import shortcut to `Cmd/Ctrl+Shift+I` so the
+  writing editor receives its italics shortcut.
+- Keep short Qwen Base auditions usable with a saved voice reference. Show
+  existing teleprompter shortcuts on their controls.
+- Edit passage direction beside the manuscript or directly below its paragraph
+  on a narrow screen. Open the same editor from the paragraph action menu.
+
 ## [0.9.2] - 2026-11-24
 
 ### Added
@@ -4695,6 +4777,7 @@ The tagged candidate stopped before publication at the hosted macOS PDF check.
   helpers.
 
 [Unreleased]: https://github.com/mfahsold/lixity/compare/v0.9.2...HEAD
+[0.9.3]: https://github.com/mfahsold/lixity/compare/v0.9.2...HEAD
 [0.9.2]: https://github.com/mfahsold/lixity/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/mfahsold/lixity/compare/v0.8.2...v0.9.1
 [0.9.0]: https://github.com/mfahsold/lixity/compare/v0.8.2...v0.9.0

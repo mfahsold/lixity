@@ -250,8 +250,10 @@ server.serve_forever()
         await page.locator('#modal-speech button').first().click();
         await audioSettings.locator('#settings-speech-output').click();
         assert.equal(await page.locator('#modal-speech[open]').count(), 1);
-        assert.equal(await page.locator('#speech-title').textContent(), fixtures.en.labels.speech_output_title);
+        assert.equal(await page.locator('#speech-title').textContent(), fixtures.en.labels.speech_chapter_output);
         await page.locator('#modal-speech button').first().click();
+        await page.locator('#tab-view-project').click();
+        await page.locator('#project-overview-body:not([hidden])').waitFor();
         assert.ok((await overview.textContent()).includes(server.fixture.projects.Alpha.root));
         assert.ok((await overview.textContent()).includes('drafts/manuscript.md'));
         const outputs = overview.locator('.project-overview-artifacts a');

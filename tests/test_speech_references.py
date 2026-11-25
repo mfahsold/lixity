@@ -5,7 +5,8 @@ import json
 import pytest
 
 from lixity.speech import generate_silence_wav
-from lixity.speech_references import load_reference, save_reference
+from lixity.speech_references import delete_reference, load_reference, save_reference
+from lixity.speech_worker import MAX_BASE_REQUEST_BYTES
 
 
 def test_reference_round_trip_is_content_addressed_and_idempotent(tmp_path):
@@ -78,13 +79,46 @@ def test_reference_rejects_final_symlink_without_rewriting_target(tmp_path):
         load_reference(tmp_path, saved.id)
     with pytest.raises((ValueError, OSError)):
         save_reference(tmp_path, audio, "Synthetic words.")
+    with pytest.raises((ValueError, OSError)):
+        delete_reference(tmp_path, saved.id)
     assert outside.read_bytes() == original
+
+
+def test_delete_reference_failure_keeps_record_and_allows_retry(tmp_path, monkeypatch):
+    audio = generate_silence_wav(1)
+    saved = save_reference(tmp_path, audio, "Synthetic first recording.")
+    other = save_reference(tmp_path, audio, "Synthetic second recording.")
+    config = tmp_path / "lixity.toml"
+    config.write_text('[audio]\nschema_version = "invalid"\n')
+    with pytest.raises(ValueError, match="schema_version"):
+        delete_reference(tmp_path, saved.id)
+    assert load_reference(tmp_path, saved.id) == saved
+
+    config.write_text('language = "en"\n')
+    record = tmp_path / ".lixity" / "audio-references" / f"{saved.id}.json"
+    unlink = type(record).unlink
+
+    def unavailable(path, *args, **kwargs):
+        if path == record:
+            raise PermissionError("Synthetic removal denied")
+        return unlink(path, *args, **kwargs)
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(type(record), "unlink", unavailable)
+        with pytest.raises(PermissionError, match="Synthetic removal denied"):
+            delete_reference(tmp_path, saved.id)
+    assert load_reference(tmp_path, saved.id) == saved
+
+    delete_reference(tmp_path, saved.id)
+    assert not record.exists()
+    assert load_reference(tmp_path, other.id) == other
+    assert config.read_text() == 'language = "en"\n'
 
 
 def test_reference_rejects_oversized_stored_data(tmp_path):
     saved = save_reference(tmp_path, generate_silence_wav(1), "Synthetic words.")
     record = tmp_path / ".lixity" / "audio-references" / f"{saved.id}.json"
-    record.write_bytes(b"x" * (3 * 1024 * 1024))
+    record.write_bytes(b"x" * (MAX_BASE_REQUEST_BYTES + 1))
     with pytest.raises(ValueError, match="bounded"):
         load_reference(tmp_path, saved.id)
 
@@ -146,26 +180,42 @@ def test_cli_calibration_text_and_generate(tmp_path, capsys, monkeypatch):
     assert "id" in res
 
 
-def test_cli_record_with_calibration_text(tmp_path, capsys, monkeypatch):
+@pytest.mark.parametrize(("configured", "variant", "extra", "expected", "excerpt"), [
+    (None, "short", [], 15, "Boxkämpfer"),
+    (None, "phonetic", [], 60, "Nordwind"),
+    (37, "short", [], 37, "Boxkämpfer"),
+    (37, "phonetic", [], 37, "Nordwind"),
+    (37, "phonetic", ["--duration", "15"], 15, "Nordwind"),
+    (None, "phonetic", ["--transcript", "Synthetic custom text."], 15, "Synthetic custom text."),
+    (37, "phonetic", ["--transcript", "Synthetic custom text."], 37, "Synthetic custom text."),
+])
+def test_cli_record_with_calibration_text(tmp_path, capsys, monkeypatch, configured, variant, extra, expected, excerpt):
     import lixity.speech_record
     from lixity.cli import main
 
-    dummy_audio = generate_silence_wav(2)
-    monkeypatch.setattr(lixity.speech_record, "record_audio", lambda duration, **kw: dummy_audio)
+    def record(duration, **options):
+        assert duration == expected
+        return generate_silence_wav(duration)
+
+    monkeypatch.setattr(lixity.speech_record, "record_audio", record)
+    if configured is not None:
+        (tmp_path / "lixity.toml").write_text(f"[audio_recording]\nreference_seconds = {configured}\n")
 
     assert main([
         "audio-reference", "record",
         "--project", str(tmp_path),
         "--calibration-text",
         "--language", "de",
-        "--variant", "short",
+        "--variant", variant,
+        *extra,
     ]) == 0
     captured = capsys.readouterr()
     assert "KALIBRIERUNGSTEXT (TELEPROMPTER)" in captured.err
-    assert "Boxkämpfer" in captured.err
+    assert excerpt in captured.err
     res = json.loads(captured.out)
     assert res["schema_version"] == "lixity-audio-reference-created/1"
     assert "id" in res
+    assert res["quality"]["duration_seconds"] == expected
 
 
 def test_list_references(tmp_path):

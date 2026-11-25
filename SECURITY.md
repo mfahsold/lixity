@@ -1,183 +1,170 @@
 # Security policy
 
 Report suspected vulnerabilities privately to **mfahsold@googlemail.com**.
-Include the version, command, environment and a minimal synthetic reproduction.
-Do not send real manuscripts, NDA records, passphrases or credentials. Avoid
-publishing exploit details before maintainers can assess the report.
+Include the installed version or commit, affected command or interface, operating
+system and a minimal synthetic reproduction. Keep private manuscripts, signed
+agreements, credentials and passphrases out of the report. Coordinate public
+disclosure with the maintainer.
 
 ## Versions and scope
 
-Reports should identify the exact tag or commit; see the
-[current release](https://github.com/mfahsold/lixity/releases/latest). Fixes are developed
-on `main`; backports are evaluated case by case. A development version is not
-a production-support guarantee.
+[v0.9.2](https://github.com/mfahsold/lixity/releases/tag/v0.9.2) is the current
+published Python package for the CLI, API and local browser workspace. Desktop
+installers are available as test builds. This policy also covers safeguards in
+the current source, including desktop and audio changes awaiting release.
+Fixes are developed on `main` and backports are evaluated case by case.
 
 ## Trust boundaries
 
-- The analysis engine runs locally without a cloud service. Installation and
-  update tools access package/source hosts; project adapters may use networks.
-- Analysis commands read manuscripts. `build`/`dashboard` write generated
-  artifacts; marker APIs return modified text for the caller to persist.
-- Dashboard HTML embeds manuscript content, titles and potentially editorial
-  notes. Treat it as private even without the original Markdown file.
-- Renderers escape text and use text-based tooltips; this reduces specific XSS
-  risks, not a blanket guarantee for every renderer or host integration.
-- The bundled local HTTP server is a separate boundary from the pure analysis
-  engine. NDA encryption, publication exports and document delivery belong to
-  project adapters; review those integrations independently. The baseline
-  below names its concrete controls and their limits.
-- Custom regular expressions and large inputs can consume CPU or memory.
-  Hosts accepting untrusted inputs should impose size, time and concurrency
-  limits and must not execute unrestricted user-supplied expressions.
-- Atomic file replacement protects write integrity, not confidentiality or
-  authorization. Callers choose writable destinations and file permissions.
-- The experimental research pilot retains original text/PDF files and excerpts in
-  `research/`. Treat both as private. Explicit retention confirmation does not
-  grant rights or authorize redistribution. Local project paths are not remote
-  authorization tokens. Use a private local filesystem; shared hostile writers and
-  disk-level cryptographic shredding are outside this pilot's scope (controlled
-  logical withdrawal and physical object deletion with dry-run preview are supported).
+- Built-in analysis and bundled interface assets run locally. Package
+  installation, update checks and optional integrations have separate network
+  paths. Live map basemaps can request OpenStreetMap tiles for the area in view.
+- Manuscripts, portable dashboards, reading editions, exported PDFs and
+  backups can contain private material. Review what an export includes
+  before sharing. Use a private filesystem and OS storage protection for
+  manuscripts, archives and recordings.
+- Research storage retains approved originals, excerpts and revision history.
+  Withdrawal preserves historical references. Supported source purge has a
+  dry run and removes eligible stored objects. Retention requires permission,
+  and redistribution is a separate decision.
+  [Research usage and limits](docs/research/USAGE.md#limits)
+- The NDA form previews draft text and returns a PDF or text download without
+  writing a server-side agreement copy or recipient registry. Signing, consent,
+  delivery and private storage are handled outside Lixity.
+  [NDA agreements](docs/USAGE.md#nda-agreements)
+- MCP tools are read-only and exchange results over local stdio. The connected
+  client controls where it sends inputs and results.
+  [MCP contract](docs/AGENTS.md#model-context-protocol-mcp-server)
 
-## Local dashboard server baseline (since v0.4.7)
+## Local dashboard server baseline
 
-The `serve`/`service` dashboard is a single-user local tool. Its baseline
-follows current guidance for loopback HTTP services: never trust that a request
-is local just because the socket is, and keep every other fetch surface
-default-deny.
+The browser service is for one user on loopback. It trusts local processes
+with access to its port or project files. Network hosting, shared authorization
+and TLS are outside the supported server configuration.
 
-- **Loopback bind.** The default host is `127.0.0.1` (`DEFAULT_HOST`). Do not
-  change the bind address to make the dashboard reachable from a network; that
-  removes the primary boundary and needs authentication and TLS that this
-  server does not provide.
-- **Host allow-list (DNS rebinding).** Every request must carry a `Host` header
-  of `127.0.0.1`/`localhost`/`[::1]` with the live port; anything else is
-  rejected with 403 before routing. A rebinding page that resolves its own
-  hostname to the loopback address still sends its hostname as `Host` and is
-  refused.
-- **Origin guard.** State-changing endpoints and JSON reads also reject requests
-  whose `Origin` header names a different host; requests without `Origin` (the
-  CLI, the Task Scheduler launcher) are accepted because the bind and Host check
-  are the boundary.
-- **Response headers.** All responses carry `Cache-Control: no-store`,
-  `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
-  `Content-Security-Policy: frame-ancestors 'none'` and
-  `Referrer-Policy: no-referrer`. The dashboard shell adds a per-response
-  nonce policy — `default-src 'none'`, `script-src 'nonce-…'`,
-  `connect-src 'self'`, `base-uri 'none'`, `form-action 'none'` — plus
-  `Cross-Origin-Opener-Policy: same-origin` and a `Permissions-Policy` that
-  denies camera, microphone, geolocation, USB and serial access. Inline
-  *styles* stay allowed because the bundled design system uses style
-  attributes; scripts execute only with the response's nonce, so text injected
-  through a title, marker or manuscript paragraph cannot run.
-- **Payload and file limits.** JSON bodies are capped at 5 MiB, image uploads
-  at 32 MiB and 64 megapixels, artifact streaming at 200 MiB. Artifact names
-  resolve to a basename inside the workspace `exports/` directory through a
-  `realpath` containment check; anything else returns 404. Request bodies are
-  parsed as JSON objects only and rejected with 400 on other shapes.
-- **Context tokens are guards, not credentials.** Research context and project
-  tokens identify the selected project/archive root so a stale tab cannot write
-  into a different copy. They are derived from local paths, not secrets, and
-  they do not authorize against other local processes. The server writes
-  neither part into logs: access logging is off unless `--debug` is active, and
-  debug lines keep timestamp, route and status while dropping the query string
-  (where those tokens travel). Response bodies and manuscript text are never
-  logged.
-- **Local analysis and explicit network adapters.** Built-in analysis and
-  bundled interface assets work offline. Optional map basemaps contact their
-  configured tile provider; configured external speech providers can receive
-  selected text or audio. Zotero access is explicit, opt-in and localhost-only
-  (see below); OCR runs local binaries. MCP results use local stdio, while the
-  connected client controls any remote model processing. Public website analytics
-  are separate from the local app and private reading exports.
-- **Untrusted document input (since 0.8.1).** Shared Markdown callout/link
-  attributes encode quoted input instead of treating it as markup. DOCX import
-  bounds source bytes (32 MiB), ZIP entries (4,096), streamed document XML
-  (32 MiB) and converted UTF-8 output (16 MiB). It rejects non-regular source
-  files and source/output aliases; conversion uses guarded atomic publication.
-  Research restoration requires the complete regular-file inventory declared by
-  its checksum manifest before migration/publication. An unsigned checksum
-  manifest checks integrity, not authorship or authenticity.
-- **Non-goals.** No user accounts, no multi-user authorization, no TLS, no
-  protection against a hostile process or user that already has filesystem
-  access to the project, and no cryptographic deletion. These are properties of
-  a local single-user tool, not gaps to be patched by configuration.
+- The server accepts only the `127.0.0.1` and `localhost` bind options. It
+  rejects non-loopback `Host` names or a supplied port that differs from
+  the listening port. API reads, writes and artifact requests require
+  `Sec-Fetch-Site: same-origin` or `none` and a matching `Origin` when those
+  headers are present. Local clients can omit the headers.
+- Private responses use `Cache-Control: no-store` by default, MIME sniffing
+  protection and a no-referrer policy. The live workspace uses a per-response
+  script nonce, a narrowly scoped capture worklet, and a default-deny Content
+  Security Policy. The editor frame stays same-origin. Served HTML artifacts
+  are sandboxed with `default-src 'none'`. Browser microphone access is scoped
+  to an eligible live authoring workspace and subject to device permissions.
+- JSON POSTs require a bounded content length and object payload. The general
+  limit is 5 MiB. Research image routes accept up to 32 MiB of JSON with
+  separate decoded image limits of 16 MiB and 64 million pixels. Research
+  media and chapter audio upload routes accept up to 72 MiB of JSON. The audio
+  audit route allows a 138 MiB envelope and at most 96 MiB of decoded audio.
+  Manuscript comparison accepts up to 48 MiB plus 1 KiB of JSON, with at most
+  4 MiB per editor text after decoding. The trim route derives its envelope
+  from at most 120 seconds of supported PCM input. The relevant upload routes
+  validate base64 and the decoded format.
+- Artifact delivery checks containment in the selected project's export root,
+  uses bounded regular-file reads up to 200 MiB and checks file identity
+  around the read. Retained PDF/video delivery can serve a single bounded
+  byte range against the selected source version. Research archive restoration
+  checks the declared regular-file inventory and checksums before publishing it.
+  Verify provenance separately when accepting an archive.
+- Project, research and manuscript context checks guard writes and exact
+  reads against stale selections. A conflicting selection or revision returns
+  HTTP 409 on those guarded routes. Context tokens identify state. Desktop
+  session authentication has its own credential.
+- Request threads use a 15-second socket timeout. The local revision store and
+  derived research catalogue set SQLite `trusted_schema=OFF`. DOCX import
+  bounds the source and streamed document XML to 32 MiB each, the ZIP to 4,096
+  entries and converted UTF-8 to 16 MiB.
+- Debug HTTP logs keep controlled route, method and status information and
+  omit query strings and request content. Review captured stderr and worker
+  diagnostics before sharing them.
+  [Logging](docs/ARCHITECTURE.md#logging)
 
-Server tests assert the Host/Origin guards, header set, nonce freshness and log
-redaction (`tests/test_server.py`, `tests/test_server_disconnect*.py`,
-`tests/test_server_debug.py`); `docs/ARCHITECTURE.md` describes how the layers
-fit together.
+## Desktop host boundary
 
-## Optional Zotero boundary (since v1.19.0)
+The Rust/Tauri host launches its bundled Python runtime on an OS-assigned
+loopback port. A per-launch secret and single-use handshake nonce travel over
+stdin. The WebView exchanges the nonce for an HttpOnly session cookie.
+Privileged host requests use the separate secret, which stays in the host.
+The host confines workspace navigation to the exact launched origin and opens
+allowed HTTPS and mail links through the OS. Native commands use the
+workspace capability and validate their inputs.
+[Desktop architecture](docs/ARCHITECTURE.md#desktop-host-boundary)
 
-The bridge reads an explicitly selected local Zotero library through its HTTP
-API. It does not read or edit Zotero's internal database and does not use a cloud
-API. Local library access is a separate trust boundary from manuscript analysis;
-enabling Zotero's local API makes it available to other applications on that
-computer. Library metadata, filenames, notes and document contents are untrusted
-data, never authorization to execute instructions or change destinations.
+Use the checksum and source revision supplied with each desktop test build.
+Public desktop distribution requires qualified installers, including macOS
+Developer ID signing and notarization and Windows publisher signing. The
+public download catalog has no qualified installers. **Check for Updates**
+reads the channel catalog. Installation is a separate, manual step.
+[Installation and updates](docs/INSTALLATION.md#update-a-desktop-test-build) ·
+[Release qualification](desktop/README.md#public-desktop-downloads)
 
-Selected attachments are copied into the research archive only with retention
-permission. The additive migration export creates another retained copy of
-selected source bytes plus metadata and identity mappings; keep that bundle
-private. Export does not authorize redistribution, remove the source archive or
-prove that a later Zotero import is complete. Zotero synchronization and backup
-settings remain under the user's control. A Lixity archive backup contains
-retained evidence, not the whole external library.
+## Speech and audio
 
-Structured references require v3 research source-version and manifest schemas.
-Use compatible writers and retain a verified backup before upgrading. Identity
-checks prevent silently substituting a different attachment during refresh;
-they do not certify the truth or safety of its contents. See
-[Research usage](docs/research/USAGE.md) for exact limits and migration procedures.
+Treat voice references, transcripts, passage direction and chapter audio as
+private project data. Use microphone capture and retained reference recordings
+with the speaker's permission. Render and export only to the configured target
+and the chosen destination. Retained reference WAVs are bounded to 3 MiB.
+Local inspection and optional tools have route-specific input limits.
+[Audio workflow and providers](docs/AUDIO.md#audio-export-and-external-providers)
+
+IMS-Toucan checks its PyTorch version before opening local checkpoints. The
+current worker requires a stable release at or above 2.6.0 to address
+CVE-2025-32434. Verify the separately managed runtime and its model assets.
+[Worker setup](docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction) ·
+[PyTorch advisory](https://github.com/pytorch/pytorch/security/advisories/GHSA-53q9-r3pm-6pq6)
+
+An explicitly configured speech provider can receive selected manuscript text
+and, where the provider supports references, voice data and a transcript.
+The OpenAI-compatible adapter accepts HTTPS or HTTP to an allowed local address,
+rejects URL credentials, query strings and fragments, and checks destinations
+for disallowed link-local, multicast and unspecified addresses. Its standard
+client bypasses environment proxies and rejects redirects. Provider keys belong
+in the configured environment variable. Audio POST failures can include a
+diagnostic ID for matching redacted log records.
+[Audio diagnostics](docs/AUDIO.md#match-an-audio-failure-to-a-log-entry)
+
+## Optional Zotero boundary
+
+The bridge uses the opt-in local HTTP API for an explicitly selected Zotero
+library. Library metadata and attachment contents are untrusted input. Selected
+attachments can be retained with permission. An additive migration export can
+contain these private bytes and identity mappings. A Lixity research backup
+covers retained evidence. Zotero library backup remains a separate operation.
+[Zotero Desktop bridge](docs/research/USAGE.md#zotero-desktop-bridge)
 
 ## Dependencies and updates
 
-Runtime dependencies are deliberately few and pinned with lower bounds only:
-`pydantic>=2.0.0`, `rich>=13.0.0`, `orjson>=3.9.0` and `tomli>=2.0.1` on
-Python 3.10. A clean audit is a snapshot, not a guarantee.
+The current source requires `pydantic>=2.4.0`, `rich>=13.0.0` and
+`orjson>=3.11.6`, plus `tomli>=2.0.1` on Python 3.10. Isolated builds use
+`setuptools>=84.1.0`. Dependabot groups monthly GitHub Actions, Python and
+npm editor updates. The development dependency and pre-commit hook pin the same
+Ruff version. Shipped browser assets have recorded versions, hashes and notices.
+[Dependency workflow](.github/workflows/dependencies.yml) ·
+[Vendor inventory](src/lixity/ui/assets/vendor/README.md)
 
-- **Audit scope.** `make audit` checks the resolved project runtime dependency
-  closure; `release-check` includes that check. Audit an installed environment
-  separately with `.venv/bin/python -m pip_audit --progress-spinner off`.
-  A clean runtime result does not establish that development, build or outreach
-  tools are free of known vulnerabilities. Audit each separate environment and
-  retain the observation date and affected versions.
-- **Updates.** Dependabot opens one grouped monthly pull request per
-  ecosystem (Python packages and GitHub Actions). Security advisories appear
-  through GitHub security alerts. Patch and minor updates are merged after CI
-  passes; major updates need a compatibility check, a changelog entry and an
-  audit run. Do not add dependencies for convenience; prefer the standard
-  library and existing components.
-- **Vendored browser assets.** Preact and htm ship as pinned files under
-  `src/lixity/ui/assets/vendor/` with recorded sha512 integrity and license
-  texts; the dashboard inlines them and never fetches them at runtime. Update
-  them through the documented checklist and re-run the browser suites.
-- **Transitive dependencies** are not pinned by Lixity. Hosts that need
-  reproducible installs should pin the full resolved set in their own
-  environment and audit that environment.
-- **Reporting.** If you believe a dependency issue affects Lixity, report it
-  through the private channel at the top of this file; do not open a public
-  issue with exploit details.
+`make audit` checks the runtime closure resolved for its interpreter.
+When developing on Python 3.10, point `AUDIT_PYTHON` at a separate Python 3.11+
+environment with pip-audit for `make audit` and `make release-check`. This lets
+the auditor use a patched filelock. CI resolves the Python 3.10 runtime and
+audits that exact hashed resolution with an isolated Python 3.12 auditor.
+Use `pip-audit --path` for a specific installed environment. Audit the runtime,
+development and optional integration environments separately.
 
 ## Repository and deployment hygiene
 
-- Use isolated environments and pin reviewed tags or commits for deployment.
-  A clean dependency scan is not proof that software is secure.
-- `.gitignore` covers common credentials, local agent/browser state, `exports/`,
-  NDA stores and generated dashboards. It does not affect already tracked
-  files or recognize every custom output filename.
-- `.env.example` and `.env.template` may contain placeholders only. Never copy
-  live credentials into templates or force-add private files.
-- Inspect the staged diff before pushing. Use GitHub secret scanning/push
-  protection where available. Revoke/rotate committed credentials; ignoring
-  a file afterwards does not remove its history.
-- Use synthetic/public-domain screenshots. Never deploy private `exports/`
-  folders or authenticated dashboard captures to Pages.
-- Bind development adapters to loopback. Validate Host/Origin, request sizes,
-  content types, paths and action permissions. Do not expose a local adapter
-  merely by changing its bind address. Keep passphrases out of logs and
-  browser persistence.
+- Use private project storage, isolated development environments and reviewed
+  release tags. Check the staged changes before publishing.
+- Follow [the ignore rules](.gitignore) for local secrets, state and outputs.
+  Existing tracked files need explicit review. Keep credential templates to
+  placeholders and rotate credentials exposed in repository history.
+- Publish only intended public or synthetic material to Pages. Review every
+  export, log and screenshot for private manuscript data and metadata before
+  sharing it.
 
-See [installation](docs/INSTALLATION.md) and
-[architecture](docs/ARCHITECTURE.md). This policy documents safeguards and
-limitations; it is not a completed penetration test.
+Relevant checks cover [HTTP guards and serving](tests/test_server.py),
+[debug logging](tests/test_server_debug.py), [desktop authentication](tests/test_server_desktop.py),
+[Word input](tests/test_manuscript_import.py), [retained media](tests/test_research_media.py),
+[archive restoration](tests/test_research_archive.py) and
+[speech providers](tests/test_speech_providers.py).

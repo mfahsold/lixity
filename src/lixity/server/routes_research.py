@@ -999,6 +999,23 @@ class ResearchRoutesMixin(ResponseMixin):
         if root is None:
             return
         action = payload.get("action")
+        if action == "withdraw":
+            try:
+                if set(payload) - {"action", "research_token", "dossier_id", "expected_revision",
+                                   "expected_snapshot", "dry_run"}:
+                    raise ResearchError("Unexpected dossier withdrawal fields")
+                dossier_id = payload.get("dossier_id")
+                dry_run = payload.get("dry_run")
+                if not isinstance(dossier_id, str) or not dossier_id or type(dry_run) is not bool:
+                    raise ResearchError("A dossier ID and explicit dry_run flag are required")
+                result = research_api.withdraw(
+                    root, dossier_id=dossier_id, expected_revision=payload.get("expected_revision"),
+                    expected_snapshot=payload.get("expected_snapshot"), dry_run=dry_run,
+                )
+                self._json({"ok": True, **result})
+            except (ResearchError, OSError, ValueError) as exc:
+                self._research_error(exc)
+            return
         if action in ("save_collection", "delete_collection", "set_collections"):
             try:
                 if action == "save_collection":

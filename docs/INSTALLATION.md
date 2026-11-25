@@ -15,7 +15,7 @@ Lixity is **open source under AGPL-3.0-or-later** and may be used for commercial
 writing. A separate written commercial license covers closed-source integrations.
 [Licensing](LICENSING.md)
 
-> **Version scope:** this source documentation describes the prepared **v0.9.2**. Verify packages at
+> This manual follows the source checkout. Verify the installed release at
 > [GitHub releases](https://github.com/mfahsold/lixity/releases/latest) and
 > [PyPI](https://pypi.org/project/lixity/). The product uses the pre-1.0 **0.x** line.
 > Historical **1.x** and **3.x** tags predate the product-number reset; a larger
@@ -64,13 +64,14 @@ environments are [separate advanced routes](#python-api-project-environment).
 
 ### Packaging direction
 
-The published **v0.9.1** release is a Python package with a local browser
-interface. GitHub Releases provides its wheel, source archive and checksums.
-The Pages desktop download catalog is empty while native installers undergo
-qualification. GitHub Actions builds platform-specific test artifacts.
+PyPI distributes the published browser app and CLI. GitHub Releases provides
+the wheel, source archive and checksums. The desktop download guide reads the
+verified installer catalog and links to platform-specific GitHub Actions test
+builds while public installers undergo qualification.
+[Current release](https://github.com/mfahsold/lixity/releases/latest)
 [Get a desktop test build](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build)
 
-The unreleased **Rust / Tauri v2 desktop host** in `desktop/` bundles an isolated
+The **Rust / Tauri v2 desktop host** in `desktop/` bundles an isolated
 `python-build-standalone` 3.12 runtime alongside the shared Python analysis
 engine and UI. The release build matrix targets macOS disk images for Apple
 Silicon and Intel, Windows x64 NSIS and WiX installers, and Linux x64 Debian
@@ -80,7 +81,7 @@ Opening a project's `lixity.toml` loads the manuscript selected for its folder.
 
 The desktop host runs its own loopback engine. Manuscript folders and retained
 research archives live outside the installed app. Python 3.12 is the bundled
-desktop baseline. The 0.9.1 Python package supports Python 3.10 and later.
+desktop baseline. The standalone Python package supports Python 3.10 and later.
 Optional speech and OCR workers remain separate from the core desktop application.
 [Desktop installation by operating system](guides/installation.html#desktop)
 
@@ -204,7 +205,7 @@ sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt
   `Lixity_VERSION_amd64.deb` with your package installer or run
   `sudo apt install ./Lixity_VERSION_amd64.deb` with the actual filename.
   This is a system package installation. APT can resolve
-  the WebKitGTK 4.1 and GTK 3 dependencies from configured repositories.
+  the WebKitGTK 4.1, GTK 3 and ALSA dependencies declared by the package.
   Start **Lixity** from the applications menu.
   [Ubuntu package installation](https://ubuntu.com/server/docs/tutorial/managing-software/#installing-a-deb-file)
 - **AppImage.** Keep `Lixity_VERSION_amd64.AppImage` in your test folder.
@@ -215,12 +216,18 @@ sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt
   when the host lacks the required libraries.
   [AppImage FUSE troubleshooting](https://docs.appimage.org/user-guide/troubleshooting/fuse.html)
 
+If a Linux test build reports missing `libasound.so.2`, install the ALSA
+runtime through your package manager. Ubuntu 22.04 provides `libasound2`,
+and Ubuntu 24.04 provides `libasound2t64`.
+
 #### Check the first desktop session
 
-Choose **Try the example offline** in a test account or VM and save an
-editable copy in a new folder. Open a passage and inspect one finding.
-Report the OS version, installer filename and SHA-256 with any failure.
-Keep the installer used for an upgrade or rollback test.
+Choose **Try the example offline** in a test account or VM. Review the preview,
+then confirm to save an editable copy in a new folder. Open a passage, inspect
+one finding and return to the passage. Save a small edit before checking an
+upgrade or rollback. Confirm the text, settings and any retained research
+after reopening the test project. Keep the installer, filename, SHA-256, OS
+version and any failure details with your test record.
 [First session](ONBOARDING.md) · [Desktop updates and rollback](#update-a-desktop-test-build)
 
 #### Find the desktop logs
@@ -278,7 +285,7 @@ lixity service start --open
 
 Use the [published release notes](https://github.com/mfahsold/lixity/releases/latest)
 for changes and compatibility of the installed release. The
-[development notes](releases/v0.9.2.md) describe this source version.
+[development notes](releases/v0.9.3.md) describe this source version.
 `uv tool update-shell` configures new terminals;
 it does not change the terminal already open.
 
@@ -398,15 +405,15 @@ transcription commands, supported direction, model downloads and licensing.
 Install FFmpeg if your workflow requires [WAV normalization or audio formats
 beyond PCM WAV](AUDIO.md#audio-export-and-external-providers-unreleased).
 
-### Native audio model lifecycle (unreleased)
+<a id="native-audio-model-lifecycle-unreleased"></a>
+
+### Native audio model lifecycle
 
 Qwen (all three variants), Coqui/OpenVoice and IMS Toucan share one worker
 lifecycle. Starting a worker binds its loopback service and validates local
 settings/assets without importing the inference stack or loading weights. The
 first validated synthesis request loads the model in an owned child process.
 Keep the worker's separate optional environment and complete local checkpoints.
-This lifecycle applies to the unreleased source; use its verified development
-wheel until the next release.
 
 The default idle interval is **300 seconds after the last completed synthesis**.
 The child exits after that interval, releasing model allocations and its inference
@@ -475,8 +482,9 @@ Start the worker explicitly from that environment:
 python -m lixity.speech_qwen --model /path/to/CustomVoice --device cpu --threads 1
 ```
 
-It binds only to `127.0.0.1:8769` and serializes synthesis. The unreleased
-source uses the [shared on-demand lifecycle](#native-audio-model-lifecycle-unreleased). CPU operation supports full chapters; generation can be much slower than the
+It binds only to `127.0.0.1:8769` and serializes synthesis through the
+[shared on-demand lifecycle](#native-audio-model-lifecycle). CPU operation
+supports full chapters. Generation can be much slower than the
 result's duration, so use a short preview to choose the voice. Match Torch threads
 to the CPU budget assigned to the worker. A heavily throttled four-thread worker
 can waste time contending within a one-core quota. Keep workstation CPU/memory
@@ -599,31 +607,27 @@ is added to the core package. CPU inference is supported; speed and speaker
 similarity must be measured on the actual computer and reference recording.
 
 Use a separate Python 3.11 environment and an eSpeak-NG shared library. The
-following inference-only setup pins the upstream checkout and model revisions;
-it intentionally excludes training and GUI dependencies. Run it from a Lixity
-source checkout. Installation downloads packages and weights; subsequent worker
-startup requires all files locally and disables Hugging Face network access.
+previous inference recipe used PyTorch 2.4.1, which is affected by CVE-2025-32434
+even with `weights_only=True`. The current worker checks for a stable PyTorch
+release at or above 2.6.0 before loading checkpoints. Select a patched
+PyTorch and TorchAudio pair for the platform. Treat the environment as
+operator-managed until the complete dependencies and a render are verified
+together. [PyTorch advisory](https://github.com/pytorch/pytorch/security/advisories/GHSA-53q9-r3pm-6pq6) ·
+[TorchAudio compatibility matrix](https://docs.pytorch.org/audio/stable/installation.html)
+
+The previously tested upstream IMS-Toucan checkout used revision
+`3cc2094d9c7123336eda7e299ac0bc90319ca9ff`. Its acoustic assets were
+`ToucanTTS.pt` and `Vocoder.pt` from `Flux9665/ToucanTTS` at revision
+`e0afe0ef703d2178dd7dc74ec298693ddb10e720`. Its speaker assets came from
+`speechbrain/spkrec-ecapa-voxceleb` at revision
+`0f99f2d0ebe89ac095bcc5903c4dd8f72b367286`. Verify the provenance of your local
+source, model and speaker configuration before use. The worker requires all
+files locally and disables Hugging Face network access during startup.
 
 ```sh
 TOUCAN_ENV="$HOME/.local/share/lixity/runtimes/toucan-venv"
 TOUCAN_SOURCE="$HOME/.local/share/lixity/runtimes/IMS-Toucan"
 TOUCAN_MODELS="$HOME/.local/share/lixity/models/toucan"
-uv venv --python 3.11 "$TOUCAN_ENV"
-uv pip install --python "$TOUCAN_ENV/bin/python" -e . \
-  'torch==2.4.1' 'torchaudio==2.4.1' 'numpy==1.23.5' 'scipy==1.9.3' \
-  'librosa==0.9.2' 'soundfile==0.12.1' 'speechbrain==0.5.13' \
-  'huggingface-hub==0.25.2' 'phonemizer==3.2.1' 'matplotlib==3.9.2' \
-  'dotwiz==0.4.0' 'einops==0.7.0' 'dragonmapper==0.2.6' \
-  'pypinyin==0.47.1' 'tqdm==4.64.1' 'hyperpyyaml==1.2.2' \
-  'setuptools==80.9.0' 'imageio==2.34.0' 'ruamel.yaml==0.18.6'
-git clone --branch MassiveScaleToucan https://github.com/DigitalPhonetics/IMS-Toucan.git "$TOUCAN_SOURCE"
-git -C "$TOUCAN_SOURCE" checkout 3cc2094d9c7123336eda7e299ac0bc90319ca9ff
-"$TOUCAN_ENV/bin/huggingface-cli" download Flux9665/ToucanTTS \
-  ToucanTTS.pt Vocoder.pt --revision e0afe0ef703d2178dd7dc74ec298693ddb10e720 \
-  --local-dir "$TOUCAN_MODELS/acoustic"
-"$TOUCAN_ENV/bin/huggingface-cli" download speechbrain/spkrec-ecapa-voxceleb \
-  embedding_model.ckpt classifier.ckpt mean_var_norm_emb.ckpt hyperparams.yaml label_encoder.txt \
-  --revision 0f99f2d0ebe89ac095bcc5903c4dd8f72b367286 --local-dir "$TOUCAN_MODELS/speaker"
 "$TOUCAN_ENV/bin/python" -m lixity.speech_toucan \
   --source "$TOUCAN_SOURCE" --model "$TOUCAN_MODELS/acoustic" \
   --speaker "$TOUCAN_MODELS/speaker" --device cpu --threads 4
@@ -633,7 +637,8 @@ If the library is installed outside the system search path, set
 `PHONEMIZER_ESPEAK_LIBRARY` to its actual shared-library file. Missing eSpeak,
 unknown IPA symbols and incomplete checkpoints fail explicitly; the adapter never
 falls back to a downloaded phonemizer or silently drops unsupported phones.
-The model assets above total approximately 395 MiB, excluding Python packages.
+The reference acoustic and speaker assets total approximately 395 MiB,
+excluding Python packages.
 Check the service with `lixity audio-status --engine ims-toucan`.
 
 In the audio dialog, review and apply the backed-up settings upgrade to schema

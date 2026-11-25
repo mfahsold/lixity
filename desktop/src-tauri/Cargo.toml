@@ -22,8 +22,8 @@ required-features = ["webview-smoke"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-# Minimum Tauri v2.11.1 mitigates GHSA-7gmj-67g7-phm9 (Windows WebView2 origin confusion).
-tauri = { version = "2.11.1", features = [] }
+# Include the Tauri channel access-control fix from GHSA-w28w-mhc8-qvjv.
+tauri = { version = "2.11.6", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"

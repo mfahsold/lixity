@@ -312,12 +312,12 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
     'audio-microphone': (
         'AUDIO.md',
         (
-            'Default action status and devices inspect hardware only. set changes the ALSA mixer '
-            'immediately and requires --gain. calibrate records an 8-second sample after 4 seconds, '
-            'optionally setting gain first; it suggests but does not apply a subsequent adjustment. '
-            'Optional local capture tools are required. --card and --control apply only to set; status '
-            'always inspects default card 1/control Mic. --device applies only to calibrate; recording '
-            'fallbacks may use other inputs.'
+            'The status and devices actions inspect hardware. set changes the ALSA mixer immediately '
+            'and requires --gain. --card and --control apply to status and set. Without --card, ALSA '
+            'selects its default mixer. With --device, status reads the named input’s ALSA card '
+            'and discovers its capture control when --control is omitted. calibrate records '
+            'one sample from the selected input and reports any suggested '
+            'gain adjustment separately.'
         ),
         ('lixity audio-microphone devices --json',
          'lixity audio-microphone set --card 1 --control Mic --gain 35'),
@@ -325,11 +325,10 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
     'audio-calibrate': (
         'AUDIO.md',
         (
-            'Uses local capture tools; records 1-30 seconds (default: 8) after a default 4-second '
-            'countdown. --gain attempts an immediate ALSA mixer change on card 1/control Mic; '
-            'recommended gain is not applied. The recording is not retained. --device is a preferred '
-            'input and fallbacks may use another device. Measurements are uncalibrated heuristics, not '
-            'recording certification.'
+            'Uses local capture tools after a configurable countdown. --gain requests an immediate '
+            'ALSA capture mixer change before recording. An explicit --device keeps capture on the '
+            'selected input. A suggested adjustment requires a verified input and mixer range. '
+            'Measurements describe the signal from a temporary recording.'
         ),
         ('lixity audio-calibrate --duration 8 --countdown 4 --json', 'lixity audio-calibrate --gain 35'),
     ),
@@ -508,23 +507,22 @@ AUDIO_OPTION_HELP: dict[str, dict[str, str]] = {'read-aloud': {'--output': 'WAV/
                             'openai-compatible provider; a native worker must match the selected model',
                 '--voice': 'Qwen preset, design for VoiceDesign, reference for reference engines, thorsten '
                            "for Coqui, or the external provider's voice identifier"},
- 'audio-microphone': {'action': 'status (default): inspect default mixer; devices: list inputs; set: change '
-                                'gain; calibrate: record an 8-second test',
+ 'audio-microphone': {'action': 'status (default): inspect mixer; devices: list inputs; set: change '
+                                'gain; calibrate: measure a test recording',
                       '--gain': 'set/calibrate: requested ALSA raw gain (implementation accepts 0-100; '
                                 'actual mixer range depends on hardware)',
-                      '--card': 'set only: ALSA mixer card index or ID (default: 1)',
-                      '--control': 'set only: ALSA mixer control (default: Mic)',
-                      '--device': 'calibrate only: preferred capture device; default initial ALSA input '
-                                  'plughw:CARD=I3000,DEV=0'},
- 'audio-calibrate': {'--duration': 'Recording length in seconds, 1-30 (default: 8)',
-                     '--gain': 'Attempt to set default ALSA capture gain before recording (accepted 0-100; '
+                      '--card': 'status/set: ALSA card index or ID (uses the default mixer if omitted)',
+                      '--control': 'status/set: explicit ALSA mixer control',
+                      '--device': 'status/calibrate: capture input ID from audio-microphone devices'},
+ 'audio-calibrate': {'--duration': 'Recording length in seconds, 1-30 (default: %(default)s)',
+                     '--gain': 'Attempt to set the input ALSA capture gain before recording (accepted 0-100; '
                                'hardware range varies)',
-                     '--device': 'Preferred capture device (initial ALSA default: plughw:CARD=I3000,DEV=0); '
-                                 'fallback may use other inputs'},
+                     '--device': 'Capture input ID from audio-microphone devices (uses the system default if omitted)'},
  'audio-reference': {'--project': 'Existing explicit project root; required except for calibration-text',
-                     '--audio': 'create: 1-30 second mono 16-bit PCM WAV at 24 kHz (maximum 2 MiB)',
-                     '--duration': 'record: 1-30 seconds (default: 15; 24 with --calibration-text and '
-                                   'phonetic variant)',
+                     '--audio': 'create: {minimum}-{maximum} second mono 16-bit PCM WAV at 24 kHz '
+                                '(maximum {mib} MiB)',
+                     '--duration': 'Record for {minimum}-{maximum} seconds. Overrides project audio_recording.reference_seconds. '
+                                   'Defaults to {default:g} seconds or {maximum} for the full phonetic calibration text.',
                      '--gain': 'record: attempt default ALSA mixer gain before capture (accepted 0-100; '
                                'hardware range varies)',
                      '--language': 'generate/calibration-text/record --calibration-text: text language '

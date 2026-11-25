@@ -2,6 +2,7 @@
 (function() {
   "use strict";
   var schema = "lixity-audio-take/1", maximumBytes = 64 * 1024 * 1024;
+  var captureSampleRate = 24000;
   function fail(code) { var error = new Error("Invalid audio take: " + code); error.code = code; throw error; }
   function keys(value, names) {
     return value && typeof value === "object" && !Array.isArray(value) &&
@@ -83,11 +84,16 @@
   function withTranscript(value, text, status) {
     return take(value.blob, Object.assign({}, value.metadata, {transcript:transcript(text, status)}));
   }
-  function referenceEligibility(value) {
+  function matchesReferenceFormat(audio, format) {
+    return audio.channels === format.channels && audio.sample_rate_hz === format.sample_rate_hz &&
+      audio.sample_width_bits === format.sample_width_bits;
+  }
+  function referenceEligibility(value, format) {
     var audio = value.metadata.audio;
-    var reason = audio.channels !== 1 || audio.sample_rate_hz !== 24000 || audio.sample_width_bits !== 16 ? "format" :
-      audio.duration_seconds < 1 || audio.duration_seconds > 30 ? "duration" :
-      !value.transcript.trim() ? "missing" : value.transcript.length > 2000 ? "transcript" :
+    var reason = !format ? "unavailable" : !matchesReferenceFormat(audio, format) ? "format" :
+      audio.duration_seconds < format.min_seconds || audio.duration_seconds > format.max_seconds ? "duration" :
+      value.blob.size > format.max_bytes ? "size" :
+      !value.transcript.trim() ? "missing" : Array.from(value.transcript).length > format.max_transcript_chars ? "transcript" :
       value.transcript_status !== "confirmed" ? "confirmation" : "";
     return {eligible:!reason, reason:reason};
   }
@@ -154,6 +160,7 @@
     };
   }
   window.LixityAudioTake = Object.freeze({create:create, validate:validate, importFiles:importFiles,
-    withTranscript:withTranscript, referenceEligibility:referenceEligibility, download:download,
+    withTranscript:withTranscript, captureSampleRate:captureSampleRate, matchesReferenceFormat:matchesReferenceFormat,
+    referenceEligibility:referenceEligibility, download:download,
     encodeWav:encodeWav, openPcmCapture:openPcmCapture, maximumBytes:maximumBytes});
 })();

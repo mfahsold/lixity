@@ -5,6 +5,30 @@ const path = require('node:path');
 const {spawn} = require('node:child_process');
 const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/browser_tools.cjs');
 
+async function holdVersionRead(page, urlPattern) {
+  let markRequested, release, markDelivered;
+  const requested = new Promise(resolve => {markRequested = resolve;});
+  const held = new Promise(resolve => {release = resolve;});
+  const delivered = new Promise(resolve => {markDelivered = resolve;});
+  const handle = async route => {
+    const response = await route.fetch();
+    markRequested();
+    await held;
+    try {await route.fulfill({response});}
+    catch (_) { /* The UI may have already aborted this read. */ }
+    finally {markDelivered();}
+  };
+  await page.route(urlPattern, handle, {times: 1});
+  return {
+    requested,
+    async deliver() {
+      release();
+      await delivered;
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    },
+  };
+}
+
 (async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-editor-'));
   const source = path.join(root, 'book.md');
@@ -31,6 +55,7 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     assert.equal(await legend.isVisible(), true, 'An expanded reader legend reproduces the transition into writing');
     await page.locator('#manuscript-write').click({timeout: 5000});
     await page.locator('.cm-content').waitFor();
+    await page.locator('#manuscript-recovery option').first().waitFor({state: 'attached'});
     assert.equal(await page.locator('#manuscript-close').isVisible(), true, 'Close writing button is visible while editing');
     assert.equal(await page.locator('#manuscript-write').isHidden(), true, 'Write button is replaced by Close writing while editing');
     assert.equal(await page.locator('#manuscript-reader-controls').isHidden(), true, 'Reader toolbar is hidden in Write mode so only one unified editor toolbar is shown');
@@ -52,7 +77,9 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     await page.keyboard.press('d');
     assert.equal(await page.locator('body').evaluate(body => body.matches('.reader-focus, .reader-direct-speech')), false,
       'Writing controls do not activate hidden reader shortcuts');
-    assert.equal(await page.locator('#lixity-tooltip kbd').textContent(), 'Ctrl+Z', 'Editor undo button exposes its keyboard shortcut badge in tooltip');
+    const modifier = await page.evaluate(() => /Mac/.test(navigator.platform) ? 'Cmd' : 'Ctrl');
+    assert.equal(await page.locator('#lixity-tooltip kbd').textContent(), `${modifier}+Z`,
+      'Editor undo help uses the platform modifier');
     assert.equal(await page.locator('#manuscript-read').count(), 0, 'Consolidated Read & Refresh button is removed');
     if (!process.argv.includes('--firefox')) {
       const original = fs.readFileSync(source, 'utf8');
@@ -73,7 +100,11 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
       assert.equal(fs.readFileSync(source, 'utf8'), original, 'Undo restores the exact manuscript');
       await cdp.detach();
     }
-    // Closing without edits returns to reading immediately and restores focus.
+    // Closing without edits returns to reading and cancels a pending comparison.
+    await versions.click();
+    const compareRead = await holdVersionRead(page, '**/manuscript-edit');
+    await page.locator('#manuscript-compare').click();
+    await compareRead.requested;
     await page.locator('#manuscript-close').click();
     await page.waitForFunction(() => !document.body.classList.contains('manuscript-writing'));
     assert.equal(await page.locator('#manuscript-editor').isHidden(), true, 'Close writing hides the editor section');
@@ -82,6 +113,8 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     assert.equal(await legend.isVisible(), true, 'Closing writing restores the active reading legend');
     assert.equal(await page.locator('#reader-analysis-options').evaluate(node => node.open), true);
     assert.equal(await legend.locator('details').evaluate(node => node.open), true, 'The reading disclosure keeps its state');
+    await compareRead.deliver();
+    assert.ok(await page.locator('#manuscript-comparison').isHidden(), 'A late comparison leaves Reader visible');
     assert.equal(await page.evaluate(() => document.activeElement && document.activeElement.id), 'manuscript-write', 'Close writing returns focus to #manuscript-write');
     // Closing after edits flushes pending changes and reloads the reading view.
     await page.locator('#manuscript-write').click();
@@ -113,19 +146,25 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     await versions.click();
     const draft = await page.locator('#manuscript-recovery option[data-kind="draft"]').first().getAttribute('value');
     await page.locator('#manuscript-recovery').selectOption(draft);
-    let releaseRecovery;
-    const delayedRecovery = new Promise(resolve => {releaseRecovery = resolve;});
-    await page.route('**/manuscript-edit?recovery=*', async route => {await delayedRecovery; await route.continue();});
-    const response = page.waitForResponse(url => url.url().includes('manuscript-edit?recovery='));
+    const oldMenuRead = await holdVersionRead(page, '**/manuscript-edit?recovery=*');
     await page.locator('#manuscript-recover').click();
+    await oldMenuRead.requested;
+    await versions.press('Escape');
+    await versions.press('Enter');
+    await oldMenuRead.deliver();
+    assert.ok(await page.locator('#manuscript-recovery').isVisible(), 'Versions stays open on return');
+    assert.ok(await versions.evaluate(node => node === document.activeElement), 'A closed version request cannot steal focus after reopening');
+    assert.doesNotMatch(await page.locator('.cm-content').innerText(), /My retained draft/, 'Reopening Versions cannot revive an old recovery request');
+
+    const delayedRecovery = await holdVersionRead(page, '**/manuscript-edit?recovery=*');
+    await page.locator('#manuscript-recover').click();
+    await delayedRecovery.requested;
     await page.locator('.cm-content').click();
     await page.keyboard.press(modShortcut('End'));
     await page.keyboard.type('Concurrent typing.');
-    releaseRecovery(); await response;
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await delayedRecovery.deliver();
     assert.match(await page.locator('.cm-content').innerText(), /Concurrent typing/, 'Delayed recovery must not replace newer typing');
     assert.doesNotMatch(await page.locator('.cm-content').innerText(), /My retained draft/);
-    await page.unroute('**/manuscript-edit?recovery=*');
     await page.keyboard.press(modShortcut('z'));
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state === 'saved');
     await versions.click();

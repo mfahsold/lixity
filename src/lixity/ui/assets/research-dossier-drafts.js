@@ -2,6 +2,72 @@
 var manuscriptDraftsState = null;
 var manuscriptDraftsBox = document.getElementById("r-dos-drafts-box");
 
+document.addEventListener("click", async function(event) {
+  var button = event.target.closest("[data-dossier-withdraw]");
+  if (!button || button.disabled || button.hidden || window.LixitySite.readOnly) return;
+  var reading = button.closest("[data-dossier-reading]")?._dossierReading;
+  if (!reading?.current()) return;
+  var context = researchReadContext();
+  var dialog = button.closest("dialog");
+  var status = button.closest(".research-dossier-toolbar").querySelector("[data-dossier-withdraw-status]");
+  var components = window.LixityComponents;
+  var reviewed = {
+    action: "withdraw",
+    dossier_id: reading.id,
+    expected_revision: reading.revision,
+    expected_snapshot: reading.snapshot
+  };
+  function feedback(message, state) {
+    if (!reading.current()) return;
+    status.hidden = !message;
+    components.setStatus(status, message, state);
+  }
+  function matches(result) {
+    return acceptResearchContext(context, result) && result.project_id === reading.projectId &&
+      result.target_id === reading.id && result.target_revision === reading.revision;
+  }
+  function failed(result) {
+    feedback(result?.http_status === 409 ? uiLabel("research_revision_conflict") :
+      result?.message || uiLabel("research_status_unavailable"), "err");
+  }
+  components.setButtonPending(button, true);
+  feedback(uiLabel("research_loading"), "loading");
+  try {
+    var preview = await researchApiPost("research-dossier", Object.assign({}, reviewed, {dry_run: true}));
+    if (!reading.current() || !button.getClientRects().length) return;
+    if (!preview.ok || !matches(preview) || preview.snapshot !== reading.snapshot || preview.ready !== true) {
+      failed(preview);
+      return;
+    }
+    if (!window.confirm(uiFormat("research_dossier_withdraw_confirm", {title: reading.title}))) {
+      feedback("");
+      return;
+    }
+    var result = await researchApiPost("research-dossier", Object.assign({}, reviewed, {dry_run: false}));
+    if (!result.ok || !matches(result)) {
+      failed(result);
+      return;
+    }
+    if (reading.current()) {
+      reading.root._dossierReading = null;
+      reading.root.replaceChildren();
+      if (dialog?.open) dialog.close();
+    }
+    document.dispatchEvent(new CustomEvent("lixity:dossier-withdrawn", {detail: {
+      id: reading.id, projectId: reading.projectId, token: context.token
+    }}));
+    await refreshResearchDossiers(null, null, true);
+    if (!acceptResearchContext(context, result)) return;
+    researchStatus(uiLabel("research_dossier_withdrawn"), true);
+    if (document.activeElement === document.body) document.getElementById("r-filter-dossiers")?.focus();
+  } catch (error) {
+    failed(error);
+  } finally {
+    components.setButtonPending(button, false);
+  }
+});
+
+
 function resetManuscriptDossierDrafts() {
   if (!manuscriptDraftsState) return;
   manuscriptDraftsState = null;

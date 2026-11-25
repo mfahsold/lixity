@@ -1564,14 +1564,16 @@ def _build_parser(only_command: str | None = None) -> argparse.ArgumentParser:
             p.add_argument("action", nargs="?", default="status", choices=("status", "set", "devices", "calibrate"), help=AUDIO_OPTION_HELP[name]['action'])
             p.add_argument("--gain", type=int, default=None, help=AUDIO_OPTION_HELP[name]['--gain'])
             p.add_argument("--device", default=None, help=AUDIO_OPTION_HELP[name]['--device'])
-            p.add_argument("--card", default=1, help=AUDIO_OPTION_HELP[name]['--card'])
-            p.add_argument("--control", default="Mic", help=AUDIO_OPTION_HELP[name]['--control'])
+            p.add_argument("--card", default=None, help=AUDIO_OPTION_HELP[name]['--card'])
+            p.add_argument("--control", help=AUDIO_OPTION_HELP[name]['--control'])
             p.add_argument("--json", action="store_true", help="Machine-readable JSON output")
             continue
         if name == "audio-calibrate":
+            from .speech_record import DEFAULT_CALIBRATION_COUNTDOWN, DEFAULT_CALIBRATION_SECONDS
+
             p.add_argument("--gain", type=int, default=None, help=AUDIO_OPTION_HELP[name]['--gain'])
-            p.add_argument("--duration", type=float, default=8.0, help=AUDIO_OPTION_HELP[name]['--duration'])
-            p.add_argument("--countdown", type=float, default=4.0, help="Prep countdown delay in seconds (default: 4.0)")
+            p.add_argument("--duration", type=float, default=DEFAULT_CALIBRATION_SECONDS, help=AUDIO_OPTION_HELP[name]['--duration'])
+            p.add_argument("--countdown", type=float, default=DEFAULT_CALIBRATION_COUNTDOWN, help="Prep countdown delay in seconds (default: %(default)s)")
             p.add_argument("--device", default=None, help=AUDIO_OPTION_HELP[name]['--device'])
             p.add_argument("--json", action="store_true", help="Machine-readable JSON calibration result")
             continue
@@ -1580,13 +1582,24 @@ def _build_parser(only_command: str | None = None) -> argparse.ArgumentParser:
             configure(p)
             continue
         if name == "audio-reference":
+            from .speech_recording_settings import (
+                DEFAULT_SHORT_REFERENCE_SECONDS,
+                MAX_REFERENCE_SECONDS,
+                MIN_REFERENCE_SECONDS,
+            )
+            from .speech_worker import MAX_REFERENCE_BYTES
+
             p.add_argument("action", choices=("create", "inspect", "record", "generate", "calibration-text"))
             p.add_argument("--project", default=None, help=AUDIO_OPTION_HELP[name]['--project'])
-            p.add_argument("--audio", help=AUDIO_OPTION_HELP[name]['--audio'])
+            p.add_argument("--audio", help=AUDIO_OPTION_HELP[name]['--audio'].format(
+                minimum=MIN_REFERENCE_SECONDS, maximum=MAX_REFERENCE_SECONDS, mib=MAX_REFERENCE_BYTES // 1024**2,
+            ))
             p.add_argument("--transcript-file", help=AUDIO_OPTION_HELP[name]['--transcript-file'])
             p.add_argument("--transcript", default=None, help="record/generate: exact inline transcript text")
             p.add_argument("--reference-id", help="inspect: saved reference identity to measure")
-            p.add_argument("--duration", type=float, default=15.0, help=AUDIO_OPTION_HELP[name]['--duration'])
+            p.add_argument("--duration", type=float, help=AUDIO_OPTION_HELP[name]['--duration'].format(
+                minimum=MIN_REFERENCE_SECONDS, maximum=MAX_REFERENCE_SECONDS, default=DEFAULT_SHORT_REFERENCE_SECONDS,
+            ))
             p.add_argument("--gain", type=int, default=None, help=AUDIO_OPTION_HELP[name]['--gain'])
             p.add_argument("--device", default=None, help="record: hardware capture device")
             p.add_argument("--calibration-text", action="store_true", help="record: read the standard phonetically balanced calibration text")
@@ -2205,6 +2218,8 @@ def _main(argv: list[str] | None = None) -> int:
         return EXIT_OK
     if args.command == "audio-microphone":
         from .speech_record import (
+            DEFAULT_MIXER_CONTROL,
+            get_alsa_gain,
             get_microphone_status,
             list_capture_devices,
             run_calibration,
@@ -2213,14 +2228,21 @@ def _main(argv: list[str] | None = None) -> int:
         try:
             if args.action == "set":
                 if args.gain is None:
-                    raise ValueError("audio-microphone set requires --gain <0-50>")
-                ok = set_alsa_gain(args.gain, card=args.card, control=args.control)
+                    raise ValueError("audio-microphone set requires --gain")
+                control = DEFAULT_MIXER_CONTROL if args.control is None else args.control
+                ok = set_alsa_gain(args.gain, card=args.card, control=control)
                 if not ok:
-                    raise RuntimeError(f"Could not set ALSA capture gain to {args.gain} on card {args.card}")
+                    raise RuntimeError("Could not set the selected ALSA capture gain")
+                current_gain = get_alsa_gain(card=args.card, control=control)
                 if args.json:
-                    print(_json({"status": "updated", "gain": args.gain, "card": args.card, "control": args.control}, indent=True))
+                    print(_json({
+                        "status": "updated", "gain": args.gain, "current_gain": current_gain,
+                        "card": args.card, "control": control,
+                    }, indent=True))
+                elif current_gain is None:
+                    print("Regler geändert. Der aktuelle Hardware-Gain ist unbekannt.")
                 else:
-                    print(f"Mikrofon-Gain erfolgreich auf {args.gain} gesetzt (Karte {args.card}, Regler {args.control}).")
+                    print(f"Mikrofon-Gain: {current_gain} (angefordert: {args.gain}).")
                 return EXIT_OK
             if args.action == "devices":
                 devs = list_capture_devices()
@@ -2235,10 +2257,12 @@ def _main(argv: list[str] | None = None) -> int:
                 calib = run_calibration(gain=args.gain, device=args.device)
                 if args.json:
                     print(_json(calib, indent=True))
+                elif not calib["signal_present"]:
+                    print("Kein Aufnahmesignal erkannt.")
                 else:
                     print(f"Kalibrierung abgeschlossen: Peak {calib['peak_dbfs']} dBFS -> {calib['verdict_label']}")
                 return EXIT_OK
-            status = get_microphone_status()
+            status = get_microphone_status(card=args.card, control=args.control, device=args.device)
             if args.json:
                 print(_json(status, indent=True))
             else:
@@ -2261,7 +2285,7 @@ def _main(argv: list[str] | None = None) -> int:
         from .speech_record import run_calibration
         try:
             if not args.json:
-                print("Bereit machen: 4 Sekunden Vorlauf, danach 8 Sekunden Testaufgabe:", file=sys.stderr)
+                print(f"Bereit machen: {args.countdown:g} Sekunden Vorlauf, danach {args.duration:g} Sekunden Testaufgabe:", file=sys.stderr)
                 print("  3x lautes 'POPP' -> 2x klatschen -> 1x normal 'Eins zwei drei' sprechen.\n", file=sys.stderr)
             calib = run_calibration(gain=args.gain, duration=args.duration, countdown=args.countdown, device=args.device)
             if args.json:
@@ -2274,15 +2298,12 @@ def _main(argv: list[str] | None = None) -> int:
             print(f"  Rauschuntergrund (min 0.5s): {calib['noise_floor_dbfs']:+7.1f} dBFS")
             print(f"  Sprachabstand zu Rauschen:   {calib['snr_db']:.1f} dB\n")
             print("==================== URTEIL ====================")
-            print(f"  Peak {calib['peak_dbfs']} dBFS -> {calib['verdict_label']}")
-            if calib["verdict"] == "too_hot":
-                print("  Handlungsempfehlung: ZU HEISS. Gain senken und nochmal versuchen:")
-                print(f"      lixity audio-calibrate --gain {calib['recommended_gain']}")
-            elif calib["verdict"] == "too_quiet":
-                print("  Handlungsempfehlung: MEHR LUFT ALS NOETIG (optional). Gain erhoehen:")
-                print(f"      lixity audio-calibrate --gain {calib['recommended_gain']}")
+            if not calib["signal_present"]:
+                print("  Kein Aufnahmesignal erkannt.")
             else:
-                print("  Handlungsempfehlung: GAIN BEHALTEN. Kalibriert fuer Aufnahmen!")
+                print(f"  Peak {calib['peak_dbfs']} dBFS -> {calib['verdict_label']}")
+            if calib["recommended_gain"] is not None:
+                print(f"  Empfohlener Gain für den ausgewählten Eingang: {calib['recommended_gain']}")
             return EXIT_OK
         except (OSError, ValueError, RuntimeError) as exc:
             print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
@@ -2296,7 +2317,6 @@ def _main(argv: list[str] | None = None) -> int:
             print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
             return EXIT_ERROR
     if args.command == "audio-reference":
-        from .speech_qwen import MAX_REFERENCE_BYTES
         from .speech_reference_quality import assess_reference
         from .speech_references import (
             get_calibration_text,
@@ -2304,6 +2324,7 @@ def _main(argv: list[str] | None = None) -> int:
             read_reference_input,
             save_reference,
         )
+        from .speech_worker import MAX_REFERENCE_BYTES
         try:
             if args.action == "calibration-text":
                 print(get_calibration_text(args.language, args.variant))
@@ -2332,16 +2353,19 @@ def _main(argv: list[str] | None = None) -> int:
                 from pathlib import Path
 
                 from .speech_record import analyze_signal, record_audio
+                from .speech_recording_settings import resolve_audio_recording_settings
 
                 transcript = args.transcript
                 if not transcript and args.transcript_file:
                     transcript = read_reference_input(args.transcript_file, 8000).decode("utf-8")
-                if not transcript and args.calibration_text:
+                using_calibration_text = not transcript and args.calibration_text
+                if using_calibration_text:
                     transcript = get_calibration_text(args.language, args.variant)
 
                 duration = args.duration
-                if args.calibration_text and duration == 15.0 and args.variant == "phonetic":
-                    duration = 24.0
+                if duration is None:
+                    recording = resolve_audio_recording_settings(read_explicit_project_config(args.project))
+                    duration = recording.duration_seconds(full_phonetic=using_calibration_text and args.variant == "phonetic")
 
                 if args.calibration_text and transcript:
                     print("\n================== KALIBRIERUNGSTEXT (TELEPROMPTER) ==================", file=sys.stderr)

@@ -16,6 +16,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any
 
+from .log import get_logger, log_event
 from .speech_lifecycle import (
     add_lifecycle_arguments,
     serve_worker,
@@ -33,9 +34,9 @@ from .speech_worker import SAMPLE_RATE, _decode_reference
 _EXPECTED_DISCARDS = frozenset("\u0361\u032f\u201a\u201c\u201e\u2018\u2019\u201d\u00ab\u00bb\u2039\u203a")
 
 
-def unexpected_discards(discarded: list[str]) -> str:
-    """Describe discarded characters outside the expected set by code point only."""
-    return " ".join(f"U+{ord(char):04X}" for char in sorted(set(discarded) - _EXPECTED_DISCARDS))
+def unexpected_discard_count(discarded: list[str]) -> int:
+    """Count distinct discarded characters outside the expected set."""
+    return len(set(discarded) - _EXPECTED_DISCARDS)
 
 
 def _validate_assets(model_dir: Path, converter_dir: Path | None = None, *, threads: int = 4) -> tuple[Path, Path | None]:
@@ -78,9 +79,10 @@ def load_renderer(model_dir: Path, converter_dir: Path | None = None, *, threads
             tokenizer = tts.synthesizer.tts_model.tokenizer
             missing_before = len(tokenizer.not_found_characters)
             audio = numpy.asarray(tts.tts(text=request["input"]), dtype=numpy.float32)
-            unexpected = unexpected_discards(tokenizer.not_found_characters[missing_before:])
+            unexpected = unexpected_discard_count(tokenizer.not_found_characters[missing_before:])
             if unexpected:
-                logging.getLogger("lixity.speech.worker").warning("Coqui discarded unexpected characters: %s", unexpected)
+                log_event(get_logger("speech.worker"), "worker_text_filter", logging.WARNING,
+                          engine="coqui", unexpected_discard_types=unexpected)
             rate = int(tts.synthesizer.output_sample_rate)
             if converter is not None:
                 reference, _ = _decode_reference(request["reference_audio"], request["reference_text"])

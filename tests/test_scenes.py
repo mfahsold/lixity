@@ -3,6 +3,7 @@
 import contextlib
 import io
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,7 +15,7 @@ from lixity import api
 from lixity.analyzer import CorpusAnalyzer
 from lixity.cli import main
 from lixity.pipeline import resolve_document_config
-from lixity.scenes import scene_report, scene_report_for_display
+from lixity.scenes import _detect_implicit_breaks, scene_report, scene_report_for_display
 from lixity.server.views import build_server_dashboard
 from lixity.style_fingerprint import FEATURES
 
@@ -31,6 +32,23 @@ SETTINGS = {"scene_analysis": {
 
 
 class SceneContracts(unittest.TestCase):
+    def test_implicit_breaks_use_two_paragraph_windows_and_scene_offsets(self):
+        orchard = "apple apricot cherry plum peach pear quince melon kiwi mango"
+        harbor = "ferry vessel anchor dock rope quay boat pier beacon coast"
+        courtroom = "judge witness lawyer clerk jury gavel ruling court trial record"
+        paragraphs = [orchard, "Meanwhile, " + harbor, "Meanwhile, " + orchard,
+                      "Back at " + courtroom, "Meanwhile, " + courtroom]
+
+        breaks, next_offset = _detect_implicit_breaks(
+            3, 2, paragraphs, 10, set(), re.compile(r"[A-Za-z]+"), frozenset({"meanwhile", "back"}),
+        )
+
+        self.assertEqual(next_offset, 15)
+        self.assertEqual(
+            [(hit["paragraph_index"], hit["cue_type"], hit["cohesion_similarity"]) for hit in breaks],
+            [(12, "time", 0.5), (13, "time", 0.3333), (14, "place+cohesion_drop", 0.0), (15, "time", 0.5)],
+        )
+
     def test_equal_quotation_shares_can_have_different_lengths(self):
         narration = "The lamps stood quietly against the tall windows. " * 6
         many = ('"One two three four five six seven eight." ' * 12).strip()

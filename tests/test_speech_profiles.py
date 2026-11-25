@@ -115,13 +115,15 @@ def test_audio_excludes_user_and_ancestor_configuration(tmp_path: Path):
     nested = root / "nested"
     nested.mkdir()
     raw = parse_audio_settings(None).model_dump(by_alias=True)
-    prepare_project_settings(root, {"audio": raw}).commit()
+    recording = {"reference_seconds": 45}
+    prepare_project_settings(root, {"audio": raw, "audio_recording": recording}).commit()
     user = tmp_path / "user.toml"
     user.write_bytes((root / "lixity.toml").read_bytes())
     with patch("lixity.config.os.path.expanduser", return_value=str(user)):
         assert load_project_config(root)["audio"] == raw
-        assert "audio" not in load_project_config(nested)
-        assert "audio" not in load_project_config(tmp_path)
+        assert load_project_config(root)["audio_recording"] == recording
+        assert not {"audio", "audio_recording"}.intersection(load_project_config(nested))
+        assert not {"audio", "audio_recording"}.intersection(load_project_config(tmp_path))
     metadata = configuration_metadata()
     assert "audio" in metadata["project_only_keys"]
     assert "audio" in metadata["native_settings"]["persisted_keys"]

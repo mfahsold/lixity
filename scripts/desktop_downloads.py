@@ -128,9 +128,9 @@ def render(catalog: dict[str, Any]) -> str:
     validate_catalog(catalog)
     tag = catalog["tag"]
     if tag is None:
-        return ('<p class="notice-box">Desktop installers are in testing. For the current public release, '
-                '<a href="#install">install the local browser app and CLI</a>. '
-                f'<a href="{TEST_BUILDS}">Get a desktop test installer</a>.</p>')
+        return ('<p class="notice-box">Desktop installers are currently available as test builds. '
+                'To start with the published release, <a href="#install">install the local browser app and CLI</a>. '
+                f'To test the desktop app, <a href="{TEST_BUILDS}">sign in to GitHub and find a test build</a>.</p>')
     installers = sorted(catalog["installers"], key=lambda asset: (
         INSTALLER_LABELS[(asset["target"], asset["kind"])], asset["filename"],
     ))

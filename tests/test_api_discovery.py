@@ -225,11 +225,15 @@ def test_configuration_discovery_describes_installed_models_and_threshold_domain
     assert audio_version["default"] == "lixity-audio-settings/1"
     assert audio_version["enum"] == [f"lixity-audio-settings/{number}" for number in (1, 2, 3, 4, 5)]
     assert settings["audio_schema"]["additionalProperties"] is False
+    assert "audio_recording" in settings["project_only_keys"]
+    assert settings["audio_recording_schema"]["properties"]["reference_seconds"]["anyOf"][0] == {
+        "type": "integer", "minimum": 1, "maximum": 60,
+    }
     assert "author_name" in settings["project_only_keys"]
     assert "title" not in settings["project_only_keys"]
     assert settings["native_settings"]["persisted_keys"] == [
         "title", "author_name", "publication", "site_publications", "dossier_collections", "terms", "locations",
-        "dossier_drafts", "register_profiles", "chapter_registers", "audio",
+        "dossier_drafts", "register_profiles", "chapter_registers", "audio", "audio_recording",
         "short_sentence_max", "medium_sentence_max", "long_sentence_max", "monotony_min_run",
         "hook_short_sentence", "short_turn_max_words", "long_turn_min_words", "dialogue_paragraph_share",
         "sticky_min_words", "sticky_glue_pct",

@@ -36,11 +36,13 @@
         <li>Choose the <code>_x64-setup.exe</code> for per-user setup, or the
         <code>_x64_en-US.msi</code> or <code>_x64_de-DE.msi</code> for Windows
         Installer with the corresponding language.</li>
-        <li>Open PowerShell in the extracted folder. Replace the example
-        filename with the exact name you chose. Compare the full result
-        with that file's entry in the checksum list.</li>
+        <li>Open PowerShell in the extracted folder and run the commands
+        below. At the prompt, enter the name of your chosen installer,
+        including its extension. Compare the full hash with that file's
+        entry in the checksum list.</li>
       </ol>
-      <pre><code>Get-FileHash -Algorithm SHA256 -LiteralPath '.\Lixity_VERSION_x64-setup.exe'</code></pre>
+      <pre><code>$installer = Read-Host 'Installer filename'
+Get-FileHash -Algorithm SHA256 -LiteralPath $installer</code></pre>
       <p>Windows may block an unsigned installer. If the hash differs or
       Windows blocks the file, stop and contact the maintainer with the
       filename, workflow run and exact Windows message.
@@ -53,9 +55,10 @@
         <li>Close any running copy of Lixity and open the verified installer.
         Setup needs internet access if Windows is missing the Microsoft
         WebView2 Runtime.</li>
-        <li>Open <strong>Lixity</strong> from the Start menu and choose
-        <strong>Try the example offline</strong> before testing your own
-        project.</li>
+        <li>Open <strong>Lixity</strong> from the Start menu. Choose
+        <strong>Try the example offline</strong>, check the destination,
+        and choose <strong>Import and analyze manuscript</strong> to
+        create a local copy you can edit.</li>
         <li>For help with startup, use <strong>Tools → Open Logs Folder</strong>
         once the app opens. The installation guide includes WebView2 help
         and the published browser and CLI setup.</li>

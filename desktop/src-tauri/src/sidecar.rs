@@ -8,9 +8,9 @@
 
 use crate::security::{random_token_hex, DESKTOP_SECRET_HEADER};
 use crate::StartupFailure;
-use reqwest::blocking::{RequestBuilder, Response};
+use reqwest::blocking::{Client, RequestBuilder, Response};
 use reqwest::{redirect, Method};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::fs::{self, OpenOptions};
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
@@ -22,10 +22,35 @@ use zeroize::Zeroizing;
 
 const MAX_LOG_BYTES: u64 = 2 * 1024 * 1024;
 const MAX_READY_BYTES: usize = 4096;
+const MAX_NONCE_BYTES: usize = 4096;
+const MAX_RUNTIME_STATUS_BYTES: usize = 1024 * 1024;
 const MAX_ENVIRONMENT_BYTES: usize = 64 * 1024;
 // Loading the project supplied at launch can include a full analysis before readiness.
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(120);
 const LOOPBACK_HOST: &str = "127.0.0.1";
+
+fn build_loopback_client() -> reqwest::Result<Client> {
+    Client::builder()
+        .redirect(redirect::Policy::none())
+        .no_proxy()
+        .build()
+}
+
+fn read_runtime_json<T: DeserializeOwned>(
+    response: Response,
+    maximum_bytes: usize,
+    invalid_message: &str,
+) -> Result<T, String> {
+    let mut body = Vec::new();
+    response
+        .take((maximum_bytes + 1) as u64)
+        .read_to_end(&mut body)
+        .map_err(|_| "Could not read the desktop runtime response".to_string())?;
+    if body.len() > maximum_bytes {
+        return Err("Desktop runtime exceeded the response limit".to_string());
+    }
+    serde_json::from_slice(&body).map_err(|_| invalid_message.to_string())
+}
 
 #[derive(Debug, Deserialize)]
 struct ReadyEnvelope {
@@ -237,9 +262,26 @@ pub struct PythonSidecar {
     pub version: String,
     pub initial_nonce: Zeroizing<String>,
     secret: Zeroizing<String>,
+    client: Client,
     child: Mutex<Option<Child>>,
     #[cfg(target_os = "windows")]
     _job_guard: Option<WindowsJobGuard>,
+}
+
+fn find_bundled_python(root: &Path) -> Option<PathBuf> {
+    let resolved_root = root.canonicalize().ok()?;
+    let python = root.join("python");
+    let bin = python.join("bin");
+    [
+        bin.join("python3.12"),
+        bin.join("python3"),
+        python.join("python.exe"),
+    ]
+    .into_iter()
+    .find(|path| {
+        path.canonicalize()
+            .is_ok_and(|resolved| resolved.starts_with(&resolved_root) && resolved.is_file())
+    })
 }
 
 impl PythonSidecar {
@@ -250,6 +292,7 @@ impl PythonSidecar {
             version: String::new(),
             initial_nonce: Zeroizing::new(String::new()),
             secret: Zeroizing::new(secret.to_string()),
+            client: build_loopback_client().expect("could not build the loopback test client"),
             child: Mutex::new(None),
             #[cfg(target_os = "windows")]
             _job_guard: None,
@@ -286,17 +329,11 @@ impl PythonSidecar {
                 }
             }
         }
-        for root in runtime_roots {
-            for rel in [
-                Path::new("python").join("bin").join("python3.12"),
-                Path::new("python").join("bin").join("python3"),
-                Path::new("python").join("python.exe"),
-            ] {
-                let path = root.join(rel);
-                if path.is_file() {
-                    return Ok(path);
-                }
-            }
+        if let Some(path) = runtime_roots
+            .iter()
+            .find_map(|root| find_bundled_python(root))
+        {
+            return Ok(path);
         }
         Err(
             "Bundled Lixity Python runtime not found. Build it with desktop/scripts/build_runtime_bundle.py \
@@ -309,7 +346,9 @@ impl PythonSidecar {
         resource_dir: Option<&Path>,
         startup_project: Option<&Path>,
     ) -> Result<Self, StartupFailure> {
-        let python = Self::resolve_python(resource_dir).map_err(|_| StartupFailure::RuntimeMissing)?;
+        let python =
+            Self::resolve_python(resource_dir).map_err(|_| StartupFailure::RuntimeMissing)?;
+        let client = build_loopback_client().map_err(|_| StartupFailure::RuntimeClient)?;
         let secret = random_token_hex();
         let initial_nonce = random_token_hex();
 
@@ -365,6 +404,7 @@ impl PythonSidecar {
             version: ready.version,
             initial_nonce,
             secret,
+            client,
             child: Mutex::new(Some(child)),
             #[cfg(target_os = "windows")]
             _job_guard: job_guard,
@@ -380,15 +420,11 @@ impl PythonSidecar {
         if !path.starts_with('/') || path.starts_with("//") {
             return Err("Desktop runtime requests require a local path".to_string());
         }
-        let client = reqwest::blocking::Client::builder()
-            .timeout(timeout)
-            .redirect(redirect::Policy::none())
-            .no_proxy()
-            .build()
-            .map_err(|_| "Could not initialize the desktop runtime client".to_string())?;
         let url = format!("http://{LOOPBACK_HOST}:{}{path}", self.port);
-        Ok(client
+        Ok(self
+            .client
             .request(method, url)
+            .timeout(timeout)
             .header(DESKTOP_SECRET_HEADER, self.secret.as_str()))
     }
 
@@ -413,10 +449,10 @@ impl PythonSidecar {
 
     /// Mint a fresh single-use handshake nonce for opening an additional window.
     pub fn mint_handshake_nonce(&self) -> Result<String, String> {
-        let parsed: NonceResponse = self
-            .request_runtime(Method::POST, "/_desktop/nonce", Duration::from_secs(5))?
-            .json()
-            .map_err(|_| "Invalid desktop nonce response".to_string())?;
+        let response =
+            self.request_runtime(Method::POST, "/_desktop/nonce", Duration::from_secs(5))?;
+        let parsed: NonceResponse =
+            read_runtime_json(response, MAX_NONCE_BYTES, "Invalid desktop nonce response")?;
         if !parsed.ok || parsed.nonce.is_empty() {
             return Err("Desktop nonce response missing nonce".to_string());
         }
@@ -428,7 +464,13 @@ impl PythonSidecar {
         let response = self
             .request_runtime(Method::GET, "/api/runtime", Duration::from_secs(2))
             .ok()?;
-        response.json::<RuntimeOverview>().ok()?.active_audio()
+        read_runtime_json::<RuntimeOverview>(
+            response,
+            MAX_RUNTIME_STATUS_BYTES,
+            "Invalid desktop runtime status",
+        )
+        .ok()?
+        .active_audio()
     }
 
     /// Read the Python runtime's content-free inventory without forwarding browser inputs.
@@ -439,21 +481,14 @@ impl PythonSidecar {
             "/api/desktop/environment?probe_zotero=1",
             Duration::from_secs(15),
         )?;
-        let mut body = Vec::new();
-        response
-            .take((MAX_ENVIRONMENT_BYTES + 1) as u64)
-            .read_to_end(&mut body)
-            .map_err(|_| "Could not read the desktop runtime environment".to_string())?;
-        if body.len() > MAX_ENVIRONMENT_BYTES {
-            return Err("Desktop runtime environment exceeded the response limit".to_string());
-        }
-        let invalid = || "Invalid desktop runtime environment".to_string();
-        let inventory: serde_json::Value = serde_json::from_slice(&body).map_err(|_| invalid())?;
+        const INVALID_ENVIRONMENT: &str = "Invalid desktop runtime environment";
+        let inventory: serde_json::Value =
+            read_runtime_json(response, MAX_ENVIRONMENT_BYTES, INVALID_ENVIRONMENT)?;
         if inventory["ok"].as_bool() != Some(true)
             || inventory["schema_version"].as_str() != Some("lixity-desktop-env/1")
             || !inventory["app"].is_object()
         {
-            return Err(invalid());
+            return Err(INVALID_ENVIRONMENT.to_string());
         }
         Ok(inventory)
     }
@@ -581,6 +616,39 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn selects_regular_python_files_and_keeps_the_packaged_path() {
+        struct RuntimeFixture(PathBuf);
+        impl Drop for RuntimeFixture {
+            fn drop(&mut self) {
+                let _ = fs::remove_dir_all(&self.0);
+            }
+        }
+
+        let fixture = RuntimeFixture(std::env::temp_dir().join(random_token_hex()));
+        let root = &fixture.0;
+        let python = root.join("python");
+        let primary = python.join("bin").join("python3.12");
+        fs::create_dir_all(&primary).unwrap();
+        assert_eq!(find_bundled_python(root), None);
+
+        let windows_path = python.join("python.exe");
+        fs::write(&windows_path, b"synthetic interpreter").unwrap();
+        assert_eq!(find_bundled_python(root), Some(windows_path));
+
+        #[cfg(unix)]
+        {
+            fs::remove_dir(&primary).unwrap();
+            fs::write(
+                primary.with_file_name("python3.12-real"),
+                b"synthetic interpreter",
+            )
+            .unwrap();
+            std::os::unix::fs::symlink("python3.12-real", &primary).unwrap();
+            assert_eq!(find_bundled_python(root), Some(primary));
+        }
+    }
+
     fn runtime_response(
         request: &'static str,
         code: u16,
@@ -624,6 +692,50 @@ mod tests {
     }
 
     #[test]
+    fn loopback_client_preserves_authentication_and_independent_deadlines() {
+        let sidecar = PythonSidecar::fixture(56789, "fixture");
+        for (path, timeout) in [
+            ("/api/runtime", Duration::from_secs(2)),
+            (
+                "/api/desktop/environment?probe_zotero=1",
+                Duration::from_secs(15),
+            ),
+        ] {
+            let request = sidecar
+                .loopback_request(Method::GET, path, timeout)
+                .unwrap()
+                .build()
+                .unwrap();
+            assert_eq!(request.timeout(), Some(&timeout));
+            assert_eq!(
+                request.url().as_str(),
+                format!("http://{LOOPBACK_HOST}:56789{path}")
+            );
+            assert_eq!(request.headers()[DESKTOP_SECRET_HEADER], "fixture");
+        }
+    }
+
+    #[test]
+    fn nonce_response_must_fit_the_control_message_limit() {
+        const REQUEST: &str = "POST /_desktop/nonce HTTP/1.1";
+        let nonce = r#"{"ok":true,"nonce":"fixture-nonce"}"#;
+        runtime_response(REQUEST, 200, nonce.to_string(), |sidecar| {
+            assert_eq!(sidecar.mint_handshake_nonce().unwrap(), "fixture-nonce");
+        });
+        runtime_response(
+            REQUEST,
+            200,
+            format!("{nonce}{}", " ".repeat(MAX_NONCE_BYTES)),
+            |sidecar| {
+                assert!(sidecar
+                    .mint_handshake_nonce()
+                    .unwrap_err()
+                    .contains("response limit"));
+            },
+        );
+    }
+
+    #[test]
     fn runtime_audio_status_distinguishes_unavailable_from_idle() {
         let empty = r#"{"schema_version":"lixity-runtime-local/1","ok":true,"audio":{"jobs":[]}}"#;
         for (code, body, expected) in [
@@ -646,6 +758,11 @@ mod tests {
             (200, empty.replace("true", "false"), None),
             (200, empty.replace("local/1", "local/2"), None),
             (200, r#"{"ok":true}"#.to_string(), None),
+            (
+                200,
+                format!("{empty}{}", " ".repeat(MAX_RUNTIME_STATUS_BYTES)),
+                None,
+            ),
             (403, empty.to_string(), None),
         ] {
             runtime_response("GET /api/runtime HTTP/1.1", code, body, |sidecar| {

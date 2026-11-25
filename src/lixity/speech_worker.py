@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import math
 import re
 import threading
@@ -15,22 +16,44 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from secrets import token_hex
 from typing import TYPE_CHECKING, Any
 
-from .log import get_logger, speech_diagnostic_id
+from .log import get_logger, log_event, speech_diagnostic_id, speech_diagnostic_scope
 from .speech_engines import QWEN_MODEL, engine_for_model, native_engine
 from .speech_profiles import AudioProfile, audio_capabilities
 from .speech_providers import _NoRedirect as _NoRedirect
 from .speech_providers import no_redirect_opener
+from .speech_recording_settings import (
+    MAX_REFERENCE_SECONDS as MAX_REFERENCE_SECONDS,
+)
+from .speech_recording_settings import (
+    MIN_REFERENCE_SECONDS as MIN_REFERENCE_SECONDS,
+)
 
 if TYPE_CHECKING:
     from .speech_references import SpeechReference
 
 MAX_REQUEST_BYTES = 32768
-MAX_REFERENCE_BYTES = 2 * 1024 * 1024
+MAX_REFERENCE_BYTES = 3 * 1024 * 1024
 MAX_BASE_REQUEST_BYTES = MAX_REQUEST_BYTES + 4 * ((MAX_REFERENCE_BYTES + 2) // 3)
 MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 SAMPLE_RATE = 24000
+REFERENCE_WAV_FORMAT = (1, 2, SAMPLE_RATE)
+MAX_REFERENCE_TRANSCRIPT_CHARS = 2000
 SYNTHESIS_TIMEOUT_SECONDS = 3600
 _RENDER_ID_HEADER = "X-Lixity-Render-Id"
+
+
+def reference_format() -> dict[str, int]:
+    """Return the capture and validation contract for author references."""
+    channels, width, rate = REFERENCE_WAV_FORMAT
+    return {
+        "channels": channels,
+        "sample_rate_hz": rate,
+        "sample_width_bits": width * 8,
+        "min_seconds": MIN_REFERENCE_SECONDS,
+        "max_seconds": MAX_REFERENCE_SECONDS,
+        "max_bytes": MAX_REFERENCE_BYTES,
+        "max_transcript_chars": MAX_REFERENCE_TRANSCRIPT_CHARS,
+    }
 
 
 def _valid_render_id(value: object) -> str | None:
@@ -163,7 +186,7 @@ def _decode_reference(encoded: object, transcript: object) -> tuple[bytes, bytes
     if (not isinstance(encoded, str) or not encoded or
             len(encoded) > 4 * ((MAX_REFERENCE_BYTES + 2) // 3)):
         raise ValueError("Invalid reference audio size")
-    if (not isinstance(transcript, str) or not transcript.strip() or len(transcript) > 2000 or
+    if (not isinstance(transcript, str) or not transcript.strip() or len(transcript) > MAX_REFERENCE_TRANSCRIPT_CHARS or
             any(ord(char) < 32 and char not in "\n\r\t" for char in transcript)):
         raise ValueError("A bounded reference transcript is required")
     transcript.encode("utf-8")  # Reject lone surrogates before inference.
@@ -171,8 +194,15 @@ def _decode_reference(encoded: object, transcript: object) -> tuple[bytes, bytes
     if len(data) > MAX_REFERENCE_BYTES:
         raise ValueError("Reference audio is too large")
     params, frames = _read_pcm(data)
-    if params != (1, 2, SAMPLE_RATE) or not SAMPLE_RATE * 2 <= len(frames) <= SAMPLE_RATE * 2 * 30:
-        raise ValueError("Reference must be 1 to 30 seconds of 24 kHz mono 16-bit PCM WAV")
+    channels, width, rate = REFERENCE_WAV_FORMAT
+    bytes_per_second = channels * width * rate
+    if params != REFERENCE_WAV_FORMAT or not (
+        MIN_REFERENCE_SECONDS * bytes_per_second <= len(frames) <= MAX_REFERENCE_SECONDS * bytes_per_second
+    ):
+        raise ValueError(
+            f"Reference must be {MIN_REFERENCE_SECONDS} to {MAX_REFERENCE_SECONDS} seconds of "
+            "24 kHz mono 16-bit PCM WAV"
+        )
     return data, frames
 
 
@@ -209,10 +239,10 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                 self.reply(status, data, content_type, voice)
             except OSError:
                 if request_id is None:
-                    logger.warning("event=worker_transport status=failed category=transport")
+                    log_event(logger, "worker_transport", logging.WARNING, status="failed", category="transport")
                 else:
-                    logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=failed category=transport",
-                                   request_id, render_id, engine)
+                    log_event(logger, "worker_synthesis", logging.WARNING, id=request_id, render_id=render_id,
+                              engine=engine, status="failed", category="transport")
                 return False
             return True
 
@@ -237,7 +267,8 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
             started = time.monotonic()
             # Browser pages cannot use this machine resource as a cross-origin API.
             if self.headers.get("Origin") or self.headers.get("Transfer-Encoding"):
-                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=rejected category=forbidden", request_id, render_id, engine)
+                log_event(logger, "worker_synthesis", logging.WARNING, id=request_id, render_id=render_id,
+                          engine=engine, status="rejected", category="forbidden")
                 self._send_reply(403, b'{"error":"Unsupported request"}', request_id=request_id, render_id=render_id)
                 return
             try:
@@ -250,14 +281,20 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                 if len(raw) != size:
                     raise ValueError("Truncated request")
                 request = json.loads(raw)
+                if not isinstance(request, dict):
+                    raise ValueError("Invalid request fields")
                 expected_fields = {"model", "input", "voice", "language", "instructions", "response_format"}
                 if engine == "qwen3-design":
                     expected_fields.add("voice_description")
                 if spec.reference_required:
                     expected_fields.update(("reference_audio", "reference_text"))
+                if engine == "qwen3-base" and "x_vector_only" in request:
+                    if type(request["x_vector_only"]) is not bool:
+                        raise ValueError("Invalid speaker-embedding flag")
+                    expected_fields.add("x_vector_only")
                 if engine == "ims-toucan":
                     expected_fields.update(("phonemes", "prosody"))
-                if not isinstance(request, dict) or set(request) != expected_fields:
+                if set(request) != expected_fields:
                     raise ValueError("Invalid request fields")
                 if request["model"] != model or request["response_format"] != "wav":
                     raise ValueError("Unsupported model or format")
@@ -276,33 +313,37 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                     profile_fields.update(phonemes=request["phonemes"], prosody=request["prosody"])
                 AudioProfile.model_validate(profile_fields)
             except OSError:
-                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=failed category=transport",
-                               request_id, render_id, engine)
+                log_event(logger, "worker_synthesis", logging.WARNING, id=request_id, render_id=render_id,
+                          engine=engine, status="failed", category="transport")
                 return
             except (ValueError, TypeError):
-                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=rejected category=validation", request_id, render_id, engine)
+                log_event(logger, "worker_synthesis", logging.WARNING, id=request_id, render_id=render_id,
+                          engine=engine, status="rejected", category="validation")
                 self._send_reply(400, b'{"error":"Invalid synthesis request"}', request_id=request_id, render_id=render_id)
                 return
             if not lock.acquire(blocking=False):
-                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=rejected category=busy", request_id, render_id, engine)
+                log_event(logger, "worker_synthesis", logging.WARNING, id=request_id, render_id=render_id,
+                          engine=engine, status="rejected", category="busy")
                 self._send_reply(503, b'{"error":"Worker is busy"}', request_id=request_id, render_id=render_id)
                 return
             phase = "synthesis"
             try:
-                logger.info("event=worker_synthesis id=%s render_id=%s engine=%s status=started", request_id, render_id, engine)
-                data = synthesize(request)
+                log_event(logger, "worker_synthesis", id=request_id, render_id=render_id, engine=engine, status="started")
+                with speech_diagnostic_scope(request_id):
+                    data = synthesize(request)
                 if len(data) > MAX_RESPONSE_BYTES or _read_pcm(data)[0] != (1, 2, SAMPLE_RATE):
                     raise ValueError("Unexpected generated audio format")
                 phase = "response"
                 if not self._send_reply(200, data, "audio/wav", request["voice"],
                                         request_id=request_id, render_id=render_id):
                     return
-                logger.info("event=worker_synthesis id=%s render_id=%s engine=%s status=success duration_ms=%d",
-                            request_id, render_id, engine, int((time.monotonic() - started) * 1000))
+                log_event(logger, "worker_synthesis", id=request_id, render_id=render_id, engine=engine, status="success",
+                          duration_ms=int((time.monotonic() - started) * 1000))
             except Exception:  # noqa: BLE001 - optional inference adapter failures are reported locally
                 category = "transport" if phase == "response" else "execution"
-                logger.warning("event=worker_synthesis id=%s render_id=%s engine=%s status=failed category=%s duration_ms=%d",
-                               request_id, render_id, engine, category, int((time.monotonic() - started) * 1000))
+                log_event(logger, "worker_synthesis", logging.WARNING, id=request_id, render_id=render_id,
+                          engine=engine, status="failed", category=category,
+                          duration_ms=int((time.monotonic() - started) * 1000))
                 if phase != "response":
                     self._send_reply(500, b'{"error":"Local synthesis failed"}', request_id=request_id, render_id=render_id)
             finally:

@@ -15,6 +15,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         inventory.app?.version !== "0.0.0-smoke" || !inventory.app.desktop_mode) {
       throw new Error("Runtime environment response missing");
     }
+    const recording = await bridge.audioCapture.recordingStatus();
+    if (recording.recording !== false || recording.max_duration_seconds !== 60) {
+      throw new Error("Interactive recording limit missing");
+    }
+    if (await bridge.audioCapture.startRecording(null, "synthetic.wav", 37) !== 37 ||
+        await bridge.audioCapture.startRecording(null, "synthetic.wav") !== null) {
+      throw new Error("Configured recording limit was not passed through the bridge");
+    }
     await bridge.setWorkspaceTitle(" A synthetic project ");
     const sample = await bridge.readSampleManuscript();
     if (sample.language !== "en" || !sample.content.includes("# The Crate at Warehouse 4")) {

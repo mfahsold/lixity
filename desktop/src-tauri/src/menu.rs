@@ -139,7 +139,7 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>, locale: &str) -> tauri::Re
         .item(&recent_submenu)
         .item(
             &MenuItemBuilder::with_id("file-import-manuscript", &l.item_import_manuscript)
-                .accelerator("CmdOrCtrl+I")
+                .accelerator("CmdOrCtrl+Shift+I")
                 .build(app)?,
         )
         .separator()

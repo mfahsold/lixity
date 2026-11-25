@@ -1,22 +1,28 @@
 # A three-minute first look
 
-Start with one question: does chapter 2's shorter rhythm fit its action?
+Open one marked sentence. See which words counted, read the sentence in its scene, and decide whether to keep it as it is or revisit it.
 
 [Kurze Einführung auf Deutsch](first-look-de.html)
 
-Updated 20 November 2026
+Updated 25 November 2026
 
 This walkthrough follows the generated demo. It uses the same reading website export available in **Project actions → Reading website**. Its manuscript, analysis and chosen Research are a fixed snapshot; importing and saving require a local project. See [how to make your own reading website](research-pdf.html#reading-website).
 
 <a id="example"></a>
 
-## 1. Open the example and read a chapter
+<a id="passage"></a>
+
+## 1. Check a marked sentence
 
 [Open the demo project](../demo/report.html)
 
-*The Crate at Warehouse 4* has six invented English chapters. The demo opens directly in the same manuscript view as the local app. In the workspace navigation, open **Try the draft examples** and choose **Inspect chapter 2** to jump to the scene and turn on sentence-length analysis.
+1. Open **Try the draft examples** and choose **Check a sticky sentence** to jump to the marked sentence.
 
-In the same list, choose **Compare chapters 1 and 2** to see the average words per sentence for the harbour description and the action scene. You can also [try a passage of your own in the browser sandbox](../sandbox/index.html).
+2. For that paragraph, choose **… → Paragraph details → Explain this passage**. Under **Why this is marked**, see the 22 function words that Lixity counted among 31 words. Read the surrounding paragraph and check whether the connections are easy to follow.
+
+3. Press Escape or close the explanation to continue reading. In your draft, keep the wording if it fits the scene, or revise it and compare the versions using the same settings.
+
+Use the [browser exercise](../sandbox/index.html) to edit a sample paragraph and see its simplified counts change.
 
 [Video walkthrough](../videos/analysis-review.mp4)
 
@@ -24,9 +30,9 @@ In the same list, choose **Compare chapters 1 and 2** to see the average words p
 
 <a id="contrast"></a>
 
-<a id="passage"></a>
+## 2. Compare the rhythm of two scenes
 
-## 2. Inspect one difference
+*The Crate at Warehouse 4* has six invented English chapters. In **Try the draft examples**, choose **Inspect chapter 2**, then read the action scene. **Compare chapters 1 and 2** opens the sentence-length overview.
 
 > A board moved. Mara turned. The crate tipped towards the drain.
 
@@ -110,7 +116,7 @@ Manuscript input supports Markdown (`.md`, `.markdown`) and plain text (`.txt`).
 
 Open **Project → Settings → Audio and services**, or use **Listen & direct** in the manuscript toolbar. The public demo cannot request your microphone, save a reference or generate speech.
 
-In 0.8.1, the local audio dialog separates four tasks: **Author voice** records, uploads and manages reference takes; **Voice profiles** configures the voice and speech service; **Listen & direct** contains passage direction, audio output, JSON/SSML export and external recording checks; **Microphone & levels** controls local hardware. Help accompanies the controls. The compact player offers time, seeking, volume and a live frequency spectrum. Browser recording requires microphone permission for the current local address; hardware gain does not grant that permission.
+Start with **Teleprompter** to rehearse a passage. **Author voice** is where you can review a recorded or imported reference take. To set project defaults or connect a voice service, use the [audio setup guide](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md). The controls depend on the installed build and the microphone or service available to it.
 
 The state beside the recording button shows pending permission, active recording or a failed start. Remove a saved microphone block using the icon beside the address, then retry and allow access. Failed starts log diagnostics in the browser console. A browser permission refusal sends no server request, so it produces no service-log entry. See [recording and troubleshooting](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening).
 

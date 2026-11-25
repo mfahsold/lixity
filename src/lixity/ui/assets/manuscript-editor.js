@@ -8,6 +8,9 @@
   if (!controls || !chapters) return;
   const language = (document.documentElement.lang || 'en').split('-')[0];
   const L = key => (typeof window.uiLabel === 'function' ? window.uiLabel(key) : key);
+  const macKeyboard = /Mac/.test(navigator.platform);
+  const editorShortcut = key => (macKeyboard ? 'Meta+' : 'Control+') + key;
+  const redoShortcut = macKeyboard ? 'Meta+Shift+Z' : /Linux/.test(navigator.platform) ? 'Control+Y Control+Shift+Z' : 'Control+Y';
   const {formatSigned, visibleChange, percentagePointChange, chapterChanges, baselineLabel} = LixityRevisionMeasurements;
   const words = [
     'editor_write', 'editor_read_refresh', 'editor_undo', 'editor_redo',
@@ -43,10 +46,10 @@
     b.addEventListener('click', action);
     return b;
   }
-  function setButtonLabel(b, newLabel) {
+  function setButtonLabel(b, newLabel, help = newLabel) {
     b.setAttribute('aria-label', newLabel);
-    b.setAttribute('title', newLabel);
-    b.setAttribute('data-help', newLabel);
+    b.setAttribute('title', help);
+    b.setAttribute('data-help', help);
     const span = b.querySelector('.reader-control-label, .editor-tool-label');
     if (span) span.textContent = newLabel;
     else b.textContent = newLabel;
@@ -55,7 +58,8 @@
   let composing = false;
   let loaded = false, generation = 0, openingLine = 1, lastState = '';
   const closeWords = [L('editor_close_writing'), L('editor_close_writing_help')];
-  const openButton = button(text(0), 'manuscript-write', open, null, {icon: 'pen-line', className: 'ctl reader-compact-control', labelClass: 'reader-control-label'});
+  const writeHelp = L('editor_write_help');
+  const openButton = button(text(0), 'manuscript-write', open, writeHelp, {icon: 'pen-line', className: 'ctl reader-compact-control', labelClass: 'reader-control-label'});
   const closeButton = button(closeWords[0], 'manuscript-close', close, closeWords[1], {icon: 'book-open', className: 'ctl ctl-sm reader-compact-control', labelClass: 'reader-control-label'});
   closeButton.hidden = true;
   const companionControls = controls.querySelector('.reader-controls');
@@ -78,8 +82,8 @@
   tools.append(historyGroup, formatGroup, contextGroup, versions, statusGroup);
   const fmtWords = ['editor_fmt_h2', 'editor_fmt_bold', 'editor_fmt_italic', 'editor_fmt_break'].map(L);
   const fmtH2 = button('H2', 'manuscript-fmt-h2', () => editor && editor.togglePrefix && editor.togglePrefix('## '), fmtWords[0], {className: 'ctl ctl-sm editor-fmt-btn', accessibleName: fmtWords[0]});
-  const fmtBold = button('B', 'manuscript-fmt-bold', () => editor && editor.wrap && editor.wrap('**', '**', 'text'), fmtWords[1], {className: 'ctl ctl-sm editor-fmt-btn editor-fmt-bold', shortcut: 'Control+B', accessibleName: L('editor_bold')});
-  const fmtItalic = button('I', 'manuscript-fmt-italic', () => editor && editor.wrap && editor.wrap('*', '*', 'text'), fmtWords[2], {className: 'ctl ctl-sm editor-fmt-btn editor-fmt-italic', shortcut: 'Control+I', accessibleName: L('editor_italic')});
+  const fmtBold = button('B', 'manuscript-fmt-bold', () => editor && editor.wrap && editor.wrap('**', '**', 'text'), fmtWords[1], {className: 'ctl ctl-sm editor-fmt-btn editor-fmt-bold', shortcut: editorShortcut('B'), accessibleName: L('editor_bold')});
+  const fmtItalic = button('I', 'manuscript-fmt-italic', () => editor && editor.wrap && editor.wrap('*', '*', 'text'), fmtWords[2], {className: 'ctl ctl-sm editor-fmt-btn editor-fmt-italic', shortcut: editorShortcut('I'), accessibleName: L('editor_italic')});
   const fmtBreak = button('—', 'manuscript-fmt-break', () => editor && editor.insertBreak && editor.insertBreak(), fmtWords[3], {className: 'ctl ctl-sm editor-fmt-btn', accessibleName: fmtWords[3]});
   formatGroup.append(fmtH2, fmtBold, fmtItalic, fmtBreak);
   const status = document.createElement('span'); status.id = 'manuscript-save-status'; status.setAttribute('role', 'status');
@@ -93,6 +97,33 @@
   const pulsePopover = document.createElement('div'); pulsePopover.id = 'manuscript-pulse-popover';
   pulsePopover.setAttribute('aria-live', 'polite');
   pulse.append(pulseSummary, pulsePopover);
+  let versionRead = null;
+  function cancelVersionRead() {
+    versionRead?.abort();
+    versionRead = null;
+  }
+  async function readVersion(action) {
+    if (!editor || section.hidden || !versions.open || inflight || versionRead) return;
+    const controller = new AbortController();
+    const before = generation, revision = snapshot.revision, selected = recovery.value;
+    versionRead = controller;
+    const isCurrent = () => versionRead === controller && versions.open && !section.hidden &&
+      !inflight && generation === before && snapshot.revision === revision && recovery.value === selected;
+    try {
+      await action({signal: controller.signal, revision, selected, isCurrent});
+    } catch (error) {
+      if (isCurrent()) show('error', error.message);
+    } finally {
+      if (versionRead === controller) versionRead = null;
+    }
+  }
+  function readRecovery(selected, signal) {
+    return request('/manuscript-edit?recovery=' + encodeURIComponent(selected), null, {signal});
+  }
+  // Escape and the native summary both mutate `open`, and toggle events can be coalesced.
+  new MutationObserver(records => {
+    if (records.some(record => record.oldValue !== null)) cancelVersionRead();
+  }).observe(versions, {attributeFilter: ['open'], attributeOldValue: true});
   pulse.addEventListener('toggle', () => {
     if (pulse.open && versions.open && snapshot) refreshPulse();
     else cancelPulse();
@@ -104,26 +135,26 @@
     }
   });
   const recovery = document.createElement('select'); recovery.className = 'ctl ctl-sm'; recovery.id = 'manuscript-recovery'; recovery.setAttribute('aria-label', text(8));
+  const recoveryNote = document.createElement('p'); recoveryNote.id = 'manuscript-recovery-note'; recoveryNote.className = 'ctl-note';
+  recoveryNote.textContent = L('editor_recovery_unsaved');
   const retry = button(text(11), 'manuscript-save', () => {paused = false; flush();}, null, {icon: 'save', className: 'ctl ctl-sm primary'});
-  const undoBtn = button(text(2), 'manuscript-undo', () => {if (editor) {editor.undo(); editor.focus();}}, text(2), {icon: 'undo', shortcut: 'Control+Z', iconOnly: true});
-  const redoBtn = button(text(3), 'manuscript-redo', () => {if (editor) {editor.redo(); editor.focus();}}, text(3), {icon: 'redo', shortcut: 'Control+Y', iconOnly: true});
+  const undoBtn = button(text(2), 'manuscript-undo', () => {if (editor) {editor.undo(); editor.focus();}}, text(2), {icon: 'undo', shortcut: editorShortcut('Z'), iconOnly: true});
+  const redoBtn = button(text(3), 'manuscript-redo', () => {if (editor) {editor.redo(); editor.focus();}}, text(3), {icon: 'redo', shortcut: redoShortcut, iconOnly: true});
   historyGroup.append(undoBtn, redoBtn);
   statusGroup.append(status, retry, closeButton);
   const reload = button(text(1), 'manuscript-reload', () => {if (dirty) download(); location.reload();}, null, {icon: 'rotate-cw'});
   reload.hidden = true;
-  const recoverBtn = button(text(9), 'manuscript-recover', async () => {
-    if (!recovery.value || inflight) return;
-    if (dirty) {download(); return;}
-    try {
-      const before = generation;
-      const recovered = await request('/manuscript-edit?recovery=' + encodeURIComponent(recovery.value));
-      if (generation !== before || dirty || inflight) return;
-      if (recovered.document !== snapshot.document) throw new Error('Recovery document mismatch');
+  const recoverBtn = button(text(9), 'manuscript-recover', () => {
+    if (dirty || !recovery.value) return;
+    return readVersion(async ({selected, signal, isCurrent}) => {
+      const recovered = await readRecovery(selected, signal);
+      if (!isCurrent() || dirty) return;
+      if (recovered.document !== snapshot.document) throw new Error(L('editor_compare_changed'));
       paused = true; pending = null; editor.replace(recovered.text); dirty = true;
       show('unsaved', text(15)); versions.open = false; editor.focus();
-    } catch (error) {show('error', error.message);}
-  }, null, {icon: 'rotate-ccw'});
-  const downloadBtn = button(text(10), 'manuscript-download', download, text(10), {icon: 'download'});
+    });
+  }, L('editor_review_draft_help'), {icon: 'rotate-ccw'});
+  const downloadBtn = button(text(10), 'manuscript-download', download, L('editor_download_draft_help'), {icon: 'download'});
   const discardBtn = button(text(12), 'manuscript-discard', async () => {
     if (!recovery.value || !confirm(text(12) + '?')) return;
     try {await request('/manuscript-edit-discard', {document: snapshot.document, id: recovery.value}); await refreshRecovery();}
@@ -132,16 +163,23 @@
   function syncRecoveryActions() {
     const hasSelection = Boolean(recovery.value);
     recoverBtn.hidden = !hasSelection;
+    recoverBtn.disabled = dirty;
     discardBtn.hidden = !hasSelection;
+    recoveryNote.hidden = !hasSelection || !dirty;
+    if (recoveryNote.hidden) recovery.removeAttribute('aria-describedby');
+    else recovery.setAttribute('aria-describedby', recoveryNote.id);
   }
-  recovery.addEventListener('change', syncRecoveryActions);
+  recovery.addEventListener('change', () => {
+    cancelVersionRead();
+    syncRecoveryActions();
+  });
   syncRecoveryActions();
   const comparisonWords = [
     'editor_find_replace', 'editor_compare_versions', 'editor_compare_base',
     'editor_compare_current', 'editor_compare_draft', 'editor_compare_use_draft',
     'editor_compare_cancel', 'editor_compare_note', 'editor_compare_changed',
   ].map(L);
-  const searchBtn = button(comparisonWords[0], 'manuscript-search', () => editor && editor.search(), comparisonWords[0], {icon: 'search', shortcut: 'Control+F'});
+  const searchBtn = button(comparisonWords[0], 'manuscript-search', () => editor && editor.search(), comparisonWords[0], {icon: 'search', shortcut: editorShortcut('F')});
   historyGroup.append(searchBtn);
   const comparison = document.createElement('dialog'); comparison.id = 'manuscript-comparison'; comparison.className = 'lixity-modal'; comparison.setAttribute('closedby', 'any'); comparison.setAttribute('aria-label', comparisonWords[1]);
   const comparisonCard = document.createElement('div'); comparisonCard.className = 'modal-card';
@@ -160,6 +198,14 @@
     reference.textContent = L('metric_reference_link');
     comparisonNote.append(' ', reference);
   }
+  const comparisonBuffer = document.createElement('details'); comparisonBuffer.className = 'panel-disclosure';
+  const comparisonBufferSummary = document.createElement('summary');
+  comparisonBufferSummary.id = 'manuscript-comparison-buffer-label';
+  comparisonBufferSummary.textContent = L('editor_compare_unsaved_text');
+  const comparisonBufferText = document.createElement('textarea'); comparisonBufferText.id = 'manuscript-comparison-buffer';
+  comparisonBufferText.className = 'ctl'; comparisonBufferText.readOnly = true; comparisonBufferText.rows = 5;
+  comparisonBufferText.setAttribute('aria-labelledby', comparisonBufferSummary.id);
+  comparisonBuffer.append(comparisonBufferSummary, comparisonBufferText);
   const comparisonGrid = document.createElement('div'); comparisonGrid.className = 'manuscript-comparison-grid';
   const comparisonFields = ['base','current','draft'].map((name, index) => {
     const label = document.createElement('label'); label.textContent = comparisonWords[index+2];
@@ -172,55 +218,59 @@
   comparisonChapters.id = 'manuscript-comparison-chapters';
   comparisonChapters.className = 'manuscript-comparison-chapters';
   comparisonChapters.hidden = true;
-  let comparisonSnapshot = null, comparisonLoading = false, comparisonOriginal = '';
+  let comparisonSnapshot = null, comparisonOriginal = '';
   let comparisonTimer = 0, comparisonRequest = null, comparisonSettings = null;
   const comparisonDirty = () => comparison.open && comparisonFields[2].field.value !== comparisonOriginal;
   function closeComparison() {
-    if (!comparisonDirty() || confirm(L('editor_compare_discard_confirm'))) comparison.close();
+    if (!comparisonDirty() || confirm(L('editor_compare_discard_confirm'))) {
+      comparison.close();
+      if (versions.open && !section.hidden) compareBtn.focus({preventScroll: true});
+    }
   }
   comparisonClose.addEventListener('click', closeComparison);
   comparison.addEventListener('cancel', event => {event.preventDefault(); closeComparison();});
   comparison.addEventListener('close', cancelComparisonMeasurements);
   const comparisonUse = button(comparisonWords[5], 'manuscript-comparison-use', () => {
     if (!comparisonSnapshot || inflight) return;
+    const proposed = comparisonFields[2].field.value;
+    if (dirty && editor.text() !== proposed && !confirm(L('editor_compare_replace_unsaved'))) return;
     paused = true; pending = null; snapshot = comparisonSnapshot; comparisonSnapshot = null;
-    editor.replace(comparisonFields[2].field.value); dirty = true;
+    editor.replace(proposed); dirty = true;
     comparison.close(); versions.open = false; show('unsaved', L('editor_pending_changes')); editor.focus();
-  }, null, {icon: 'check', className: 'ctl primary'});
+  }, L('editor_review_draft_help'), {icon: 'check', className: 'ctl primary'});
   const comparisonCancel = button(comparisonWords[6], 'manuscript-comparison-cancel', closeComparison, comparisonWords[6], {icon: 'x', shortcut: 'Escape', className: 'ctl'});
   const comparisonActions = document.createElement('div'); comparisonActions.className = 'modal-footer'; comparisonActions.append(comparisonCancel,comparisonUse);
   comparisonHeader.append(comparisonTitle, comparisonClose);
-  comparisonBody.append(comparisonNote, comparisonGrid, comparisonChapters);
+  comparisonBody.append(comparisonNote, comparisonBuffer, comparisonGrid, comparisonChapters);
   comparisonCard.append(comparisonHeader, comparisonBody, comparisonActions);
   comparison.append(comparisonCard); document.body.append(comparison);
-  const compareBtn = button(comparisonWords[1], 'manuscript-compare', async () => {
-    if (!editor || inflight || comparisonLoading) return;
-    comparisonLoading = true;
-    const before = generation, baseRevision = snapshot.revision, selected = recovery.value;
-    try {
-      const current = await request('/manuscript-edit');
-      const recovered = selected ? await request('/manuscript-edit?recovery=' + encodeURIComponent(selected)) : null;
-      if (generation !== before || inflight || snapshot.revision !== baseRevision) return;
-      if (current.document !== snapshot.document || recovered && recovered.document !== snapshot.document) throw new Error(comparisonWords[8]);
-      comparisonSnapshot = current;
-      comparisonFields[0].field.value = snapshot.text; comparisonFields[0].identity.textContent = baseRevision.slice(0,12);
-      comparisonFields[1].field.value = current.text; comparisonFields[1].identity.textContent = current.revision.slice(0,12);
-      comparisonFields[2].field.value = recovered ? recovered.text : editor.text();
-      comparisonFields[2].identity.textContent = recovered ? recovered.revision.slice(0,12) : '';
-      comparisonFields[2].identity.hidden = !recovered;
-      comparisonOriginal = comparisonFields[2].field.value;
-      comparisonSettings = null;
-      comparisonFields.forEach(({summary}) => {summary.textContent = L('editor_compare_metrics_loading');});
-      comparisonChapters.hidden = true;
-      comparison.showModal();
-      refreshComparisonMeasurements();
-      if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(comparisonGrid);
-      comparisonCancel.focus();
-    } catch (error) {show('error',error.message);}
-    finally {comparisonLoading = false;}
-  }, null, {icon: 'git-compare'});
+  const compareBtn = button(comparisonWords[1], 'manuscript-compare', () => readVersion(async ({signal, revision, selected, isCurrent}) => {
+    const current = await request('/manuscript-edit', null, {signal});
+    if (!isCurrent()) return;
+    const recovered = selected ? await readRecovery(selected, signal) : null;
+    if (!isCurrent()) return;
+    if (current.document !== snapshot.document || recovered && recovered.document !== snapshot.document) throw new Error(comparisonWords[8]);
+    comparisonSnapshot = current;
+    const buffer = editor.text();
+    comparisonBuffer.open = false;
+    comparisonBuffer.hidden = !dirty;
+    comparisonBufferText.value = dirty ? buffer : '';
+    comparisonFields[0].field.value = snapshot.text; comparisonFields[0].identity.textContent = revision.slice(0,12);
+    comparisonFields[1].field.value = current.text; comparisonFields[1].identity.textContent = current.revision.slice(0,12);
+    comparisonFields[2].field.value = recovered ? recovered.text : buffer;
+    comparisonFields[2].identity.textContent = recovered ? recovered.revision.slice(0,12) : '';
+    comparisonFields[2].identity.hidden = !recovered;
+    comparisonOriginal = comparisonFields[2].field.value;
+    comparisonSettings = null;
+    comparisonFields.forEach(({summary}) => {summary.textContent = L('editor_compare_metrics_loading');});
+    comparisonChapters.hidden = true;
+    comparison.showModal();
+    refreshComparisonMeasurements();
+    if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(comparisonGrid);
+    comparisonCancel.focus();
+  }), L('editor_compare_versions_help'), {icon: 'git-compare'});
   versionActions.append(recoverBtn, discardBtn, compareBtn, downloadBtn);
-  versionsGroup.append(recovery, versionActions, pulse);
+  versionsGroup.append(recovery, recoveryNote, versionActions, pulse);
   document.addEventListener('click', event => {
     if (versions.open && !versions.contains(event.target) && !comparison.contains(event.target)) versions.open = false;
   });
@@ -235,6 +285,7 @@
     #manuscript-comparison {width:min(1200px,95vw);max-width:min(1200px,95vw);max-height:min(92dvh,56rem);}
     #manuscript-comparison .modal-card {max-height:min(calc(92dvh - 2px),calc(56rem - 2px));}
     #manuscript-comparison .modal-body > .ctl-note {margin:0;}
+    #manuscript-comparison-buffer {inline-size:100%;box-sizing:border-box;}
     .manuscript-comparison-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--space-4,16px);}
     .manuscript-comparison-grid label {display:flex;flex-direction:column;min-width:0;font-weight:var(--weight-semibold,600);font-size:var(--text-small,.875rem);}
     .manuscript-comparison-grid small {color:var(--muted);font-family:var(--font-mono,monospace);margin-top:2px;}
@@ -252,6 +303,7 @@
     #manuscript-versions > summary {min-block-size:2rem;gap:var(--space-2);padding:var(--space-1) var(--space-2);white-space:nowrap;}
     .editor-versions-panel {position:absolute;inset-block-start:calc(100% + var(--space-1));inset-inline-end:0;width:min(27rem,100%);margin:0;display:grid;gap:var(--space-2);max-height:60dvh;overflow:auto;}
     .manuscript-editor-toolbar .editor-versions-panel button.ctl {white-space:normal;text-align:start;line-height:var(--line-control);}
+    #manuscript-recovery-note {margin:0;}
     .editor-group-status {margin-inline-start:auto;padding-inline-start:6px;gap:6px;}
     .manuscript-editor-toolbar .reader-controls {display:inline-flex;align-items:center;flex-basis:auto;gap:4px;}
     .manuscript-editor-toolbar button.ctl {padding:.25rem .5rem;min-height:2rem;white-space:nowrap;}
@@ -325,6 +377,7 @@
     if (changed && window.LixityMotion && window.LixityMotion.status) window.LixityMotion.status(status);
     retry.hidden = state === 'saved' || state === 'saving';
     reload.hidden = !paused;
+    syncRecoveryActions();
     notifyDesktopDirty();
   }
   let pulseRequest = null;
@@ -677,10 +730,11 @@
       if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(section);
       editor.line(openingLine); show('saved', text(5)); await refreshRecovery(); editor.focus();
     } catch (error) {section.hidden = false; show('error', error.message);}
-    finally {loading = false; openButton.disabled = false; setButtonLabel(openButton, text(0));}
+    finally {loading = false; openButton.disabled = false; setButtonLabel(openButton, text(0), writeHelp);}
   }
   async function close() {
     if (comparison.open || composing) return;
+    cancelVersionRead();
     while (inflight) await new Promise(resolve => setTimeout(resolve, 25));
     if (composing) return;
     if (dirty && !paused) await flush();

@@ -17,6 +17,7 @@ const {launchChromium} = require('../../scripts/browser_tools.cjs');
     assert.equal(await page.evaluate(() => typeof window.LixityAudioTake), 'object', 'The current portable take API is available');
     const result = await page.evaluate(async () => {
       const api = window.LixityAudioTake;
+      const reference = {sample_rate_hz:24000,channels:1,sample_width_bits:16,min_seconds:1,max_seconds:60,max_transcript_chars:2000,max_bytes:3*1024*1024};
       function wav(seconds=2, rate=24000) {
         const frames = seconds * rate, buffer = new ArrayBuffer(44 + frames * 2), view = new DataView(buffer);
         function string(offset, text) { [...text].forEach((char,index) => view.setUint8(offset+index,char.charCodeAt(0))); }
@@ -45,12 +46,17 @@ const {launchChromium} = require('../../scripts/browser_tools.cjs');
         try { await api.importFiles(new File([audio],'synthetic.wav'),new File([JSON.stringify(metadata)],'synthetic.json')); errors[name]='accepted'; }
         catch (error) { errors[name]=error.code; }
       }
-      const long = await api.create(wav(31),{filename:'long.wav',transcript:'A river flows.',transcript_status:'confirmed'});
+      const limit = await api.create(wav(60),{filename:'limit.wav',transcript:'A river flows.',transcript_status:'confirmed'});
+      const long = await api.create(wav(61),{filename:'long.wav',transcript:'A river flows.',transcript_status:'confirmed'});
       const differentRate = await api.create(wav(2,48000),{filename:'other.wav',transcript:'A river flows.',transcript_status:'confirmed'});
       window.savedTake = confirmed;
-      return {metadata:restored.metadata, draft:api.referenceEligibility(take), confirmed:api.referenceEligibility(restored),
-        empty:api.referenceEligibility(await api.create(wav(),{filename:'empty.wav'})),
-        long:api.referenceEligibility(long),differentRate:api.referenceEligibility(differentRate),errors};
+      const eligible = value => api.referenceEligibility(value, reference);
+      return {metadata:restored.metadata, draft:eligible(take), confirmed:eligible(restored),
+        empty:eligible(await api.create(wav(),{filename:'empty.wav'})), limit:eligible(limit),
+        long:eligible(long), differentRate:eligible(differentRate),
+        oversized:api.referenceEligibility(restored,{...reference,max_bytes:1024}),
+        unicode:eligible(api.withTranscript(take,'𐍈'.repeat(2000),'confirmed')),
+        unavailable:api.referenceEligibility(restored),errors};
     });
     assert.equal(result.metadata.schema_version,'lixity-audio-take/1');
     assert.match(result.metadata.audio.sha256,/^[0-9a-f]{64}$/);
@@ -59,7 +65,11 @@ const {launchChromium} = require('../../scripts/browser_tools.cjs');
     assert.deepEqual(result.metadata.transcript,{text:'A river flows.',status:'confirmed'});
     assert.equal(result.confirmed.eligible,true);
     assert.equal(result.draft.reason,'confirmation');assert.equal(result.empty.reason,'missing');
+    assert.equal(result.limit.eligible,true,'The sixty-second boundary is eligible');
     assert.equal(result.long.reason,'duration');assert.equal(result.differentRate.reason,'format');
+    assert.equal(result.oversized.reason,'size');
+    assert.equal(result.unicode.eligible,true,'Count transcript characters as Unicode code points');
+    assert.equal(result.unavailable.reason,'unavailable');
     assert.deepEqual(result.errors,{hash:'hash',format:'format',schema:'schema',duration:'format',confirmed_empty:'transcript',data_before_format:'format'});
     for (const kind of ['wav','json']) {
       const pending=page.waitForEvent('download');

@@ -252,13 +252,19 @@ async function dossierContext(browser, width, artifacts) {
     await page.locator('.teleprompter-btn-record').click();
     const take = page.locator('.teleprompter-dossier-card').filter({has:page.locator('audio')});
     await take.waitFor();
-    assert.equal(await take.locator('button').count(), 2, 'A static reading take has paired file exports without native save actions');
+    assert.deepEqual(await take.locator('[data-take-download]').evaluateAll(buttons =>
+      buttons.map(button => button.dataset.takeDownload)), ['wav', 'json'], 'A static reading take offers both paired file exports');
+    const discard = take.locator('[data-take-discard]');
+    assert.equal(await discard.isVisible(), true, 'A static reading take can be discarded locally');
     assert.equal(await take.locator('.teleprompter-voice-studio-link').count(), 0);
     const download = page.waitForEvent('download');
     await take.locator('[data-take-download="wav"]').click();
     const saved = await download;
     assert(saved.suggestedFilename().endsWith('.wav'));
     assert.equal(fs.readFileSync(await saved.path()).subarray(0, 4).toString(), 'RIFF');
+    await discard.click();
+    await take.waitFor({state:'detached'});
+    assert.equal(await page.locator('.teleprompter-btn-record').evaluate(button => button === document.activeElement), true);
     assert.deepEqual(await page.evaluate(() => window.studioCalls), []);
     await page.evaluate(() => window.LixityTeleprompter.close());
     assert.equal(await page.locator('#teleprompter-modal').isVisible(), false);

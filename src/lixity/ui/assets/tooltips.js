@@ -45,7 +45,8 @@
 
   function formatShortcutKey(key) {
     if (!key) return "";
-    var k = key.trim().replace(/^Control\+/i, "Ctrl+");
+    var k = key.trim().replace(/^Control\+/i, "Ctrl+").replace(/^Meta\+/i, "Cmd+")
+      .replace(/(^|\+)Plus$/i, "$1+");
     var lower = k.toLowerCase();
     if (lower === "escape") return "Esc";
     if (lower === "arrowleft") return "←";
@@ -53,6 +54,15 @@
     if (lower === "arrowup") return "↑";
     if (lower === "arrowdown") return "↓";
     return k;
+  }
+
+  function platformShortcuts(shortcut) {
+    var keys = shortcut.trim().split(/\s+/);
+    var preferred = /Mac/.test(navigator.platform) ? "Meta+" : "Control+";
+    var alternative = preferred === "Meta+" ? "Control+" : "Meta+";
+    return keys.filter(function(key) {
+      return !key.startsWith(alternative) || !keys.includes(preferred + key.slice(alternative.length));
+    });
   }
 
   var SHORTCUT_SUFFIX_RE = /\s*\((Alt\+[A-Za-z0-9]|Shift\+[A-Za-z0-9]|Ctrl\+[A-Za-z0-9]|Strg\+[A-Za-z0-9]|Cmd\+[A-Za-z0-9]|Meta\+[A-Za-z0-9]|Esc|Escape|Enter|Shift\+Enter|P)\)\s*$/i;
@@ -152,7 +162,7 @@
     if (fromPointer) { if (!samePointer) pointerAnchor(el); }
     else pointerHelp = false;
     // Keep help in the native dialog's top layer when its control is inside one.
-    var host = el.closest("dialog[open]") || document.body;
+    var host = el.closest('dialog[open], [role="dialog"][aria-modal="true"]:not([hidden])') || document.body;
     if (tip.parentElement !== host) host.appendChild(tip);
     var descriptions = (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
     if (descriptions.indexOf(tip.id) === -1) descriptions.push(tip.id);
@@ -186,8 +196,7 @@
         heading.appendChild(document.createTextNode(displayName));
       }
       if (hasShortcut) {
-        var combos = shortcut.trim().split(/\s+/);
-        combos.forEach(function(combo) {
+        platformShortcuts(shortcut).forEach(function(combo) {
           if (!combo) return;
           var key = document.createElement("kbd");
           key.textContent = formatShortcutKey(combo);
@@ -255,6 +264,7 @@
     function place(left, top) {
       LixityComponents.placeOverlay(tip, left, top, space);
     }
+    var settingsBody = el.closest(".reader-settings-body");
     for (var parent = el.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
       var style = getComputedStyle(parent), box = parent.getBoundingClientRect();
       var clipX = /auto|scroll|hidden|clip/.test(style.overflowX);
@@ -278,6 +288,8 @@
         visible.top = Math.max(visible.top, top);
         visible.bottom = Math.min(visible.bottom, top + parent.clientHeight);
       }
+      // A fixed settings popover escapes the reader toolbar's overflow.
+      if (parent === settingsBody && style.position === "fixed") break;
     }
     var anchorTop = rect.top, anchorBottom = rect.bottom;
     if (el.matches("input, select, textarea")) {
@@ -302,7 +314,9 @@
       anchorBottom = Math.min(rect.bottom, rect.top + pointerOffsetY + 16);
     }
     var toolbarSelector = LixityComponents.TOOLBAR_SELECTOR;
-    var toolbar = el.closest(toolbarSelector);
+    // Settings controls live in their own bounded popover. The underlying
+    // reader toolbar should not take up the popover's available help space.
+    var toolbar = settingsBody ? null : el.closest(toolbarSelector);
     if (toolbar && !pointerHelp) {
       var bar = toolbar.getBoundingClientRect();
       anchorTop = bar.top; anchorBottom = bar.bottom;
@@ -512,10 +526,10 @@
       var visibleHelp = Boolean(activeEl);
       var helpOwnsFocus = visibleHelp && (activeEl.contains(e.target) || tip.contains(e.target) ||
         e.target === document.body || e.target === document.documentElement);
-      // A dialog action advertising Escape must keep that shortcut even when
-      // its own focused hint is visible (notably the native Close button).
-      var escapeAction = e.target.closest('button[aria-keyshortcuts~="Escape"]');
-      if (escapeAction && escapeAction.closest("dialog")) helpOwnsFocus = false;
+      // Search fields and explicit dialog actions keep their Escape shortcut
+      // while the focused hint also closes.
+      var escapeAction = e.target.closest('button[aria-keyshortcuts~="Escape"], input[aria-keyshortcuts~="Escape"]');
+      if (escapeAction && (escapeAction.matches("input") || escapeAction.closest('dialog, [role="dialog"]'))) helpOwnsFocus = false;
       // Transient menus own dismissal; their focused action help closes with them.
       if (e.target.closest('[role="menu"]')) helpOwnsFocus = false;
       // A dismissed hover must not reappear on small movements within the
@@ -523,8 +537,8 @@
       if (activeEl && activeEl.matches(":hover")) dismissedHover = activeEl;
       if (helpOwnsFocus) e.preventDefault();
       // A hovered hint must not steal Escape from an unrelated focused control.
-      // Focused help is the innermost layer; search still clears its query.
-      if (helpOwnsFocus && e.target.id !== "text-search") e.stopImmediatePropagation();
+      // Focused help is the innermost layer when the control has no override.
+      if (helpOwnsFocus) e.stopImmediatePropagation();
       hide();
     } else if ((e.key === "Enter" || e.key === " ") &&
         e.target.matches(".help[data-help]") && !e.target.closest("button, a")) {

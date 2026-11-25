@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import tempfile
 import threading
 import time
@@ -11,7 +12,13 @@ from pathlib import Path
 from secrets import token_hex
 from typing import TYPE_CHECKING, Any
 
-from .log import get_logger, new_speech_diagnostic_id, speech_diagnostic_scope
+from .log import (
+    get_logger,
+    log_event,
+    new_speech_diagnostic_id,
+    speech_diagnostic_id,
+    speech_diagnostic_scope,
+)
 from .markdown_parser import split_chapters
 from .pipeline import document_paragraph_texts, paragraph_identity, resolve_document_config
 from .speech import SpeechCancelled, extract_audio_cues, render_speech_audio
@@ -87,6 +94,7 @@ class _Job:
     context: dict[str, Any]
     storage: tempfile.TemporaryDirectory[str]
     valid: Callable[[], bool]
+    diagnostic_id: str
     cache_dir: Path | None = None
     fresh_audio: bool = False
     target: str = "local"
@@ -99,7 +107,6 @@ class _Job:
     created: float = field(default_factory=time.monotonic)
     finished: float | None = None
     cancel: threading.Event = field(default_factory=threading.Event)
-    diagnostic_id: str = field(default_factory=new_speech_diagnostic_id)
     retain: Callable[[Path, Callable[[], bool]], None] | None = field(default=None, repr=False)
 
 
@@ -133,7 +140,8 @@ class SpeechJobs:
         except OSError:
             job.state = "error"
             job.message = "Could not remove temporary speech files"
-            self._log.warning("audio_job stage=cleanup id=%s status=failed category=io", job.diagnostic_id)
+            log_event(self._log, "audio_job", logging.WARNING, id=job.diagnostic_id,
+                      stage="cleanup", status="failed", category="io")
             return False
         return True
 
@@ -164,7 +172,11 @@ class SpeechJobs:
                 raise RuntimeError("The audio queue is full; wait before submitting another job")
             self._prune()
             storage = tempfile.TemporaryDirectory(prefix="lixity-speech-job-")
-            job = _Job(token_hex(16), context_key, dict(context), storage, valid, cache_dir, fresh_audio, target)
+            job = _Job(
+                token_hex(16), context_key, dict(context), storage, valid,
+                diagnostic_id=speech_diagnostic_id() or new_speech_diagnostic_id(),
+                cache_dir=cache_dir, fresh_audio=fresh_audio, target=target,
+            )
             job.plan = [SpeechSegment(p.text, AudioProfile.model_validate(p.profile.model_dump()), p.pause_before, p.pause_after, dict(p.anchor) if p.anchor else None) for p in plan] if plan is not None else None
             job.references = dict(references or {})
             job.retain = retain
@@ -181,7 +193,7 @@ class SpeechJobs:
             mode = job.context.get("mode")
             safe_mode = mode if isinstance(mode, str) and mode in ("preview", "chapter") else "unknown"
             safe_target = job.target if job.target in ("local", "jetson") else "unknown"
-            self._log.info("audio_job stage=queued id=%s mode=%s target=%s", job.diagnostic_id, safe_mode, safe_target)
+            log_event(self._log, "audio_job", id=job.diagnostic_id, stage="queued", mode=safe_mode, target=safe_target)
             threading.Thread(target=self._run, args=(job, source, profile), daemon=True).start()
             return self._report(job)
 
@@ -208,7 +220,7 @@ class SpeechJobs:
                 self._pending.remove(job.identifier)
                 self._active = job.identifier
                 job.state = "running"
-                self._log.info("audio_job stage=running id=%s", job.diagnostic_id)
+                log_event(self._log, "audio_job", stage="running")
             if not job.valid():
                 terminal_state = "stale"
                 return
@@ -259,8 +271,8 @@ class SpeechJobs:
                 if (job.state != "ready" or self._closed) and not self._cleanup(job):
                     category = "cleanup"
                 job.finished = time.monotonic()
-                self._log.info("audio_job stage=finished id=%s status=%s category=%s duration_ms=%d",
-                               job.diagnostic_id, job.state, category, int((job.finished - job.created) * 1000))
+                log_event(self._log, "audio_job", stage="finished", status=job.state, category=category,
+                          duration_ms=int((job.finished - job.created) * 1000))
 
     def _find(self, identifier: str, context_key: str) -> _Job:
         self._prune()
@@ -289,11 +301,12 @@ class SpeechJobs:
             job = self._find(identifier, context_key)
             job.cancel.set()
             self._condition.notify_all()
-            self._log.info("audio_job stage=cancel_requested id=%s", job.diagnostic_id)
+            log_event(self._log, "audio_job", id=job.diagnostic_id, stage="cancel_requested")
             if job.state == "ready":
                 job.state = "cancelled"
                 self._cleanup(job)
-                self._log.info("audio_job stage=invalidated id=%s status=%s reason=cancel", job.diagnostic_id, job.state)
+                log_event(self._log, "audio_job", id=job.diagnostic_id, stage="invalidated",
+                          status=job.state, reason="cancel")
             return self._report(job)
 
     def cancel_stale(self) -> None:
@@ -306,13 +319,14 @@ class SpeechJobs:
                     job.cancel.set()
                     self._condition.notify_all()
                     if not was_cancelled:
-                        self._log.info("audio_job stage=stale_requested id=%s", job.diagnostic_id)
+                        log_event(self._log, "audio_job", id=job.diagnostic_id, stage="stale_requested")
                     if job.state not in ("pending", "running"):
                         was_stale = job.state == "stale"
                         job.state = "stale"
                         self._cleanup(job)
                         if not was_stale:
-                            self._log.info("audio_job stage=invalidated id=%s status=%s reason=context", job.diagnostic_id, job.state)
+                            log_event(self._log, "audio_job", id=job.diagnostic_id, stage="invalidated",
+                                      status=job.state, reason="context")
 
     def audio(self, identifier: str, context_key: str) -> bytes:
         with self._lock:

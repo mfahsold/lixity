@@ -27,7 +27,55 @@
 }
 
 /* Audio sections have one owner; author styles must respect native hidden state. */
-#modal-speech .modal-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .25rem; flex: none; }
+#modal-speech .modal-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .25rem; flex: none; }
+#modal-speech .speech-reader-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#modal-speech .speech-profile-summary { justify-content: space-between; overflow-wrap: anywhere; }
+#modal-speech .speech-profile-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-2);
+}
+#modal-speech .speech-profile-picker > :is(.setting-field, .speech-choice-readout) { flex: 1 1 12rem; }
+#modal-speech .speech-profile-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); max-inline-size: 100%; }
+#modal-speech .speech-choice-readout { min-inline-size: 0; overflow-wrap: anywhere; }
+#modal-speech .speech-choice-readout > strong { font-size: var(--text-control); line-height: var(--line-control); }
+#modal-speech .speech-profile-editor { overflow-wrap: anywhere; }
+#modal-speech :is(.speech-profile-voice, .speech-profile-delivery, .speech-recording-defaults > fieldset) {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+#modal-speech :is(.speech-profile-voice, .speech-profile-delivery) > legend {
+  inline-size: 100%;
+  margin-block-end: var(--space-3);
+  padding: 0;
+  font-size: var(--text-control);
+  font-weight: var(--weight-semibold);
+}
+#modal-speech .speech-profile-delivery > legend { border-block-start: 1px solid var(--line); padding-block-start: var(--space-3); }
+#modal-speech :is(.speech-profile-voice, .speech-profile-delivery) > .ctl-note { margin: 0; }
+#modal-speech :is(.speech-profile-voice-grid, .speech-profile-delivery-grid) { gap: var(--space-3) var(--space-4); }
+#modal-speech :is(.speech-profile-voice-grid, .speech-profile-delivery-grid) > .setting-field:has(textarea) { grid-column: 1 / -1; }
+#modal-speech .speech-profile-utilities { min-inline-size: 0; overflow-wrap: anywhere; }
+#modal-speech .speech-profile-utilities > .ctl { align-self: start; }
+#modal-speech .speech-profile-schema {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-inline-start: 2px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  overflow-wrap: anywhere;
+}
+#modal-speech .speech-profile-schema > .ctl-note { margin: 0; }
+#modal-speech .speech-profile-schema > .section-heading { font-size: var(--text-control); }
+#modal-speech .speech-profile-footer { gap: var(--space-2); padding-block: var(--space-2); }
+#modal-speech .speech-project-shortcut { align-self: end; }
+#modal-speech .speech-recording-defaults .setting-field > input[type="number"] { max-inline-size: 12ch; }
 #modal-speech .modal-tab-btn { min-width: 0; white-space: normal; overflow-wrap: anywhere; padding: .6rem .4rem; }
 #modal-speech .modal-body > * { min-width: 0; }
 #modal-speech .voice-active-card, #modal-speech .voice-ref-item { flex-wrap: wrap; }
@@ -42,11 +90,23 @@
 #modal-speech .speech-stale-list li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding-block: .5rem; border-bottom: 1px solid var(--line); }
 #modal-speech .speech-stale-list span { flex: 1 1 12rem; overflow-wrap: anywhere; }
 #modal-speech .speech-stale-list button { flex: none; }
+.speech-microphone-input { align-items: end; }
+.speech-microphone-input > .setting-field { flex: 1 1 14rem; }
+#speech-microphone-current { overflow-wrap: anywhere; }
 @media (max-width: 540px) {
   #modal-speech .modal-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #modal-speech .speech-profile-footer { align-items: stretch; }
+  #modal-speech .speech-profile-footer > .ctl { flex: 1 1 0; }
   #modal-speech .settings-grid { grid-template-columns: minmax(0, 1fr); }
   #modal-speech .voice-reading-card, #modal-speech .voice-prompt-box { padding: .6rem; }
   #modal-speech .voice-record-controls { gap: .5rem; }
+}
+@media (max-height: 32rem) {
+  #modal-speech .modal-card:has(> .speech-profile-footer:not([hidden])) { overflow-y: auto; }
+  #modal-speech .modal-card:has(> .speech-profile-footer:not([hidden])) > .modal-body {
+    flex: none;
+    overflow: visible;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   #modal-speech .voice-rec-btn { animation: none; transition: none; }
@@ -54,3 +114,28 @@
 
 #modal-speech .modal-header [data-speech-action="close"] { flex-shrink: 0; white-space: nowrap; }
 #modal-speech .voice-prompt-box { max-height: 16rem; overflow: auto; }
+
+#modal-speech.speech-docked[open] {
+  position: static; inset: auto; width: 100%; max-width: none; min-width: 0;
+  max-height: none; margin: var(--space-3) 0; box-shadow: var(--shadow);
+}
+#modal-speech.speech-docked .modal-card { max-height: min(66dvh, 43rem); }
+#modal-speech.speech-docked .modal-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#modal-speech.speech-docked .modal-header, #modal-speech.speech-docked .modal-body { padding: var(--space-3); }
+.workspace-reader-layout.speech-dock-open > :is(#workspace-context-panel, .workspace-reader-divider) { display: none; }
+.workspace-reader-layout.speech-dock-open #workspace-analysis-body { grid-column: 1; grid-row: 1; }
+body.manuscript-writing #modal-speech.speech-docked { display: none; }
+.ptext.speech-direction-target > .ptext-inner { box-shadow: inset 2px 0 var(--accent); }
+@media (min-width: 901px) {
+  body:not(.manuscript-writing) .workspace-reader-layout.speech-dock-open {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, 40%); gap: var(--space-3); align-items: start;
+  }
+  #modal-speech.speech-docked[open] {
+    position: sticky; grid-column: 2; grid-row: 1; margin: 0;
+    top: calc(var(--workbench-return-height, 0px) + var(--reader-controls-height, 0px) + var(--space-2));
+  }
+  #modal-speech.speech-docked .modal-card {
+    max-height: calc(100dvh - var(--workbench-return-height, 0px) - var(--reader-controls-height, 0px) - 2 * var(--space-3));
+  }
+}
+@media print { #modal-speech.speech-docked { display: none !important; } }

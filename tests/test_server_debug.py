@@ -1,11 +1,13 @@
 """Debug diagnostics share timestamps without changing response behavior."""
 
 import io
+import json
 import tempfile
 import unittest
 from contextlib import redirect_stderr
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from lixity import log
 from tests.support import LoopbackServer, make_handler
@@ -94,3 +96,38 @@ class TestServerDebug(unittest.TestCase):
             self.assertEqual(self.request("GET", "/"), 200)
             self.assertEqual(self.request("POST", "/api/marker-add", "invalid JSON"), 400)
         self.assertEqual(output.getvalue(), "")
+
+    def test_audio_post_correlates_response_with_redacted_structured_log(self):
+        self.handler.debug = False
+        output = io.StringIO()
+        log.configure(level="INFO", stream=output, force=True, json_format=True)
+        diagnosed = self.loop.request(
+            "/api/audio-microphone?token=PRIVATE_QUERY",
+            payload={"action": "save_reference", "project_token": "PRIVATE_PAYLOAD"},
+            headers={"X-Lixity-Diagnostic-Id": "aaaaaaaaaaaaaaaa"},
+        )
+        with patch("lixity.speech_record.get_microphone_status", return_value={}):
+            unknown = self.loop.request("/api/audio-microphone", payload={"action": "PRIVATE_ACTION"})
+        ordinary = self.loop.request("/", method="GET")
+        self.assertEqual(diagnosed.status, 400)
+        label = "x-lixity-diagnostic-id"
+        self.assertEqual(unknown.status, 200)  # Existing microphone status fallback.
+        identifier = diagnosed.headers[label]
+        self.assertRegex(identifier, r"^[0-9a-f]{16}$")
+        self.assertNotEqual(identifier, "aaaaaaaaaaaaaaaa")
+        self.assertNotEqual(identifier, unknown.headers[label])
+        self.assertNotIn(label, ordinary.headers)
+        self.assertNotIn("PRIVATE_", output.getvalue())
+        records = [json.loads(line) for line in output.getvalue().splitlines()]
+        self.assertEqual(len(records), 2)
+        for record, response, operation, level in zip(
+            records, (diagnosed, unknown), ("save_reference", "unknown"), ("WARNING", "INFO"), strict=True,
+        ):
+            self.assertEqual(record["event"], "audio_operation")
+            self.assertEqual(record["route"], "audio-microphone")
+            self.assertEqual(record["operation"], operation)
+            self.assertEqual(record["id"], response.headers[label])
+            self.assertEqual(record["status"], response.status)
+            self.assertEqual(record["level"], level)
+            self.assertIs(type(record["duration_ms"]), int)
+            self.assertGreaterEqual(record["duration_ms"], 0)

@@ -40,6 +40,7 @@ from .publication import (
     publication_configuration_schema,
     validate_metadata_text,
 )
+from .speech_recording_settings import AUDIO_RECORDING_SETTINGS_KEY, AudioRecordingSettings
 from .status import DEFAULT_HOST as DEFAULT_HOST
 from .status import DEFAULT_PORT as DEFAULT_PORT
 
@@ -51,11 +52,12 @@ UNINTERPRETED_KEYS = frozenset({"phrases", "capabilities"})
 PROJECT_ONLY_KEYS = (
     "author_name", "draft_notice", "publication", "site_publications", "dossier_collections",
     "terms", "register_profiles", "chapter_registers", "characters", "locations",
-    DOSSIER_DRAFT_SETTINGS_KEY, "manuscript", "audio",
+    DOSSIER_DRAFT_SETTINGS_KEY, "manuscript", "audio", AUDIO_RECORDING_SETTINGS_KEY,
 )
 PERSISTED_SETTINGS_KEYS = (
     "title", "author_name", "publication", "site_publications", "dossier_collections",
     "terms", "locations", DOSSIER_DRAFT_SETTINGS_KEY, "register_profiles", "chapter_registers", "audio",
+    AUDIO_RECORDING_SETTINGS_KEY,
     *CORPUS_DETAIL_KEYS,
 )
 
@@ -71,6 +73,7 @@ TOOL_KEYS = frozenset(
         DOSSIER_DRAFT_SETTINGS_KEY,
         "terms",
         "audio",
+        AUDIO_RECORDING_SETTINGS_KEY,
         "z_mild",
         "z_strong",
         "fdr_q",
@@ -370,6 +373,8 @@ def prepare_project_settings(
             from .speech_profiles import AudioSettings
 
             value = AudioSettings.model_validate(raw).model_dump(by_alias=True)
+        elif key == AUDIO_RECORDING_SETTINGS_KEY:
+            value = AudioRecordingSettings.model_validate(raw).model_dump(exclude_none=True)
         elif key == "language":
             value = raw
         elif key in THRESHOLD_KEYS:
@@ -605,6 +610,7 @@ def configuration_metadata() -> dict[str, Any]:
         "terms_schema": terms_configuration_schema(),
         "characters_schema": character_configuration_schema(),
         "audio_schema": AudioSettings.model_json_schema(by_alias=True),
+        "audio_recording_schema": AudioRecordingSettings.model_json_schema(),
         "threshold_schema": {
             "type": "object", "properties": properties, "additionalProperties": False,
             "$comment": (

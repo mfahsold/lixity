@@ -1,9 +1,15 @@
 # Pre-tag release-candidate qualification: runs full Python 3.10/3.12 source
 # + wheel smoke, 4-shard Chromium browser matrix, and Windows/macOS native
-# gates on main before creating a public v* release tag.
+# gates before creating a public v* release tag. Promotion uses runs on main.
 name: release-candidate
+run-name: Qualify ${{ inputs.expected_sha }}
 on:
   workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Full commit SHA reviewed for the release
+        required: true
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -14,6 +20,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Confirm the dispatch resolved to the reviewed commit
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          if [[ "$GITHUB_SHA" != "$EXPECTED_SHA" ]]; then
+            echo "::error::The selected ref no longer points to the reviewed commit."
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: ${{ github.sha }}
@@ -53,6 +67,10 @@ jobs:
     needs: [source_checks, browser_checks, native_checks, dependency_checks]
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -66,11 +84,27 @@ jobs:
       - name: Verify the candidate archives from this run
         run: |
           python -m zipfile -e "$RUNNER_TEMP/candidate-archive/"* .release-candidate
-          python scripts/check_release.py --dist .release-candidate/dist
-          test -s .release-candidate/lixity-release.cdx.json
+          python scripts/release_channels.py validate-rc-artifacts --root . --expected-commit "$GITHUB_SHA" \
+            --dist .release-candidate/dist --sbom .release-candidate/lixity-release.cdx.json
+      - name: Attest the qualified build artifacts
+        if: github.ref == 'refs/heads/main'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: .release-candidate/dist/*
+      - name: Attest the SBOM for the qualified wheel and source archive
+        if: github.ref == 'refs/heads/main'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-checksums: .release-candidate/dist/SHA256SUMS
+          sbom-path: .release-candidate/lixity-release.cdx.json
       - name: Record qualified release candidate commit
         env:
           RC_SHA: ${{ github.sha }}
         run: |
-          printf 'Release candidate qualified for %s.\n' "$RC_SHA" >> "$GITHUB_STEP_SUMMARY"
-          printf 'Source (Python 3.10 + 3.12 + wheel smoke), 4-shard Chromium browser, Windows/macOS native and dependency gates passed.\n' >> "$GITHUB_STEP_SUMMARY"
+          {
+            printf 'Candidate checks completed for %s.\n' "$RC_SHA"
+            printf 'Source (Python 3.10 + 3.12 + wheel smoke), 4-shard Chromium browser, Windows/macOS native and dependency gates passed.\n'
+            if [[ "$GITHUB_REF" == refs/heads/main ]]; then
+              printf 'This run on main is eligible for promotion from an exact matching tag while its artifact is retained.\n'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

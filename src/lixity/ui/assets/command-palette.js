@@ -1,5 +1,4 @@
-// Lixity Command Palette (Obsidian-style Ctrl/Cmd+P / Ctrl/Cmd+K)
-// Fast keyboard-first access to analyses, audio studio, research search and exports.
+// Command palette and workspace-level keyboard commands.
 (function () {
   "use strict";
 
@@ -9,6 +8,7 @@
   var selectedIndex = 0;
   var activeCommands = [];
   var lastFocusedElement = null;
+  var paletteShortcuts = "Control+K Meta+K Control+P Meta+P";
 
   var STANDALONE_DE = {
     cmd_cat_views: "Ansicht",
@@ -157,9 +157,9 @@
       {
         id: "toggle-focus-mode",
         category: catViews,
-        title: cmdText("cmd_toggle_focus_title", "Toggle Focus Mode (F)"),
+        title: cmdText("cmd_toggle_focus_title", "Toggle Focus Mode").replace(/\s+\(F\)$/, ""),
         subtitle: cmdText("cmd_toggle_focus_sub", "Distraction-free reading without chrome"),
-        shortcut: "F",
+        shortcut: document.getElementById("reader-focus")?.getClientRects().length ? "F" : "",
         icon: "eye",
         action: function () {
           var focusBtn = document.getElementById("reader-focus");
@@ -265,7 +265,6 @@
         category: catResearch,
         title: cmdText("cmd_research_search_title", "Open Research Search"),
         subtitle: cmdText("cmd_research_search_sub", "Search sources, citations and dossiers"),
-        shortcut: "S",
         icon: "search",
         action: function () {
           if (typeof switchActiveView === "function") switchActiveView("research");
@@ -332,9 +331,9 @@
       {
         id: "audio-teleprompter",
         category: catAudio,
-        title: cmdText("cmd_audio_teleprompter_title", "Open Teleprompter (P)"),
+        title: cmdText("cmd_audio_teleprompter_title", "Open Teleprompter").replace(/\s+\(P\)$/, ""),
         subtitle: cmdText("cmd_audio_teleprompter_sub", "Live pacing with vocal cues and phonetics"),
-        shortcut: "P",
+        shortcut: document.getElementById("reader-teleprompter")?.getClientRects().length ? "P" : "",
         icon: "mic",
         action: function () {
           var pBtn = document.getElementById("reader-teleprompter");
@@ -457,6 +456,7 @@
     });
 
     input.addEventListener("keydown", function (e) {
+      if (e.isComposing || e.defaultPrevented) return;
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedIndex((selectedIndex + 1) % Math.max(1, activeCommands.length));
@@ -656,19 +656,33 @@
     return paletteDialog && (paletteDialog.open || paletteDialog.hasAttribute("open"));
   }
 
-  // Global keyboard shortcuts
+  function bindLauncher() {
+    document.querySelectorAll("[data-open-command-palette]").forEach(function (button) {
+      button.setAttribute("aria-keyshortcuts", paletteShortcuts);
+      button.hidden = false;
+      button.addEventListener("click", open);
+    });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bindLauncher);
+  else bindLauncher();
+
   window.addEventListener("keydown", function (e) {
-    // Escape when open
+    if (e.defaultPrevented || e.isComposing || e.repeat) return;
     if (e.key === "Escape" && isOpen()) {
       e.preventDefault();
       close();
       return;
     }
 
-    // Ctrl+P / Cmd+P or Ctrl+K / Cmd+K triggers Command Palette
-    var isModifier = e.ctrlKey || e.metaKey;
+    var target = e.target instanceof Element ? e.target : document.body;
+    if (e.altKey || (!isOpen() && (target.closest('dialog[open], [role="dialog"], [role="menu"]') ||
+        document.querySelector("dialog:modal")))) return;
+
+    var isModifier = e.ctrlKey !== e.metaKey;
     var key = e.key ? e.key.toLowerCase() : "";
-    if (isModifier && (key === "p" || key === "k")) {
+    if (isModifier && !e.shiftKey && (key === "p" || key === "k")) {
+      // The Markdown editor already uses the same chord to insert a link.
+      if (key === "k" && target.matches(".markdown-editor-area")) return;
       e.preventDefault();
       if (isOpen()) {
         close();
@@ -678,8 +692,7 @@
       return;
     }
 
-    // Single 'F' or 'Ctrl+Shift+F' toggles Focus Mode if not inside an input/textarea
-    var isInput = e.target.matches && e.target.matches("input, textarea, select, [contenteditable='true']");
+    var isInput = target.closest("input, textarea, select, [contenteditable]");
     if (!isInput && !isOpen()) {
       if ((key === "f" && !e.ctrlKey && !e.metaKey && !e.altKey) || (isModifier && e.shiftKey && key === "f")) {
         var focusBtn = document.getElementById("reader-focus");

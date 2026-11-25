@@ -172,13 +172,13 @@ class EditingRoutesMixin(ResponseMixin):
                     if context is None:
                         return
                 store = self._editor_store()
-                result = store.delta(
-                    base_revision=query.get("base"),
-                    target_revision=query.get("target"),
-                )
-                if context is not None and not self._manuscript_context_still_current(context, stale_message=stale_message):
-                    return
-                self._ok(result)
+            result = store.delta(
+                base_revision=query.get("base"),
+                target_revision=query.get("target"),
+            )
+            if context is not None and not self._manuscript_context_still_current(context, stale_message=stale_message):
+                return
+            self._ok(result)
         except (ValueError, OSError, sqlite3.Error) as exc:
             self._error(str(exc), 400)
 

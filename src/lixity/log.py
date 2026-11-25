@@ -20,6 +20,7 @@ stderr output and existing debug errors can contain contextual details.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sys
@@ -45,7 +46,6 @@ FORMAT = "%(asctime)s %(levelname)s %(name)s %(message)s"
 DATEFMT = "%Y-%m-%d %H:%M:%S UTC"
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 _DIAGNOSTIC_ID: ContextVar[str | None] = ContextVar("lixity_diagnostic_id", default=None)
-_SPEECH_DIAGNOSTIC_ID: ContextVar[str | None] = ContextVar("lixity_speech_diagnostic_id", default=None)
 _CONFIGURE_LOCK = RLock()
 _SPEECH_PREVIOUS_LEVEL: list[int] = []
 
@@ -60,7 +60,7 @@ new_speech_diagnostic_id = new_diagnostic_id
 
 def diagnostic_id() -> str | None:
     """Return the active diagnostic ID for this context, if one has been entered."""
-    return _DIAGNOSTIC_ID.get() or _SPEECH_DIAGNOSTIC_ID.get()
+    return _DIAGNOSTIC_ID.get()
 
 
 def speech_diagnostic_id() -> str | None:
@@ -74,13 +74,11 @@ def diagnostic_scope(identifier: str | None = None) -> Iterator[str]:
     selected = identifier or diagnostic_id() or new_diagnostic_id()
     if len(selected) != 16 or any(char not in "0123456789abcdef" for char in selected):
         raise ValueError("Invalid diagnostic identifier")
-    reset_general = _DIAGNOSTIC_ID.set(selected)
-    reset_speech = _SPEECH_DIAGNOSTIC_ID.set(selected)
+    reset = _DIAGNOSTIC_ID.set(selected)
     try:
         yield selected
     finally:
-        _DIAGNOSTIC_ID.reset(reset_general)
-        _SPEECH_DIAGNOSTIC_ID.reset(reset_speech)
+        _DIAGNOSTIC_ID.reset(reset)
 
 
 @contextmanager
@@ -90,34 +88,41 @@ def speech_diagnostic_scope(identifier: str | None = None) -> Iterator[str]:
         yield scope_id
 
 
-def format_event(event: str, **fields: Any) -> str:
-    """Format structured key-value diagnostic event according to Lixity standards.
-
-    Fields are formatted as key=value without leaking private manuscript bytes.
-    """
-    pairs: list[str] = [f"event={event}"]
-    diag_id = fields.pop("id", None) or diagnostic_id()
-    if diag_id:
-        pairs.append(f"id={diag_id}")
+def _event_fields(event: str, fields: dict[str, Any]) -> dict[str, str | bool | int | float]:
+    data: dict[str, str | bool | int | float] = {"event": event}
+    identifier = fields.pop("id", None) or diagnostic_id()
+    if identifier:
+        data["id"] = str(identifier)
     for key, value in sorted(fields.items()):
-        if value is None:
-            continue
+        if value is not None:
+            data[key] = value if isinstance(value, (str, bool, int, float)) else str(value)
+    return data
+
+
+def _event_message(data: dict[str, str | bool | int | float]) -> str:
+    pairs = []
+    for key, value in data.items():
         if isinstance(value, bool):
             pairs.append(f"{key}={'true' if value else 'false'}")
-        elif isinstance(value, (int, float)):
-            pairs.append(f"{key}={value}")
+        elif isinstance(value, str) and (not value or any(
+            char.isspace() or not char.isprintable() or char in '="\\' for char in value
+        )):
+            pairs.append(f"{key}={json.dumps(value)}")
         else:
-            s_val = str(value)
-            if " " in s_val or "=" in s_val or '"' in s_val:
-                s_val = '"' + s_val.replace('"', '\\"') + '"'
-            pairs.append(f"{key}={s_val}")
+            pairs.append(f"{key}={value}")
     return " ".join(pairs)
+
+
+def format_event(event: str, **fields: Any) -> str:
+    """Format a one-line key-value diagnostic event for human-readable logs."""
+    return _event_message(_event_fields(event, fields))
 
 
 def log_event(logger: logging.Logger, event: str, level: int = logging.INFO, **fields: Any) -> None:
     """Emit a structured diagnostic event on the given logger."""
     if logger.isEnabledFor(level):
-        logger.log(level, format_event(event, **fields))
+        data = _event_fields(event, fields)
+        logger.log(level, _event_message(data), extra={"lixity_event": data})
 
 
 def is_json_logging() -> bool:
@@ -138,27 +143,11 @@ class _JsonFormatter(logging.Formatter):
             "logger": record.name,
             "message": msg,
         }
+        for key, value in getattr(record, "lixity_event", {}).items():
+            entry.setdefault(key, value)
         diag_id = getattr(record, "diagnostic_id", None) or diagnostic_id()
         if diag_id:
-            entry["id"] = diag_id
-        if msg.startswith("event="):
-            for part in msg.split(" "):
-                if "=" in part:
-                    k, v = part.split("=", 1)
-                    v_clean = v.strip('"')
-                    if k == "event":
-                        entry["event"] = v_clean
-                    elif v_clean == "true":
-                        entry[k] = True
-                    elif v_clean == "false":
-                        entry[k] = False
-                    elif v_clean.isdigit():
-                        entry[k] = int(v_clean)
-                    else:
-                        try:
-                            entry[k] = float(v_clean)
-                        except ValueError:
-                            entry[k] = v_clean
+            entry.setdefault("id", diag_id)
         if record.exc_info and record.exc_text:
             entry["exception"] = record.exc_text
         return orjson.dumps(entry).decode("utf-8")

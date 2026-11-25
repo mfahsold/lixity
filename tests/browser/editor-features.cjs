@@ -3,7 +3,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const {spawn} = require('node:child_process');
-const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, launchFirefox, modShortcut, playwrightModule} = require('../../scripts/browser_tools.cjs');
+const {expect} = require(path.join(playwrightModule, 'test'));
 (async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-editor-features-'));
   const source = path.join(root, 'book.md');
@@ -18,6 +19,20 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     const base = await new Promise((resolve,reject) => {server.stdout.once('data', d=>resolve(String(d).trim()));server.once('exit',c=>reject(new Error('Server '+c)));});
     browser = await (process.argv.includes('--firefox') ? launchFirefox() : launchChromium());
     const page = await browser.newPage({viewport:{width:1440,height:900}}); page.setDefaultTimeout(10000);
+    async function checkHelp(selector, name, description) {
+      const control = page.locator(selector);
+      await control.focus();
+      await expect(control).toHaveAccessibleName(name);
+      await expect(control).toHaveAccessibleDescription(description);
+      const tip = page.locator('#lixity-tooltip');
+      await expect(tip).toBeVisible();
+      const box = await tip.boundingBox();
+      const viewport = page.viewportSize();
+      assert.ok(box && box.x >= 0 && box.y >= 0 &&
+        box.x + box.width <= viewport.width && box.y + box.height <= viewport.height);
+      await page.keyboard.press('Escape');
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+    }
     const outsideWorkspace = [];
     page.on('request', request => {
       const url = new URL(request.url());
@@ -40,7 +55,9 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
       catch (error) {if (!String(error).includes('aborted')) throw error;}
       finally {initialDelivered();}
     });
-    await page.goto(base); await page.locator('#manuscript-write').click();
+    await page.goto(base);
+    await checkHelp('#manuscript-write', 'Write', 'Open the manuscript for editing at your current reading position.');
+    await page.locator('#manuscript-write').click();
     await page.locator('.cm-content').waitFor();
     assert.equal(deltaReads, 0, 'Entering Write does not request a report');
     const versionsMenu = page.locator('#manuscript-versions > summary');
@@ -83,9 +100,28 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     fs.writeFileSync(source, external);
     await page.locator('.cm-content').click(); await page.keyboard.press(modShortcut('End')); await page.keyboard.type(' My draft.');
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state==='conflict');
+    const recovery = page.locator('#manuscript-recovery');
+    const retained = recovery.locator('option[data-kind="draft"]').first();
+    await retained.waitFor({state:'attached'});
+    await page.keyboard.insertText(' Newer unsaved text.');
     await page.locator('#manuscript-versions > summary').click();
+    await recovery.selectOption(await retained.getAttribute('value'));
+    assert.ok(await page.locator('#manuscript-recover').isDisabled());
+    assert.match(await recovery.getAttribute('aria-describedby'), /manuscript-recovery-note/);
+    assert.match(await page.locator('#manuscript-recovery-note').innerText(), /Compare the recovery copy/);
+    await checkHelp('#manuscript-download', 'Download draft', 'Download the text currently in the editor as a separate Markdown file.');
+    const [backup] = await Promise.all([
+      page.waitForEvent('download'), page.locator('#manuscript-download').click(),
+    ]);
+    assert.match(fs.readFileSync(await backup.path(), 'utf8'), /Newer unsaved text/);
+    await checkHelp('#manuscript-compare', 'Compare versions', 'Compare the file on disk with your current text or the selected recovery copy.');
     await page.locator('#manuscript-compare').click();
     await page.locator('#manuscript-comparison[open]').waitFor();
+    await page.setViewportSize({width:320,height:844});
+    await checkHelp('#manuscript-comparison-use', 'Use as draft',
+      'Review the draft in the editor. Choose “Save this draft” to write it to the manuscript.');
+    assert.equal(fs.readFileSync(source, 'utf8'), external, 'Reading draft help does not write the manuscript');
+    await page.setViewportSize({width:1440,height:900});
     const reference = page.locator('#manuscript-comparison a[href*="/guides/metrics/"]');
     assert.ok(await reference.isVisible(), 'The version comparison exposes its reference in the open dialog');
     assert.equal(await reference.getAttribute('href'), '/guides/metrics/en.html#revisions');
@@ -95,6 +131,12 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     assert.equal(await page.locator('#manuscript-comparison-base').inputValue(),original);
     assert.equal(await page.locator('#manuscript-comparison-current').inputValue(), external);
     assert.match(await page.locator('#manuscript-comparison-draft').inputValue(),/My draft/);
+    assert.doesNotMatch(await page.locator('#manuscript-comparison-draft').inputValue(), /Newer unsaved text/);
+    const editorBuffer = page.locator('#manuscript-comparison-buffer');
+    await page.locator('#manuscript-comparison-buffer-label').click();
+    assert.equal(await editorBuffer.getAttribute('readonly'), '');
+    assert.match(await editorBuffer.inputValue(), /Newer unsaved text/);
+    await page.locator('#manuscript-comparison-buffer-label').click();
     assert.equal(await page.locator('#manuscript-comparison').getByText('Unsaved — retry').count(), 0,
       'Opening the comparison uses draft language rather than a failure message');
     assert.ok((await page.locator('#manuscript-recovery option[data-kind="draft"]').allTextContents())
@@ -123,12 +165,32 @@ const {launchChromium, launchFirefox, modShortcut} = require('../../scripts/brow
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
     await page.setViewportSize({width:320,height:844});
     assert.equal(await summaries.evaluateAll(nodes => nodes.every(node => node.scrollWidth <= node.clientWidth)), true);
-    await page.locator('#manuscript-comparison-use').click();
+    await page.locator('#manuscript-comparison-buffer-label').click();
+    assert.equal(await editorBuffer.evaluate(node => {
+      const bounds = node.getBoundingClientRect();
+      const body = node.closest('.modal-body');
+      return bounds.width > 0 && bounds.left >= 0 && bounds.right <= innerWidth && body.scrollWidth <= body.clientWidth;
+    }), true, 'The original unsaved text remains readable at 320 CSS pixels');
+    await page.locator('#manuscript-comparison-buffer-label').click();
+    const useDraft = page.locator('#manuscript-comparison-use');
+    let prompt;
+    page.once('dialog', async dialog => {
+      prompt = dialog.message();
+      await dialog.dismiss();
+    });
+    await useDraft.click();
+    assert.match(prompt, /Replace the unsaved text/);
+    assert.ok(await page.locator('#manuscript-comparison').isVisible(), 'Declining to replace unsaved text keeps the comparison open');
+    assert.match(await page.locator('.cm-content').innerText(), /Newer unsaved text/);
+    assert.equal(await page.locator('#manuscript-comparison-draft').inputValue(), reviewed);
+    page.once('dialog', dialog => dialog.accept());
+    await useDraft.click();
     assert.equal(fs.readFileSync(source,'utf8'), external, 'Comparison adoption does not write');
     await page.locator('#manuscript-save').click();
     await page.waitForFunction(() => document.querySelector('#manuscript-save-status').dataset.state==='saved');
     assert.equal(fs.readFileSync(source,'utf8'),reviewed);
     await page.locator('#manuscript-versions > summary').click();
+    await recovery.selectOption('');
     await page.locator('#manuscript-compare').click();
     await page.locator('#manuscript-comparison[open]').waitFor();
     await currentSummary.filter({hasText:'Average words per sentence 2.5'}).waitFor();

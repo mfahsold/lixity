@@ -310,6 +310,15 @@ async function checkDesktopCapture(browser, width) {
         await card.locator('[data-take-studio]').click();
         const handoff=await page.evaluate(()=>({mode:handedTake.mode,context:handedTake.context,transcript:handedTake.take.transcript,status:handedTake.take.transcript_status}));
         assert.deepEqual(handoff,{mode:'reference',context:{project_token:'synthetic-project',source_sha256:'synthetic-source'},transcript:'A river flows. ',status:'confirmed'});
+        await page.locator('#reader-teleprompter').click();
+        await page.locator('.teleprompter-dossier-toggle').click();
+        await card.locator('[data-take-discard]').click();
+        assert.equal(await card.count(), 0, 'Discard removes the in-memory take and transcript');
+        assert.equal(await record.evaluate(button => button === document.activeElement), true);
+        await page.locator('#teleprompter-take-files').setInputFiles([downloads.wav, downloads.json]);
+        await card.waitFor({state:'visible'});
+        assert.equal(await card.locator('textarea').inputValue(), 'A river flows. ', 'Downloaded recordings remain importable');
+        await page.evaluate(() => LixityTeleprompter.close());
         // Closing pending permission revokes a late stream without starting capture.
         await page.locator('#reader-teleprompter').click();await record.click();await page.evaluate(()=>LixityTeleprompter.close());
         const stopped=await page.evaluate(()=>testCapture.stops);await page.evaluate(()=>resolveCapture());await page.waitForFunction(before=>testCapture.stops>before,stopped);

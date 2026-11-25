@@ -129,5 +129,5 @@ def test_worker_logs_client_disconnect_as_transport_not_synthesis_failure(record
     handler.do_POST()
     assert replies == [200]  # A partially sent response cannot be replaced with a second response.
     text = recorded.getvalue()
-    assert "status=failed category=transport" in text
+    assert any("status=failed" in line and "category=transport" in line for line in text.splitlines())
     assert "PRIVATE_MANUSCRIPT" not in text and "PRIVATE_PATH" not in text

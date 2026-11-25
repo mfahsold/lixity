@@ -51,8 +51,12 @@ if (researchRevisionDialog) {
     catch (_) { return true; } // Invalid form values still belong to the author.
   }
 
+  function revisionWithdrawalPending() {
+    return Boolean(revisionHistoryDetail.querySelector('[data-dossier-withdraw][aria-busy="true"]'));
+  }
+
   function canStageDossier(id) {
-    return !revisionState.pending && (!researchRevisionDialog.open ||
+    return !revisionState.pending && !revisionWithdrawalPending() && (!researchRevisionDialog.open ||
       (!revisionState.loading && revisionState.kind === "dossier" && revisionState.id === id && revisionState.mode === "history" &&
        revisionState.historyView && revisionState.historyView.current && !revisionHasEdits()));
   }
@@ -75,7 +79,8 @@ if (researchRevisionDialog) {
         ? "staged" : "unavailable";
     },
     busy: function() {
-      return revisionState.pending || revisionBatch.pending || Boolean(document.querySelector('#research-manager [data-pending="true"]'));
+      return revisionState.pending || revisionWithdrawalPending() || revisionBatch.pending ||
+        Boolean(document.querySelector('#research-manager [data-pending="true"]'));
     },
     hasPendingWork: function() {
       if (this.busy() || revisionBatch.entries.length || researchEvidenceDraft) return true;
@@ -407,7 +412,9 @@ if (researchRevisionDialog) {
       image_editable: !window.LixitySite.readOnly && record.revision === envelope.latest_revision &&
         !revisionState.historyInitialRevision && !envelope.availability,
     }) : envelope;
-    var dossierBody = dossier ? researchDossierDetailHtml(imageContext, !imageContext.image_editable, {recordView:true}) : "";
+    var dossierBody = dossier ? researchDossierDetailHtml(imageContext, !imageContext.image_editable, {
+      recordView: true, allowWithdraw: !revisionHasEdits()
+    }) : "";
     var rows = fields.map(function(spec) {
       // Readable reference names already include their exact pin in reading mode.
       // Keep the separate numeric controls exclusively in the edit form.
@@ -495,6 +502,8 @@ if (researchRevisionDialog) {
           revisionShowMeta(viewed);
           revisionNotices(viewed);
           revisionShowCitations(viewed.citations);
+          var withdraw = revisionHistoryDetail.querySelector("[data-dossier-withdraw]");
+          if (withdraw) withdraw.hidden = revisionHasEdits();
         } else if (selected === revisionState.current.record.revision) revisionShowReadOnly(revisionState.current);
         else revisionLoadHistorical(selected);
         if (revisionVersions.open && !revisionState.historyLoaded) revisionLoadHistory();
@@ -1121,7 +1130,8 @@ if (researchRevisionDialog) {
     revisionForm.querySelector(".research-revision-choice").hidden = active;
     revisionTitle.textContent = uiLabel(active ? "research_dossier_draft_revision_title" : "research_revision_title");
     revisionSave.textContent = uiLabel(active ? "research_dossier_draft_revision_save" : "research_revision_save");
-    revisionDiscard.textContent = uiLabel(active ? "research_dossier_draft_revision_discard" : "modal_cancel");
+    revisionDiscard.textContent = uiLabel(active ? "research_dossier_draft_revision_discard" :
+      revisionState.kind === "dossier" ? "research_dossier_changes_discard" : "modal_cancel");
     revisionForm.setAttribute("aria-labelledby", active ? revisionTitle.id : revisionEditTab.id);
     if (active) {
       revisionForm.removeAttribute("role");
@@ -1205,16 +1215,15 @@ if (researchRevisionDialog) {
     revisionState.historyRequest++;
     revisionState.historyListRequest++;
     revisionState.historyEnvelope = null;
-    if (revisionState.staged) {
-      revisionState.current = null;
-      revisionSetStage(false);
-    }
+    if (revisionState.kind === "dossier") revisionState.current = null;
+    if (revisionState.staged) revisionSetStage(false);
   });
   researchRevisionDialog.addEventListener("cancel", function(event) {
-    if (revisionState.pending) event.preventDefault();
+    if (revisionState.pending || revisionWithdrawalPending()) event.preventDefault();
   });
   researchRevisionDialog.addEventListener("click", function(event) {
-    if (revisionState.pending && (event.target === researchRevisionDialog || event.target.closest("[data-close-modal]"))) {
+    if ((revisionState.pending || revisionWithdrawalPending()) &&
+        (event.target === researchRevisionDialog || event.target.closest("[data-close-modal]"))) {
       event.preventDefault();
       event.stopPropagation();
     }
@@ -1226,6 +1235,7 @@ if (researchRevisionDialog) {
   });
 
   document.addEventListener("click", function(event) {
+    if (researchRevisionDialog.open && revisionWithdrawalPending()) return;
     var edit = event.target.closest("[data-research-revise]");
     var history = event.target.closest("[data-research-history]");
     if (edit || history) {

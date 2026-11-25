@@ -348,6 +348,7 @@ def test_reduced_publication_assets_keep_measured_bundle_limits(publication_proj
     bundle = prepare_site(root, mode=mode, publication_profile='readers', max_chapter=1)
     html = bundle.files['index.html']
     assert b'id="research-diagram-library"' not in html
+    assert b'speech_project_profile_summary' not in html
     assert len(html) < 1_500_000
     report = bundle.preflight()
     total = sum(map(len, bundle.files.values()))

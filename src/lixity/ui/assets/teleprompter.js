@@ -167,7 +167,8 @@
     playSpan.textContent = label("teleprompter_play");
     playBtn.append("▶ ", playSpan);
     playBtn.setAttribute("aria-label", label("teleprompter_play"));
-    playBtn.title = label("teleprompter_play");
+    playBtn.setAttribute("aria-keyshortcuts", "Space");
+    playBtn.dataset.help = label("teleprompter_play_help");
     playBtn.addEventListener("click", togglePlay);
     centerGroup.appendChild(playBtn);
 
@@ -181,7 +182,8 @@
     speedSlider.value = String(wordsPerMinute);
     speedSlider.step = "5";
     speedSlider.setAttribute("aria-label", label("teleprompter_speed"));
-    speedSlider.title = label("teleprompter_speed");
+    speedSlider.setAttribute("aria-keyshortcuts", "ArrowUp ArrowDown");
+    speedSlider.dataset.help = label("teleprompter_speed_help");
     speedSlider.addEventListener("input", function() {
       wordsPerMinute = parseInt(speedSlider.value, 10);
       speedVal.textContent = wordsPerMinute + " WPM";
@@ -202,8 +204,8 @@
     sizeMinus.type = "button";
     sizeMinus.className = "teleprompter-btn";
     sizeMinus.textContent = "A−";
-    sizeMinus.title = label("reading_smaller");
     sizeMinus.setAttribute("aria-label", label("reading_smaller"));
+    sizeMinus.setAttribute("aria-keyshortcuts", "-");
     sizeMinus.addEventListener("click", function() {
       fontSize = Math.max(20, fontSize - 4);
       modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
@@ -214,8 +216,8 @@
     sizePlus.type = "button";
     sizePlus.className = "teleprompter-btn";
     sizePlus.textContent = "A+";
-    sizePlus.title = label("reading_larger");
     sizePlus.setAttribute("aria-label", label("reading_larger"));
+    sizePlus.setAttribute("aria-keyshortcuts", "= Plus");
     sizePlus.addEventListener("click", function() {
       fontSize = Math.min(56, fontSize + 4);
       modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
@@ -239,8 +241,8 @@
     sidebarBtnSpan.className = "teleprompter-btn-label";
     sidebarBtnSpan.textContent = label("teleprompter_dossiers");
     sidebarToggleBtn.append(" ", sidebarBtnSpan);
-    sidebarToggleBtn.title = label("teleprompter_dossier_context") + " (D)";
     sidebarToggleBtn.setAttribute("aria-label", label("teleprompter_dossier_context"));
+    sidebarToggleBtn.setAttribute("aria-keyshortcuts", "D");
     sidebarToggleBtn.setAttribute("aria-pressed", "false");
     sidebarToggleBtn.addEventListener("click", function() {
       if (sidebar) {
@@ -261,8 +263,8 @@
     recordBtnSpan.className = "teleprompter-btn-label";
     recordBtnSpan.textContent = label("teleprompter_record_take");
     recordBtn.append(" ", recordBtnSpan);
-    recordBtn.title = label("teleprompter_record_hint") + " (R)";
     recordBtn.setAttribute("aria-label", label("teleprompter_record_hint"));
+    recordBtn.setAttribute("aria-keyshortcuts", "R");
     recordBtn.addEventListener("click", toggleRecording);
     rightGroup.appendChild(recordBtn);
     takeImportBtn = document.createElement("button"); takeImportBtn.type = "button";
@@ -281,8 +283,8 @@
     closeBtn.type = "button";
     closeBtn.className = "teleprompter-btn teleprompter-btn-close";
     closeBtn.innerHTML = '<span aria-hidden="true">✕</span>';
-    closeBtn.title = label("modal_close") + " (Esc)";
-    closeBtn.setAttribute("aria-label", label("modal_close") + " (Esc)");
+    closeBtn.setAttribute("aria-label", label("modal_close"));
+    closeBtn.setAttribute("aria-keyshortcuts", "Escape");
     closeBtn.addEventListener("click", closeTeleprompter);
     rightGroup.appendChild(closeBtn);
 
@@ -362,21 +364,23 @@
 
     // Keyboard controls
     document.addEventListener("keydown", function(e) {
-      if (!modal || modal.hidden) return;
-      if (e.code !== "Escape" && e.target.closest("input, textarea, select, [contenteditable=true]")) return;
-      if (e.code === "Space" && e.target.closest("button, a")) return;
-      if (e.code === "Space") {
+      if (modal.hidden || e.defaultPrevented || e.isComposing || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (!modal.contains(e.target) && e.target !== document.body && e.target !== document.documentElement) return;
+      if (e.key !== "Escape" && e.target.closest?.("input, textarea, select, [contenteditable]")) return;
+      if (e.key === " " && e.target.closest?.("button, a, summary, [role=button]")) return;
+      if (e.repeat && [" ", "Escape", "d", "D", "r", "R"].includes(e.key)) return;
+      if (e.key === " ") {
         e.preventDefault();
         togglePlay();
-      } else if (e.code === "Escape") {
+      } else if (e.key === "Escape") {
         e.preventDefault();
         closeTeleprompter();
-      } else if (e.code === "ArrowUp") {
+      } else if (e.key === "ArrowUp") {
         e.preventDefault();
         wordsPerMinute = Math.min(240, wordsPerMinute + 10);
         speedSlider.value = String(wordsPerMinute);
         speedVal.textContent = wordsPerMinute + " WPM";
-      } else if (e.code === "ArrowDown") {
+      } else if (e.key === "ArrowDown") {
         e.preventDefault();
         wordsPerMinute = Math.max(60, wordsPerMinute - 10);
         speedSlider.value = String(wordsPerMinute);
@@ -389,16 +393,10 @@
         e.preventDefault();
         fontSize = Math.max(20, fontSize - 4);
         modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
-      } else if (e.code === "KeyD" && !e.ctrlKey && !e.metaKey) {
+      } else if (e.key === "d" || e.key === "D") {
         e.preventDefault();
-        if (sidebar) {
-          var open = sidebar.classList.toggle("is-open");
-          if (sidebarToggleBtn) {
-            sidebarToggleBtn.classList.toggle("is-active", open);
-            sidebarToggleBtn.setAttribute("aria-pressed", String(open));
-          }
-        }
-      } else if (e.code === "KeyR" && !e.ctrlKey && !e.metaKey) {
+        sidebarToggleBtn.click();
+      } else if (e.key === "r" || e.key === "R") {
         e.preventDefault();
         toggleRecording();
       }
@@ -655,7 +653,6 @@
       pauseSpan.textContent = label("teleprompter_pause");
       playBtn.replaceChildren("⏸ ", pauseSpan);
       playBtn.setAttribute("aria-label", label("teleprompter_pause"));
-      playBtn.title = label("teleprompter_pause");
       lastTimestamp = 0;
       pendingScrollPixels = 0;
       animFrameId = requestAnimationFrame(scrollLoop);
@@ -666,7 +663,6 @@
       resumeSpan.textContent = label("teleprompter_play");
       playBtn.replaceChildren("▶ ", resumeSpan);
       playBtn.setAttribute("aria-label", label("teleprompter_play"));
-      playBtn.title = label("teleprompter_play");
       if (animFrameId) cancelAnimationFrame(animFrameId);
     }
   }
@@ -734,7 +730,7 @@
     var hint = label("teleprompter_take_native_limit").replace("{seconds}", seconds);
     if (hint === desktopLimitHint) return;
     desktopLimitHint = hint;
-    recordBtn.title = label("teleprompter_record_hint") + " (R). " + hint;
+    recordBtn.dataset.help = hint;
     recordBtn.setAttribute("aria-description", hint);
     if (recordStatusAnnouncer.hidden) recordingState("idle", null, hint);
     else if (desktopRecording && desktopRecording.running && isRecording) {
@@ -758,6 +754,7 @@
     recordBtn.append(" ", recLabel);
     recordBtn.setAttribute("aria-label", label("teleprompter_record_hint"));
     takeImportBtn.disabled = false;
+    if (takeCard) takeCard.querySelector("[data-take-discard]").disabled = false;
   }
   function discardCapture() {
     var desktop = desktopRecording;
@@ -778,6 +775,7 @@
     var AudioCtxClass = window.AudioContext || window.webkitAudioContext;
     var desktop = desktopRecorder();
     isRecording = true; takeImportBtn.disabled = true;
+    if (takeCard) takeCard.querySelector("[data-take-discard]").disabled = true;
     var request = ++captureSequence;
     function sameContext() {
       if (!matchesCaptureContext()) throw captureContextError();
@@ -794,17 +792,19 @@
           checking: false
         };
         desktopRecording = recording;
-        await recording.start;
+        var started = await recording.start;
         if (request !== captureSequence || !isRecording || modal.hidden) return;
         sameContext();
         recording.running = true;
+        showDesktopLimit(started);
         showActiveCapture(recording);
         return;
       }
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !AudioCtxClass) throw new Error("Microphone unavailable");
       var stream = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1, echoCancellation:false, noiseSuppression:false, autoGainControl:false}});
       if (request !== captureSequence || !isRecording || modal.hidden) { stream.getTracks().forEach(function(track) { track.stop(); }); return; }
-      pcmMediaStream = stream; sameContext(); var context = new AudioCtxClass({sampleRate:24000}); pcmAudioContext = context;
+      pcmMediaStream = stream; sameContext();
+      var context = new AudioCtxClass({sampleRate:window.LixityAudioTake.captureSampleRate}); pcmAudioContext = context;
       await context.resume();
       if (request !== captureSequence || !isRecording || modal.hidden) return;
       sameContext();
@@ -881,6 +881,8 @@
   }
   async function acceptTake(pending, context, captured, limit) {
     var sequence = ++takeSequence, view = contextSequence; recordBtn.disabled = true; takeImportBtn.disabled = true;
+    var discard = takeCard?.querySelector("[data-take-discard]");
+    if (discard) discard.disabled = true;
     try {
       var value = await pending;
       if (sequence !== takeSequence) return;
@@ -893,7 +895,12 @@
       recordingState("ready", limit ? "teleprompter_take_limit" : "teleprompter_take_ready");
     } catch (_) {
       if (sequence === takeSequence) recordingState("failed", captured ? "teleprompter_take_failed" : "teleprompter_take_import_failed");
-    } finally { if (sequence === takeSequence) { recordBtn.disabled = false; takeImportBtn.disabled = false; } }
+    } finally {
+      if (sequence === takeSequence) {
+        recordBtn.disabled = takeImportBtn.disabled = false;
+        if (discard) discard.disabled = false;
+      }
+    }
   }
   function importTakeFiles() {
     var files = Array.from(takeFiles.files || []); takeFiles.value = "";
@@ -905,14 +912,26 @@
     }
     acceptTake(window.LixityAudioTake.importFiles(wav[0], json[0]), selectedContext());
   }
-  function renderTake(value, context) {
+  function clearTake() {
     if (takePlayer) { takePlayer.destroy(); takePlayer = null; }
     if (takeCard) {
       var oldAudio = takeCard.querySelector("audio");
       if (oldAudio) { oldAudio.pause(); oldAudio.removeAttribute("src"); oldAudio.load(); }
-      takeCard.remove();
+      takeCard.remove(); takeCard = null;
     }
-    if (lastRecordedBlobUrl) URL.revokeObjectURL(lastRecordedBlobUrl);
+    if (lastRecordedBlobUrl) { URL.revokeObjectURL(lastRecordedBlobUrl); lastRecordedBlobUrl = null; }
+    currentTake = takeContext = null;
+  }
+  function discardTake() {
+    if (isRecording) return;
+    ++takeSequence;
+    clearTake();
+    recordBtn.disabled = takeImportBtn.disabled = false;
+    recordingState("idle", "speech_take_discarded");
+    recordBtn.focus();
+  }
+  function renderTake(value, context) {
+    clearTake();
     currentTake = value; takeContext = context; lastRecordedBlobUrl = URL.createObjectURL(value.blob);
     takeCard = document.createElement("section"); takeCard.className = "teleprompter-dossier-card teleprompter-take-card";
     var title = document.createElement("strong"); title.textContent = label("teleprompter_take_ready"); takeCard.appendChild(title);
@@ -948,6 +967,12 @@
         recordingState("failed", "teleprompter_take_export_failed");
       }); }); actions.appendChild(button);
     });
+    var discard = document.createElement("button");
+    discard.type = "button"; discard.className = "teleprompter-btn"; discard.dataset.takeDiscard = "";
+    discard.textContent = label("speech_take_discard");
+    discard.dataset.help = label("speech_take_discard_help");
+    discard.addEventListener("click", discardTake);
+    actions.appendChild(discard);
     var studio = document.createElement("button"); studio.type = "button"; studio.className = "teleprompter-voice-studio-link"; studio.dataset.takeStudio = "";
     studio.textContent = label("teleprompter_open_studio");
     studio.addEventListener("click", function() {
@@ -1019,10 +1044,12 @@
       var readerP = document.querySelector('#chapters .ptext[data-paragraph-sha256="' + activeParagraphSha + '"]');
       if (readerP) {
         readerP.scrollIntoView({ behavior: "smooth", block: "center" });
-        readerP.focus();
+        readerP.focus({preventScroll:true});
+        if (document.activeElement === readerP) return;
       }
-    } else if (previousActiveElement && typeof previousActiveElement.focus === "function") {
-      previousActiveElement.focus();
+    }
+    if (previousActiveElement?.isConnected && typeof previousActiveElement.focus === "function") {
+      previousActiveElement.focus({preventScroll:true});
     }
   }
 

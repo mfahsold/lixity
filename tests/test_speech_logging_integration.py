@@ -33,11 +33,12 @@ def test_job_and_renderer_share_private_content_free_diagnostics(monkeypatch):
     profile = AudioProfile(instructions=sentinel, speed=1.0)
     jobs = SpeechJobs()
     try:
-        report = jobs.start(
-            "synthetic-private-context", sentinel, profile,
-            {"mode": "chapter", "title": sentinel}, lambda: True,
-            plan=[SpeechSegment(sentinel, profile)],
-        )
+        with log.diagnostic_scope() as request_identifier:
+            report = jobs.start(
+                "synthetic-private-context", sentinel, profile,
+                {"mode": "chapter", "title": sentinel}, lambda: True,
+                plan=[SpeechSegment(sentinel, profile)],
+            )
         deadline = time.monotonic() + 5
         while "stage=finished" not in stream.getvalue() and time.monotonic() < deadline:
             time.sleep(0.01)
@@ -46,6 +47,7 @@ def test_job_and_renderer_share_private_content_free_diagnostics(monkeypatch):
         lines = stream.getvalue().splitlines()
         queued = next(line for line in lines if "stage=queued" in line)
         identifier = re.search(r"\bid=([0-9a-f]{16})\b", queued).group(1)
+        assert identifier == request_identifier
         for event in ("stage=running", "event=render_start", "event=render_plan",
                       "event=segment_start", "event=segment_end", "event=render_end", "stage=finished"):
             assert any(event in line and f"id={identifier}" in line for line in lines), event

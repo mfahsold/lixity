@@ -10,9 +10,9 @@ download). Releases ship the checked-in bytes.
 `codemirror-editor.js` is a native-only, lazily loaded IIFE. It is not inlined
 into reports or public reading exports. `scripts/editor/package-lock.json`
 records exact dependency versions and registry integrity values; direct packages
-are `@codemirror/view` 6.43.15, `@codemirror/state` 6.7.6,
-`@codemirror/commands` 6.11.1, `@codemirror/lang-markdown` 6.5.2 and
-`@codemirror/search` 6.7.2.
+are `@codemirror/view` 6.44.0, `@codemirror/state` 6.7.6,
+`@codemirror/commands` 6.11.2, `@codemirror/lang-markdown` 6.5.2 and
+`@codemirror/search` 6.7.3.
 `codemirror.LICENSE` retains all production dependency notices. The esbuild
 output inventory, `scripts/editor/bundle-inputs.json`, records the dependency
 versions that contribute code to the shipped file.
@@ -46,8 +46,9 @@ verified tarball, and no separate image requests are needed.
 They are used through UMD/IIFE globals (`preact`, `htm`), not as ES modules,
 because the dashboard bundle is one classic inline script under a nonce CSP
 without `unsafe-eval`. Keep Preact on the reviewed 10.x UMD line while this
-loader uses `globalThis.preact`. A major update needs a compatible browser
-artifact or a reviewed change to the loader and CSP assumptions.
+loader uses `globalThis.preact`. Preact 11 ships ES modules. A major update
+needs a compatible browser artifact or a reviewed change to the loader and CSP
+assumptions. [Preact upgrade guide](https://preactjs.com/guide/v11/upgrade-guide/)
 
 Leaflet renders the existing authored GeoJSON locally. Tiles are absent by
 default. The separate OpenStreetMap control permits only the current viewport's

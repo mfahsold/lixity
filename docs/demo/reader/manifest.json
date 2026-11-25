@@ -33,7 +33,7 @@
     "research": false,
     "source_files": true
   },
-  "created_at": "2026-11-24T20:27:37.746746+00:00",
+  "created_at": "2026-11-25T15:56:09.824468+00:00",
   "disclosures": [
     "Contains only the selected publication profile, approved dossier content and explicitly selected citations/maps.",
     "Reading progress hides content already included in this file; it is not access control.",
@@ -49,8 +49,8 @@
   "entrypoint": "index.html",
   "files": {
     "analysis.html": {
-      "byte_length": 300469,
-      "sha256": "80796dfb8445397fe2277409632d0cd4a5c7424292330b6c2dd7893b99b19855"
+      "byte_length": 300550,
+      "sha256": "1a15aee1d687126553b7f82f02a8756795a35e2f4eb6f5eb00366049aea80712"
     },
     "assets/audio/9cdbeeadfb279d4ee5d71ba4de7517dba3f328dea60eb2623c052f9bd3c8a501.wav": {
       "byte_length": 3002838,
@@ -65,16 +65,16 @@
       "sha256": "993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64"
     },
     "index.html": {
-      "byte_length": 1540722,
-      "sha256": "1de8e1f2d85bb0b5ad069c67e1c138cd19cd5cb21c20e9a3f6deea31f849166c"
+      "byte_length": 1517153,
+      "sha256": "ea856f8b573d57f5fa6335dc592b5e5a8cbea97cf752dd4c1d70690397ecc967"
     },
     "licenses/Lixity-LICENSE": {
       "byte_length": 34523,
       "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
     },
     "licenses/codemirror.LICENSE": {
-      "byte_length": 26311,
-      "sha256": "a0bc3606ebb536a54d53789c7a0e80749a72f5ea0dae364f34f5fc7ca56fa243"
+      "byte_length": 26310,
+      "sha256": "c01109e237c3fec146059d84ab1975b7aa508b0f6165a02eb6aade2626e84e2b"
     },
     "licenses/htm.LICENSE": {
       "byte_length": 11341,
@@ -101,9 +101,9 @@
     "source_sha256": "6a69cb4da86bb6454c247dba4f59b1ac365eed8970b8f40409dfea1a6d6a32dc"
   },
   "mode": "reader",
-  "product_version": "0.9.2",
+  "product_version": "0.9.3",
   "project": {
-    "id": "urn:uuid:60c1cf0d-6f1f-4231-92d1-38ee24a3889b",
+    "id": "urn:uuid:86a9f161-975a-43b4-ad38-663c726749c5",
     "language": "en",
     "title": "Warehouse 4 — a reader's companion"
   },
@@ -112,7 +112,7 @@
       "chapters"
     ],
     "entry_count": 6,
-    "identity": "ee3cd95cb8adea43d0f795d197337c1b876515ee74bd9a93676bea0f1ba499fc",
+    "identity": "678f7888ee240bf4180c4b6bc123a3a48a533a72f6749be758258a24d6f00eae",
     "max_chapter": 6,
     "profile": "readers"
   },

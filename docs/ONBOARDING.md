@@ -2,14 +2,15 @@
 
 [Documentation map](README.md) · [Install Lixity](INSTALLATION.md) · [Workspace manual](WORKSPACE.md)
 
-Open Lixity and choose a project, a manuscript file, or a blank manuscript.
-Once your text is open, read one passage, check what a measurement counted,
-and decide whether the difference matters to the scene.
+Start with one question about a passage. Open the words or sentence behind a
+measurement, read the surrounding prose, and decide whether to keep reading
+or revise the passage.
 
-Find the [desktop installer for your operating system](guides/installation.html#desktop)
-and check its availability in the guide. Lixity starts its bundled local
-engine when you open the app. For the CLI-installed browser app, follow
-[Start the browser workspace](#use-the-interactive-workspace).
+Before installing, [edit a short sample in the browser exercise](sandbox/index.html)
+or [follow one finding in the read-only Warehouse 4 demo](guides/first-look.html#passage).
+Use the [download guide](guides/installation.html#desktop) to check your system's
+desktop options and find the published local browser installation. The desktop
+app includes the local engine and opens from your application launcher.
 
 <a id="the-journey-at-a-glance"></a>
 <a id="see-a-finished-example-first"></a>
@@ -20,9 +21,7 @@ engine when you open the app. For the CLI-installed browser app, follow
 | A folder where you already work | Choose **Open a project folder**, select the folder containing your manuscript, and confirm in the form. From an open workspace, use **Project actions → Open Project**. |
 | A file to copy into a new project | Choose **Import a manuscript** on the welcome screen, or **Project actions → New Project → Import manuscript**. Lixity previews a Word, Markdown, or plain-text file before copying it. |
 | A new manuscript | Choose **Start writing**, enter a title and manuscript language, and create the project. From an open workspace, use **Project actions → New Project → Start new manuscript**. |
-| An example to explore first | In the desktop app, choose **Try the example offline** to preview the bundled English manuscript. Confirm to save an editable copy. The browser workspace links to the [read-only Warehouse 4 demo](demo/report.html) and its [illustrated walkthrough](guides/first-look.html). |
-| A linguistic question about an existing text | Follow the [text-analysis workflow](USAGE.md#linguistic-text-analysis) to record scope, settings and reproducible outputs. |
-| Sources without a manuscript | Open or initialize a [research project](research/USAGE.md#try-it). |
+| An example to explore first | In the desktop app, choose **Try the example offline** to preview the bundled English manuscript. Check the destination and choose **Import and analyze manuscript** to create an editable copy. The browser workspace links to the [read-only Warehouse 4 demo](demo/report.html). |
 
 In the desktop app, new and imported manuscripts use a new folder under
 `~/Lixity` by default. Check the proposed folder in the form. You can enter
@@ -32,11 +31,16 @@ show the welcome actions as **Open Project** and **Analyze a manuscript**.
 ## Session checklist
 
 1. Open or create the project and confirm its folder and manuscript language.
-2. To write or revise a passage, choose **Write**. Check for **Saved locally**,
-   then choose **Close writing** to return to the reader.
+2. Read a paragraph in **Manuscript**. Follow one counted sentence to its
+   explanation and press Escape to return to the passage.
+   [Read and explore](#read-and-explore)
+3. When you want to revise it, choose **Write**. Check for **Saved locally**,
+   then choose **Close writing** to return to the manuscript.
    [Writing and recovery](WORKSPACE.md#write-a-manuscript)
-3. When there is text to explore, read a paragraph in **Manuscript** and inspect
-   one [measurement](#read-and-explore).
+
+Starting with an empty manuscript? Write a paragraph first. Later, follow a
+[research link](#research-workflow) beside the text or [choose a reading copy](#record-or-share-a-reading).
+For a library of sources without a manuscript, start with a [research project](research/USAGE.md#try-it).
 
 ## Start with a manuscript
 
@@ -110,7 +114,8 @@ the counted passages that can still be located. For a word pattern, a measured
 zero means the rule counted no matches.
 [Counted text and paragraph comparison](WORKSPACE.md#counted-text-and-paragraph-comparison)
 
-Open **Analysis overview** to compare chapters or explore patterns.
+Once you have explained a marked passage in your own words, open **Analysis
+overview** to compare chapters or explore patterns.
 **Open passage** suggests the first tense-pattern flag in manuscript order, or
 the opening paragraph when no flag meets the threshold. The suggestion explains
 its selection. **Back to passage** restores your reading position and prior
@@ -205,8 +210,8 @@ character reading](research/USAGE.md#manuscript-driven-dossier-drafts) ·
 
 ### First Zotero capture
 
-Enable Zotero's local API and download the needed attachments. **Since v0.7.1:**
-choose **Research → Evidence captures → Capture from Zotero**,
+Enable Zotero's local API and download the needed attachments. Choose
+**Research → Evidence captures → Capture from Zotero**,
 then preview a library, collection and attachment before permitting retention.
 The Zotero bridge captures PDF/text and PNG/JPEG; it does not capture audio or
 video. Lixity separately supports [local PDF/video dossier attachments](research/USAGE.md#retain-a-pdf-or-video-in-a-dossier).
@@ -232,10 +237,11 @@ archive for later restoration.
 ## Check your first session and return later
 
 Check that the active project and analysis language match your manuscript.
-The project stays in its folder between sessions. To reopen it in the desktop
-app, launch **Applications → Lixity** on macOS and choose it under
-**File → Recent Projects**. If you moved the folder, use **Open Project** and
-select its new location. To close, reopen or update the browser app, use
+The project stays in its folder between sessions. Open Lixity from your system's
+application launcher, or run the same executable AppImage on Linux. Choose the
+project from **Recent projects** in the welcome window or **File → Recent
+Projects**. If you moved it, choose **Open Project** and select its new location.
+To close, reopen or update the browser app, use
 [service management](INSTALLATION.md#running-the-server).
 
 Choose a [project backup](PROJECT_BACKUP.md) to copy saved manuscripts and

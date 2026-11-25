@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 import logging
 import os
 import runpy
@@ -110,10 +111,16 @@ def test_format_event_and_log_event():
 def test_json_logging_format():
     stream = io.StringIO()
     logger = log.configure(level="INFO", stream=stream, force=True, json_format=True)
-    with log.diagnostic_scope("abcdef0123456789"):
-        log.log_event(logger, "json_event", stage="ready", duration_ms=15)
-    import json
+    label = 'synthetic "quoted value"\twith \\ and =\nnew line'
+    try:
+        with log.diagnostic_scope("abcdef0123456789"):
+            log.log_event(logger, "json_event", stage="ready", duration_ms=15,
+                          label=label, code="001", enabled=False, delta=-2, missing=None,
+                          timestamp="reserved", message="reserved")
+    finally:
+        log.configure(force=True, json_format=False)
     line = stream.getvalue().strip()
+    assert len(line.splitlines()) == 1
     data = json.loads(line)
     assert data["level"] == "INFO"
     assert data["logger"] == "lixity"
@@ -121,5 +128,10 @@ def test_json_logging_format():
     assert data["id"] == "abcdef0123456789"
     assert data["stage"] == "ready"
     assert data["duration_ms"] == 15
-    # Reset logger to normal text format
-    log.configure(force=True, json_format=False)
+    assert data["label"] == label
+    assert data["code"] == "001"
+    assert data["enabled"] is False
+    assert data["delta"] == -2
+    assert "missing" not in data
+    assert data["timestamp"] != "reserved" and data["message"].startswith("event=json_event")
+    assert len(log.format_event("json_event", label=label).splitlines()) == 1

@@ -48,10 +48,15 @@ jobs:
           name: lixity-source-sbom-${{ github.run_attempt }}
           path: ${{ runner.temp }}/lixity-runtime.cdx.json
           if-no-files-found: error
+      - name: Set up the separate audit interpreter
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.12'
       - name: Audit the same pinned Python runtime resolution
         run: |
-          python -m pip install pip-audit
-          python -m pip_audit --progress-spinner off --strict --require-hashes --disable-pip \
+          python -m venv "$RUNNER_TEMP/dependency-audit"
+          "$RUNNER_TEMP/dependency-audit/bin/python" -m pip install 'pip-audit>=2.10.1'
+          "$RUNNER_TEMP/dependency-audit/bin/python" -m pip_audit --progress-spinner off --strict --require-hashes --disable-pip \
             -r "$RUNNER_TEMP/lixity-runtime.txt"
 
   browser_dependencies:

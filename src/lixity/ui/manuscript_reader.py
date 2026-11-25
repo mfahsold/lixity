@@ -151,6 +151,7 @@ def reading_controls(
     focus_btn = compact_control(
         label(labels, "reading_focus"), "maximize-2", control_id="reader-focus",
         help_text=label(labels, "reading_help_focus"), pressed=False,
+        keyshortcuts="F Control+Shift+F Meta+Shift+F",
     )
     teleprompter_btn = compact_control(
         label(labels, "reading_teleprompter"), "teleprompter", control_id="reader-teleprompter",
@@ -180,12 +181,16 @@ def reading_controls(
         f'<button class="ctl" type="button" id="reader-text-larger" aria-label="{text("reading_larger")}">A+</button></div>'
         f'{width_choices}{spacing_choices}'
         f'<div class="reader-shortcuts"><strong>{text("reading_shortcuts")}</strong><dl>'
+        f'<dt><kbd>F</kbd></dt><dd>{text("reading_focus")}</dd>'
         f'<dt><kbd>P</kbd></dt><dd>{text("reading_teleprompter")}</dd>'
         f'<dt><kbd>D</kbd></dt><dd>{text("reading_direct_speech")}</dd>'
         f'<dt><kbd>Shift+F10</kbd></dt><dd>{text("reading_shortcut_actions")}</dd>'
+        f'<dt><kbd>/</kbd></dt><dd>{text("text_search")}</dd>'
         f'<dt><kbd>Enter</kbd></dt><dd>{text("reading_shortcut_search")}</dd>'
         f'<dt><kbd>Esc</kbd></dt><dd>{text("reading_shortcut_close")}</dd>'
-        '</dl></div></div></details>'
+        '</dl>'
+        f'<button type="button" class="ctl reader-command-palette" data-open-command-palette hidden>{text("cmd_aria_label")}</button>'
+        '</div></div></details>'
         f'{focus_btn}{teleprompter_btn}{direct_speech_btn}'
         '<div class="reader-analysis-toggle-controls">'
         f'<button class="ctl analysis-toggle" type="button" id="manuscript-analysis-toggle" '

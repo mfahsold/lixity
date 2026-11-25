@@ -1,4 +1,4 @@
-# Full source checks run locally and are reusable by the tagged release.
+# Full source checks run locally and are reusable by release qualification.
 name: tests
 on:
   pull_request:

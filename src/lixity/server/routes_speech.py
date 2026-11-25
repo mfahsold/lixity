@@ -13,12 +13,18 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from ..config import load_project_config
+from ..config import load_project_config, read_explicit_project_config
 from ..io import FileUtils
 from ..markdown_parser import split_chapters
 from ..pipeline import document_paragraph_texts, resolve_document_config
 from ..speech import MAX_SEGMENT_CHARS
-from ..speech_artifacts import MAX_CHAPTER_AUDIO_BYTES, list_project_audio, retain_chapter_audio
+from ..speech_artifacts import (
+    MAX_CHAPTER_AUDIO_BYTES,
+    ChapterAudioChanged,
+    delete_chapter_audio,
+    list_project_audio,
+    retain_chapter_audio,
+)
 from ..speech_cache import project_audio_cache
 from ..speech_direction import (
     BaseDirectionConflict,
@@ -36,15 +42,21 @@ from ..speech_direction import (
 from ..speech_export import ssml_export, timeline_json
 from ..speech_jobs import SpeechJobs, prepare_speech_source
 from ..speech_profiles import (
+    DEFAULT_PARAGRAPH_PAUSE,
+    DEFAULT_SCENE_PAUSE,
     EXTERNAL_ENGINES,
+    MAX_AUDIO_PROFILES,
     AudioProfile,
     audio_capabilities,
     parse_audio_settings,
     requires_audio_migration,
     resolve_audio_profile,
 )
+from ..speech_recording_settings import MAX_REFERENCE_SECONDS, resolve_audio_recording_settings
 from ..speech_references import read_reference_input, references_for_plan, references_unchanged
 from ..speech_status import native_worker_inventory
+from ..speech_trim import MAX_TRIM_INPUT_SECONDS, configured_soundcraft, trim_audio_take
+from ..speech_worker import reference_format
 from ..workspace_labels import workspace_labels_for
 from ._base import ResponseMixin
 from .pdf_context import project_settings_token
@@ -56,6 +68,24 @@ class _SpeechStale(ValueError):
 
 class SpeechRoutesMixin(ResponseMixin):
     _speech_manager_lock = threading.Lock()
+
+    def _handle_audio_take_trim(self, payload: dict[str, Any]) -> None:
+        """Return a verified audio excerpt for review without writing to the project."""
+        try:
+            if set(payload) != {"project_token", "source_sha256", "audio", "start_frame", "end_frame"}:
+                raise ValueError("Supply a WAV, a sample range and the selected manuscript context")
+            with self._workspace_lock:
+                _text, _digest, _settings, key = self._speech_bound(payload)
+            executable = configured_soundcraft()
+            if executable is None:
+                raise ValueError("SoundCraft CLI is not configured")
+            audio = trim_audio_take(executable, payload["audio"], payload["start_frame"], payload["end_frame"])
+            with self._workspace_lock:
+                if self._speech_bound(payload)[3] != key:
+                    raise _SpeechStale("The selected audio context has changed; try again")
+                self._json({"ok": True, "audio": audio})
+        except (OSError, ValueError, RuntimeError, UserWarning) as exc:
+            self._speech_error(exc)
 
     def _handle_speech_audio_import(self, payload: dict[str, Any]) -> None:
         """Retain an explicitly selected chapter WAV, without transcript assumptions."""
@@ -85,6 +115,25 @@ class SpeechRoutesMixin(ResponseMixin):
                                                 origin="imported", valid=valid)
             self._json({"ok": True, "schema_version": "lixity-chapter-audio/1", "artifact": asdict(artifact)})
         except (OSError, ValueError, RuntimeError, UserWarning, binascii.Error) as exc:
+            self._speech_error(exc)
+
+    def _handle_speech_audio_delete(self, payload: dict[str, Any]) -> None:
+        """Delete the chapter recording the author reviewed in the current workspace."""
+        try:
+            if set(payload) != {"project_token", "source_sha256", "chapter", "audio_sha256"}:
+                raise ValueError("Supply the selected chapter recording and manuscript context")
+            with self._workspace_lock:
+                _, digest, _, _ = self._speech_bound(payload)
+                root = self.get_author_project_root()
+                if root is None:
+                    raise ValueError("Open a manuscript project before deleting chapter audio")
+                cleaned = delete_chapter_audio(root, source_sha256=digest, chapter=payload["chapter"],
+                                               audio_sha256=payload["audio_sha256"])
+            self._json({"ok": True, "cleanup_pending": not cleaned})
+        except ChapterAudioChanged:
+            self._json({"ok": False, "code": "chapter-audio-changed",
+                        "message": workspace_labels_for(self.language)["speech_chapter_audio_changed"]}, 409)
+        except (OSError, ValueError, RuntimeError, UserWarning) as exc:
             self._speech_error(exc)
 
     def _handle_speech_audio_artifacts(self, _query: Any = None) -> None:
@@ -274,16 +323,29 @@ class SpeechRoutesMixin(ResponseMixin):
             self._speech_manager().cancel_stale()
             with self._workspace_lock:
                 text, digest, config, _key = self._speech_bound(query)
+                raw_audio = config.get("audio")
                 settings = None
                 selected_profile = None
                 configuration_error = ""
                 try:
                     settings = parse_audio_settings(
-                        config.get("audio"), language=self.language
+                        raw_audio, language=self.language
                     ).model_dump(by_alias=True)
                     selected_profile = resolve_audio_profile(config, language=self.language)
                 except ValueError as exc:
                     configuration_error = str(exc)
+                reference_recording: dict[str, int | str | None] = {
+                    "default_seconds": MAX_REFERENCE_SECONDS,
+                    "reference_seconds": None,
+                    "duration_seconds": None,
+                    "configuration_error": "",
+                }
+                try:
+                    recording_settings = resolve_audio_recording_settings(config)
+                    reference_recording["reference_seconds"] = recording_settings.reference_seconds
+                    reference_recording["duration_seconds"] = recording_settings.duration_seconds()
+                except ValueError as exc:
+                    reference_recording["configuration_error"] = str(exc)
                 document, _resolved = resolve_document_config(
                     text, self.language, project_config=config
                 )
@@ -305,9 +367,16 @@ class SpeechRoutesMixin(ResponseMixin):
                     "ok": True,
                     "schema_version": "lixity-speech-local/1",
                     "settings": settings,
+                    "audio_settings_present": raw_audio is not None,
                     "configuration_error": configuration_error,
-                    "requires_migration": requires_audio_migration(config.get("audio")),
+                    "reference_recording": reference_recording,
+                    "requires_migration": requires_audio_migration(raw_audio),
                     "capabilities": audio_capabilities(),
+                    "profile_constraints": {
+                        "maximum": MAX_AUDIO_PROFILES,
+                        "default_paragraph_pause": DEFAULT_PARAGRAPH_PAUSE,
+                        "default_scene_pause": DEFAULT_SCENE_PAUSE,
+                    },
                     "direction": self._direction_view(),
                     "chapters": chapters,
                     "project_token": query["project_token"],
@@ -317,7 +386,9 @@ class SpeechRoutesMixin(ResponseMixin):
             # A worker status is a snapshot, not a promise of later readiness.
             if selected_profile is not None and selected_profile.engine in EXTERNAL_ENGINES:
                 from ..speech_providers import external_provider_status
-                response["workers"] = [external_provider_status(selected_profile)]
+
+                worker = external_provider_status(selected_profile)
+                response["workers"] = [{**worker, "engines": [selected_profile.engine]}]
             else:
                 response["workers"] = native_worker_inventory()
             from ..speech_record import get_microphone_status
@@ -325,6 +396,9 @@ class SpeechRoutesMixin(ResponseMixin):
 
             root = self.get_author_project_root()
             response["microphone"] = get_microphone_status()
+            response["can_trim_take"] = configured_soundcraft() is not None
+            response["take_trim_limit_seconds"] = MAX_TRIM_INPUT_SECONDS
+            response["reference_format"] = reference_format()
             response["references"] = list_references(root) if root else []
             response["calibration_texts"] = CALIBRATION_TEXTS.get(self.language, CALIBRATION_TEXTS.get("de", {}))
             with self._workspace_lock:
@@ -678,29 +752,55 @@ class SpeechRoutesMixin(ResponseMixin):
     def _handle_audio_microphone_post(self, payload: dict[str, Any]) -> None:
         """Handle microphone gain updates, calibration, and voice references."""
         from ..speech_record import (
+            DEFAULT_CALIBRATION_COUNTDOWN,
+            DEFAULT_CALIBRATION_SECONDS,
+            DEFAULT_MIXER_CONTROL,
             get_microphone_status,
             run_calibration,
             set_alsa_gain,
         )
 
         action = payload.get("action", "status")
-        if action == "set_gain":
-            gain = int(payload.get("gain", 35))
-            card = payload.get("card", 1)
-            control = payload.get("control", "Mic")
-            ok = set_alsa_gain(gain, card=card, control=control)
-            if not ok:
-                self._json({"ok": False, "message": f"Could not set gain {gain} on card {card}"}, 400)
-                return
-            self._json({"ok": True, **get_microphone_status()})
+        if action == "delete_reference":
+            self._delete_recorded_reference(payload)
             return
-        if action == "calibrate":
-            calib_gain: int | None = int(payload["gain"]) if "gain" in payload and payload["gain"] is not None else None
-            duration = float(payload.get("duration", 8.0))
-            countdown = float(payload.get("countdown", 4.0))
-            device = str(payload["device"]) if payload.get("device") else None
-            result = run_calibration(gain=calib_gain, duration=duration, countdown=countdown, device=device)
-            self._json({"ok": True, "calibration": result})
+        if action == "status" and payload.get("device") is not None:
+            device = payload["device"]
+            if not isinstance(device, str) or not device:
+                self._speech_error(ValueError("Choose a recording device"))
+                return
+            self._json({"ok": True, **get_microphone_status(device=device)})
+            return
+        if action in ("set_gain", "calibrate"):
+            try:
+                raw_gain = payload.get("gain")
+                if isinstance(raw_gain, bool) or (isinstance(raw_gain, float) and not raw_gain.is_integer()):
+                    raise ValueError("Capture gain must be an integer")
+                gain = int(raw_gain) if raw_gain is not None else None
+                if action == "set_gain":
+                    if gain is None:
+                        raise ValueError("A capture gain is required")
+                    card = payload.get("card")
+                    control = payload.get("control", DEFAULT_MIXER_CONTROL)
+                    if card is not None and type(card) not in (int, str):
+                        raise ValueError("An ALSA card index or ID is required")
+                    if not isinstance(control, str) or not control or control.startswith("-"):
+                        raise ValueError("An ALSA control name is required")
+                    if not set_alsa_gain(gain, card=card, control=control):
+                        raise RuntimeError("Could not set the selected ALSA capture gain")
+                    self._json({"ok": True, **get_microphone_status(card=card, control=control)})
+                else:
+                    duration = float(payload.get("duration", DEFAULT_CALIBRATION_SECONDS))
+                    countdown = float(payload.get("countdown", DEFAULT_CALIBRATION_COUNTDOWN))
+                    device = payload.get("device")
+                    if device is not None and (not isinstance(device, str) or not device):
+                        raise ValueError("Choose a recording device")
+                    result = run_calibration(gain=gain, duration=duration, countdown=countdown, device=device)
+                    self._json({"ok": True, "calibration": result})
+            except (OSError, RuntimeError, ValueError) as exc:
+                self._speech_error(exc)
+            except (OverflowError, TypeError):
+                self._speech_error(ValueError("Capture gain, duration and countdown must be numeric"))
             return
         if action == "save_reference":
             try:
@@ -725,16 +825,21 @@ class SpeechRoutesMixin(ResponseMixin):
             if root is None:
                 self._json({"ok": False, "message": "No open manuscript project"}, 400)
                 return
-            duration = float(payload.get("duration", 15.0))
             transcript = str(payload.get("transcript", "")).strip()
-            if not transcript:
+            full_phonetic = not transcript
+            if full_phonetic:
                 transcript = get_calibration_text(self.language)
-            rec_gain: int | None = int(payload["gain"]) if "gain" in payload and payload["gain"] is not None else None
-            device = str(payload["device"]) if payload.get("device") else None
             try:
+                if "duration" in payload:
+                    duration = float(payload["duration"])
+                else:
+                    recording = resolve_audio_recording_settings(read_explicit_project_config(root))
+                    duration = recording.duration_seconds(full_phonetic=full_phonetic)
+                rec_gain = int(payload["gain"]) if payload.get("gain") is not None else None
+                device = str(payload["device"]) if payload.get("device") else None
                 ref = record_and_save_reference(root, duration, transcript, gain=rec_gain, device=device)
                 quality = assess_reference(ref.audio)
-            except (ValueError, OSError, RuntimeError) as exc:
+            except (ValueError, OverflowError, OSError, RuntimeError, TypeError) as exc:
                 self._json({"ok": False, "message": f"Recording failed: {exc}"}, 400)
                 return
 
@@ -756,3 +861,26 @@ class SpeechRoutesMixin(ResponseMixin):
             self._json({"ok": True, "references": refs})
             return
         self._json({"ok": True, **get_microphone_status()})
+
+    def _delete_recorded_reference(self, payload: dict[str, Any]) -> None:
+        from ..speech_references import VoiceReferenceInUse, delete_reference
+
+        try:
+            if set(payload) != {"action", "project_token", "source_sha256", "reference_id"}:
+                raise ValueError("Supply the saved recording ID and the selected manuscript context")
+            with self._workspace_lock:
+                self._speech_bound(payload)
+                root = self.get_author_project_root()
+                if root is None:
+                    raise ValueError("Open a manuscript project before removing a recording")
+
+                def check_context() -> None:
+                    self._speech_bound(payload)
+
+                delete_reference(root, payload["reference_id"], before_delete=check_context)
+            self._json({"ok": True, "reference_id": payload["reference_id"]})
+        except VoiceReferenceInUse:
+            message = workspace_labels_for(self.language)["speech_reference_delete_in_use"]
+            self._json({"ok": False, "code": "reference-in-use", "message": message}, 409)
+        except (OSError, ValueError, RuntimeError, UserWarning) as exc:
+            self._speech_error(exc)

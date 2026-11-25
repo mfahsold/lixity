@@ -453,6 +453,7 @@ async function verifyComparisonRegressions(browser) {
       await selectMetric(page, 'filter');
       const counted = page.locator('#analysis-evidence-enabled');
       const allResults = page.locator('#reader-counted-results');
+      const noResults = page.locator('#reader-counted-empty');
       const chapterResults = page.locator('#ch-1 button[data-chapter-counted-results]');
       const card = page.locator('#analysis-evidence-card');
       const bar = page.locator('#craft-jump-bar');
@@ -506,10 +507,13 @@ async function verifyComparisonRegressions(browser) {
       await assertCount(allResults, generated.counted_matches[9]);
       assert.equal(await page.locator('#ch-2').isVisible(), true, 'live search temporarily takes precedence over the tense filter');
       await search.fill('Kalter Wind fegt'); await search.press('Enter');
-      await assertCount(allResults, 0);
+      await noResults.waitFor({state: 'visible'});
+      assert.ok(await allResults.isHidden());
+      assert.equal(await noResults.textContent(), fixtures.de.labels.reader_evidence_results_filtered);
       assert.equal(await chapterResults.isVisible(), false);
       await search.press('Escape');
       await assertCount(allResults, chapterTotal);
+      assert.ok(await noResults.isHidden());
       assert.equal(await page.locator('#ch-2').isVisible(), false);
       assert.equal(await counted.isChecked(), false);
       if (width === 320) {
@@ -541,6 +545,10 @@ async function verifyComparisonRegressions(browser) {
         }
         await page.setViewportSize({width, height: 900});
       }
+      await selectMetric(page, 'dialogue');
+      await noResults.waitFor({state: 'visible'});
+      assert.ok(await allResults.isHidden());
+      assert.equal(await noResults.textContent(), fixtures.de.labels.reader_evidence_results_empty);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     }, generated.sparse_html)),
   ]);

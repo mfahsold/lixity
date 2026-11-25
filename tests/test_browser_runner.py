@@ -524,12 +524,15 @@ def test_suite_heap_limit_preserves_explicit_caller_options(monkeypatch, configu
 
 
 @pytest.mark.parametrize("diagnostics", [False, True])
-def test_heap_limit_reaches_each_suite_process(browser_runner, monkeypatch, tmp_path, diagnostics):
+def test_suite_process_receives_heap_limit_and_opt_in_diagnostics(browser_runner, monkeypatch, tmp_path, diagnostics):
     monkeypatch.delenv("NODE_OPTIONS", raising=False)
+    monkeypatch.delenv("LIXITY_TEST_AUDIO_DIAGNOSTICS", raising=False)
     arguments = ("--diagnostics", str(tmp_path / "evidence")) if diagnostics else ()
     result = browser_runner(
-        {"a.cjs": "import os\nprint('suite options: ' + os.environ.get('NODE_OPTIONS', 'missing'))\n"},
+        {"a.cjs": ("import os\nprint('suite options: ' + os.environ.get('NODE_OPTIONS', 'missing'))\n"
+                   "print('audio evidence: ' + os.environ.get('LIXITY_TEST_AUDIO_DIAGNOSTICS', 'disabled'))\n")},
         extra_args=arguments,
     )
     assert result.returncode == 0
     assert "suite options: --max-old-space-size=2048" in result.stdout
+    assert f"audio evidence: {'1' if diagnostics else 'disabled'}" in result.stdout

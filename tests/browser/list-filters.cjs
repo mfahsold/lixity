@@ -160,6 +160,15 @@ print(json.dumps({'sourceIds': source_ids, 'dossierIds': dossier_ids}))
       await page.locator(`[data-rtab=${kind}]`).click();
       const input = page.locator('#r-filter-' + kind);
       const list = page.locator('#research-' + kind + '-list');
+      await input.fill('no synthetic record matches');
+      await expect(list.locator('.research-card:visible')).toHaveCount(0);
+      await input.blur();
+      await input.focus();
+      await expect(page.locator('#lixity-tooltip kbd')).toHaveText('Esc');
+      await input.press('Escape');
+      await expect(input).toHaveValue('');
+      await expect(input).toBeFocused();
+      await expect(list.locator('.research-card:visible')).toHaveCount(2);
       const refresh = () => page.evaluate(kind => kind === 'sources'
         ? refreshResearchSources(null, null, true) : refreshResearchDossiers(null, null, true), kind);
       await refresh();

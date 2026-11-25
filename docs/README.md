@@ -11,7 +11,7 @@ and Dutch. The technical manuals are maintained in English.
 | --- | --- |
 | Try a passage before installing | [Browser exercise in German or English](sandbox/index.html) · [Read-only example project in English](demo/report.html) |
 | Find the installer or check your version | [Installation and updates](INSTALLATION.md) |
-| Open your first manuscript and inspect a finding | [First session](ONBOARDING.md) · [Illustrated tour](guides/first-look.html) |
+| Open your first manuscript and inspect a finding | [Find a marked sentence in the demo](guides/first-look.html#passage) · [First session in your project](ONBOARDING.md) |
 
 ## Find a task
 
@@ -36,7 +36,7 @@ and Dutch. The technical manuals are maintained in English.
 | CLI, project settings and machine-readable responses | [Commands and configuration](USAGE.md) · [Automation contracts and MCP](AGENTS.md) · [Agent skill](https://github.com/mfahsold/lixity/blob/main/skills/lixity/SKILL.md) |
 | Application layers, local storage and evidence revisions | [Architecture](ARCHITECTURE.md) · [Research data model](research/DATA_MODEL.md) |
 | Development, checks and publication | [Contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) · [Desktop maintainers' guide](https://github.com/mfahsold/lixity/blob/main/desktop/README.md) |
-| Product priorities and feedback criteria | [Product direction](PRODUCT.md) |
+| Product priorities and feedback criteria | [Product direction](PRODUCT.md) · [Compare manuscript workflows](guides/manuscript-analysis-tools.html) |
 | Licensing and reporting issues | [Licensing](LICENSING.md) · [Security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) |
 
 Use **Tools → System Status & Extensions** to identify your desktop build. For

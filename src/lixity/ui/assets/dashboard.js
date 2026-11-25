@@ -300,6 +300,7 @@ if (filter) {
     pending = setTimeout(function() { pending = null; apply(); }, 120);
   });
   input.addEventListener("keydown", function (event) {
+    if (event.defaultPrevented || event.isComposing) return;
     if (event.key === "Enter") {
       event.preventDefault();
       if (pending) { clearTimeout(pending); pending = null; apply(event.shiftKey ? -1 : 1); }
@@ -318,22 +319,20 @@ if (filter) {
     if (focus) input.focus();
   };
   if (clear) clear.addEventListener("click", function() { clearManuscriptSearch(true); });
+  var searchBadge = input.parentElement.querySelector(".search-kbd-badge");
+  if (searchBadge && /Mac/.test(navigator.platform)) searchBadge.textContent = "⌘F";
   window.addEventListener("keydown", function (e) {
-    if ((e.ctrlKey || e.metaKey) && (e.key === "f" || e.key === "F")) {
-      if (!e.defaultPrevented && input.getClientRects().length) {
-        e.preventDefault();
-        input.focus();
-        input.select();
-      }
-    } else if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey) {
-      var target = e.target;
-      var isInput = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
-      if (!isInput && input.getClientRects().length) {
-        e.preventDefault();
-        input.focus();
-        input.select();
-      }
-    }
+    if (e.defaultPrevented || e.isComposing || e.repeat || e.altKey) return;
+    var find = e.ctrlKey !== e.metaKey && !e.shiftKey && (e.key === "f" || e.key === "F");
+    var quickFind = e.key === "/" && !e.ctrlKey && !e.metaKey;
+    if (!find && !quickFind) return;
+    var target = e.target instanceof Element ? e.target : document.body;
+    if (target.closest('dialog[open], [role="dialog"], [role="menu"]') || document.querySelector("dialog:modal")) return;
+    if (quickFind && target.closest("input, textarea, select, [contenteditable]")) return;
+    if (!input.getClientRects().length) return;
+    e.preventDefault();
+    input.focus();
+    input.select();
   });
 })();
 

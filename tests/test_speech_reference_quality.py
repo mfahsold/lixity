@@ -9,7 +9,7 @@ import wave
 
 from lixity.cli import main
 from lixity.speech import generate_silence_wav
-from lixity.speech_coqui import unexpected_discards
+from lixity.speech_coqui import unexpected_discard_count
 from lixity.speech_reference_quality import SCHEMA, assess_reference
 
 RATE = 24000
@@ -98,6 +98,6 @@ def test_reference_cli_requires_the_inputs_of_each_action(tmp_path, capsys) -> N
     assert "--reference-id" in capsys.readouterr().err
 
 
-def test_expected_tokenizer_discards_stay_silent_and_others_are_listed_by_code_point() -> None:
-    assert unexpected_discards(["\u0361", "\u032f", "\u201e", "\u201c"]) == ""
-    assert unexpected_discards(["\u0361", "\u0283", "\u0101", "\u0283"]) == "U+0101 U+0283"
+def test_expected_tokenizer_discards_stay_silent_and_others_are_counted_by_type() -> None:
+    assert unexpected_discard_count(["\u0361", "\u032f", "\u201e", "\u201c"]) == 0
+    assert unexpected_discard_count(["\u0361", "\u0283", "\u0101", "\u0283"]) == 2

@@ -116,3 +116,81 @@ def test_strict_search_cli_keeps_failure_exit_code_and_actual_diagnostic(indexed
     assert str(index) in errors
     assert "not a database" in errors
     assert retained_files(project) == before
+
+
+@pytest.mark.parametrize("ensure_fresh", [False, True])
+def test_search_uses_new_index_published_between_snapshot_and_open(indexed_project, monkeypatch, ensure_fresh):
+    connect = sqlite3.connect
+    reindex = catalogue._reindex_snapshot
+    published = {}
+    rebuilds = 0
+
+    def count_reindex(repository):
+        nonlocal rebuilds
+        rebuilds += 1
+        return reindex(repository)
+
+    def open_after_publication(database, *args, **kwargs):
+        if kwargs.get("uri") and not published:
+            published.update(api.create_dossier(indexed_project, "New note", "A newly visible synthetic record."))
+            published.update(api.reindex(indexed_project))
+        return connect(database, *args, **kwargs)
+
+    monkeypatch.setattr(catalogue, "_reindex_snapshot", count_reindex)
+    monkeypatch.setattr(catalogue.sqlite3, "connect", open_after_publication)
+    result = api.search(indexed_project, "visible", scope="all", ensure_fresh=ensure_fresh)
+    assert [hit["record_id"] for hit in result["hits"]] == [published["dossier_id"]]
+    assert result["snapshot"] == published["snapshot"]
+    assert rebuilds == 1
+    assert result["warnings"] == []
+
+
+def test_search_finishes_index_transaction_before_verifying_citations(indexed_project, monkeypatch):
+    source = indexed_project / "synthetic.txt"
+    source.write_text("The safety lantern hangs above the doorway.", encoding="utf-8")
+    api.ingest(indexed_project, source, allow_retention=True)
+    api.reindex(indexed_project)
+    connect = sqlite3.connect
+    citation = Repository.citation
+    observed = []
+
+    class ReadConnection(sqlite3.Connection):
+        def execute(self, sql, parameters=(), /):
+            if sql.startswith("SELECT"):
+                assert self.in_transaction
+                observed.append("query")
+            return super().execute(sql, parameters)
+
+        def close(self):
+            super().close()
+            observed.append("closed")
+
+    def verify(repository, snapshot, passage):
+        assert observed == ["query", "query", "closed"]
+        return citation(repository, snapshot, passage)
+
+    monkeypatch.setattr(catalogue.sqlite3, "connect",
+                        lambda *args, **kwargs: connect(*args, **kwargs, factory=ReadConnection))
+    monkeypatch.setattr(Repository, "citation", verify)
+    assert len(api.search(indexed_project, "lantern")["hits"]) == 1
+
+
+def test_nonregular_catalogue_is_not_replaced(indexed_project):
+    index = indexed_project / ".lixity/research/catalogue.sqlite3"
+    index.unlink()
+    index.mkdir()
+    before = retained_files(indexed_project)
+
+    with pytest.raises(ResearchError, match="not a regular file"):
+        api.search(indexed_project, "original", ensure_fresh=True)
+    with pytest.raises(ResearchError, match="not a regular file"):
+        api.reindex(indexed_project)
+
+    assert index.is_dir()
+    assert retained_files(indexed_project) == before
+    assert list(index.parent.glob(".index-*")) == []
+
+
+def test_excerpt_keeps_match_in_view_when_lowercasing_expands_unicode():
+    text = "İ" * 600 + "Needle finishes this note."
+    assert catalogue.excerpt(text, ["needle"]) == "…" + "İ" * 100 + "Needle finishes this note."

@@ -171,10 +171,64 @@ server.serve_forever()
         assert.equal(await page.locator('#speech-direction_profile option:checked').textContent(),await page.evaluate(() => uiLabel('speech_profile_unavailable')));
         assert.equal((await page.locator('#modal-speech').innerText()).includes(unknownProfile),false);
         await assertHumanText();
+        if (fixture.locale === 'en') {
+          const savedConfig = fs.readFileSync(fixture.config);
+          await page.locator('#modal-speech [data-speech-action=close]').click();
+          await openProfiles();
+          await page.locator('#speech-tab-reference').click();
+          const library = page.locator('.voice-library-section');
+          const summary = library.locator('summary');
+          if (!await library.evaluate(element => element.open)) await summary.click();
+          const unused = library.locator('.voice-ref-item').filter({hasText:'A synthetic morning begins.'});
+          const assigned = library.locator('.voice-ref-item').filter({hasText:'A synthetic evening ends.'});
+          const remove = unused.locator('[data-speech-action=reference_delete]');
+          assert.equal(await assigned.locator('[data-speech-action=reference_delete]').count(), 0);
+          assert.match(await assigned.innerText(), /A saved voice profile uses this recording/);
+          const file = path.join(fixture.root, '.lixity', 'audio-references', fixture.first + '.json');
+
+          page.once('dialog', dialog => dialog.dismiss());
+          await remove.click();
+          assert.ok(fs.existsSync(file), 'Cancelling confirmation retains the recording');
+
+          await page.route('**/api/audio-microphone', route =>
+            route.fulfill({status:409, json:{ok:false, message:'Synthetic deletion failure'}}), {times:1});
+          page.once('dialog', dialog => dialog.accept());
+          await remove.click();
+          await page.waitForFunction(() => document.querySelector('#speech-status').textContent === 'Synthetic deletion failure');
+          assert.ok(await unused.isVisible() && fs.existsSync(file), 'A failed deletion leaves the recording visible and retryable');
+
+          const deleting = page.waitForRequest(request => request.postDataJSON()?.action === 'delete_reference');
+          page.once('dialog', dialog => dialog.accept());
+          await remove.click();
+          const {reference_id: referenceId, project_token: projectToken, source_sha256: sourceDigest} =
+            (await deleting).postDataJSON();
+          assert.equal(referenceId, fixture.first);
+          assert.match(projectToken, /^[0-9a-f]{64}$/);
+          assert.match(sourceDigest, /^[0-9a-f]{64}$/);
+          await unused.waitFor({state:'detached'});
+          assert.ok(await assigned.isVisible() && !fs.existsSync(file));
+          assert.deepEqual(fs.readFileSync(fixture.config), savedConfig);
+
+          await page.locator('#modal-speech [data-speech-action=close]').click();
+          await page.route('**/api/speech?*', async route => {
+            const response = await route.fetch(), data = await response.json();
+            data.settings = null; data.audio_settings_present = true;
+            data.configuration_error = 'Synthetic unavailable profile settings';
+            await route.fulfill({response, json:data});
+          }, {times:1});
+          await page.locator('#tab-view-project').click();
+          await page.locator('#settings-speech').click();
+          await page.waitForFunction(() => document.querySelector('#speech-status').textContent === 'Synthetic unavailable profile settings');
+          await page.locator('#speech-tab-reference').click();
+          if (!await library.evaluate(element => element.open)) await summary.click();
+          assert.ok(await assigned.isVisible());
+          assert.equal(await library.locator('[data-speech-action=reference_delete]').count(), 0);
+          assert.doesNotMatch(await library.innerText(), /A saved voice profile uses this recording/);
+        }
         assert.deepEqual(fs.readFileSync(fixture.source),original);
         assert.deepEqual(errors,[]);
       } finally { await page.close(); }
     }
-    console.log(`Named audio references: seven locales, desktop/mobile, missing selection retention, persistence and plan labels passed. ${artifacts}`);
+    console.log(`Named audio references: seven locales, desktop/mobile, missing selection retention, plan labels and confirmed library deletion passed. ${artifacts}`);
   } finally { await browser.close(); await server.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -47,8 +47,20 @@ LixityServerHandler.source_input = str(source)
 LixityServerHandler.exports_dir = str(root / 'exports')
 LixityServerHandler.language = 'de'
 LixityServerHandler.refresh()
+single = root / 'single'
+single.mkdir()
+(single / 'manuscript.md').write_text(source.read_text())
+(single / 'lixity.toml').write_text('''language = "de"
+manuscript = "manuscript.md"
+[audio]
+schema_version = "lixity-audio-settings/5"
+selected = "narrator"
+[audio.profiles.narrator]
+name = "Only narrator"
+engine = "qwen3"
+''')
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
-print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}'}), flush=True)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'single':str(single)}), flush=True)
 server.serve_forever()
 `, temp);
   const browser = await launchChromium();
@@ -95,6 +107,31 @@ server.serve_forever()
       }
       await page.close();
     }
+    const page = await browser.newPage({viewport: {width:320,height:900}});
+    assert.equal((await page.request.post(server.fixture.url + '/api/project-open', {data:{path:server.fixture.single}})).status(), 200);
+    await page.goto(server.fixture.url);
+    await page.locator('#tab-view-project').click();
+    await page.locator('#settings-speech').click();
+    const remove = page.locator('[data-speech-action=remove_profile]');
+    await remove.click();
+    const current = page.locator('.speech-profile-picker .speech-choice-readout strong');
+    assert.ok((await current.textContent()).includes('kein Stimmprofil'));
+    await page.locator('[data-speech-action=profiles_discard]').click();
+    assert.equal(await current.textContent(), 'Only narrator');
+    await remove.click();
+    const posted = page.waitForRequest(request => request.url().endsWith('/api/settings'));
+    const reloaded = page.waitForEvent('load');
+    await page.locator('[data-speech-action=save]').click();
+    const {audio} = (await posted).postDataJSON();
+    assert.equal(audio.selected, '');
+    assert.deepEqual(audio.profiles, {});
+    await reloaded;
+    await page.locator('#tab-view-project').click();
+    await page.locator('#settings-speech').click();
+    await page.locator('[data-speech-action=create]:enabled').waitFor();
+    assert.equal(await remove.isVisible(), false);
+    assert.equal(await page.locator('.speech-profile-footer').isVisible(), false);
+    await page.close();
   } finally { await browser.close(); await server.close(); }
-  console.log('Audio profile removal stages changes and preserves one profile on desktop/mobile: ' + temp);
+  console.log('Audio profile removal stages changes and supports an empty profile list on desktop/mobile: ' + temp);
 })().catch(error => { console.error(error); process.exitCode = 1; });

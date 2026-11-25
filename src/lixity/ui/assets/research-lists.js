@@ -167,6 +167,15 @@ document.addEventListener("input", function(event) {
   }
 });
 
+document.addEventListener("keydown", function(event) {
+  if (event.key !== "Escape" || event.defaultPrevented || event.isComposing) return;
+  var input = event.target;
+  if ((input.id !== "r-filter-sources" && input.id !== "r-filter-dossiers") || !input.value) return;
+  event.preventDefault();
+  input.value = "";
+  input.dispatchEvent(new Event("input", {bubbles: true}));
+});
+
 document.addEventListener("focusout", function(event) {
   if (event.target.id === "r-filter-sources") filterResearchList("sources");
   if (event.target.id === "r-filter-dossiers") filterResearchList("dossiers");

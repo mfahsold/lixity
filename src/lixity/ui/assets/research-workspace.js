@@ -219,6 +219,8 @@ async function initResearchUI(freshRead) {
   update();
 })();
 
+var newDossierFields = ["r-dos-title", "r-dos-tags", "r-dos-eids", "r-dos-body", "r-dos-geography"];
+
 function openResearchDossierComposer() {
   var composer = document.getElementById("r-dos-composer");
   if (!composer || !composer.getClientRects().length) return;
@@ -925,6 +927,23 @@ document.addEventListener("click", async function (event) {
     return;
   }
 
+  var discardDossier = event.target.closest("#r-dos-discard-btn");
+  if (discardDossier) {
+    var createDossier = document.getElementById("r-dos-create-btn");
+    if (createDossier.disabled) return;
+    var draft = fieldSnapshot(newDossierFields);
+    var hasDraft = newDossierFields.some(function(id) {
+      return draft[id].length && (id !== "r-dos-geography" || draft[id] !== "[]");
+    });
+    if (hasDraft && !window.confirm(uiLabel("research_dossier_discard_confirm"))) return;
+    clearResearchFields(newDossierFields);
+    window.LixityComponents.setStatus(createDossier.id + "-status", "");
+    var composer = discardDossier.closest("details");
+    composer.open = false;
+    composer.querySelector("summary").focus();
+    return;
+  }
+
   var dosBtn = event.target.closest("#r-dos-create-btn");
   if (dosBtn) {
     if (dosBtn.disabled) return;
@@ -939,15 +958,20 @@ document.addEventListener("click", async function (event) {
     var dGeography = document.getElementById("r-dos-geography"), geography = null;
     try { if (dGeography && dGeography._geographyEditor) geography = dGeography._geographyEditor.read(); }
     catch (error) { researchFormStatus(dosBtn, error.message || uiLabel("geography_invalid"), "err"); return; }
-    await submitResearchForm(dosBtn, "research-dossier", {
-      title: titleVal,
-      body: dBody ? dBody.value : "",
-      tags: tagsArr,
-      evidence_ids: eidsArr,
-      geography: geography
-    }, ["r-dos-title", "r-dos-tags", "r-dos-eids", "r-dos-body", "r-dos-geography"],
-      ["r-dos-title", "r-dos-tags", "r-dos-eids", "r-dos-body", "r-dos-geography"], "research_dossier_complete",
+    var discardButton = document.getElementById("r-dos-discard-btn");
+    discardButton.disabled = true;
+    try {
+      await submitResearchForm(dosBtn, "research-dossier", {
+        title: titleVal,
+        body: dBody ? dBody.value : "",
+        tags: tagsArr,
+        evidence_ids: eidsArr,
+        geography: geography
+      }, newDossierFields, newDossierFields, "research_dossier_complete",
       function() { refreshResearchDossiers(null, null, true); });
+    } finally {
+      discardButton.disabled = false;
+    }
     return;
   }
 

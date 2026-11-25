@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import functools
 import io
+import logging
 import math
 import os
 import re
@@ -27,7 +28,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
 from .audio_audit import _wave_reader_is_integer_pcm
-from .log import get_logger, speech_diagnostic_id, speech_diagnostic_scope
+from .log import get_logger, log_event, speech_diagnostic_scope
 from .markdown_parser import counting_inline_text, parse_markdown_blocks, split_chapters
 from .sentences import split_sentences
 from .speech_profiles import (
@@ -76,20 +77,20 @@ def _speech_error_kind(error: BaseException) -> str:
     return "other"
 
 
-def _changed_value(previous: str | None, current: str) -> str:
+def _changed_value(previous: str | None, current: str) -> bool | str:
     if previous is None:
         return "first"
-    return "true" if previous != current else "false"
+    return previous != current
 
 
 def _observe_speech_render(func: Callable[_P, _R]) -> Callable[_P, _R]:
     """Report bounded diagnostics even when preflight or cancellation fails."""
     @functools.wraps(func)
     def wrapped(*args: _P.args, **kwargs: _P.kwargs) -> _R:
-        with speech_diagnostic_scope() as diagnostic_id:
+        with speech_diagnostic_scope():
             logger = get_logger("speech")
             started = time.monotonic()
-            logger.info("event=render_start id=%s", diagnostic_id)
+            log_event(logger, "render_start")
             status, error_kind = "success", "none"
             try:
                 return func(*args, **kwargs)
@@ -98,28 +99,28 @@ def _observe_speech_render(func: Callable[_P, _R]) -> Callable[_P, _R]:
                 status = "cancelled" if error_kind in ("cancelled", "interrupted") else "error"
                 raise
             finally:
-                logger.info("event=render_end id=%s status=%s error=%s duration_ms=%d",
-                            diagnostic_id, status, error_kind, max(0, round((time.monotonic() - started) * 1000)))
+                log_event(logger, "render_end", status=status, error=error_kind,
+                          duration_ms=max(0, round((time.monotonic() - started) * 1000)))
     return wrapped
 
 
 @contextmanager
 def _observe_speech_segment(index: int, total: int, profile: AudioProfile,
-                            pcm_start_ms: int, instruction_changed: str,
-                            description_changed: str, reference_changed: str) -> Iterator[dict[str, Any]]:
+                            pcm_start_ms: int, instruction_changed: bool | str,
+                            description_changed: bool | str, reference_changed: bool | str) -> Iterator[dict[str, Any]]:
     """Track timings and selected controls without recording text or paths."""
     logger = get_logger("speech")
-    diagnostic_id = speech_diagnostic_id()
     from .speech_engines import NATIVE_ENGINES
 
     engine = profile.engine if profile.engine in NATIVE_ENGINES or profile.engine in EXTERNAL_ENGINES else "unknown"
     voice = profile.voice if profile.voice in (*QWEN_VOICES, "design", "reference", "thorsten") else "unknown"
     language = profile.language if profile.language in QWEN_LANGUAGES else "unknown"
-    has_instruction = "true" if profile.instructions else "false"
     speed = (profile.speed if type(profile.speed) in (int, float) and math.isfinite(profile.speed)
              and MIN_PLAYBACK_SPEED <= profile.speed <= MAX_PLAYBACK_SPEED else None)
-    logger.debug("event=segment_start id=%s index=%d total=%d requested_engine=%s voice=%s language=%s tempo=%s has_instruction=%s instruction_changed=%s description_changed=%s reference_changed=%s pcm_start_ms=%d",
-                 diagnostic_id, index, total, engine, voice, language, speed if speed is not None else "unknown", has_instruction, instruction_changed, description_changed, reference_changed, pcm_start_ms)
+    log_event(logger, "segment_start", logging.DEBUG, index=index, total=total, requested_engine=engine,
+              voice=voice, language=language, tempo=speed if speed is not None else "unknown",
+              has_instruction=bool(profile.instructions), instruction_changed=instruction_changed,
+              description_changed=description_changed, reference_changed=reference_changed, pcm_start_ms=pcm_start_ms)
     state: dict[str, Any] = {"cache": "unknown", "pcm_end_ms": None}
     started = time.monotonic()
     status, error_kind = "success", "none"
@@ -130,10 +131,10 @@ def _observe_speech_segment(index: int, total: int, profile: AudioProfile,
         status = "cancelled" if error_kind in ("cancelled", "interrupted") else "error"
         raise
     finally:
-        logger.debug("event=segment_end id=%s index=%d total=%d status=%s error=%s cache=%s pcm_start_ms=%d pcm_end_ms=%s duration_ms=%d",
-                     diagnostic_id, index, total, status, error_kind, state["cache"], pcm_start_ms,
-                     state["pcm_end_ms"] if state["pcm_end_ms"] is not None else "unknown",
-                     max(0, round((time.monotonic() - started) * 1000)))
+        log_event(logger, "segment_end", logging.DEBUG, index=index, total=total, status=status,
+                  error=error_kind, cache=state["cache"], pcm_start_ms=pcm_start_ms,
+                  pcm_end_ms=state["pcm_end_ms"] if state["pcm_end_ms"] is not None else "unknown",
+                  duration_ms=max(0, round((time.monotonic() - started) * 1000)))
 
 
 def _check_cancelled(cancelled: Callable[[], bool] | None) -> None:
@@ -487,9 +488,8 @@ def render_speech_audio(
     requested_engines = sorted({cue.profile.engine if cue.profile.engine in NATIVE_ENGINES or cue.profile.engine in EXTERNAL_ENGINES else "unknown"
                                 for cue in cues if cue.text})
     cache_mode = "disabled" if segment_cache is None else "fresh" if fresh_audio else "enabled"
-    get_logger("speech").info("event=render_plan id=%s target=%s requested_engines=%s segments=%d cache_mode=%s output_format=%s",
-                              speech_diagnostic_id(), target, ",".join(requested_engines), total, cache_mode,
-                              "mp3" if output.suffix.lower() == ".mp3" else "wav")
+    log_event(get_logger("speech"), "render_plan", target=target, requested_engines=",".join(requested_engines),
+              segments=total, cache_mode=cache_mode, output_format="mp3" if output.suffix.lower() == ".mp3" else "wav")
     done = 0
     if progress is not None:
         progress(done, total)

@@ -731,12 +731,14 @@ attached historical images remain independent evidence, not calibrated basemaps.
 
 `src/lixity/log.py` is the one logging entry point. Modules log through
 `get_logger()` under the `lixity` tree; the CLI keeps stdout as its result
-channel and sends logs and other diagnostics to stderr. Logger lines use a single UTC format
+channel and sends logs and other diagnostics to stderr. Text logger lines use UTC
 (`YYYY-MM-DD HH:MM:SS UTC LEVEL lixity.<area> message`) with standard levels,
 resolved from an explicit argument, else `LIXITY_LOG_LEVEL`, else DEBUG while
 `LIXITY_DEBUG`/`--debug` is active, else INFO. On current main,
 `LIXITY_SPEECH_LOG_LEVEL=DEBUG` enables audio-specific segment diagnostics
-without enabling DEBUG for unrelated branches.
+without enabling DEBUG for unrelated branches. `LIXITY_LOG_FORMAT=json` emits
+one structured Python record per line. `log_event` preserves numbers and
+booleans alongside the text message and omits unavailable fields.
 
 The managed service appends the child's stderr to `service-PORT.log`;
 `rotate_service_log()` bounds that file at service start (one writer per file,
@@ -749,7 +751,15 @@ references and paths. Captured stderr may contain other contextual details and
 must be reviewed before sharing. Log rotation happens at service start, not
 continuously while the service runs.
 
-Audio renders send their random diagnostic ID to the worker in the optional
+Trusted audio POST responses include a server-generated `X-Lixity-Diagnostic-Id`.
+Their `audio_operation` record carries the controlled route, status and time
+through response headers. Failures use WARNING. Successful writes use INFO and
+frequent status checks and plan requests use DEBUG. Native browser fixtures can
+retain this envelope in the bounded synthetic evidence produced by the test
+runner's `--diagnostics` option. Desktop host logs combine Rust and Python lines.
+Client-only microphone or WebView failures remain in the browser console.
+
+Audio renders send the same random diagnostic ID to the worker in the optional
 `X-Lixity-Render-Id` header; the request JSON is unchanged. The worker accepts
 only 16 lowercase hexadecimal characters for this field, logs `unknown` for
 other input, and assigns its own request ID. A received ID is untrusted and
@@ -1419,13 +1429,36 @@ sharing the same delta fields and chapter matching with revision history and
 standalone text comparisons. The view handles debouncing, focus and presentation
 of the returned state.
 
-The local editor journal adds a nullable verified base revision in SQLite
-schema 3 on the next save. It commits the draft and original recovery bytes
+The local editor journal records a nullable verified base revision in SQLite
+schema 3. It commits the draft and original recovery bytes
 before replacing the source, then commits the immutable measurements and save
 receipt together. The existing recovery limit keeps verified bases for pending
 drafts ahead of other versions. An older pending draft can recover its text
 without an inferred historical parent. An in-process lock orders saves and
 draft removals per manuscript. Readers can continue during measurement.
+
+Manuscripts in one project share the journal and retain separate document keys.
+First writes in the same service serialize schema initialization. Regular reads
+open the existing database in SQLite read-only mode, where SQLite can still
+maintain WAL sidecars beside the file. Pre-schema and schema 1 files complete the
+existing initialization before the first read, and schema 2 stays readable
+until the next write upgrades it. Initialization retries transient journal-mode
+contention and checks the version again under the migration transaction. A newer
+schema is rejected. The connection disables trusted schema features and checks
+that the database and journal sidecars are regular files.
+
+The timeline returns the requested window of full measurements. A revision
+comparison reads only revision IDs and timestamps within its selection window,
+then captures both selected rows and any required recovery text in one SQLite
+read transaction. It closes the connection and releases the document and
+workspace locks before recalculating measurements. The result describes the
+captured revision. A request bound to an analysis context checks that context
+again before returning. SQLite withholds recovery content whose storage class
+or size falls outside the editing contract before the Python process decodes it.
+Chapter measurements preserve their existing JSON representation. Draft
+recovery, comparison and timeline responses retain their schemas.
+[SQLite isolation and snapshots](https://www.sqlite.org/isolation.html) ·
+[WAL checkpoints](https://www.sqlite.org/wal.html#ckpt)
 
 Inline styles are reserved for measured/dynamic values. Layout and responsive
 stacking belong in shared CSS; `tests/test_inline_styles.py` checks forbidden
@@ -1863,9 +1896,12 @@ The existing renderer consumes resolved `SpeechSegment` values and remains the
 single WAV/MP3/cancellation/cache path. Native jobs snapshot the plan and keep
 source/settings/ledger validity checks; a completed result cannot survive an
 observed ledger change. Each validity check reads only the bounded ledger digest,
-not a new linguistic analysis. `speech-direction.js` owns the passage editor
-inside the existing Audio dialog. It never sends spoken manuscript text as an
-API synthesis input. Static exports do not bundle this native editor.
+not a new linguistic analysis. `speech-direction.js` owns the shared passage
+editor. `speech.js` hosts it beside the reader or directly after the active
+paragraph at narrow widths. The manuscript stays interactive. Start and end
+lines and the paragraph hash identify the exact sibling prose; selections
+inside the spoken-text field retain the server's projected character offsets.
+The editor sends only direction and context to the API. Static exports omit it.
 
 Direction fields use SSML-like separation of voice, substitution and silence;
 they are not SSML XML or portable acoustic parameters. The Qwen adapter retains
@@ -1916,10 +1952,16 @@ Its architecture coordinates these components:
    portable-take validity; longer or incompatible takes are not silently trimmed or converted.
    Studio handoff carries captured project/source tokens, validates before replacing a draft,
    and requires explicit review before the existing reference-save endpoint is called.
-6. **Synchronous Audio-Karaoke in the Manuscript Reader:** During chapter audio playback,
-   a proportional timing interpolator maps playback `currentTime` across timeline segment anchors,
-   illuminating the estimated active paragraph (`.reader-audio-active`). Proportional timing
-   is a reading aid, not forced alignment or word-level timing evidence.
+   An operator-configured local SoundCraft CLI can process an explicit sample-range
+   edit in a temporary directory. The server validates the returned PCM against
+   the requested source slice. The UI keeps the original in the review dialog
+   and starts the excerpt with a missing transcript.
+6. **Manuscript audio workbench:** The reader pins direction editing to the exact
+   line range and paragraph digest. The same modeless workbench offers chapter
+   generation, import and transcript comparison under Chapter audio. Project
+   settings own persisted profile defaults. The browser submits their saved ID
+   alongside temporary run options. Playback shows elapsed time and preserves the
+   selected passage. Text-length weighting is unsuitable as a timing source.
 
 ### Microphone hardware calibration and voice reference acquisition
 
@@ -1935,7 +1977,11 @@ field is peak level minus that estimate. These are heuristic signal checks, not 
 calibrated acoustic noise measurement or a validated speech-quality score.
 The −13 to −7 dBFS peak band controls the displayed verdict and suggested mixer
 setting; the suggestion is not automatically applied in a tuning loop.
-The native Rust capture path has a separate calibration implementation.
+An explicit ALSA input stays bound to that input through capture and mixer checks.
+Stable card IDs identify mixers where one physical input can be attributed. An
+ambiguous or unreadable mixer leaves hardware gain unavailable for editing.
+The native Rust capture path has a separate calibration implementation. Both
+implementations map digital silence to a −120 dBFS display floor.
 Consolidate peak, clipping, RMS and verdict in one PCM analyzer while keeping
 device capture and mixer access at their respective boundaries. Verify identical
 PCM fixtures at the verdict and clipping thresholds, with silence and with
@@ -1949,3 +1995,11 @@ metadata and SHA-256 verification. Editing its transcript removes confirmation;
 invalid text blocks metadata export and Studio handoff while the WAV remains
 available. These portable takes do not imply an immutable saved reference until
 an explicit reference-save action succeeds.
+
+`speech_recording_settings.py` owns the project-only recording preference and
+the reference duration range shared by the backend and CLI. The browser reads
+the resolved preference through the speech endpoint. The desktop bridge passes
+that duration at capture start. Rust enforces it with both an elapsed-time and
+a sample budget under the host's 60-second safety limit. The recording
+preference lives in its own project table, independent of saved voice profiles
+and reference validation.

@@ -160,7 +160,8 @@ server.serve_forever()
         await page.waitForFunction(()=>!document.querySelector('.voice-rec-btn')?.disabled);
         assert.equal(await state.getAttribute('data-state'),'idle');
         assert.equal(await detail.isVisible(),false);
-        assert.equal(await button.getAttribute('aria-describedby'),null);
+        assert.equal(await button.getAttribute('aria-describedby'),'speech-record-limit',
+          'The recording limit remains described after stale error feedback is cleared');
         assert.deepEqual(pageErrors,[]);
       } finally {await page.close();}
     }

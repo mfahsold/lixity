@@ -3,8 +3,8 @@
 The Rust/Tauri v2 app opens the Lixity workspace in an operating-system window.
 It uses the shared manuscript editor, analysis, and research views. The desktop
 app is the intended first install for authors. The download guide shows the
-current availability. Native installers are in qualification, and the existing
-public release provides the Python package and its local browser workspace.
+current installer and test-build availability. The published Python package
+provides the local browser workspace and CLI.
 [Installation guide](../docs/INSTALLATION.md#packaging-direction)
 · [Published releases](https://github.com/mfahsold/lixity/releases)
 
@@ -34,8 +34,9 @@ public release provides the Python package and its local browser workspace.
   PDFs and reading-site ZIPs with SHA-256 receipts. Analysis, research records
   and document bytes remain the responsibility of the shared application.
 - Native 24 kHz mono PCM recording and level calibration for the teleprompter
-  and Author's voice. Interactive takes belong to their window and stop at
-  30 seconds. Closing a window can prompt when there are unsaved edits or
+  and Author's voice. Interactive takes belong to their window. Author's voice
+  passes the project's saved duration to the native host, with a maximum of
+  60 seconds. Closing a window can prompt when there are unsaved edits or
   active audio. The last workspace checks the audio queue off the window
   event loop and asks before closing if the queue status is unavailable.
 - A user-triggered check for public desktop packages and a manual install path.
@@ -84,6 +85,7 @@ New Windows and Linux test archives also include a platform-specific
 - On Linux, run `sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt`. Open the
   verified `.deb` with your package installer on a Debian-based distribution.
   For the AppImage, give the file execute permission and launch it.
+  [Troubleshooting missing runtime libraries](../docs/INSTALLATION.md#linux-desktop-test)
   [Linux test build instructions](../docs/guides/installation.html#linux)
 
 Actions archives are temporary development builds. Public stable installers
@@ -97,6 +99,12 @@ Node.js/npm, `uv` with managed Python 3.12, and the Tauri prerequisites for your
 OS. Start from the checkout root.
 [Development setup](../CONTRIBUTING.md#development-setup)
 · [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)
+
+Desktop CI and release builds share the [runtime build action](../.github/actions/build-desktop-runtime/action.yml).
+It installs a pinned `uv` and provisions the selected CPython 3.12 patch in the
+runner's temporary directory. It builds the wheel with `uv build` and
+smoke-tests the bundled runtime. Review both pins together when updating the
+standalone Python build used by the installer matrix.
 
 ### macOS app bundle
 
@@ -149,15 +157,47 @@ cargo run --locked --manifest-path desktop/Cargo.toml --features webview-smoke -
 ```
 
 The smoke exercises the generated workspace capability, bridge and navigation
-callbacks against a synthetic loopback fixture in WKWebView. It calls the
-production Rust System Status command and checks that its authenticated
-loopback request returns the expected inventory. It initializes the production
-opener configuration and verifies the two license link destinations.
+callbacks against a synthetic loopback fixture in WKWebView. It checks the
+production Rust System Status command, its authenticated loopback inventory,
+and the recording limit passed through the native bridge. It initializes the
+production opener configuration and verifies the two license link destinations.
 The runtime smoke checks Python startup and session authentication. Use the
 manual checks below for the author workflow, operating-system interactions
 and hardware.
 Chromium and browser WebKit tests cover the shared UI.
 [Browser verification](../tests/browser/README.md)
+
+### Linux WebKitGTK smoke
+
+This optional check uses the exact installed DEB from a selected build. Use its
+matching source checkout and a disposable Ubuntu 22.04 x86-64 VM or runner.
+Verify the installer SHA-256 before installing it with APT. Install these QA
+tools in the same environment:
+
+```sh
+sudo apt install xvfb xauth openbox xdotool dbus-x11 at-spi2-core \
+  python3-gi python3-pyatspi gir1.2-webkit2-4.1 iproute2
+```
+
+Run as an ordinary user. The script uses `sudo` to create a private network
+namespace with only loopback, then runs the probes as that user:
+
+```sh
+bash desktop/scripts/smoke_linux_webview.sh \
+  /path/to/Lixity_VERSION_amd64.deb EXPECTED_SHA256 /path/to/new-evidence-directory
+```
+
+The smoke verifies the installer digest and compares the installed payload with
+the package's file inventory. A stock WebKitGTK page supplies the rendering
+control. A fresh Lixity session must paint the welcome action, show the import
+preview before writing project files, and display the first chapter after
+confirmation. The saved manuscript must match the bundled example byte for
+byte. The evidence directory receives the environment, screenshots,
+accessibility trees and probe logs. Inspect the screenshots for layout issues.
+
+The check uses Xvfb and software rendering inside the test session. Clean APT
+dependency verification, physical desktop graphics, Wayland and AppImage FUSE
+remain separate checks.
 
 ### Installer workflows
 
@@ -173,6 +213,15 @@ Chromium and browser WebKit tests cover the shared UI.
   for a Developer ID candidate. Both macOS jobs import the certificate into
   an isolated runner keychain and verify app and DMG notarization.
   [Desktop release workflow](../.github/workflows/desktop-release.yml)
+- Both installer workflows retry a failed per-platform upload once on the same
+  runner using the already verified files. A second upload failure fails the
+  platform job. The release workflow checks the complete installer inventory
+  and checksums again before attesting the combined bundle.
+- Both Linux installer jobs install the finished DEB in a clean Ubuntu 22.04
+  container without recommended packages and check that its Rust host loads
+  every shared library and its packaged runtime serves an authenticated first
+  session. To repeat locally with Docker, run
+  `bash desktop/scripts/smoke_linux_deb.sh /path/to/Lixity_VERSION_amd64.deb`.
 
 ## Remaining work before distribution
 
@@ -182,6 +231,12 @@ Chromium and browser WebKit tests cover the shared UI.
 | 2 | Exercise the app as an author on clean desktop sessions. | Open and switch projects, type and undo with real IME and dead keys, use the keyboard and screen reader, follow an analysis finding to the manuscript, open help and license links, export a dossier PDF, and verify microphone permission, recording and playback. Cover WKWebView, WebView2 and WebKitGTK. Use a synthetic or public-domain manuscript. |
 | 3 | Exercise installation, upgrade and rollback. | Test a fresh user without development tools, the operating system's trust checks, bundled runtime cleanup on exit, project and settings retention, and relaunch after upgrading or rolling back. Confirm any first-install dependencies, including the WebView2 bootstrapper on Windows. |
 | 4 | Prepare distribution and first-run help. | Verify public macOS signing and notarization and Windows publisher signing. Show how to open an existing manuscript or try an example and explain how to diagnose unavailable optional tools. Publish platform requirements and installation steps with the verified artifacts. |
+
+For each installer, record its SHA-256, OS and WebView versions, graphics mode
+and results. In the same synthetic project, follow a passage to its evidence
+and back, save one edit and export a dossier. Reopen the project after upgrade
+and rollback and verify the saved text, preferences and archived evidence.
+Use those records in the existing installer qualification receipt.
 
 [Tauri distribution and signing guide](https://tauri.app/distribute/#signing)
 
@@ -354,7 +409,7 @@ checks. Before enabling the updater for direct desktop downloads:
 
 ## Host follow-ups
 
-- Extend teleprompter recording past the current 30-second cap once the host can
+- Extend teleprompter recording beyond one minute once the host can
   hand off bounded on-disk audio and clean it up after saving or cancelling.
 
 Any move of the shared analysis engine to Rust starts with an end-to-end

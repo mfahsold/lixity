@@ -3,21 +3,25 @@
   "use strict";
   var body = document.body, settingsForm = document.getElementById("settings-form");
   if (body.dataset.speechCapable !== "true" || body.dataset.readOnly === "true" || !settingsForm) return;
-  var canRender = body.dataset.speechRenderCapable === "true";
+  var canRender = body.dataset.speechRenderCapable === "true", referenceFormat = null, referenceRecording = null;
   var dialog, fields = {}, settings, capabilities, workers, generation = 0, openSequence = 0, job = null, timer, openedContext, paragraph;
-  var executionTarget = "local", migrationRequired = false, direction, savedDirectionView, lastPreset = "Ryan", mode = "reference", editingPronunciation = null;
+  var migrationRequired = false, profileSettingsAvailable = false, schemaReviewAvailable = false;
+  var direction, savedDirectionView, lastPreset = "", mode = "reference", editingPronunciation = null;
   var savedSettings = null, profilesDirty = false, profileSaving = false, auditAudioUrl = null;
   var speechReady = false, speechLoadMessage = "";
   var specialPronunciations = Object.create(null);
   var profileProsody;
   var currentAudioSchema = "lixity-audio-settings/5";
-  var allReferences = [], calibrationTexts = null;
-  var microphoneState = null, microphoneBusy = false;
+  var allReferences = [], calibrationTexts = null, profileConstraints = null;
+  var microphoneState = null, microphoneBusy = false, microphoneRefreshing = false, preferredMicrophone = "";
   var chapterAudio = null, chapterAudioBusy = false, chapterAudioSequence = 0;
   var audioStream = null, audioCtx = null, audioSource = null, audioProcessor = null, recordedChunks = [], totalRecordedSamples = 0;
-  var recTimerInterval = null, recStartTime = 0, isRecordingVoice = false, desktopAudioRecording = false, lastRecordedWavBlob = null, sampleVariant = "short";
+  var recTimerInterval = null, isRecordingVoice = false, desktopAudioRecording = false, lastRecordedWavBlob = null, sampleVariant = "short";
 
   var importedTake = null, takeTokens = null, takeImportSequence = 0;
+  var trimLimitSeconds = 0, trimSource = null;
+  var speechLayout = document.getElementById("workspace-reader-layout"), narrowSpeech = matchMedia("(max-width: 900px)");
+  var speechDocked = false, placingSpeech = false, speechPassage = null, speechOpener = null;
   var recordingPending = false, recordingSequence = 0, takeUrl = null, takeTranscript = "", voiceSaving = false, takeValid = false;
   function label(key) { return uiLabel("speech_" + key); }
   function recordingFeedback(state, message, stateLabel) {
@@ -83,6 +87,65 @@
       top_level: window.top === window
     });
   }
+  function readReferenceFormat(value) {
+    if (!value || !["sample_rate_hz", "channels", "sample_width_bits", "min_seconds", "max_seconds", "max_transcript_chars", "max_bytes"].every(function(key) {
+      return Number.isSafeInteger(value[key]) && value[key] > 0;
+    }) || value.min_seconds > value.max_seconds || value.channels !== 1 || value.sample_width_bits !== 16) return null;
+    return value;
+  }
+  function referenceText(key) {
+    return uiFormat("speech_" + key, {min:referenceFormat.min_seconds, max:referenceFormat.max_seconds,
+      characters:new Intl.NumberFormat(document.documentElement.lang).format(referenceFormat.max_transcript_chars)});
+  }
+  function readReferenceRecording(value) {
+    if (!referenceFormat || !value) return null;
+    function secondsInRange(seconds) {
+      return Number.isSafeInteger(seconds) && seconds >= referenceFormat.min_seconds && seconds <= referenceFormat.max_seconds;
+    }
+    if (!secondsInRange(value.default_seconds) ||
+        (value.duration_seconds !== null && !secondsInRange(value.duration_seconds)) ||
+        (value.reference_seconds !== null && !secondsInRange(value.reference_seconds)) ||
+        typeof value.configuration_error !== "string") return null;
+    return value;
+  }
+  function canRecordVoice() { return speechReady && openedContext === context() && Boolean(referenceRecording?.duration_seconds); }
+  function recordingDurationChanged() {
+    var input = fields.recording_duration;
+    return referenceRecording && (input.validity.badInput || input.value !== String(referenceRecording.reference_seconds ?? ""));
+  }
+  function recordingDurationHasTake() {
+    return voiceSaving || isRecordingVoice || recordingPending || Boolean(importedTake);
+  }
+  function updateRecordingDuration() {
+    var hasTake = recordingDurationHasTake();
+    var canEdit = referenceRecording && openedContext === context() && !profileSaving && !hasTake;
+    fields.recording_duration.disabled = !canEdit;
+    fields.recording_duration_save.disabled = !canEdit || (!recordingDurationChanged() && referenceRecording.duration_seconds !== null);
+    fields.recording_duration_discard.disabled = profileSaving || hasTake || !recordingDurationChanged();
+    fields.recording_duration_hint.textContent = referenceRecording ? uiFormat("speech_recording_duration_hint", {
+      min:referenceFormat.min_seconds, max:referenceFormat.max_seconds, default:referenceRecording.default_seconds
+    }) : label("recording_duration_unavailable");
+    fields.recording_duration_error.textContent = recordingDurationHasTake() ? label("recording_duration_finish_take") :
+      (referenceRecording?.configuration_error || "");
+    fields.recording_duration_error.hidden = !fields.recording_duration_error.textContent;
+  }
+  function prepareRecordingDuration() {
+    var input = fields.recording_duration;
+    input.value = referenceRecording?.reference_seconds ?? "";
+    input.min = referenceFormat?.min_seconds ?? "";
+    input.max = referenceFormat?.max_seconds ?? "";
+    input.placeholder = referenceRecording?.default_seconds ?? "";
+    updateRecordingDuration();
+    fields.recLimit.textContent = referenceRecording?.duration_seconds
+      ? uiFormat("speech_record_limit", {max:referenceRecording.duration_seconds}) : label("recording_duration_unavailable");
+    fields.recLimit.hidden = false;
+  }
+  function profileDraftMessage() {
+    if (mode === "reference" && recordingDurationChanged()) return "recording_duration_unsaved";
+    if (mode !== "profiles") return "";
+    if (pronunciationPending()) return "pronunciation_pending";
+    return profilesDirty ? "profiles_unsaved" : "";
+  }
   function languageName(code) {
     try { return new Intl.DisplayNames([document.documentElement.lang || "en"], {type: "language"}).of(code); }
     catch (_) { return code; }
@@ -124,6 +187,42 @@
     if (selected && !values.some(function(pair) { return pair[0] === selected; })) select.add(new Option(unavailableLabel || selected, selected));
     select.value = selected || (values[0] && values[0][0]) || "";
   }
+  function choiceField(parent, key) {
+    var input = field(parent, key, "select");
+    var readout = node("div", parent, "setting-field speech-choice-readout");
+    readout.hidden = true;
+    node("span", readout, "form-label", label(key));
+    fields[key + "_readout"] = node("strong", readout);
+    return input;
+  }
+  function showChoice(key, visible, fixed, empty) {
+    var input = fields[key], value = fields[key + "_readout"];
+    var only = fixed && input.options.length === 1 && input.value && input.selectedOptions[0];
+    var text = only ? only.textContent : !input.options.length ? empty : "";
+    input.closest("label").hidden = !visible || Boolean(text);
+    value.parentElement.hidden = !visible || !text;
+    value.textContent = text || "";
+  }
+  function engineOptions(selected) {
+    var items = Object.entries(capabilities).filter(function([id, cap]) {
+      return cap.creation_enabled !== false || id === selected;
+    });
+    options(fields.engine, items.map(function([id, cap]) { return [id, cap.short_name || cap.name]; }), selected);
+    var groups = new Map();
+    Array.from(fields.engine.options).forEach(function(option) {
+      var cap = capabilities[option.value];
+      var category = !cap || cap.creation_enabled === false ? "retained" :
+        providerFields(cap) ? "provider" : cap.voice_design ? "design" :
+        cap.reference_required ? "reference" : "presets";
+      if (!groups.has(category)) {
+        var group = node("optgroup", fields.engine);
+        group.label = label("engine_group_" + category);
+        groups.set(category, group);
+      }
+      groups.get(category).append(option);
+    });
+    fields.engine.value = selected;
+  }
   function profileCapability() { return capabilities && capabilities[fields.engine.value] || {}; }
   function externalEngine(engine) { return !!(capabilities && capabilities[engine] && capabilities[engine].configurable_model); }
   function providerFields(cap) { return !!(cap && cap.configurable_model && cap.provider_fields !== false); }
@@ -133,9 +232,11 @@
     var voice = providerFields(cap) && fields.provider_voice ? fields.provider_voice.value : fields.voice && fields.voice.value;
     return !!cap.reference_required || (referenceSupported(cap) && voice === "reference");
   }
-  function profileSupport() {
-    var cap = profileCapability(), support = Object.assign({}, cap.control_support || {});
-    if (cap.configurable_instructions) support.direction = fields.supports_instructions.checked ? "model_interpreted" : "unsupported";
+  function profileSupport(profile) {
+    var cap = profile ? capabilities[profile.engine] || {} : profileCapability();
+    var support = Object.assign({}, cap.control_support || {});
+    var instructionsSupported = profile ? profile.supports_instructions : fields.supports_instructions.checked;
+    if (cap.configurable_instructions) support.direction = instructionsSupported ? "model_interpreted" : "unsupported";
     return support;
   }
   function applyPauseBounds(inputs, support) {
@@ -199,9 +300,117 @@
     return result;
   }
   function status(message) { fields.status.textContent = message || ""; fields.status.hidden = !message; }
+  function inReader() { return mode === "reader" || mode === "output"; }
+  function sourcePanel(anchor) {
+    if (!anchor || !Number.isInteger(anchor.start_line) || !Number.isInteger(anchor.end_line)) return null;
+    var selector = `#chapters .ptext[data-start="${anchor.start_line}"][data-end="${anchor.end_line}"]`;
+    return Array.from(document.querySelectorAll(selector)).find(function(panel) {
+      return panel.dataset.paragraphSha256 === anchor.paragraph_sha256;
+    }) || null;
+  }
+  function passageIdentity(panel) {
+    return {start_line:Number(panel.dataset.start), end_line:Number(panel.dataset.end), paragraph_sha256:panel.dataset.paragraphSha256};
+  }
+  function placeReaderSpeech(panel, align) {
+    if (speechPassage !== panel) {
+      speechPassage?.classList.remove("speech-direction-target");
+      speechPassage = panel;
+      speechPassage?.classList.add("speech-direction-target");
+    }
+    if (!speechDocked) return;
+    var active = dialog.contains(document.activeElement) ? document.activeElement : null;
+    if (narrowSpeech.matches && panel) {
+      if (panel.nextElementSibling !== dialog) panel.after(dialog);
+    } else if (dialog.parentElement !== speechLayout) speechLayout.append(dialog);
+    if (active && document.activeElement !== active) active.focus({preventScroll:true});
+    if (!align || !panel || !dialog.open || dialog.hidden) return;
+    if (typeof revealPassageScope === "function") revealPassageScope(panel);
+    revealChapter(panel);
+    var top = readingViewportTop(), bounds = panel.getBoundingClientRect(), editor = dialog.getBoundingClientRect();
+    if (narrowSpeech.matches && (editor.top > innerHeight - 168 || bounds.bottom <= top)) {
+      var room = Math.min(156, Math.max(32, (innerHeight - top) / 3));
+      window.scrollBy({top:Math.max(bounds.top, editor.top - room) - top, behavior:"instant"});
+    } else if (bounds.bottom <= top || bounds.top >= innerHeight - 48) {
+      setPassageScrollMargin(panel);
+      panel.scrollIntoView({block:"start", behavior:"instant"});
+    }
+  }
+  function visibleReaderSpeech(state) {
+    dialog.hidden = state.view !== "analysis" || state.surface !== "document" || state.focus || state.contextTool !== "none";
+    speechLayout.classList.toggle("speech-dock-open", !dialog.hidden);
+    document.getElementById("reader-speech")?.setAttribute("aria-expanded", String(!dialog.hidden));
+  }
+  function showReaderDocument() {
+    var workbench = window.LixityWorkbench;
+    if (workbench.state().view !== "analysis") switchActiveView("analysis", true);
+    if (workbench.state().surface !== "document" || workbench.state().contextTool !== "none" || workbench.state().focus) {
+      workbench.dispatch({type:"surface", value:"document", contextTool:"none"});
+    }
+    visibleReaderSpeech(workbench.state());
+  }
+  function presentSpeechSurface(panel) {
+    var dock = Boolean(speechLayout && window.LixityWorkbench && inReader());
+    placingSpeech = true;
+    try {
+      if (dialog.open && speechDocked !== dock) dialog.close();
+      if (speechDocked && !dock) placeReaderSpeech(null, false);
+      speechDocked = dock;
+      dialog.classList.toggle("speech-docked", dock);
+      if (dock) {
+        if (!speechOpener) speechOpener = document.getElementById("reader-speech");
+        showReaderDocument();
+        placeReaderSpeech(panel || speechPassage || sourcePanel(paragraph?.identity) || window.LixityReader?.capture()?.panel, false);
+        var opening = !dialog.open;
+        if (opening) dialog.show();
+        placeReaderSpeech(speechPassage, true);
+        if (opening || !dialog.contains(document.activeElement) || !document.activeElement.getClientRects().length) {
+          fields.heading.focus({preventScroll:true});
+        }
+      } else {
+        speechLayout?.classList.remove("speech-dock-open");
+        document.getElementById("reader-speech")?.setAttribute("aria-expanded", "false");
+        dialog.hidden = false;
+        if (dialog.parentElement !== body) body.append(dialog);
+        if (!dialog.open) dialog.showModal();
+      }
+    } finally { placingSpeech = false; }
+  }
+  function closeAudioSurface() {
+    if (profileSaving || voiceSaving || direction.busy()) { status(label("saving")); return false; }
+    if (direction.dirty()) { status(label(mode === "output" ? "direction_output_draft" : "direction_switch_first")); return false; }
+    var draft = profileDraftMessage();
+    if (draft) { status(label(draft)); return false; }
+    if (importedTake) {
+      if (mode !== "reference") switchMode("reference");
+      status(label("take_unsaved"));
+      return false;
+    }
+    var opener = speechOpener;
+    var position = speechDocked && speechPassage?.getClientRects().length ?
+      {panel:speechPassage, top:speechPassage.getBoundingClientRect().top} : null;
+    dialog.close();
+    speechReady = false;
+    ++recordingSequence; releaseRecording();
+    recordedChunks = []; totalRecordedSamples = 0;
+    clearVoiceTake();
+    invalidate();
+    if (speechDocked) {
+      speechLayout.classList.remove("speech-dock-open");
+      speechPassage?.classList.remove("speech-direction-target");
+      speechPassage = speechOpener = null;
+      speechDocked = false;
+      document.getElementById("reader-speech")?.setAttribute("aria-expanded", "false");
+      if (position) window.LixityReader?.restore(position);
+      if (opener?.getClientRects().length) opener.focus({preventScroll:true});
+    }
+    return true;
+  }
+  narrowSpeech.addEventListener("change", function() {
+    if (dialog?.open && speechDocked) placeReaderSpeech(speechPassage, false);
+  });
   function addHelp(el, key) {
     var aliases = {engine:"service_help", voice:"voice_hint", voice_description:"design_hint", reference_id:"reference_hint",
-      record_author_title:"reference_hint", profiles_title:"profile_help", output_title:"export_hint", microphone_title:"microphone_help",
+      record_author_title:"reference_hint", profiles_title:"profile_help", output_title:"export_hint",
       pronunciations:"pronunciation_hint", pronunciation_term:"pronunciation_hint", pronunciation_spoken:"pronunciation_hint",
       direction_instructions:"direction_hint", instructions:"direction_hint", audit_audio:"audit_hint", audit_transcript:"audit_hint",
       export_scope:"export_hint", direction_plan:"export_hint", worker_refresh:"service_help", profile:"profile_help",
@@ -215,11 +424,23 @@
     if (!help.startsWith("speech_")) el.dataset.help = help;
   }
   function arrangeSections() {
-    var reading = mode === "reader" || mode === "output";
-    fields.chapter_audio_section.hidden = !reading;
+    var reading = inReader(), output = mode === "output", profiles = mode === "profiles" && profileSettingsAvailable;
+    var selected = profiles && Boolean(settings?.selected);
+    fields.project_audio_tabs.hidden = reading;
+    fields.reader_audio_tabs.hidden = !reading;
+    fields.reader_shortcut.hidden = reading;
+    fields.project_profile_summary.hidden = !reading;
+    fields.run_options.hidden = !reading;
+    fields.target.closest("label").hidden = !reading || !canRender || fields.target.disabled;
+    fields.worker_target.closest("label").hidden = fields.worker_target.disabled;
+    fields.chapter_audio_section.hidden = !output;
+    fields.audit_section.hidden = !output;
     fields.export_section.hidden = !reading;
     fields.render_section.hidden = !reading || !canRender;
-    fields.service_section.hidden = mode !== "profiles";
+    fields.profile_row.hidden = !profiles;
+    fields.editor.hidden = fields.lexicon_section.hidden = fields.service_section.hidden = !selected;
+    fields.profile_footer.hidden = !profiles || !canSaveProfiles();
+    fields.phonemes_section.hidden = !selected || (!profileSupport().phonemes && !fields.phonemes.value.trim());
     fields.microphone_section.hidden = mode !== "microphone";
     fields.render_heading.textContent = label("render_title");
     fields.playback_section.hidden = mode === "microphone";
@@ -228,7 +449,8 @@
     else fields.audit_section.after(fields.playback_section);
     fields.audit_section.before(...(mode === "reader" ? [fields.render_section, fields.export_section] : [fields.export_section, fields.render_section]));
     fields.export_section.after(fields.chapter_audio_section);
-    fields.schema_hint.hidden = fields.schema_preview.hidden = mode !== "profiles" || !settings || settings.schema_version === currentAudioSchema || migrationRequired;
+    fields.schema_section.hidden = mode !== "profiles" || !schemaReviewAvailable;
+    fields.schema_preview.hidden = fields.schema_section.hidden;
     if (mode !== "profiles") fields.schema_review.hidden = fields.schema_apply.hidden = true;
   }
   function downloadText(text, filename, type) {
@@ -243,68 +465,109 @@
     setTimeout(function() { URL.revokeObjectURL(address); }, 2000);
   }
   function microphoneMixer() {
-    var mic = microphoneState, info = mic && mic.gain_info;
-    var device = mic && (mic.devices || []).find(function(item) { return item.alsa_id === fields.microphone_device.value; });
+    var mic = microphoneState, info = mic && mic.gainInfo;
+    var device = mic && mic.devices.find(function(item) { return item.id === fields.microphone_device.value; });
     if (!info || !device || info.card == null || !info.control ||
-        ![device.card, device.card_id].some(function(card) { return card != null && String(card) === String(info.card); }) ||
-        !Number.isInteger(mic.current_gain) || !Number.isInteger(info.min) || !Number.isInteger(info.max) ||
-        info.min < 0 || info.max <= info.min ||
-        mic.current_gain < info.min || mic.current_gain > info.max) return null;
+        ![device.card, device.cardId].some(function(card) { return card != null && String(card) === String(info.card); }) ||
+        !Number.isInteger(mic.gain) || !Number.isInteger(info.min) || !Number.isInteger(info.max) ||
+        info.max <= info.min ||
+        mic.gain < info.min || mic.gain > info.max) return null;
     return info;
   }
+  function nativeMicrophoneInventory() {
+    var capture = window.lixityDesktop?.audioCapture;
+    return typeof capture?.listDevices === "function" ? capture : null;
+  }
   function microphoneControls() {
-    var mixer = microphoneMixer(), editable = mixer && mixer.max <= 100;
-    fields.microphone_device.disabled = microphoneBusy || !microphoneState || !fields.microphone_device.options.length;
-    fields.microphone_gain.disabled = fields.microphone_gain_range.disabled = fields.microphone_set_btn.disabled = microphoneBusy || !editable;
-    fields.microphone_calib_btn.disabled = microphoneBusy || !microphoneState || !fields.microphone_device.value;
+    var mixer = microphoneMixer(), unavailable = microphoneBusy || microphoneRefreshing;
+    fields.microphone_refresh.disabled = unavailable;
+    fields.microphone_device.disabled = unavailable || fields.microphone_device.options.length <= 1;
+    fields.microphone_gain.disabled = fields.microphone_gain_range.disabled = fields.microphone_set_btn.disabled = unavailable || mixer?.writable !== true;
+    fields.microphone_calib_btn.disabled = unavailable || !fields.microphone_device.value;
   }
   function showMicrophoneGain() {
-    var info = microphoneMixer();
-    fields.microphone_gain.value = fields.microphone_gain_range.value = info ? String(microphoneState.current_gain) : "";
+    window.LixityComponents.setStatus(fields.microphone_gain_status, "");
+    window.LixityComponents.setStatus(fields.microphone_check_status, "");
+    fields.microphone_gain.removeAttribute("aria-invalid");
+    var info = microphoneMixer(), hasDevice = Boolean(fields.microphone_device.value);
+    fields.microphone_gain_field.hidden = !hasDevice || Boolean(nativeMicrophoneInventory());
+    fields.microphone_gain.hidden = !info;
+    fields.microphone_set_btn.hidden = info?.writable !== true;
+    fields.microphone_gain.value = fields.microphone_gain_range.value = info ? String(microphoneState.gain) : "";
     fields.microphone_gain_range.hidden = !info;
     fields.microphone_gain_info.textContent = label("microphone_gain_unknown");
     if (info) {
       [fields.microphone_gain, fields.microphone_gain_range].forEach(function(input) {
         input.min = String(info.min); input.max = String(info.max);
-        input.value = String(microphoneState.current_gain);
+        input.value = String(microphoneState.gain);
       });
       fields.microphone_gain_info.textContent = uiFormat("speech_microphone_gain_limits", {minimum:info.min, maximum:info.max}) +
         (Number.isFinite(info.db) ? " · " + (info.db >= 0 ? "+" : "") + info.db.toFixed(1) + " dB" : "") +
-        (info.max > 100 ? " · " + label("microphone_gain_read_only") : "");
+        (info.writable !== true ? " · " + label("microphone_gain_read_only") : "");
     }
     fields.microphone_calib_result.replaceChildren();
     microphoneControls();
   }
-  function populateMicrophone(mic, selectedDevice) {
-    if (!fields.microphone_device) return;
+  function browserMicrophoneState(mic) {
+    return {
+      devices: (mic?.devices || []).map(function(device) {
+        return {id:device.alsa_id, label:device.alsa_id === "default" ? label("microphone_default_input") : device.label,
+          card:device.card, cardId:device.card_id};
+      }),
+      defaultDevice: mic?.default_device, gain: mic?.current_gain, gainInfo: mic?.gain_info
+    };
+  }
+  function populateMicrophone(mic) {
     microphoneState = mic;
-    fields.microphone_device.replaceChildren();
-    if (mic && mic.devices && mic.devices.length) {
-      mic.devices.forEach(function(d) {
-        var opt = new Option(d.label, d.alsa_id);
-        if (d.alsa_id === (selectedDevice || mic.default_device)) opt.selected = true;
-        fields.microphone_device.add(opt);
-      });
-      showMicrophoneGain();
-      return;
+    var devices = mic?.devices || [], select = fields.microphone_device;
+    if (mic && !devices.some(function(device) { return device.id === preferredMicrophone; })) {
+      preferredMicrophone = "";
     }
-    if (window.lixityDesktop && window.lixityDesktop.audioCapture &&
-        typeof window.lixityDesktop.audioCapture.listDevices === "function") {
-      var seq = openSequence;
-      window.lixityDesktop.audioCapture.listDevices().then(function(list) {
-        if (seq !== openSequence || !dialog || !dialog.open || !Array.isArray(list) || !list.length) return;
-        var mapped = list.map(function(d) {
-          return { alsa_id: d.id, label: d.label, is_default: Boolean(d.is_default) };
-        });
-        var def = mapped.find(function(d) { return d.is_default; }) || mapped[0];
-        populateMicrophone({
-          _desktopNative: true,
-          devices: mapped,
-          default_device: def ? def.alsa_id : ""
-        }, selectedDevice);
-      }).catch(function() {});
-    }
+    var selected = preferredMicrophone || mic?.defaultDevice;
+    var choices = devices.map(function(device) {
+      var name = device.is_default ? uiFormat("speech_microphone_system_default", {device:device.label}) : device.label;
+      return new Option(name, device.id);
+    });
+    select.replaceChildren(...choices);
+    if (devices.some(function(device) { return device.id === selected; })) select.value = selected;
+    fields.microphone_choice.hidden = choices.length < 2;
+    fields.microphone_current.hidden = choices.length !== 1;
+    fields.microphone_current_name.textContent = choices.length === 1 ? choices[0].textContent : "";
+    fields.microphone_scope.hidden = !choices.length;
     showMicrophoneGain();
+  }
+  function microphoneInventoryStatus(key) {
+    fields.microphone_inventory_status.textContent = key ? label(key) : "";
+  }
+  async function refreshMicrophone() {
+    if (microphoneRefreshing || microphoneBusy || !dialog.open) return;
+    var sequence = openSequence, capture = nativeMicrophoneInventory();
+    function current() { return sequence === openSequence && dialog.open && context() === openedContext; }
+    microphoneRefreshing = true;
+    microphoneInventoryStatus("microphone_looking");
+    microphoneControls();
+    try {
+      var mic;
+      if (capture) {
+        var devices = await capture.listDevices();
+        if (!Array.isArray(devices)) throw new Error("Invalid native microphone inventory");
+        var systemDefault = devices.find(function(device) { return device.is_default; });
+        mic = {devices:devices, defaultDevice:systemDefault?.id};
+      } else {
+        mic = browserMicrophoneState(await request("audio-microphone", {
+          action:"status", ...(preferredMicrophone ? {device:preferredMicrophone} : {})
+        }));
+      }
+      if (!current()) return;
+      populateMicrophone(mic);
+      microphoneInventoryStatus(mic.devices.length ? "" : "microphone_empty");
+    } catch (_) {
+      if (!current()) return;
+      populateMicrophone(null);
+      microphoneInventoryStatus("microphone_failed");
+    } finally {
+      if (current()) { microphoneRefreshing = false; microphoneControls(); }
+    }
   }
   async function inspectAudio() {
     var file = fields.audit_audio.files[0];
@@ -324,11 +587,11 @@
         transcript = JSON.parse(await transcriptFile.text());
       }
       if (!valid(serial)) return;
-      var scope = fields.export_scope.value === "manuscript" ? "manuscript" : "chapter";
+      var scope = fields.audit_scope.value;
       var result = await request("audio-audit", Object.assign(tokens(), {
         audio: encoded, filename: file.name, transcript: transcript, mode: scope,
         chapter: scope === "manuscript" ? null : Number(fields.chapter.value),
-        ...(transcript ? {profile: readProfile()} : {}), ignore_direction: fields.ignore_direction.checked
+        ignore_direction: fields.ignore_direction.checked
       }));
       if (!valid(serial)) return;
       var audit = result.audit;
@@ -394,7 +657,7 @@
     fields.worker_guide.href = profileCapability().guide_url || (fields.engine.value.startsWith("coqui") ? settingsForm.dataset.speechCoquiGuide : settingsForm.dataset.speechQwenGuide);
     if (external) { fields.worker_status.textContent = label("provider_status"); return; }
     if (profileCapability().runtime_status === "unavailable") { fields.worker_status.textContent = label("engine_unavailable"); return; }
-    var target = fields.target.value || "local", cap = capabilities[fields.engine.value];
+    var target = fields.worker_target.value || "local", cap = capabilities[fields.engine.value];
     var worker = Array.isArray(workers) ? workers.find(function(item) { return item.target === target && (!item.engines || item.engines.includes(fields.engine.value)); }) : null;
     var args = {target: label("target_" + target)};
     var knownModel = worker && worker.model && Object.values(capabilities).find(function(item) { return item.model === worker.model; });
@@ -452,6 +715,7 @@
   function voiceControls() {
     var cap = capabilities[fields.engine.value];
     if (!cap) return;
+    fields.engine.dataset.help = cap.name + ". " + label("service_help");
     var designed = !!cap.voice_design;
     var external = !!cap.configurable_model;
     var provider = providerFields(cap);
@@ -460,9 +724,10 @@
     var voices = Object.entries(cap.voices).filter(function(pair) { return pair[1].languages.includes(fields.language.value); });
     options(fields.voice, designed ? [["design", "VoiceDesign"]] : voices.map(function(pair) { return [pair[0], pair[1].name]; }), designed ? "design" : voice);
     var referenced = selectedReference();
-    fields.voice.closest("label").hidden = designed || (!!cap.reference_required) || provider;
-    fields.voice.disabled = designed || (!!cap.reference_required) || provider;
-    fields.language.closest("label").hidden = provider;
+    var showVoice = !designed && !cap.reference_required && !provider;
+    showChoice("voice", showVoice, voices.some(function([value]) { return value === fields.voice.value; }));
+    fields.voice.disabled = !showVoice;
+    showChoice("language", !provider, cap.languages.includes(fields.language.value));
     fields.language.disabled = provider;
     ["base_url", "provider_model", "api_key_env", "provider_voice", "provider_language", "supports_instructions"].forEach(function(key) {
       fields[key].closest("label").hidden = !provider; fields[key].disabled = !provider;
@@ -472,7 +737,6 @@
     fields.supports_instructions.disabled = !external || fields.engine.value === "mlx-audio";
     updateModelFields();
     fields.reference_hint.hidden = !referenced;
-    fields.voice_hint.hidden = true;
     fields.design_hint.hidden = !designed;
     fields.speed.min = String(cap.speed.minimum);
     fields.speed.max = String(cap.speed.maximum);
@@ -483,29 +747,30 @@
     fields.speed_label.textContent = label(modelTempo ? "speed_model" : "speed");
     fields.speed_hint.textContent = tempoHelp;
     fields.speed.dataset.help = tempoHelp;
-    fields.model.textContent = cap.name;
     var support = profileSupport();
     applyPauseBounds([fields.paragraph_pause, fields.scene_pause], support);
     direction.setCapabilities(capabilities, fields.engine.value, support);
-    options(fields.target, cap.targets.map(function(value) { return [value, label("target_" + value)]; }),
-      cap.targets.includes(executionTarget) ? executionTarget : cap.targets[0]);
-    fields.target.disabled = cap.targets.length < 2;
-    fields.target.closest("label").hidden = mode !== "profiles" || fields.target.disabled;
+    var targets = cap.targets.map(function(value) { return [value, label("target_" + value)]; });
+    [fields.target, fields.worker_target].forEach(function(select) {
+      options(select, targets, cap.targets.includes(select.value) ? select.value : cap.targets[0]);
+      select.disabled = cap.targets.length < 2;
+    });
+    fields.target.closest("label").hidden = !inReader() || !canRender || fields.target.disabled;
+    fields.worker_target.closest("label").hidden = fields.worker_target.disabled;
     updateRuntimeHint();
     fields.reuse.closest("label").hidden = mode !== "output" || !canRender;
     updateWorkerStatus(); updateVoiceCard();
   }
   function loadProfile() {
     invalidate();
-    if (!settings.selected) return;
+    if (!settings.selected) {
+      setEditorDisabled(true); fields.save.disabled = !canSaveProfiles(); arrangeSections();
+      return;
+    }
     var profile = settings.profiles[settings.selected];
-    lastPreset = profile.engine === "qwen3" ? profile.voice : "Ryan";
+    lastPreset = profile.engine === "qwen3" ? profile.voice : capabilities.qwen3?.default_voice || "";
     ["name", "instructions", "speed", "paragraph_pause", "scene_pause"].forEach(function(key) { fields[key].value = profile[key]; });
-    options(fields.engine, Object.keys(capabilities).filter(function(key) {
-      return capabilities[key].creation_enabled !== false || key === profile.engine;
-    }).map(function(key) {
-      return [key, capabilities[key].name];
-    }), profile.engine);
+    engineOptions(profile.engine);
     fields.base_url.value = profile.base_url || ""; fields.provider_model.value = profile.model || "";
     fields.api_key_env.value = profile.api_key_env || ""; fields.supports_instructions.checked = !!profile.supports_instructions;
     fields.provider_voice.value = externalEngine(profile.engine) ? profile.voice : "";
@@ -519,6 +784,7 @@
     editingPronunciation = null; fields.pronunciation_term.value = fields.pronunciation_spoken.value = "";
     fields.pronunciation_search.value = ""; renderPronunciations();
     setEditorDisabled(false); fields.save.disabled = false;
+    arrangeSections();
   }
   function setEditorDisabled(disabled) {
     fields.editor.disabled = disabled;
@@ -536,6 +802,18 @@
         updateModelFields();
       }
     }
+  }
+  function setProfileSaving(saving) {
+    profileSaving = saving;
+    if (!dialog.open) return;
+    var current = openedContext === context();
+    setEditorDisabled(saving || !current || !settings.selected);
+    fields.profile_discard.disabled = saving;
+    fields.profile.disabled = saving || !current;
+    fields.save.disabled = saving || !current || migrationRequired || !canSaveProfiles();
+    if (saving || !current) fields.create.disabled = fields.remove_profile.disabled = true;
+    else profileOptions();
+    updateRecordingDuration();
   }
   function pronunciationEntries() {
     var replacements = Object.create(null);
@@ -635,25 +913,41 @@
     } catch (error) { status(error.message); }
   }
   function stash() { if (settings && settings.selected) settings.profiles[settings.selected] = readProfile(); }
+  function supportsEmptyProfiles() {
+    return ["lixity-audio-settings/4", currentAudioSchema].includes(settings?.schema_version);
+  }
+  function canSaveProfiles() {
+    return Boolean(settings?.selected || (profilesDirty && supportsEmptyProfiles()));
+  }
   function profileOptions() {
     options(fields.profile, Object.entries(settings.profiles).map(function(pair) { return [pair[0], pair[1].name]; }), settings.selected);
-    fields.create.disabled = migrationRequired || Object.keys(settings.profiles).length >= 32;
-    fields.remove_profile.disabled = migrationRequired || Object.keys(settings.profiles).length <= 1;
+    showChoice("profile", true, true, label("profile_empty"));
+    fields.create.disabled = migrationRequired || !profileConstraints || Object.keys(settings.profiles).length >= profileConstraints.maximum;
+    fields.remove_profile.hidden = !settings.selected;
+    fields.remove_profile.disabled = migrationRequired || fields.remove_profile.hidden;
+  }
+  function guideToSchemaReview(reason) {
+    status(label(reason));
+    if (!fields.schema_section.hidden) fields.schema_preview.focus();
   }
   function removeProfile() {
-    if (migrationRequired || !settings || Object.keys(settings.profiles).length <= 1) return;
+    if (migrationRequired || !settings?.selected) return;
     if (pronunciationPending()) { status(label("pronunciation_pending")); return; }
     var id = settings.selected;
     if (savedDirectionView && savedDirectionView.directions.some(function(item) { return item.profile_id === id; })) {
       status(label("profile_referenced")); return;
     }
+    if (Object.keys(settings.profiles).length === 1 && !supportsEmptyProfiles()) {
+      guideToSchemaReview("profile_remove_last_schema");
+      return;
+    }
     delete settings.profiles[id];
     profilesDirty = true;
-    settings.selected = Object.keys(settings.profiles)[0];
+    settings.selected = Object.keys(settings.profiles)[0] || "";
     profileOptions(); loadProfile(); status(label("profile_removed_draft"));
   }
   function create() {
-    if (migrationRequired) return;
+    if (fields.create.disabled) return;
     try { stash(); } catch (error) { status(error.message); return; }
     var id = "narrator", index = 1;
     while (Object.hasOwn(settings.profiles, id)) id = "narrator_" + (++index);
@@ -666,11 +960,12 @@
     }) || "openai-compatible";
     cap = capabilities[engine];
     var external = !!cap.configurable_model;
-    if (external && !["lixity-audio-settings/4", currentAudioSchema].includes(settings.schema_version)) { status(label("provider_schema_required")); return; }
-    if (engine === authorEngine && settings.schema_version !== currentAudioSchema) { status(label("phonemes_schema_required")); return; }
-    var voice = cap.reference_required ? "reference" : external ? "" : Object.keys(cap.voices)[0];
+    if (external && !["lixity-audio-settings/4", currentAudioSchema].includes(settings.schema_version)) { guideToSchemaReview("provider_schema_required"); return; }
+    if (engine === authorEngine && settings.schema_version !== currentAudioSchema) { guideToSchemaReview("phonemes_schema_required"); return; }
+    var voice = cap.reference_required ? "reference" : external ? "" : cap.default_voice || Object.keys(cap.voices)[0];
     settings.profiles[id] = {name: label("new_profile"), engine: engine, language: language, voice: voice, speed: cap.speed.default,
-      instructions: "", paragraph_pause: 0.45, scene_pause: 1.2, pronunciations: {}};
+      instructions: "", paragraph_pause: profileConstraints.default_paragraph_pause,
+      scene_pause: profileConstraints.default_scene_pause, pronunciations: {}};
     profilesDirty = true;
     settings.selected = id; profileOptions(); loadProfile(); fields.name.focus();
   }
@@ -706,15 +1001,33 @@
     } catch (error) { if (valid(serial)) { status(error.message); finish(); } }
   }
   function finish() { job = null; fields.cancel.disabled = true; fields.preview.disabled = fields.chapter_render.disabled = !canRender || !settings || !settings.selected || !fields.chapter.options.length || openedContext !== context(); }
+  function selectedChapterAudio() {
+    return chapterAudio?.find(function(entry) { return entry.chapter === Number(fields.chapter.value); });
+  }
+  function updateChapterAudioActions() {
+    var unavailable = chapterAudioBusy || !speechReady || openedContext !== context();
+    fields.chapter_audio_delete.hidden = !selectedChapterAudio();
+    fields.chapter_audio_delete.disabled = unavailable;
+    fields.chapter_audio_discard.hidden = !fields.chapter_audio_file.files.length;
+    fields.chapter_audio_discard.disabled = unavailable;
+  }
+  function setChapterAudioBusy(busy) {
+    chapterAudioBusy = busy;
+    fields.chapter.disabled = busy;
+    fields.chapter_audio_import.disabled = fields.chapter_audio_file.disabled = busy || !speechReady || openedContext !== context();
+    updateChapterAudioActions();
+  }
   function showChapterAudio() {
+    updateChapterAudioActions();
     if (!fields.chapter_audio_status || chapterAudio === null || chapterAudioBusy) return;
-    var entry = chapterAudio.find(function(item) { return item.chapter === Number(fields.chapter.value); });
+    var entry = selectedChapterAudio();
     fields.chapter_audio_status.textContent = entry ? label("chapter_audio_ready") + " · " + entry.duration_seconds.toFixed(1) + " s" : label("chapter_audio_missing");
   }
   async function refreshChapterAudio() {
     if (!speechReady || chapterAudioBusy || (mode !== "reader" && mode !== "output")) return;
     var sequence = ++chapterAudioSequence, opening = openSequence, bound = context();
     chapterAudio = null;
+    updateChapterAudioActions();
     fields.chapter_audio_status.textContent = label("loading");
     try {
       var result = await request("speech-audio-artifacts");
@@ -730,8 +1043,7 @@
     if (!file) { fields.chapter_audio_file.reportValidity(); return; }
     if (file.size > 48 * 1024 * 1024) { fields.chapter_audio_status.textContent = label("chapter_audio_too_large"); return; }
     var bound = tokens(), chapter = Number(fields.chapter.value), opening = openSequence, captureContext = context();
-    ++chapterAudioSequence; chapterAudioBusy = true;
-    fields.chapter_audio_import.disabled = fields.chapter_audio_file.disabled = fields.chapter.disabled = true;
+    ++chapterAudioSequence; setChapterAudioBusy(true);
     fields.chapter_audio_status.textContent = label("saving");
     try {
       var encoded = await new Promise(function(resolve, reject) {
@@ -749,10 +1061,33 @@
     } catch (error) {
       if (opening === openSequence && dialog.open) fields.chapter_audio_status.textContent = error.message;
     } finally {
+      if (opening === openSequence) setChapterAudioBusy(false);
+    }
+  }
+  async function removeChapterAudio() {
+    var entry = selectedChapterAudio();
+    if (!entry || fields.chapter_audio_delete.disabled || !confirm(label("chapter_audio_delete_confirm"))) return;
+    var opening = openSequence, bound = context(), removed = false;
+    ++chapterAudioSequence; setChapterAudioBusy(true);
+    fields.chapter_audio_status.textContent = label("saving");
+    function current() { return opening === openSequence && dialog.open && bound === context(); }
+    try {
+      var result = await request("speech-audio-delete", Object.assign(tokens(), {
+        chapter:entry.chapter, audio_sha256:entry.audio_sha256
+      }));
+      if (!current()) return;
+      chapterAudio = chapterAudio.filter(function(item) { return item !== entry; });
+      clearAudio();
+      fields.chapter_audio_status.textContent = label(result.cleanup_pending ? "chapter_audio_cleanup_pending" : "chapter_audio_deleted");
+      removed = true;
+    } catch (error) {
+      if (!current()) return;
+      if (error.code === "chapter-audio-changed") chapterAudio = null;
+      fields.chapter_audio_status.textContent = error.message;
+    } finally {
       if (opening === openSequence) {
-        chapterAudioBusy = false;
-        fields.chapter_audio_import.disabled = fields.chapter_audio_file.disabled = !speechReady || openedContext !== context();
-        fields.chapter.disabled = false;
+        setChapterAudioBusy(false);
+        if (removed && current() && mode === "output") fields.chapter_audio_file.focus();
       }
     }
   }
@@ -760,12 +1095,13 @@
     if (migrationRequired || (!planOnly && !canRender)) return;
     if (openedContext !== context()) { status(label("direction_context_changed")); return; }
     try {
-      if (!Array.from(fields.editor.querySelectorAll("input, select, textarea")).every(function(input) { return input.reportValidity(); })) return;
-      var profile = readProfile(); invalidate(); var serial = generation;
-      if (!planOnly && profile.instructions && profileSupport().direction !== "model_interpreted") throw new Error(label("instructions_export_only"));
+      var profileId = savedSettings?.selected, profile = savedSettings?.profiles[profileId];
+      if (!profile) throw new Error(label("profile_required"));
+      invalidate(); var serial = generation;
+      if (!planOnly && profile.instructions && profileSupport(profile).direction !== "model_interpreted") throw new Error(label("instructions_export_only"));
       fields.preview.disabled = fields.chapter_render.disabled = true;
       status(label("state_pending"));
-      var payload = Object.assign(tokens(), {mode: mode, chapter: mode === "manuscript" ? null : Number(fields.chapter.value), profile: profile,
+      var payload = Object.assign(tokens(), {mode: mode, chapter: mode === "manuscript" ? null : Number(fields.chapter.value), profile_id: profileId,
         target: fields.target.value || "local", ignore_direction: fields.ignore_direction.checked});
       if (mode === "preview" && paragraph) payload.paragraph = paragraph.identity;
       if (mode !== "preview") {
@@ -813,7 +1149,7 @@
         fields.plan.hidden = false; status(label("export_ready")); finish(); return;
       }
       if (!valid(serial)) { request("speech-cancel", Object.assign({}, {project_token: payload.project_token, source_sha256: payload.source_sha256}, {id: data.job.id})).catch(function() {}); return; }
-      job = {id: data.job.id, tokens: tokens(), timeline: data.timeline || data.plan}; fields.cancel.disabled = false; fields.progress.hidden = false; poll(serial, job);
+      job = {id: data.job.id, tokens: tokens()}; fields.cancel.disabled = false; fields.progress.hidden = false; poll(serial, job);
     } catch (error) { if (serial == null || valid(serial)) { status(error.message); finish(); } }
   }
   async function cancel() {
@@ -823,23 +1159,22 @@
     catch (error) { if (job === active) { status(error.message); fields.cancel.disabled = false; active.cancelling = false; } }
   }
   async function save() {
-    if (migrationRequired || profileSaving) return false;
+    if (migrationRequired || profileSaving || !canSaveProfiles()) return false;
+    if (recordingDurationChanged()) { status(label("recording_duration_unsaved")); return false; }
     if (openedContext !== context()) { status(label("pronunciation_context_changed")); return false; }
     try {
       if (!Array.from(fields.editor.querySelectorAll("input, select, textarea")).every(function(input) { return input.reportValidity(); })) return false;
       stash();
       if (!["lixity-audio-settings/3", "lixity-audio-settings/4", currentAudioSchema].includes(settings.schema_version) && Object.values(settings.profiles).some(function(profile) { return profile.engine.startsWith("coqui"); })) {
-        status(label("coqui_schema_required")); return false;
+        guideToSchemaReview("coqui_schema_required"); return false;
       }
       if (!["lixity-audio-settings/4", currentAudioSchema].includes(settings.schema_version) && Object.values(settings.profiles).some(function(profile) { return externalEngine(profile.engine); })) {
-        status(label("provider_schema_required")); return false;
+        guideToSchemaReview("provider_schema_required"); return false;
       }
       if (settings.schema_version !== currentAudioSchema && Object.values(settings.profiles).some(function(profile) {
         return profile.engine === "ims-toucan" || Object.keys(profile.phonemes || {}).length || Object.keys(profile.prosody || {}).length;
-      })) { status(label("phonemes_schema_required")); return false; }
-      invalidate(); var serial = generation; profileSaving = true;
-      setEditorDisabled(true);
-      fields.profile.disabled = fields.create.disabled = fields.remove_profile.disabled = fields.profile_discard.disabled = fields.save.disabled = true;
+      })) { guideToSchemaReview("phonemes_schema_required"); return false; }
+      invalidate(); var serial = generation; setProfileSaving(true);
       status(label("saving"));
       await request("settings", {project_token: tokens().project_token, audio: settings});
       if (!valid(serial)) return false;
@@ -850,13 +1185,28 @@
       return false;
     }
     finally {
-      if (profileSaving) {
-        profileSaving = false;
-        if (dialog.open) {
-          setEditorDisabled(false); fields.profile_discard.disabled = false;
-          if (openedContext === context()) { fields.profile.disabled = false; profileOptions(); fields.save.disabled = migrationRequired || !settings.selected; }
-        }
-      } else if (serial == null || valid(serial)) fields.save.disabled = false;
+      if (profileSaving) setProfileSaving(false);
+      else if (serial == null || valid(serial)) fields.save.disabled = false;
+    }
+  }
+  async function saveRecordingDuration() {
+    if (fields.recording_duration_save.disabled || recordingDurationHasTake() || direction.dirty() || openedContext !== context()) return;
+    if (pronunciationPending() || profilesDirty) {
+      status(label(pronunciationPending() ? "pronunciation_pending" : "profiles_unsaved"));
+      return;
+    }
+    var input = fields.recording_duration;
+    if (!input.reportValidity()) return;
+    var configuration = input.value === "" ? {} : {reference_seconds:input.valueAsNumber};
+    var serial = generation;
+    setProfileSaving(true); status(label("saving"));
+    try {
+      await request("settings", {project_token:tokens().project_token, audio_recording:configuration});
+      if (valid(serial)) location.reload();
+    } catch (error) {
+      if (valid(serial)) status(error.message);
+    } finally {
+      setProfileSaving(false);
     }
   }
   function referenceName(reference, index, limit) {
@@ -925,6 +1275,34 @@
       node("em", span, "", label("no_voice_yet"));
     }
   }
+  var referenceDeleting = false;
+  async function deleteLibraryRecording(referenceId, name, trigger) {
+    if (!profileSettingsAvailable || referenceDeleting || voiceSaving || isRecordingVoice || recordingPending ||
+        !speechReady || openedContext !== context()) return;
+    if (!window.confirm(uiFormat("speech_reference_delete_confirm", {name:name}))) return;
+    var sequence = openSequence, captureContext = context(), restoreFocus = document.activeElement === trigger;
+    function current() { return sequence === openSequence && dialog.open && captureContext === context(); }
+    referenceDeleting = true; trigger.disabled = true;
+    try {
+      var response = await request("audio-microphone", Object.assign(tokens(), {
+        action:"delete_reference", reference_id:referenceId
+      }));
+      if (!current()) return;
+      if (response.reference_id !== referenceId) throw new Error(label("failed"));
+      if (fields.audio.getAttribute("src") === url("speech-audio", {reference_id:referenceId})) clearAudio();
+      allReferences = allReferences.filter(function(item) { return item.id !== referenceId; });
+      referenceOptions(fields.reference_id.value);
+      renderReferenceList(allReferences); renderActiveVoiceBadge(); updateVoiceCard();
+      status(label("reference_delete_done"));
+      if (restoreFocus && document.activeElement === body) {
+        fields.reference_list.closest("details").querySelector("summary").focus({preventScroll:true});
+      }
+    } catch (error) { if (current()) status(error.message); }
+    finally {
+      referenceDeleting = false;
+      if (trigger.isConnected) trigger.disabled = false;
+    }
+  }
   function renderReferenceList(refs) {
     if (!fields.reference_list) return;
     fields.reference_list.replaceChildren();
@@ -932,10 +1310,14 @@
       node("p", fields.reference_list, "ctl-note", label("reference_empty"));
       return;
     }
+    var persisted = savedSettings || settings;
+    var activeProfile = persisted && persisted.selected && persisted.profiles[persisted.selected];
+    var usedReferences = new Set(Object.values(persisted?.profiles || {}).map(function(profile) { return profile.reference_id; }));
     refs.forEach(function(ref, index) {
       var item = node("div", fields.reference_list, "voice-ref-item");
       var info = node("div", item, "voice-ref-info");
-      node("div", info, "voice-ref-text", referenceName(ref, index));
+      var name = referenceName(ref, index);
+      node("div", info, "voice-ref-text", name);
       var duration = referenceDuration(ref);
       if (duration) node("div", info, "voice-ref-meta", label("audit_duration") + ": " + duration);
       var actions = node("div", item, "row");
@@ -946,8 +1328,6 @@
         fields.audio.hidden = false;
         fields.audio.play().catch(function(error) { status(error.message); });
       });
-      var persisted = savedSettings || settings;
-      var activeProfile = persisted && persisted.selected && persisted.profiles[persisted.selected];
       var isCurrent = activeProfile && activeProfile.reference_id === ref.id;
       if (isCurrent) {
         node("span", actions, "badge", "✓ " + label("active_voice"));
@@ -972,7 +1352,36 @@
           }
         });
       }
+      if (!profileSettingsAvailable) return;
+      if (usedReferences.has(ref.id)) node("span", actions, "ctl-note", label("reference_delete_in_use"));
+      else {
+        var shortName = referenceName(ref, index, 72);
+        var remove = button(actions, "reference_delete", function() { deleteLibraryRecording(ref.id, shortName, remove); });
+        remove.setAttribute("aria-label", label("reference_delete") + " · " + shortName);
+      }
     });
+  }
+  function startRecordingTimer(limit, current, capture) {
+    var started = performance.now(), checking = false;
+    function clock(seconds) {
+      return String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0");
+    }
+    function tick() {
+      var elapsed = Math.floor((performance.now() - started) / 1000);
+      fields.recTimer.textContent = clock(Math.min(elapsed, limit)) + " / " + clock(limit);
+      if (elapsed >= limit) { stopVoiceRecording(); return; }
+      if (capture && typeof capture.recordingStatus === "function" && !checking) {
+        checking = true;
+        capture.recordingStatus().then(function(state) {
+          if (current() && desktopAudioRecording && state && (state.auto_stopped || state.recording === false)) stopVoiceRecording();
+        }).catch(function() {}).finally(function() { checking = false; });
+      }
+    }
+    fields.recBtn.disabled = false;
+    fields.recBtn.textContent = label("record_stop"); fields.recBtn.classList.add("is-recording");
+    fields.recBtn.dataset.help = label("record_stop_help");
+    fields.recTimer.hidden = false;
+    tick(); recTimerInterval = setInterval(tick, 250);
   }
   function releaseRecording() {
     if (desktopAudioRecording && window.lixityDesktop && window.lixityDesktop.audioCapture &&
@@ -987,17 +1396,20 @@
     if (audioStream) { audioStream.getTracks().forEach(function(t) { t.stop(); }); audioStream = null; }
     if (fields.takeWidget) fields.takeWidget.clearLiveAnalyser();
     if (audioCtx) { audioCtx.close().catch(function() {}); audioCtx = null; }
-    fields.recBtn.disabled = !speechReady;
+    fields.recBtn.disabled = !canRecordVoice();
     fields.recBtn.textContent = label("record_start");
     fields.recBtn.classList.remove("is-recording");
+    fields.recBtn.dataset.help = label("record_help");
     fields.recTimer.hidden = true;
     fields.promptControls.forEach(function(el) { el.disabled = false; });
     fields.saveVoiceBtn.disabled = !takeValid;
     recordingFeedback("idle");
   }
   async function startVoiceRecording() {
-    if (!speechReady || recordingPending || isRecordingVoice || voiceSaving) return;
-    if (sampleVariant === "custom" && !fields.customTextarea.value.trim()) {
+    if (!canRecordVoice() || recordingPending || isRecordingVoice || voiceSaving) return;
+    var seconds = referenceRecording.duration_seconds;
+    var spoken = sampleVariant === "custom" ? fields.customTextarea.value.trim() : fields.promptText.textContent.trim();
+    if (!spoken) {
       recordingDiagnostic("preflight", "InvalidStateError");
       status(label("transcript_help")); recordingFeedback("failed", label("transcript_help")); return;
     }
@@ -1007,42 +1419,32 @@
       recordingDiagnostic("preflight", "NotSupportedError");
       status(label("mic_unavailable")); recordingFeedback("failed", label("mic_unavailable")); return;
     }
-    var sequence = ++recordingSequence, captureContext = context();
+    var sequence = ++recordingSequence, captureContext = context(), refocus = document.activeElement === fields.recBtn;
     function current() {
       return sequence === recordingSequence && dialog.open && mode === "reference" && captureContext === context();
+    }
+    function restoreRecordFocus() {
+      if (refocus && current() && document.activeElement === body) fields.recBtn.focus({preventScroll:true});
     }
     recordingPending = true; fields.recBtn.disabled = true; status(label("mic_pending"));
     recordingFeedback("busy");
     if (desktopCapture) {
       try {
-        var preferredDevice = fields.microphone_device && fields.microphone_device.value ? fields.microphone_device.value : null;
-        await desktopCapture.startRecording(preferredDevice, "author-voice.wav");
+        var preferredDevice = nativeMicrophoneInventory() ? preferredMicrophone || fields.microphone_device.value || null : null;
+        var nativeStatus = await desktopCapture.startRecording(preferredDevice, "author-voice.wav", seconds);
         if (!current()) {
           desktopCapture.cancelRecording().catch(function() {});
           return;
         }
         desktopAudioRecording = true; isRecordingVoice = true; recordingPending = false;
-        importedTake = null; takeTokens = tokens();
-        fields.takeExports.hidden = true;
-        fields.take_confirmed.closest("label").hidden = fields.takeNotice.hidden = true;
-        lastRecordedWavBlob = null; takeValid = false;
-        if (takeUrl) { URL.revokeObjectURL(takeUrl); takeUrl = null; }
-        takeTranscript = sampleVariant === "custom" ? fields.customTextarea.value.trim() : fields.promptText.textContent.trim();
+        clearVoiceTake(); takeTokens = tokens();
+        takeTranscript = spoken;
         fields.promptControls.forEach(function(el) { el.disabled = true; });
-        fields.audio.pause(); fields.takePlayer.pause(); fields.takePlayer.removeAttribute("src"); fields.takePlayer.load();
-        fields.takeCard.hidden = false; fields.takeStats.textContent = ""; fields.saveVoiceBtn.disabled = true;
-        fields.recBtn.disabled = false; fields.recBtn.textContent = label("record_stop"); fields.recBtn.classList.add("is-recording");
-        fields.recTimer.hidden = false; fields.recTimer.textContent = "00:00"; recStartTime = Date.now();
-        recTimerInterval = setInterval(function() {
-          var elapsed = Math.floor((Date.now() - recStartTime) / 1000);
-          fields.recTimer.textContent = String(Math.floor(elapsed / 60)).padStart(2, "0") + ":" + String(elapsed % 60).padStart(2, "0");
-          if (typeof desktopCapture.recordingStatus === "function") {
-            desktopCapture.recordingStatus().then(function(st) {
-              if (st && st.auto_stopped && isRecordingVoice && desktopAudioRecording) stopVoiceRecording();
-            }).catch(function() {});
-          }
-          if (elapsed >= 30) stopVoiceRecording();
-        }, 250);
+        fields.audio.pause(); fields.takeCard.hidden = false;
+        var nativeLimit = nativeStatus?.max_duration_seconds;
+        startRecordingTimer(Number.isSafeInteger(nativeLimit) && nativeLimit > 0 ?
+          Math.min(nativeLimit, seconds) : seconds, current, desktopCapture);
+        restoreRecordFocus();
         status(label("record_running"));
         recordingFeedback("recording");
         return;
@@ -1050,6 +1452,7 @@
         if (sequence !== recordingSequence) return;
         recordingDiagnostic("microphone_request", err && err.name);
         releaseRecording();
+        restoreRecordFocus();
         status(label("mic_failed"));
         recordingFeedback("failed", label("mic_failed"));
         return;
@@ -1058,7 +1461,7 @@
     var stage = "audio_context_create";
     try {
       var AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-      audioCtx = new AudioCtxClass({sampleRate: 24000});
+      audioCtx = new AudioCtxClass({sampleRate: referenceFormat.sample_rate_hz});
       stage = "audio_context_resume";
       await audioCtx.resume();
       if (!current()) return;
@@ -1073,7 +1476,7 @@
       stage = "capture_processor_create";
       var capture = await window.LixityAudioTake.openPcmCapture(audioCtx, function(samples) {
         if (!isRecordingVoice || !current()) return;
-        var limit = 30 * audioCtx.sampleRate;
+        var limit = seconds * audioCtx.sampleRate;
         var remaining = limit - totalRecordedSamples;
         if (remaining <= 0) return;
         var chunk = samples.subarray(0, remaining);
@@ -1094,31 +1497,22 @@
       stage = "analyser_create";
       var analyser = audioCtx.createAnalyser(); analyser.fftSize = 256; audioSource.connect(analyser);
       recordedChunks = []; totalRecordedSamples = 0; isRecordingVoice = true; recordingPending = false;
-      importedTake = null; takeTokens = tokens();
-      fields.takeExports.hidden = true;
-      fields.take_confirmed.closest("label").hidden = fields.takeNotice.hidden = true;
-      lastRecordedWavBlob = null; takeValid = false;
-      if (takeUrl) { URL.revokeObjectURL(takeUrl); takeUrl = null; }
-      takeTranscript = sampleVariant === "custom" ? fields.customTextarea.value.trim() : fields.promptText.textContent.trim();
+      clearVoiceTake(); takeTokens = tokens();
+      takeTranscript = spoken;
       fields.promptControls.forEach(function(el) { el.disabled = true; });
-      fields.audio.pause(); fields.takePlayer.pause(); fields.takePlayer.removeAttribute("src"); fields.takePlayer.load();
-      fields.takeCard.hidden = false; fields.takeStats.textContent = ""; fields.saveVoiceBtn.disabled = true;
+      fields.audio.pause(); fields.takeCard.hidden = false;
       fields.takeWidget.setLiveAnalyser(analyser);
       stage = "capture_connect";
       audioProcessor.connect(audioSource);
-      fields.recBtn.disabled = false; fields.recBtn.textContent = label("record_stop"); fields.recBtn.classList.add("is-recording");
-      fields.recTimer.hidden = false; fields.recTimer.textContent = "00:00"; recStartTime = Date.now();
-      recTimerInterval = setInterval(function() {
-        var elapsed = Math.floor((Date.now() - recStartTime) / 1000);
-        fields.recTimer.textContent = String(Math.floor(elapsed / 60)).padStart(2, "0") + ":" + String(elapsed % 60).padStart(2, "0");
-        if (elapsed >= 30) stopVoiceRecording();
-      }, 250);
+      startRecordingTimer(seconds, current);
+      restoreRecordFocus();
       status(label("record_running"));
       recordingFeedback("recording");
     } catch (err) {
       if (sequence !== recordingSequence) return;
       recordingDiagnostic(stage, err && err.name);
       releaseRecording();
+      restoreRecordFocus();
       var key = stage !== "microphone_request" ? "mic_failed" :
         ["NotAllowedError", "PermissionDeniedError", "SecurityError"].includes(err && err.name) ? "mic_permission" :
         err && err.name === "NotFoundError" ? "mic_missing" : err && err.name === "NotReadableError" ? "mic_busy" : "mic_failed";
@@ -1150,7 +1544,7 @@
         }
       } finally {
         voiceSaving = false;
-        if (desktopSequence === openSequence && dialog.open) { fields.recBtn.disabled = !speechReady; fields.saveVoiceBtn.disabled = !takeValid; }
+        if (desktopSequence === openSequence && dialog.open) { fields.recBtn.disabled = !canRecordVoice(); fields.saveVoiceBtn.disabled = !takeValid; }
       }
       return;
     }
@@ -1171,9 +1565,9 @@
       if (sequence !== openSequence || serial !== recordingSequence || !dialog.open || !matchingTakeContext(bound)) return;
       voiceSaving = false; presentImportedTake(take, bound);
       recordingFeedback("recorded");
-      var audio = take.metadata.audio;
-      if (audio.sample_rate_hz !== 24000 || audio.duration_seconds < 1 || audio.duration_seconds > 30) {
-        recordingDiagnostic("capture_complete", audio.sample_rate_hz !== 24000 ? "NotSupportedError" : "InvalidStateError");
+      var reason = window.LixityAudioTake.referenceEligibility(take, referenceFormat).reason;
+      if (reason === "format" || reason === "duration") {
+        recordingDiagnostic("capture_complete", reason === "format" ? "NotSupportedError" : "InvalidStateError");
       }
     } catch (error) {
       if (sequence === openSequence && serial === recordingSequence && dialog.open) {
@@ -1182,7 +1576,7 @@
       }
     } finally {
       voiceSaving = false;
-      if (sequence === openSequence && dialog.open) { fields.recBtn.disabled = !speechReady; fields.saveVoiceBtn.disabled = !takeValid; }
+      if (sequence === openSequence && dialog.open) { fields.recBtn.disabled = !canRecordVoice(); fields.saveVoiceBtn.disabled = !takeValid; }
     }
   }
   function referenceSaved(res) {
@@ -1202,11 +1596,13 @@
     try {
       importedTake = window.LixityAudioTake.withTranscript(importedTake, text,
         fields.take_confirmed.checked ? "confirmed" : text.trim() ? "draft" : "missing");
-      var eligibility = window.LixityAudioTake.referenceEligibility(importedTake);
+      var eligibility = window.LixityAudioTake.referenceEligibility(importedTake, referenceFormat);
       takeValid = eligibility.eligible;
-      fields.takeNotice.textContent = label(eligibility.reason ? "take_" + eligibility.reason : "take_ready");
+      fields.takeNotice.textContent = eligibility.reason === "duration" || eligibility.reason === "transcript" ?
+        referenceText("take_" + eligibility.reason) : label(eligibility.reason ? "take_" + eligibility.reason : "take_ready");
     } catch (_) { takeValid = false; fields.takeNotice.textContent = label("take_invalid"); }
-    fields.takeNotice.hidden = false; fields.saveVoiceBtn.disabled = !takeValid || voiceSaving;
+    fields.takeNotice.hidden = false;
+    fields.saveVoiceBtn.disabled = !takeValid || voiceSaving || !matchingTakeContext(takeTokens);
   }
   async function exportVoiceTake(kind) {
     if (!importedTake || isRecordingVoice || recordingPending) return;
@@ -1217,7 +1613,31 @@
       await window.LixityAudioTake.download(take, kind);
     } catch (_) { status(label("take_export_failed")); }
   }
-  function presentImportedTake(take, bound) {
+  function clearVoiceTake() {
+    ++takeImportSequence;
+    importedTake = null; trimSource = null; takeTokens = null;
+    lastRecordedWavBlob = null; takeValid = false; takeTranscript = "";
+    fields.takePlayer.pause();
+    fields.takePlayer.removeAttribute("src"); fields.takePlayer.load();
+    if (takeUrl) { URL.revokeObjectURL(takeUrl); takeUrl = null; }
+    fields.takeCard.hidden = fields.takeExports.hidden = fields.take_trim.hidden = fields.takeDiscard.hidden = true;
+    fields.takeStats.textContent = fields.takeTranscriptInput.value = "";
+    fields.takeTranscriptInput.closest("details").open = false;
+    fields.take_confirmed.checked = false;
+    fields.take_confirmed.closest("label").hidden = fields.takeNotice.hidden = true;
+    fields.saveVoiceBtn.disabled = true;
+    updateRecordingDuration();
+  }
+  function discardVoiceTake() {
+    if (!importedTake || isRecordingVoice || recordingPending) return;
+    if (voiceSaving) { status(label("saving")); return; }
+    clearVoiceTake();
+    fields.upload_voice_file.value = fields.take_metadata_file.value = fields.upload_voice_transcript.value = "";
+    recordingFeedback("idle");
+    status(label("take_discarded"));
+    (fields.recBtn.disabled ? fields.heading : fields.recBtn).focus();
+  }
+  function presentImportedTake(take, bound, original) {
     if (isRecordingVoice || recordingPending || voiceSaving) return;
     fields.audio.pause(); fields.takePlayer.pause();
     var nextUrl = URL.createObjectURL(take.blob);
@@ -1231,8 +1651,69 @@
     fields.takeTranscriptInput.closest("details").open = true;
     fields.take_confirmed.closest("label").hidden = false;
     fields.take_confirmed.checked = take.transcript_status === "confirmed";
-    fields.takeCard.hidden = false; fields.takeExports.hidden = false; refreshImportedTake(false);
+    fields.takeCard.hidden = fields.takeExports.hidden = fields.takeDiscard.hidden = false;
+    refreshImportedTake(false);
+    trimSource = original || null;
+    fields.take_trim.hidden = !trimSource && (!referenceFormat || !window.LixityAudioTake.matchesReferenceFormat(audio, referenceFormat) ||
+      audio.duration_seconds <= referenceFormat.min_seconds || audio.duration_seconds > trimLimitSeconds);
+    fields.take_trim.open = Boolean(trimSource);
+    fields.trim_controls.hidden = Boolean(trimSource);
+    fields.trim_restore.hidden = !trimSource;
+    fields.take_trim_start.value = "0";
+    fields.take_trim_end.value = referenceFormat ? String(Math.floor(Math.min(referenceFormat.max_seconds, audio.duration_seconds) * 1000) / 1000) : "";
+    window.LixityComponents.setStatus(fields.trim_status, "");
+    updateRecordingDuration();
     status(label("take_loaded"));
+  }
+  function audioBase64(blob) {
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function() { resolve(String(reader.result).split(",")[1]); };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+  async function trimVoiceTake() {
+    if (!referenceFormat || !trimLimitSeconds || !importedTake || trimSource || voiceSaving || isRecordingVoice || recordingPending || !matchingTakeContext(takeTokens)) return;
+    var prior = importedTake, bound = Object.assign({}, takeTokens), sequence = openSequence;
+    var audio = prior.metadata.audio, rate = audio.sample_rate_hz, feedback = fields.trim_status;
+    var start = Math.round(fields.take_trim_start.valueAsNumber * rate), end = Math.round(fields.take_trim_end.valueAsNumber * rate);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end > audio.frames ||
+        end - start < rate * referenceFormat.min_seconds || end - start > rate * referenceFormat.max_seconds ||
+        (start === 0 && end === audio.frames)) {
+      window.LixityComponents.setStatus(feedback, referenceText("take_trim_range"), "err");
+      return;
+    }
+    function current() { return sequence === openSequence && dialog.open && matchingTakeContext(bound); }
+    voiceSaving = true;
+    [fields.recBtn, fields.saveVoiceBtn, fields.take_confirmed, fields.takeTranscriptInput,
+      fields.take_trim_start, fields.take_trim_end].forEach(function(input) { input.disabled = true; });
+    window.LixityComponents.setButtonPending(fields.trim_apply, true);
+    window.LixityComponents.setStatus(feedback, label("take_trim_pending"), "loading");
+    try {
+      var encoded = await audioBase64(prior.blob);
+      if (!current()) return;
+      var res = await request("audio-take-trim", Object.assign({}, bound, {audio:encoded, start_frame:start, end_frame:end}));
+      if (!current()) return;
+      var bytes = Uint8Array.from(atob(res.audio), function(c) { return c.charCodeAt(0); });
+      var name = audio.filename.slice(0, -4).slice(0, 168) + "-excerpt.wav";
+      var take = await window.LixityAudioTake.create(new Blob([bytes], {type:"audio/wav"}), {filename:name});
+      if (!current()) return;
+      if (take.metadata.audio.frames !== end - start) throw new Error("Unexpected excerpt length");
+      voiceSaving = false;
+      presentImportedTake(take, bound, prior);
+      window.LixityComponents.setStatus(feedback, label("take_trim_ready"), "ok");
+      fields.takeTranscriptInput.disabled = false;
+      fields.takeTranscriptInput.focus({preventScroll:true});
+    } catch (_) {
+      if (current()) window.LixityComponents.setStatus(feedback, label("take_trim_failed"), "err");
+    } finally {
+      voiceSaving = false;
+      [fields.take_confirmed, fields.takeTranscriptInput, fields.take_trim_start,
+        fields.take_trim_end].forEach(function(input) { input.disabled = false; });
+      window.LixityComponents.setButtonPending(fields.trim_apply, false);
+      if (current()) { fields.recBtn.disabled = !canRecordVoice(); fields.saveVoiceBtn.disabled = !takeValid; }
+    }
   }
   function matchingTakeContext(bound) {
     var current = tokens();
@@ -1261,12 +1742,7 @@
     if (fields.saveVoiceBtn) fields.saveVoiceBtn.disabled = true;
     status(label("saving"));
     try {
-      var reader = new FileReader();
-      var b64Wav = await new Promise(function(resolve, reject) {
-        reader.onload = function() { resolve(String(reader.result).split(",")[1]); };
-        reader.onerror = reject;
-        reader.readAsDataURL(savedBlob);
-      });
+      var b64Wav = await audioBase64(savedBlob);
       if (sequence !== openSequence || !dialog.open || captureContext !== context()) return;
       if (!spoken) throw new Error(label("transcript_help"));
       var res = await request("audio-microphone", Object.assign({}, bound, {
@@ -1276,25 +1752,23 @@
         profile_id: (settings && settings.selected) || "default"
       }));
       if (sequence !== openSequence || !dialog.open || captureContext !== context()) return;
-      if (referenceSaved(res)) {
-        lastRecordedWavBlob = null; importedTake = null; takeTokens = null; takeValid = false;
-        fields.takeExports.hidden = true;
-        fields.take_confirmed.closest("label").hidden = fields.takeNotice.hidden = true;
-      }
+      if (referenceSaved(res)) clearVoiceTake();
     } catch (err) { if (sequence === openSequence && dialog.open && captureContext === context()) status(err.message); }
     finally {
       voiceSaving = false;
-      if (sequence === openSequence && dialog.open) { fields.recBtn.disabled = !speechReady; if (fields.saveVoiceBtn) fields.saveVoiceBtn.disabled = !takeValid; }
+      updateRecordingDuration();
+      if (sequence === openSequence && dialog.open) { fields.recBtn.disabled = !canRecordVoice(); if (fields.saveVoiceBtn) fields.saveVoiceBtn.disabled = !takeValid; }
     }
   }
   function switchMode(newMode, initializing) {
     if (newMode === mode && !initializing) return true;
     if (profileSaving || voiceSaving || (direction && direction.busy())) return false;
-    if (mode === "profiles" && (pronunciationPending() || profilesDirty)) {
-      status(label(pronunciationPending() ? "pronunciation_pending" : "profiles_unsaved"));
+    var draft = profileDraftMessage();
+    if (draft) { status(label(draft)); return false; }
+    if (direction && direction.dirty() && newMode !== "reader" && newMode !== "output" && newMode !== mode) {
+      status(label("direction_switch_first"));
       return;
     }
-    if (direction && direction.dirty() && newMode !== mode && !(newMode === "output" && mode === "reader" && fields.ignore_direction.checked)) { status(label("direction_switch_first")); return; }
     if (newMode !== "reference" && (isRecordingVoice || recordingPending)) {
       ++recordingSequence;
       if (isRecordingVoice) stopVoiceRecording(); else releaseRecording();
@@ -1304,62 +1778,39 @@
     if (fields.tabs) {
       Object.keys(fields.tabs).forEach(function(k) {
         if (fields.tabs[k]) {
-          var active = k === mode || (mode === "output" && k === "reader");
+          var active = k === mode;
           fields.tabs[k].classList.toggle("active", active);
           fields.tabs[k].setAttribute("aria-selected", String(active));
           if (active) fields.panel.setAttribute("aria-labelledby", fields.tabs[k].id);
         }
       });
     }
-    fields.heading.textContent = label(mode === "reference" ? "record_author_title" : mode === "profiles" ? "profiles_title" : mode === "output" ? "output_title" : mode === "microphone" ? "microphone_title" : "reader_title");
+    fields.heading.textContent = label(mode === "reference" ? "record_author_title" : mode === "profiles" ? "profiles_title" : mode === "output" ? "chapter_output" : mode === "microphone" ? "microphone_title" : "reader_title");
     if (fields.reference_section) fields.reference_section.hidden = mode !== "reference";
-    if (fields.profile_row) fields.profile_row.hidden = mode !== "profiles";
-    fields.editor.hidden = mode !== "profiles";
-    if (fields.lexicon_section) fields.lexicon_section.hidden = mode !== "profiles";
-    if (fields.phonemes_section) {
-      fields.phonemes_section.hidden = mode !== "profiles" || (!profileSupport().phonemes && !fields.phonemes.value.trim());
-    }
-    fields.create.hidden = mode !== "profiles";
-    fields.remove_profile.hidden = mode !== "profiles";
-    fields.save.hidden = mode !== "profiles";
-    fields.profile_discard.hidden = mode !== "profiles";
+    updateRecordingDuration();
     if (direction && direction.section) direction.section.hidden = mode !== "reader";
-    fields.chapter.closest("label").hidden = mode !== "reader" && mode !== "output";
-    fields.target.closest("label").hidden = mode !== "profiles" || fields.target.disabled;
-    fields.runtime_hint.hidden = mode === "profiles" || mode === "reference";
-    fields.ignoreLabel.hidden = mode !== "reader" && mode !== "output";
-    fields.preview.hidden = (mode !== "reader" && mode !== "output") || !canRender;
-    fields.direction_plan.hidden = mode !== "reader" && mode !== "output";
-    fields.export_scope.closest("label").hidden = mode !== "reader" && mode !== "output";
-    fields.audit_section.hidden = mode !== "reader" && mode !== "output";
+    fields.chapter.closest("label").hidden = !inReader();
+    fields.runtime_hint.hidden = !inReader();
+    fields.preview.hidden = !inReader() || !canRender;
     fields.chapter_render.hidden = mode !== "output" || !canRender;
-    fields.open_output.hidden = mode !== "reader";
-    fields.cancel.hidden = (mode !== "reader" && mode !== "output") || !canRender;
+    fields.cancel.hidden = !inReader() || !canRender;
     fields.reuseLabel.hidden = mode !== "output" || !canRender;
-    fields.context.hidden = mode === "profiles" || mode === "reference";
-    if (fields.microphone_section) {
-      fields.microphone_section.hidden = mode !== "microphone";
-      if (mode === "microphone") fields.microphone_section.open = true;
-    }
+    fields.context.hidden = !inReader();
     arrangeSections();
+    if (!initializing) presentSpeechSurface();
     refreshChapterAudio();
     if (mode === "reference") renderActiveVoiceBadge();
     fields.panel.scrollTop = 0;
-    status(speechLoadMessage);
+    status(mode === "output" && direction.dirty() ? label("direction_output_draft") : speechLoadMessage);
+    if (!initializing && mode === "microphone") void refreshMicrophone();
     return true;
   }
   function build() {
     dialog = node("dialog", body, "lixity-modal"); dialog.id = "modal-speech"; dialog.setAttribute("aria-labelledby", "speech-title");
     var card = node("div", dialog, "modal-card"), header = node("div", card, "modal-header");
     fields.heading = node("h3", header, "", label("title")); fields.heading.id = "speech-title";
-    var close = button(header, "close", function() {
-      if (profileSaving || voiceSaving) { status(label("saving")); return; }
-      if (direction.busy()) { status(label("saving")); return; }
-      if (direction.dirty()) { status(label("direction_switch_first")); return; }
-      if (mode === "profiles" && pronunciationPending()) { status(label("pronunciation_pending")); return; }
-      if (mode === "profiles" && profilesDirty) { status(label("profiles_unsaved")); return; }
-      dialog.close();
-    });
+    fields.heading.tabIndex = -1;
+    var close = button(header, "close", closeAudioSurface);
     close.className = "modal-close";
     close.textContent = "✕";
     var closeLabel = uiLabel("modal_close");
@@ -1367,26 +1818,41 @@
     close.setAttribute("aria-label", closeLabel);
     close.setAttribute("title", closeLabel);
     close.setAttribute("aria-keyshortcuts", "Escape");
-    var tabsBar = node("div", card, "modal-tabs");
-    tabsBar.setAttribute("role", "tablist");
-    var tabVoice = node("button", tabsBar, "modal-tab-btn", label("tab_voice"));
-    var tabProfiles = node("button", tabsBar, "modal-tab-btn", label("tab_profiles"));
-    var tabReader = node("button", tabsBar, "modal-tab-btn", label("tab_reader"));
-    var tabMic = node("button", tabsBar, "modal-tab-btn", label("tab_microphone"));
-    tabVoice.type = tabProfiles.type = tabReader.type = tabMic.type = "button";
-    tabVoice.addEventListener("click", function() { switchMode("reference"); });
-    tabProfiles.addEventListener("click", function() { switchMode("profiles"); });
-    tabReader.addEventListener("click", function() { switchMode("reader"); });
-    tabMic.addEventListener("click", function() { switchMode("microphone"); });
-    fields.tabs = {reference: tabVoice, profiles: tabProfiles, reader: tabReader, microphone: tabMic};
+    fields.project_audio_tabs = node("div", card, "modal-tabs speech-project-tabs");
+    fields.reader_audio_tabs = node("div", card, "modal-tabs speech-reader-tabs");
+    fields.tabs = {};
     fields.status = node("p", card, "ctl-status modal-intro"); fields.status.id = "speech-status"; fields.status.setAttribute("role", "status"); fields.status.setAttribute("aria-live", "polite");
     var content = node("div", card, "modal-body"); fields.panel = content;
     content.id = "speech-panel"; content.setAttribute("role", "tabpanel");
-    tabsBar.setAttribute("aria-label", label("action_title"));
-    Object.keys(fields.tabs).forEach(function(key) {
-      var tab = fields.tabs[key]; tab.id = "speech-tab-" + key; tab.setAttribute("role", "tab"); tab.setAttribute("aria-controls", content.id);
-    });
-    initKeyboardTabs(tabsBar, '[role="tab"]', false);
+    function setupTabs(container, tabs) {
+      container.setAttribute("role", "tablist");
+      container.setAttribute("aria-label", label("action_title"));
+      tabs.forEach(function([key, id, text]) {
+        var tab = node("button", container, "modal-tab-btn", label(text));
+        tab.type = "button"; tab.id = "speech-tab-" + id;
+        tab.setAttribute("role", "tab"); tab.setAttribute("aria-controls", content.id);
+        tab.addEventListener("click", function() { switchMode(key); });
+        fields.tabs[key] = tab;
+      });
+      initKeyboardTabs(container, '[role="tab"]', false);
+    }
+    setupTabs(fields.project_audio_tabs, [["reference", "reference", "tab_voice"],
+      ["profiles", "profiles", "tab_profiles"], ["microphone", "microphone", "tab_microphone"]]);
+    setupTabs(fields.reader_audio_tabs, [["reader", "direction", "direction_title"], ["output", "output", "chapter_output"]]);
+    fields.tabs.output.dataset.speechAction = "output_title";
+    fields.reader_shortcut = node("div", content, "row speech-project-shortcut");
+    button(fields.reader_shortcut, "go_to_manuscript_audio", function() {
+      if (switchMode("reader")) fields.export_scope.value = "preview";
+    }).id = "speech-tab-reader";
+    fields.project_profile_summary = node("div", content, "row speech-profile-summary");
+    fields.project_profile_name = node("p", fields.project_profile_summary, "ctl-note");
+    fields.project_profile_name.id = "speech-project-profile";
+    button(fields.project_profile_summary, "profiles_title", function() {
+      if (!closeAudioSurface()) return;
+      switchActiveView("project", true);
+      fields.project_profiles_action.focus({preventScroll:true});
+      open("profiles");
+    }).id = "speech-edit-project-voice";
 
     fields.reference_section = node("div", content, "author-voice-studio");
     fields.reference_section.hidden = true;
@@ -1412,32 +1878,14 @@
         var selected = ["phonetic", "short", "custom"][index] === sampleVariant;
         el.setAttribute("aria-pressed", String(selected)); el.classList.toggle("active", selected);
       });
-      var langTexts = calibrationTexts || {
-        phonetic: "Einst stritten sich Nordwind und Sonne, wer von ihnen beiden wohl der Stärkere wäre, als ein Wanderer, der in einen warmen Mantel gehüllt war, des Weges daherkam. Sie wurden einig, dass derjenige für den Stärkeren gelten sollte, der den Wanderer zwingen würde, seinen Mantel abzulegen. Der Nordwind blies mit aller Macht, aber je mehr er blies, desto fester hüllte sich der Wanderer in seinen Mantel ein. Endlich gab der Nordwind den Kampf auf.",
-        short: "Zwölf Boxkämpfer jagen Viktor quer über den großen Sylter Deich. Ein kluger Richter prüft jede Aussage gewissenhaft und ruhig."
-      };
-      if (sampleVariant === "phonetic") {
-        fields.promptText.textContent = langTexts.phonetic;
-        fields.promptText.hidden = false;
-        fields.customTextarea.hidden = true;
-      } else if (sampleVariant === "short") {
-        fields.promptText.textContent = langTexts.short;
-        fields.promptText.hidden = false;
-        fields.customTextarea.hidden = true;
-      } else {
-        fields.promptText.hidden = true;
-        fields.customTextarea.hidden = false;
-        if (!fields.customTextarea.value) fields.customTextarea.value = langTexts.short;
-      }
+      var custom = sampleVariant === "custom";
+      fields.promptText.hidden = custom;
+      fields.customTextarea.hidden = !custom;
+      fields.promptText.textContent = calibrationTexts?.[sampleVariant] || "";
+      if (custom && !fields.customTextarea.value) fields.customTextarea.value = calibrationTexts?.short || "";
     }
-    btnFull.addEventListener("click", function() {
-      sampleVariant = "phonetic"; btnFull.classList.add("active"); btnShort.classList.remove("active"); btnCustom.classList.remove("active"); updatePromptText();
-    });
-    btnShort.addEventListener("click", function() {
-      sampleVariant = "short"; btnShort.classList.add("active"); btnFull.classList.remove("active"); btnCustom.classList.remove("active"); updatePromptText();
-    });
-    btnCustom.addEventListener("click", function() {
-      sampleVariant = "custom"; btnCustom.classList.add("active"); btnFull.classList.remove("active"); btnShort.classList.remove("active"); updatePromptText();
+    [[btnFull, "phonetic"], [btnShort, "short"], [btnCustom, "custom"]].forEach(function([button, variant]) {
+      button.addEventListener("click", function() { sampleVariant = variant; updatePromptText(); });
     });
     fields.updatePromptText = updatePromptText;
     fields.promptControls = [btnFull, btnShort, btnCustom, fields.customTextarea];
@@ -1445,12 +1893,23 @@
     fields.promptControls.forEach(function(el) { el.dataset.help = label("transcript_help"); });
     updatePromptText();
     var recControls = node("div", fields.reference_section, "voice-record-controls");
+    fields.recLimit = node("p", fields.reference_section, "ctl-note");
+    fields.recLimit.id = "speech-record-limit"; fields.recLimit.hidden = true;
+    recControls.before(fields.recLimit);
     fields.recBtn = node("button", recControls, "ctl voice-rec-btn", label("record_start"));
     fields.recBtn.type = "button"; addHelp(fields.recBtn, "record_start");
-    fields.recTimer = node("span", recControls, "voice-rec-timer", "00:00");
+    fields.recBtn.setAttribute("aria-describedby", fields.recLimit.id);
+    fields.recTimer = node("span", recControls, "voice-rec-timer");
+    fields.recTimer.setAttribute("role", "timer");
+    fields.recTimer.setAttribute("aria-label", label("record_elapsed"));
     fields.recTimer.hidden = true;
     fields.recState = node("span", recControls, "voice-record-state");
     fields.recState.setAttribute("role", "status"); fields.recState.setAttribute("aria-live", "polite"); fields.recState.hidden = true;
+    button(recControls, "recording_duration_edit", function() {
+      if (recordingDurationHasTake()) { status(label("recording_duration_finish_take")); return; }
+      fields.recording_defaults_section.open = true;
+      fields.recording_duration.focus();
+    });
     fields.recError = node("p", fields.reference_section, "voice-record-error");
     fields.recError.id = "speech-record-error"; fields.recError.hidden = true;
     fields.takeCard = node("div", fields.reference_section, "voice-take-card");
@@ -1458,6 +1917,25 @@
     fields.takePlayer = node("audio", fields.takeCard, "media-player");
     fields.takePlayer.controls = true; fields.takeWidget = window.createSpeechPlayer(fields.takePlayer, {label: label, onError: status});
     fields.takeStats = node("div", fields.takeCard, "voice-take-stats");
+    fields.take_trim = node("details", fields.takeCard, "settings-section");
+    fields.take_trim.id = "speech-take-trim";
+    fields.take_trim.hidden = true;
+    node("summary", fields.take_trim, "", label("take_trim_title"));
+    fields.trim_controls = node("div", fields.take_trim, "ctl-group");
+    node("p", fields.trim_controls, "ctl-note", label("take_trim_help"));
+    var trimInputs = node("div", fields.trim_controls, "settings-grid");
+    [field(trimInputs, "take_trim_start", "number"), field(trimInputs, "take_trim_end", "number")].forEach(function(input) {
+      input.min = "0"; input.step = "any";
+    });
+    fields.trim_apply = button(node("div", fields.trim_controls, "row"), "take_trim_apply", trimVoiceTake);
+    fields.trim_restore = button(node("div", fields.take_trim, "row"), "take_trim_restore", function() {
+      if (!trimSource || voiceSaving || isRecordingVoice || recordingPending || !matchingTakeContext(takeTokens)) return;
+      presentImportedTake(trimSource, takeTokens);
+      fields.take_trim.querySelector("summary").focus({preventScroll:true});
+    });
+    fields.trim_status = node("p", fields.take_trim, "ctl-status");
+    fields.trim_status.id = "speech-take-trim-status";
+    fields.trim_status.setAttribute("role", "status");
     var takeTranscriptSection = node("details", fields.takeCard, "settings-section");
     node("summary", takeTranscriptSection, "", label("upload_voice_transcript"));
     node("p", takeTranscriptSection, "ctl-note", label("transcript_help"));
@@ -1474,8 +1952,11 @@
     fields.takeExports = node("div", fields.takeCard, "row"); fields.takeExports.hidden = true;
     button(fields.takeExports, "take_download_wav", function() { exportVoiceTake("wav"); });
     button(fields.takeExports, "take_download_json", function() { exportVoiceTake("json"); });
-    fields.saveVoiceBtn = node("button", fields.takeCard, "ctl primary voice-save-btn", label("record_save"));
+    var takeActions = node("div", fields.takeCard, "row");
+    fields.saveVoiceBtn = node("button", takeActions, "ctl primary voice-save-btn", label("record_save"));
     fields.saveVoiceBtn.type = "button"; addHelp(fields.saveVoiceBtn, "record_save");
+    fields.takeDiscard = button(takeActions, "take_discard", discardVoiceTake);
+    fields.takeDiscard.hidden = true;
     fields.recBtn.addEventListener("click", function() {
       if (!isRecordingVoice) startVoiceRecording();
       else stopVoiceRecording();
@@ -1508,15 +1989,39 @@
       } catch (_) { if (sequence === openSequence && dialog.open && captureContext === context()) status(label("take_invalid")); }
       finally {
         voiceSaving = false;
-        if (sequence === openSequence && dialog.open) { uploadBtn.disabled = false; fields.recBtn.disabled = !speechReady; }
+        if (sequence === openSequence && dialog.open) { uploadBtn.disabled = false; fields.recBtn.disabled = !canRecordVoice(); }
       }
     });
 
-    fields.profile_row = node("div", content, "row"); field(fields.profile_row, "profile", "select"); fields.create = button(fields.profile_row, "create", create);
-    fields.remove_profile = button(fields.profile_row, "remove_profile", removeProfile);
-    fields.schema_hint = node("p", content, "ctl-note", label("schema_hint"));
-    fields.schema_review = node("p", content, "ctl-note"); fields.schema_review.id = "speech-schema-review"; fields.schema_review.hidden = true;
-    fields.schema_preview = button(content, "schema_preview", async function() {
+    fields.recording_defaults_section = node("details", fields.reference_section, "settings-section panel-disclosure speech-recording-defaults");
+    var recordingHeading = node("summary", fields.recording_defaults_section, "", label("recording_duration_title"));
+    recordingHeading.id = "speech-recording-defaults-heading";
+    fields.recording_defaults = node("fieldset", fields.recording_defaults_section, "ctl-group");
+    fields.recording_defaults.setAttribute("aria-labelledby", recordingHeading.id);
+    var recordingDuration = field(fields.recording_defaults, "recording_duration", "number");
+    recordingDuration.step = "1";
+    fields.recording_duration_hint = node("p", fields.recording_defaults, "ctl-note");
+    fields.recording_duration_hint.id = "speech-recording-duration-hint";
+    fields.recording_duration_error = node("p", fields.recording_defaults, "ctl-note");
+    fields.recording_duration_error.id = "speech-recording-duration-error";
+    fields.recording_duration_error.setAttribute("aria-live", "polite");
+    recordingDuration.setAttribute("aria-describedby", fields.recording_duration_hint.id + " " + fields.recording_duration_error.id);
+    var recordingActions = node("div", fields.recording_defaults, "row");
+    fields.recording_duration_save = button(recordingActions, "recording_duration_save", saveRecordingDuration);
+    fields.recording_duration_save.classList.add("primary");
+    fields.recording_duration_discard = button(recordingActions, "recording_duration_discard", function() {
+      prepareRecordingDuration(); status("");
+    });
+    recordingDuration.addEventListener("input", function() {
+      updateRecordingDuration();
+      status(recordingDurationChanged() ? label("recording_duration_unsaved") : "");
+    });
+    fields.schema_section = node("section", content, "settings-section speech-profile-schema");
+    node("h4", fields.schema_section, "section-heading", label("schema_title"));
+    node("p", fields.schema_section, "ctl-note", label("schema_hint"));
+    fields.schema_review = node("p", fields.schema_section, "ctl-note"); fields.schema_review.id = "speech-schema-review"; fields.schema_review.hidden = true;
+    var schemaActions = node("div", fields.schema_section, "row");
+    fields.schema_preview = button(schemaActions, "schema_preview", async function() {
       var sequence = openSequence; fields.schema_preview.disabled = true;
       try {
         var result = await request("audio-schema", Object.assign(tokens(), {apply: false, schema_version: currentAudioSchema}));
@@ -1530,8 +2035,10 @@
       } catch (error) { if (sequence === openSequence && dialog.open) status(error.message); }
       finally { if (sequence === openSequence) fields.schema_preview.disabled = false; }
     });
-    fields.schema_apply = button(content, "schema_apply", async function() {
-      if (profilesDirty || pronunciationPending() || direction.dirty()) { status(label("profiles_unsaved")); return; }
+    fields.schema_apply = button(schemaActions, "schema_apply", async function() {
+      if (profileSaving) return;
+      var draft = profileDraftMessage();
+      if (draft || direction.dirty()) { status(label(draft || "profiles_unsaved")); return; }
       fields.schema_apply.disabled = true;
       try {
         await request("audio-schema", Object.assign(tokens(), {apply: true, snapshot: fields.schema_apply.dataset.snapshot, schema_version: currentAudioSchema}));
@@ -1539,14 +2046,19 @@
       } catch (error) { status(error.message); fields.schema_apply.disabled = false; }
     });
     fields.schema_apply.hidden = true;
+    fields.schema_apply.classList.add("primary");
+    fields.profile_row = node("div", content, "speech-profile-picker");
+    choiceField(fields.profile_row, "profile");
+    var profileActions = node("div", fields.profile_row, "speech-profile-actions");
+    fields.create = button(profileActions, "create", create);
+    fields.remove_profile = button(profileActions, "remove_profile", removeProfile);
     field(content, "target", "select"); fields.target.closest("label").hidden = true;
     var targetHint = node("span", fields.target.closest("label"), "ctl-note", label("target_scope"));
     targetHint.id = "speech-target-hint"; fields.target.setAttribute("aria-describedby", targetHint.id);
     fields.target.addEventListener("change", function() {
-      executionTarget = fields.target.value; invalidate();
-      updateRuntimeHint();
-      updateWorkerStatus();
+      invalidate();
     });
+    field(content, "worker_target", "select").addEventListener("change", updateWorkerStatus);
     fields.worker_status = node("p", content, "ctl-note"); fields.worker_status.id = "speech-worker-status";
     fields.worker_status.setAttribute("aria-live", "polite");
     fields.worker_guide = node("a", content, "ctl-link", label("worker_guide"));
@@ -1559,30 +2071,32 @@
       catch (_) { if (currentOpen()) { workers = null; updateWorkerStatus(); } }
       finally { if (currentOpen()) fields.worker_refresh.disabled = false; }
     });
-    fields.editor = node("fieldset", content, "settings-section");
-    node("legend", fields.editor, "", label("delivery"));
-    var grid = node("div", fields.editor, "settings-grid");
+    fields.editor = node("fieldset", content, "settings-section speech-profile-editor");
+    fields.editor.setAttribute("aria-label", label("profiles_title"));
+    var voiceSettings = node("fieldset", fields.editor, "speech-profile-voice");
+    node("legend", voiceSettings, "", label("voice_settings"));
+    var grid = node("div", voiceSettings, "settings-grid speech-profile-voice-grid");
     field(grid, "name").maxLength = 100; fields.name.required = true;
     field(grid, "engine", "select");
-    fields.model = node("span", fields.engine.closest("label"), "ctl-note"); fields.model.id = "speech-model-hint";
-    ["language", "voice"].forEach(function(key) { field(grid, key, "select"); });
+    ["language", "voice"].forEach(function(key) { choiceField(grid, key); });
     ["base_url", "provider_model", "api_key_env", "provider_voice", "provider_language"].forEach(function(key) {
       var input = field(grid, key, key === "base_url" ? "url" : "text"); input.maxLength = key === "base_url" ? 2048 : 200;
       input.required = key !== "api_key_env";
     });
     field(grid, "supports_instructions", "checkbox").addEventListener("change", voiceControls);
-    fields.engine.setAttribute("aria-describedby", "speech-model-hint speech-worker-status");
-    fields.model_conflict = node("p", fields.editor, "ctl-note"); fields.model_conflict.setAttribute("aria-live", "polite"); fields.model_conflict.hidden = true;
-    fields.voice_hint = node("p", fields.editor, "ctl-note", label("voice_hint"));
-    field(fields.editor, "voice_description", "textarea").maxLength = 2000;
-    fields.design_hint = node("p", fields.editor, "ctl-note", label("design_hint"));
+    fields.model_conflict = node("p", voiceSettings, "ctl-note"); fields.model_conflict.setAttribute("aria-live", "polite"); fields.model_conflict.hidden = true;
+    field(voiceSettings, "voice_description", "textarea").maxLength = 2000;
+    fields.design_hint = node("p", voiceSettings, "ctl-note", label("design_hint"));
     fields.design_hint.id = "speech-design-hint"; fields.voice_description.setAttribute("aria-describedby", fields.design_hint.id);
-    var reference = field(fields.editor, "reference_id", "select");
-    fields.reference_hint = node("p", fields.editor, "ctl-note", label("reference_hint"));
+    var reference = field(voiceSettings, "reference_id", "select");
+    fields.reference_hint = node("p", voiceSettings, "ctl-note", label("reference_hint"));
     fields.reference_hint.id = "speech-reference-hint"; reference.setAttribute("aria-describedby", fields.reference_hint.id);
-    fields.profile_voice_card = node("div", fields.editor, "voice-active-card");
+    fields.profile_voice_card = node("div", voiceSettings, "voice-active-card");
     fields.profile_voice_card.hidden = true;
-    var speed = field(grid, "speed", "number"); speed.step = "any"; speed.required = true;
+    var delivery = node("fieldset", fields.editor, "speech-profile-delivery");
+    node("legend", delivery, "", label("delivery"));
+    var deliveryGrid = node("div", delivery, "settings-grid speech-profile-delivery-grid");
+    var speed = field(deliveryGrid, "speed", "number"); speed.step = "any"; speed.required = true;
     var speedField = speed.closest("label");
     fields.speed_label = speedField.querySelector(".form-label");
     fields.speed_label.id = "speech-speed-label";
@@ -1590,16 +2104,16 @@
     fields.speed_hint.id = "speech-speed-hint";
     speed.setAttribute("aria-labelledby", fields.speed_label.id);
     speed.setAttribute("aria-describedby", fields.speed_hint.id);
-    ["paragraph_pause", "scene_pause"].forEach(function(key) { field(grid, key, "number").required = true; });
-    field(fields.editor, "instructions", "textarea").maxLength = 2000;
-    fields.instructions_note = node("p", fields.editor, "ctl-note", label("instructions_export_only"));
+    ["paragraph_pause", "scene_pause"].forEach(function(key) { field(deliveryGrid, key, "number").required = true; });
+    field(delivery, "instructions", "textarea").maxLength = 2000;
+    fields.instructions_note = node("p", delivery, "ctl-note", label("instructions_export_only"));
     fields.instructions_note.id = "speech-instructions-note";
     fields.instructions.setAttribute("aria-describedby", fields.instructions_note.id);
-    profileProsody = createProsody(fields.editor, "prosody-", function() { profilesDirty = true; invalidate(); }, false);
+    profileProsody = createProsody(delivery, "prosody-", function() { profilesDirty = true; invalidate(); }, false);
     [fields.voice_description, fields.reference_id, fields.instructions].forEach(function(input) {
       input.addEventListener("input", function() { updateModelFields(); updateVoiceCard(); });
     });
-    var lexicon = node("details", content, "settings-section"); lexicon.id = "speech-lexicon";
+    var lexicon = node("details", content, "settings-section panel-disclosure speech-profile-utilities"); lexicon.id = "speech-lexicon";
     fields.lexicon_section = lexicon;
     node("summary", lexicon, "", label("pronunciations"));
     var searchRow = node("div", lexicon, "row"), search = field(searchRow, "pronunciation_search", "search");
@@ -1620,7 +2134,7 @@
     field(rawList, "pronunciations", "textarea").addEventListener("input", renderPronunciations);
     node("p", rawList, "ctl-note", label("pronunciation_hint"));
     node("p", rawList, "ctl-note", label("pronunciation_bulk_special"));
-    fields.phonemes_section = node("details", content, "settings-section"); fields.phonemes_section.id = "speech-phonemes-section";
+    fields.phonemes_section = node("details", content, "settings-section panel-disclosure speech-profile-utilities"); fields.phonemes_section.id = "speech-phonemes-section";
     node("summary", fields.phonemes_section, "", label("phonemes"));
     field(fields.phonemes_section, "phonemes", "textarea").rows = 5;
     fields.phonemes.placeholder = "Vogel=ˈfoːɡəl";
@@ -1632,14 +2146,18 @@
       node:node, field:field, button:button, options:options, label:label, request:request,
       status:status, invalidate:invalidate, tokens:tokens, createProsody:createProsody, applyPauseBounds:applyPauseBounds,
       current:function() { return dialog.open && openedContext === context(); },
-      selected:function(p) { paragraph={identity:p.anchor,chapter:p.chapter}; fields.chapter.value=String(p.chapter); }
+      selected:function(p) {
+        paragraph={identity:p.anchor,chapter:p.chapter}; fields.chapter.value=String(p.chapter);
+        if (speechDocked) placeReaderSpeech(sourcePanel(p.anchor), true);
+      }
     });
     fields.runtime_hint = node("p", content, "ctl-note", label("runtime_hint")); fields.runtime_hint.id = "speech-runtime-hint";
-    var ignore = node("label", content, "form-checkbox"); ignore.hidden = true;
+    var ignore = node("label", content, "form-checkbox");
     fields.ignore_direction = node("input", ignore); fields.ignore_direction.type = "checkbox"; fields.ignore_direction.id = "speech-ignore-direction";
     node("span", ignore, "", label("ignore_direction"));
     fields.ignore_direction.addEventListener("change", invalidate);
-    fields.ignoreLabel = ignore;
+    fields.run_options = node("div", content, "ctl-group");
+    fields.run_options.append(fields.target.closest("label"), ignore);
     var reuse = node("label", content, "form-checkbox"); reuse.hidden = true;
     fields.reuse = node("input", reuse); fields.reuse.type = "checkbox"; fields.reuse.id = "speech-reuse"; fields.reuse.checked = true;
     node("span", reuse, "", label("reuse"));
@@ -1656,14 +2174,28 @@
     node("p", fields.audit_section, "ctl-note", label("audit_hint"));
     field(fields.audit_section, "audit_audio", "file").accept = ".wav,.flac,.mp3";
     field(fields.audit_section, "audit_transcript", "file").accept = ".json";
-    [fields.audit_audio, fields.audit_transcript].forEach(function(input) { input.addEventListener("change", invalidate); });
+    field(fields.audit_section, "audit_scope", "select");
+    options(fields.audit_scope, [["chapter", label("scope_chapter")], ["manuscript", label("scope_manuscript")]], "chapter");
+    [fields.audit_audio, fields.audit_transcript, fields.audit_scope].forEach(function(input) { input.addEventListener("change", invalidate); });
     fields.audit_run = button(fields.audit_section, "audit_run", inspectAudio);
     fields.audit_result = node("div", fields.audit_section, "audio-audit-result"); fields.audit_result.setAttribute("aria-live", "polite");
-    fields.microphone_section = node("details", content, "settings-section");
+    fields.microphone_section = node("section", content, "settings-section");
     fields.microphone_section.id = "speech-microphone-section";
-    node("summary", fields.microphone_section, "", label("microphone_title"));
-    field(fields.microphone_section, "microphone_device", "select");
-    var micGainField = node("div", fields.microphone_section, "setting-field");
+    var micInputRow = node("div", fields.microphone_section, "row speech-microphone-input");
+    fields.microphone_choice = field(micInputRow, "microphone_device", "select").closest("label");
+    fields.microphone_current = node("div", micInputRow, "setting-field");
+    node("span", fields.microphone_current, "form-label", label("microphone_device"));
+    fields.microphone_current_name = node("strong", fields.microphone_current);
+    fields.microphone_current_name.id = "speech-microphone-current";
+    fields.microphone_refresh = button(micInputRow, "microphone_refresh", refreshMicrophone);
+    fields.microphone_inventory_status = node("div", fields.microphone_section, "ctl-status");
+    fields.microphone_inventory_status.id = "speech-microphone-inventory-status";
+    fields.microphone_inventory_status.setAttribute("role", "status");
+    var micCapture = nativeMicrophoneInventory();
+    var micHelp = micCapture && window.lixityDesktop.platform === "macos" ? "microphone_macos_help" :
+      micCapture ? "microphone_native_help" : "microphone_help";
+    fields.microphone_scope = node("p", fields.microphone_section, "ctl-note", label(micHelp));
+    var micGainField = fields.microphone_gain_field = node("div", fields.microphone_section, "setting-field");
     var micGainLabel = node("span", micGainField, "form-label", label("microphone_gain"));
     micGainLabel.id = "speech-microphone-gain-label";
     var micGainRow = node("div", micGainField, "row");
@@ -1673,81 +2205,116 @@
     fields.microphone_gain.type = "number"; fields.microphone_gain.step = "1"; fields.microphone_gain.required = true;
     [fields.microphone_gain_range, fields.microphone_gain].forEach(function(input) { input.setAttribute("aria-labelledby", micGainLabel.id); });
     fields.microphone_gain.style.width = "5rem";
-    fields.microphone_gain_info = node("span", micGainRow, "ctl-note");
+    fields.microphone_gain_info = node("p", micGainField, "ctl-note");
     fields.microphone_gain_info.id = "speech-microphone-gain-info";
-    [fields.microphone_gain_range, fields.microphone_gain].forEach(function(input) { input.setAttribute("aria-describedby", fields.microphone_gain_info.id); });
-    fields.microphone_device.addEventListener("change", showMicrophoneGain);
-    fields.microphone_gain_range.addEventListener("input", function() { fields.microphone_gain.value = fields.microphone_gain_range.value; });
-    fields.microphone_gain.addEventListener("input", function() { fields.microphone_gain_range.value = fields.microphone_gain.value; });
-    fields.microphone_set_btn = button(fields.microphone_section, "microphone_set_gain", async function() {
-      var mixer = microphoneMixer();
-      if (microphoneBusy || !mixer || mixer.max > 100 || !fields.microphone_gain.reportValidity()) return;
-      var g = Number(fields.microphone_gain.value), sequence = openSequence, device = fields.microphone_device.value;
+    fields.microphone_gain_status = node("p", fields.microphone_section, "ctl-status");
+    fields.microphone_gain_status.id = "speech-microphone-gain-status";
+    fields.microphone_gain_status.setAttribute("role", "status");
+    [fields.microphone_gain_range, fields.microphone_gain].forEach(function(input) {
+      input.setAttribute("aria-describedby", fields.microphone_gain_info.id + " " + fields.microphone_gain_status.id);
+    });
+    fields.microphone_device.addEventListener("change", function() {
+      preferredMicrophone = fields.microphone_device.value;
+      showMicrophoneGain();
+      if (!nativeMicrophoneInventory()) void refreshMicrophone();
+    });
+    function editGain(source, target) {
+      target.value = source.value;
+      fields.microphone_gain.removeAttribute("aria-invalid");
+      window.LixityComponents.setStatus(fields.microphone_gain_status, "");
+    }
+    fields.microphone_gain_range.addEventListener("input", function() { editGain(fields.microphone_gain_range, fields.microphone_gain); });
+    fields.microphone_gain.addEventListener("input", function() { editGain(fields.microphone_gain, fields.microphone_gain_range); });
+    fields.microphone_set_btn = button(micGainRow, "microphone_set_gain", async function() {
+      var mixer = microphoneMixer(), input = fields.microphone_gain, feedback = fields.microphone_gain_status;
+      if (microphoneBusy || microphoneRefreshing || mixer?.writable !== true) return;
+      if (!input.validity.valid) {
+        input.setAttribute("aria-invalid", "true");
+        window.LixityComponents.setStatus(feedback, uiFormat("speech_microphone_gain_invalid", {minimum:mixer.min, maximum:mixer.max}), "err");
+        input.focus({preventScroll:true});
+        return;
+      }
+      var g = input.valueAsNumber, sequence = openSequence, device = fields.microphone_device.value;
+      if (g === microphoneState.gain) {
+        window.LixityComponents.setStatus(feedback, uiFormat("speech_microphone_gain_same", {gain:g}), "ok");
+        return;
+      }
       microphoneBusy = true; microphoneControls();
+      window.LixityComponents.setStatus(feedback, label("microphone_gain_applying"), "loading");
+      function current() { return sequence === openSequence && dialog.open && context() === openedContext; }
       try {
         var res = await request("audio-microphone", {action: "set_gain", gain: g, card:mixer.card, control:mixer.control});
-        if (sequence !== openSequence || !dialog.open || context() !== openedContext) return;
-        populateMicrophone(res, device);
-        status(microphoneMixer() ? uiFormat("speech_microphone_gain_set", {gain:res.current_gain}) : label("microphone_gain_unknown"));
-      } catch (err) { if (sequence === openSequence && dialog.open) status(err.message); }
-      finally { if (sequence === openSequence) { microphoneBusy = false; microphoneControls(); } }
+        if (!current()) return;
+        populateMicrophone(browserMicrophoneState(res));
+        var reported = microphoneMixer();
+        if (!reported || fields.microphone_device.value !== device || String(reported.card) !== String(mixer.card) || reported.control !== mixer.control) {
+          window.LixityComponents.setStatus(feedback, label("microphone_gain_unverified"), "err");
+        } else if (microphoneState.gain !== g) {
+          window.LixityComponents.setStatus(feedback, uiFormat("speech_microphone_gain_different", {requested:g, actual:microphoneState.gain}), "warn");
+        } else {
+          window.LixityComponents.setStatus(feedback, uiFormat("speech_microphone_gain_set", {gain:g}), "ok");
+        }
+      } catch (_) {
+        if (current()) window.LixityComponents.setStatus(feedback, label("microphone_gain_failed"), "err");
+      } finally {
+        if (sequence === openSequence) { microphoneBusy = false; microphoneControls(); }
+      }
     });
     var micCalibActions = node("div", fields.microphone_section, "row");
     fields.microphone_calib_btn = button(micCalibActions, "microphone_calibrate", async function() {
-      if (microphoneBusy || !microphoneState || !fields.microphone_device.value) return;
+      if (microphoneBusy || microphoneRefreshing || !fields.microphone_device.value) return;
       var sequence = openSequence, mixer = microphoneMixer(), dev = fields.microphone_device.value;
+      var capture = nativeMicrophoneInventory();
       microphoneBusy = true; microphoneControls(); fields.microphone_calib_result.replaceChildren();
-      var prepNote = node("p", fields.microphone_calib_result, "ctl-note", label("microphone_calib_prep"));
-      status(label("microphone_calib_running"));
+      var feedback = fields.microphone_check_status;
+      window.LixityComponents.setStatus(feedback, label(capture ? "microphone_calib_native_prep" : "microphone_calib_prep"), "loading");
       try {
         var res;
-        if (microphoneState && microphoneState._desktopNative && window.lixityDesktop &&
-            window.lixityDesktop.audioCapture && typeof window.lixityDesktop.audioCapture.calibrate === "function") {
-          var nativeCal = await window.lixityDesktop.audioCapture.calibrate(dev, 4.0);
-          res = { calibration: nativeCal };
+        if (capture) {
+          res = {calibration:await capture.calibrate(dev, 4.0)};
         } else {
           // Measure the selected device at its current level. The calibration API's
           // optional gain targets its default mixer, which may be another card.
           res = await request("audio-microphone", {action: "calibrate", device: dev});
         }
         if (sequence !== openSequence || !dialog.open || context() !== openedContext) return;
-        prepNote.remove();
-        if (res && res.calibration) {
-          var cal = res.calibration;
-          var card = node("div", fields.microphone_calib_result, "audit-summary");
-          var vBadge = node("div", card, "badge", cal.verdict_label);
-          if (cal.verdict === "too_hot") vBadge.classList.add("badge-fail");
-          else if (cal.verdict === "calibrated") vBadge.classList.add("badge-pass");
-          else vBadge.classList.add("badge-warn");
-          var snrLabel = label("microphone_calib_snr");
-          node("p", card, "", "Peak: " + (cal.peak_dbfs >= 0 ? "+" : "") + cal.peak_dbfs.toFixed(1) + " dBFS · Clipping: " + cal.clipping_samples + " · " + snrLabel + ": " + cal.snr_db.toFixed(1) + " dB");
-          // Recommendations currently use the backend's default card/Mic gain.
-          if (mixer && mixer.max <= 100 && String(mixer.card) === "1" && mixer.control === "Mic" && Number.isInteger(cal.recommended_gain) &&
-              cal.recommended_gain >= mixer.min && cal.recommended_gain <= mixer.max && cal.recommended_gain !== microphoneState.current_gain) {
-            var applyGainText = uiFormat("speech_microphone_calib_apply_gain", {gain: cal.recommended_gain});
-            var recBtn = node("button", card, "ctl", applyGainText);
-            recBtn.type = "button";
-            recBtn.addEventListener("click", function() {
-              fields.microphone_gain.value = fields.microphone_gain_range.value = String(cal.recommended_gain);
-              fields.microphone_set_btn.click();
-            });
-          }
-          status(label("microphone_calib_done"));
+        var cal = res?.calibration;
+        if (!cal || !Number.isFinite(cal.peak_dbfs) || !Number.isInteger(cal.clipping_samples) || typeof cal.signal_present !== "boolean" ||
+            !["calibrated", "too_hot", "too_quiet"].includes(cal.verdict)) throw new Error("Invalid microphone check");
+        window.LixityComponents.setStatus(feedback, "");
+        var verdict = cal.signal_present ? cal.verdict : "silent";
+        var card = node("div", fields.microphone_calib_result, "audit-summary");
+        var tone = verdict === "calibrated" ? "pass" : verdict === "too_hot" ? "fail" : "warn";
+        node("div", card, "badge badge-" + tone, label("microphone_check_" + verdict));
+        node("p", card, "", label("microphone_check_" + verdict + "_help"));
+        var numbers = new Intl.NumberFormat(document.documentElement.lang);
+        node("p", card, "ctl-note", uiFormat("speech_microphone_check_readings",
+          {peak:numbers.format(cal.peak_dbfs), clipping:numbers.format(cal.clipping_samples)}));
+        if (cal.signal_present && mixer?.writable === true && cal.mixer &&
+            String(mixer.card) === String(cal.mixer.card) && mixer.control === cal.mixer.control && Number.isInteger(cal.recommended_gain) &&
+            cal.recommended_gain >= mixer.min && cal.recommended_gain <= mixer.max && cal.recommended_gain !== microphoneState.gain) {
+          var applyGainText = uiFormat("speech_microphone_calib_apply_gain", {gain: cal.recommended_gain});
+          var recBtn = node("button", card, "ctl", applyGainText);
+          recBtn.type = "button";
+          recBtn.addEventListener("click", function() {
+            fields.microphone_gain.value = fields.microphone_gain_range.value = String(cal.recommended_gain);
+            fields.microphone_set_btn.click();
+          });
         }
-      } catch (err) { if (sequence === openSequence && dialog.open) status(err.message); }
-      finally { if (sequence === openSequence) { microphoneBusy = false; microphoneControls(); } }
+      } catch (_) {
+        if (sequence === openSequence && dialog.open && context() === openedContext) {
+          window.LixityComponents.setStatus(feedback, label("microphone_check_failed"), "err");
+        }
+      } finally {
+        if (sequence === openSequence) { microphoneBusy = false; microphoneControls(); }
+      }
     });
+    fields.microphone_check_status = node("p", fields.microphone_section, "ctl-status");
+    fields.microphone_check_status.id = "speech-microphone-check-status";
+    fields.microphone_check_status.setAttribute("role", "status");
     fields.microphone_calib_result = node("div", fields.microphone_section, "audio-calib-result");
+    fields.microphone_calib_result.setAttribute("aria-live", "polite");
     fields.chapter_render = button(actions, "chapter_render", function() { render("chapter"); });
-    fields.open_output = button(actions, "output_title", function() {
-      if (direction.dirty() && !fields.ignore_direction.checked) { status(label("direction_save_first")); return; }
-      if (!switchMode("output")) return; invalidate();
-      direction.section.hidden = !direction.dirty(); fields.direction_plan.hidden = false; fields.export_scope.value = "chapter";
-      fields.open_output.hidden = true; fields.chapter_render.hidden = !canRender;
-      fields.reuseLabel.hidden = !canRender;
-      arrangeSections();
-    });
-    fields.open_output.textContent = label("open_output");
     fields.cancel = button(actions, "cancel", cancel); fields.cancel.disabled = true;
     fields.context = node("p", content, "ctl-note"); fields.progress = node("progress", content); fields.progress.hidden = true; fields.progress.setAttribute("aria-label", label("progress"));
     fields.playback_section = node("div", content, "speech-playback");
@@ -1775,56 +2342,16 @@
       rateBtn.setAttribute("aria-pressed", String(isDefaultRate));
     });
     fields.download = node("a", content, "ctl", label("download")); fields.download.download = "speech.wav"; fields.download.hidden = true;
-    var activeKaraokeSha = null;
-    function clearAudioKaraoke() {
-      if (activeKaraokeSha) {
-        document.querySelectorAll('#chapters .ptext[data-paragraph-sha256="' + activeKaraokeSha + '"]').forEach(function(el) {
-          el.classList.remove("reader-audio-active");
-        });
-        activeKaraokeSha = null;
-      }
-    }
-    fields.audio.addEventListener("timeupdate", function() {
-      var cur = fields.audio.currentTime;
-      var dur = fields.audio.duration;
-      var tl = job && (job.timeline || (job.context && job.context.timeline));
-      if (!dur || !tl || !tl.segments) return;
-      var segs = tl.segments.filter(function(s) { return s.anchor && s.anchor.paragraph_sha256; });
-      if (!segs.length) return;
-      var totalWeight = segs.reduce(function(w, s) { return w + (s.text ? s.text.length : 20); }, 0);
-      var currentWeight = (cur / dur) * totalWeight;
-      var running = 0;
-      var match = segs[0];
-      for (var i = 0; i < segs.length; i++) {
-        running += (segs[i].text ? segs[i].text.length : 20);
-        if (running >= currentWeight) {
-          match = segs[i];
-          break;
-        }
-      }
-      var sha = match.anchor.paragraph_sha256;
-      if (sha !== activeKaraokeSha) {
-        clearAudioKaraoke();
-        activeKaraokeSha = sha;
-        document.querySelectorAll('#chapters .ptext[data-paragraph-sha256="' + sha + '"]').forEach(function(el) {
-          el.classList.add("reader-audio-active");
-          if (typeof revealChapter === "function") revealChapter(el);
-          if (typeof setPassageScrollMargin === "function") setPassageScrollMargin(el);
-          var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-          el.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest" });
-        });
-      }
-    });
-    fields.audio.addEventListener("pause", clearAudioKaraoke);
-    fields.audio.addEventListener("ended", clearAudioKaraoke);
-    fields.save = button(content, "save", save);
-    fields.profile_discard = button(content, "profiles_discard", function() {
+    fields.profile_footer = node("div", card, "modal-footer speech-profile-footer");
+    fields.profile_discard = button(fields.profile_footer, "profiles_discard", function() {
       if (profileSaving || !savedSettings) return;
       settings = JSON.parse(JSON.stringify(savedSettings)); profilesDirty = false;
       profileOptions(); loadProfile();
       if (openedContext !== context()) fields.save.disabled = fields.create.disabled = fields.remove_profile.disabled = fields.profile.disabled = true;
       status(""); invalidate();
     });
+    fields.save = button(fields.profile_footer, "save", save);
+    fields.save.classList.add("primary");
     fields.export_section = node("fieldset", content, "settings-section speech-export-section");
     node("legend", fields.export_section, "", label("export_title"));
     node("p", fields.export_section, "ctl-note", label("export_hint"));
@@ -1839,18 +2366,29 @@
     var chapterActions = node("div", fields.chapter_audio_section, "row");
     fields.chapter_audio_import = button(chapterActions, "chapter_audio_import", importChapterAudio);
     fields.chapter_audio_import.dataset.help = label("chapter_audio_hint");
+    fields.chapter_audio_discard = button(chapterActions, "chapter_audio_discard", function() {
+      fields.chapter_audio_file.value = "";
+      showChapterAudio();
+      fields.chapter_audio_file.focus();
+    });
+    fields.chapter_audio_delete = button(chapterActions, "chapter_audio_delete", removeChapterAudio);
+    fields.chapter_audio_discard.hidden = fields.chapter_audio_delete.hidden = true;
+    fields.chapter_audio_file.addEventListener("change", updateChapterAudioActions);
     fields.chapter_audio_status = node("p", fields.chapter_audio_section, "ctl-note");
     fields.chapter_audio_status.id = "speech-chapter-audio-status";
     fields.chapter_audio_status.setAttribute("role", "status");
-    fields.service_section = node("fieldset", content, "settings-section speech-service-section");
-    node("legend", fields.service_section, "", label("service_title"));
-    fields.service_section.append(fields.target.closest("label"), fields.worker_status, fields.worker_guide, fields.worker_refresh);
+    fields.service_section = node("details", content, "settings-section panel-disclosure speech-service-section speech-profile-utilities");
+    fields.service_section.id = "speech-service";
+    node("summary", fields.service_section, "", label("service_title"));
+    var serviceActions = node("div", null, "row");
+    serviceActions.append(fields.worker_guide, fields.worker_refresh);
+    fields.service_section.append(fields.worker_target.closest("label"), fields.worker_status, serviceActions);
     fields.render_section.append(fields.runtime_hint, reuse, actions, fields.context, fields.progress);
     fields.playback_section.append(fields.player_controls, fields.download);
-    fields.profile_row.after(fields.editor, fields.lexicon_section, fields.phonemes_section, fields.service_section, fields.save, fields.profile_discard);
+    fields.profile_row.after(fields.editor, fields.lexicon_section, fields.phonemes_section, fields.service_section, fields.schema_section);
     fields.audit_section.before(fields.render_section, fields.export_section);
     fields.export_section.after(fields.chapter_audio_section);
-    content.append(fields.playback_section);
+    content.append(fields.playback_section, fields.reader_shortcut);
     arrangeSections();
     fields.reuseLabel = reuse;
     function markProfileDirty(event) {
@@ -1867,8 +2405,10 @@
       var matchingVoices = Object.entries(cap.voices).filter(function(pair) {
         return pair[1].languages.includes(fields.language.value);
       });
+      var defaultVoice = cap.default_voice || "";
       var voice = cap.voice_design ? "design" : cap.reference_required ? "reference" :
         cap.voices[lastPreset] && cap.voices[lastPreset].languages.includes(fields.language.value) ? lastPreset :
+        cap.voices[defaultVoice] && cap.voices[defaultVoice].languages.includes(fields.language.value) ? defaultVoice :
         (matchingVoices[0] && matchingVoices[0][0]) || "";
       options(fields.voice, [], voice);
       if (!fields.speed.value || (fields.engine.value === "mlx-audio" && Number(fields.speed.value) === 1)) {
@@ -1894,83 +2434,118 @@
     fields.chapter.addEventListener("change", function() { paragraph = null; invalidate(); var select=fields.direction_passage; var choice=Array.from(select.options).find(function(o) { return o.textContent.startsWith(fields.chapter.value + " · "); }); if (choice) { select.value=choice.value; select.dispatchEvent(new Event("change")); } fields.context.textContent = label("first_preview"); });
     fields.chapter.addEventListener("change", showChapterAudio);
     dialog.addEventListener("cancel", function(event) {
-      if (profileSaving || voiceSaving) { event.preventDefault(); status(label("saving")); }
-      else if (direction.busy() || direction.dirty()) {
-        event.preventDefault(); status(label(direction.busy() ? "saving" : "direction_switch_first"));
-      } else if (mode === "profiles" && pronunciationPending()) {
-        event.preventDefault(); status(label("pronunciation_pending"));
-      } else if (mode === "profiles" && profilesDirty) {
-        event.preventDefault(); status(label("profiles_unsaved"));
+      event.preventDefault();
+      closeAudioSurface();
+    });
+    dialog.addEventListener("keydown", function(event) {
+      if (speechDocked && event.key === "Escape" && !event.defaultPrevented && !event.isComposing) {
+        event.preventDefault(); event.stopPropagation(); closeAudioSurface();
       }
     });
-    [fields.microphone_device, fields.microphone_gain, fields.microphone_gain_range, fields.microphone_set_btn, fields.microphone_calib_btn].forEach(function(el) { el.dataset.help = label("microphone_help"); });
     fields.microphone_device.setAttribute("aria-label", label("microphone_device"));
     fields.microphone_gain.setAttribute("aria-label", label("microphone_gain"));
     fields.microphone_gain_range.setAttribute("aria-label", label("microphone_gain"));
     fields.ignore_direction.dataset.help = label("ignore_help"); fields.reuse.dataset.help = label("reuse_help");
-    dialog.addEventListener("close", function() {
-      speechReady = false;
-      ++takeImportSequence; importedTake = null; takeTokens = null;
-      ++recordingSequence; releaseRecording(); fields.takePlayer.pause();
-      recordedChunks = []; totalRecordedSamples = 0; lastRecordedWavBlob = null; takeValid = false;
-      fields.takePlayer.removeAttribute("src"); fields.takePlayer.load(); fields.takeCard.hidden = true;
-      if (takeUrl) { URL.revokeObjectURL(takeUrl); takeUrl = null; }
-      invalidate();
-    });
   }
-  async function open(entry) {
+  async function open(entry, requestedPanel, opener) {
+    if (dialog?.open && speechDocked && entry === "reader") {
+      if (!speechReady && requestedPanel && closeAudioSurface()) return open(entry, requestedPanel, opener);
+      if (direction.busy() || direction.dirty()) {
+        showReaderDocument(); status(label(direction.busy() ? "saving" : "direction_switch_first"));
+        return;
+      }
+      if (opener) speechOpener = opener;
+      if (mode !== "reader") switchMode("reader");
+      showReaderDocument();
+      if (requestedPanel && !direction.selectAnchor(passageIdentity(requestedPanel))) status(label("passage_unavailable"));
+      fields.heading.focus({preventScroll:true});
+      return;
+    }
+    if (dialog?.open && speechDocked && (direction.busy() || direction.dirty())) showReaderDocument();
+    if (dialog?.open && !closeAudioSurface()) return;
     mode = entry || "reference";
-    speechReady = false; speechLoadMessage = label("loading");
+    speechOpener = mode === "reader" ? opener || document.getElementById("reader-speech") : null;
+    speechReady = false; speechLoadMessage = label("loading"); trimLimitSeconds = 0; referenceFormat = null; referenceRecording = null; profileConstraints = null;
+    profileSettingsAvailable = schemaReviewAvailable = migrationRequired = false;
     ++openSequence;
-    var fromReader = mode === "reader";
+    var fromReader = inReader();
     var readerControl = document.getElementById("reader-chapter");
     var readerChapterIntent = fromReader && readerControl ? (readerControl.value || readerControl.dataset.currentChapter || "") : "";
-    if (!dialog) build(); invalidate(); direction.disable(); settings = null; savedSettings = null; workers = null; profilesDirty = false; profileSaving = false; openedContext = context(); paragraph = null;
-    chapterAudio = null; chapterAudioBusy = false; ++chapterAudioSequence;
-    fields.chapter_audio_import.disabled = fields.chapter_audio_file.disabled = true;
-    fields.chapter_audio_file.value = ""; fields.chapter.disabled = false;
+    var micCapture = nativeMicrophoneInventory(), currentContext = context();
+    if (!micCapture || openedContext !== currentContext) preferredMicrophone = "";
+    if (!dialog) build(); invalidate(); direction.disable(); settings = null; savedSettings = null; workers = null; profilesDirty = false; profileSaving = false; openedContext = currentContext; paragraph = null;
+    chapterAudio = null; ++chapterAudioSequence;
+    fields.chapter_audio_file.value = ""; setChapterAudioBusy(false);
     fields.chapter_audio_status.textContent = label("loading");
-    microphoneBusy = false; populateMicrophone(null);
-    fields.worker_status.textContent = label("loading"); fields.worker_refresh.disabled = true; fields.model.textContent = "";
+    fields.audit_audio.value = fields.audit_transcript.value = "";
+    fields.audit_section.open = false;
+    microphoneBusy = false; microphoneRefreshing = !micCapture;
+    microphoneInventoryStatus("microphone_looking");
+    populateMicrophone(null);
+    fields.worker_status.textContent = label("loading"); fields.worker_refresh.disabled = true;
+    fields.service_section.open = fields.recording_defaults_section.open = false;
     fields.profile.disabled = false;
     fields.recBtn.disabled = true; fields.reference_section.inert = true;
+    fields.recLimit.hidden = true;
     recordingFeedback("idle");
     fields.reference_section.setAttribute("aria-busy", "true");
     switchMode(mode, true);
     if (fromReader) {
       var selection = window.getSelection(), anchor = selection && selection.anchorNode;
       var element = anchor && (anchor.nodeType === 1 ? anchor : anchor.parentElement);
-      var panel = element && element.closest("#chapters .ptext[data-paragraph-sha256]");
+      var panel = requestedPanel || element && element.closest("#chapters .ptext[data-paragraph-sha256]");
       if (!panel) {
         panel = document.querySelector("#chapters .ptext.reader-selected, #chapters .ptext:focus-within");
       }
       var reader = document.getElementById("reader-chapter");
-      if (panel && reader && /^ch-\d+$/.test(readerChapterIntent) && panel.closest(".chapter").id !== readerChapterIntent) panel = null;
-      if (panel) paragraph = {chapter: Number((panel.closest(".chapter") || {}).id?.replace("ch-", "")), identity: {
-        start_line: Number(panel.dataset.start), end_line: Number(panel.dataset.end), paragraph_sha256: panel.dataset.paragraphSha256}};
+      if (!requestedPanel && panel && reader && /^ch-\d+$/.test(readerChapterIntent) && panel.closest(".chapter").id !== readerChapterIntent) panel = null;
+      if (panel) paragraph = {chapter: Number((panel.closest(".chapter") || {}).id?.replace("ch-", "")), identity:passageIdentity(panel)};
     }
-    fields.context.textContent = ""; fields.reuse.checked = true; fields.reuse.disabled = false; fields.reuse.closest("label").hidden = true;
+    fields.context.textContent = "";
+    fields.project_profile_name.textContent = label("loading");
+    fields.target.value = fields.worker_target.value = "";
+    fields.export_scope.value = mode === "reader" ? "preview" : "chapter";
+    fields.audit_scope.value = "chapter";
+    fields.ignore_direction.checked = false;
+    fields.reuse.checked = true;
+    fields.reuse.disabled = false;
+    calibrationTexts = null; sampleVariant = "short"; fields.customTextarea.value = "";
+    fields.updatePromptText();
     fields.editor.querySelectorAll("input, textarea").forEach(function(input) { input.value = ""; });
     ["profile", "engine", "language", "voice", "reference_id", "chapter"].forEach(function(key) { fields[key].replaceChildren(); });
-    dialog.showModal(); status(label("loading")); setEditorDisabled(true); fields.save.disabled = fields.create.disabled = fields.preview.disabled = fields.chapter_render.disabled = true;
-    var serial = generation;
+    presentSpeechSurface(fromReader ? panel : null);
+    status(label("loading")); setEditorDisabled(true); fields.save.disabled = fields.create.disabled = fields.preview.disabled = fields.chapter_render.disabled = true;
+    if (micCapture) void refreshMicrophone();
+    var serial = generation, sequence = openSequence;
     try {
       var data = await request("speech"); if (!valid(serial)) return;
+      referenceFormat = readReferenceFormat(data.reference_format);
+      referenceRecording = readReferenceRecording(data.reference_recording);
+      prepareRecordingDuration();
+      trimLimitSeconds = data.can_trim_take === true && Number.isFinite(data.take_trim_limit_seconds) ? data.take_trim_limit_seconds : 0;
+      profileConstraints = data.profile_constraints;
       migrationRequired = data.requires_migration === true;
+      profileSettingsAvailable = Boolean(data.settings) && !migrationRequired;
+      schemaReviewAvailable = !migrationRequired && (data.settings ?
+        data.settings.schema_version !== currentAudioSchema : data.audio_settings_present === false);
       settings = data.settings || {schema_version: "lixity-audio-settings/1", selected: "", profiles: {}}; capabilities = data.capabilities; workers = data.workers;
       allReferences = data.references || [];
       renderReferenceList(allReferences);
-      if (data.calibration_texts) {
-        calibrationTexts = data.calibration_texts; fields.updatePromptText();
-      }
+      calibrationTexts = data.calibration_texts || null; fields.updatePromptText();
       renderActiveVoiceBadge();
-      populateMicrophone(data.microphone || null);
-      if (mode === "microphone" && fields.microphone_section) fields.microphone_section.open = true;
-      fields.schema_hint.hidden = fields.schema_preview.hidden = mode !== "profiles" || settings.schema_version === currentAudioSchema || migrationRequired;
+      if (!micCapture) {
+        var microphone = browserMicrophoneState(data.microphone);
+        microphoneRefreshing = false;
+        populateMicrophone(microphone);
+        microphoneInventoryStatus(microphone.devices.length ? "" : "microphone_empty");
+      }
       fields.schema_apply.hidden = true; fields.schema_apply.disabled = false;
       fields.worker_refresh.disabled = false;
       savedSettings = JSON.parse(JSON.stringify(settings));
-      fields.model.textContent = "";
+      var savedProfile = savedSettings.profiles[savedSettings.selected];
+      fields.project_profile_name.textContent = savedProfile ? uiFormat("speech_project_profile_summary", {
+        profile:savedProfile.name, engine:capabilities[savedProfile.engine]?.name || savedProfile.engine
+      }) : label("profile_required");
       var matchedChapter = paragraph && data.chapters.find(function(chapter) {
         return paragraph.identity.start_line >= chapter.start_line && paragraph.identity.end_line <= chapter.end_line;
       });
@@ -1981,8 +2556,6 @@
       if (paragraph && !data.chapters.some(function(chapter) { return Number(fields.chapter.value) === chapter.number && paragraph.identity.start_line >= chapter.start_line && paragraph.identity.end_line <= chapter.end_line; })) paragraph = null;
       profileOptions(); loadProfile();
       updateVoiceCard();
-      fields.target.closest("label").hidden = mode !== "profiles" || fields.target.disabled;
-      fields.reuseLabel.hidden = mode !== "output" || !canRender;
       savedDirectionView = data.direction || null;
       if (data.direction) {
         var initialPassage = paragraph ? {anchor:paragraph.identity} : data.direction.passages.find(function(p) { return p.chapter === Number(fields.chapter.value); });
@@ -1990,17 +2563,23 @@
       }
       if (migrationRequired) direction.disable();
       arrangeSections();
-      speechReady = true; fields.recBtn.disabled = false; fields.reference_section.inert = false;
+      speechReady = true; fields.recBtn.disabled = !canRecordVoice(); fields.reference_section.inert = false;
       fields.chapter_audio_import.disabled = fields.chapter_audio_file.disabled = false;
       refreshChapterAudio();
       recordingFeedback("idle");
       fields.reference_section.setAttribute("aria-busy", "false");
-      speechLoadMessage = data.configuration_error || "";
+      speechLoadMessage = profileSettingsAvailable && !settings.selected ? "" : data.configuration_error || "";
       status(speechLoadMessage); fields.save.disabled = migrationRequired || !settings.selected;
       fields.context.textContent = label(paragraph ? "paragraph_preview" : "first_preview");
     } catch (error) {
-      if (valid(serial)) {
-        fields.worker_status.textContent = uiFormat("speech_worker_unknown", {target: label("target_" + (fields.target.value || "local"))});
+      if (sequence === openSequence && dialog.open && openedContext === context()) {
+        if (!micCapture) {
+          microphoneRefreshing = false;
+          microphoneInventoryStatus("microphone_failed");
+          microphoneControls();
+        }
+        fields.project_profile_name.textContent = label("profile_required");
+        fields.worker_status.textContent = uiFormat("speech_worker_unknown", {target: label("target_" + (fields.worker_target.value || "local"))});
         speechLoadMessage = error.message;
         fields.reference_section.setAttribute("aria-busy", "false");
         status(speechLoadMessage);
@@ -2008,12 +2587,15 @@
     }
   }
   var audioActions = document.getElementById("project-audio-settings-actions");
+  fields.project_profiles_action = button(audioActions, "profiles_title", function() { open("profiles"); });
+  fields.project_profiles_action.id = "settings-speech";
   button(audioActions, "record_author_title", function() { open("reference"); }).id = "btn-project-record-voice";
-  button(audioActions, "profiles_title", function() { open("profiles"); }).id = "settings-speech";
-  button(audioActions, "output_title", function() { open("output"); }).id = "settings-speech-output";
   button(audioActions, "microphone_title", function() { open("microphone"); }).id = "settings-speech-mic";
   var runtimeAction = document.getElementById("runtime-open");
   if (runtimeAction) audioActions.appendChild(runtimeAction);
+  var outputShortcut = node("div", null, "row");
+  audioActions.after(outputShortcut);
+  button(outputShortcut, "go_to_chapter_audio", function() { open("output"); }).id = "settings-speech-output";
   var toolbar = document.getElementById("manuscript-reader-controls");
   if (toolbar) {
     var existingSpeech = toolbar.querySelector("#reader-speech");
@@ -2023,6 +2605,8 @@
     var audioSvg = window.LixityIcons ? window.LixityIcons.svg("headphones", { size: 16, strokeWidth: 1.85 }) : "";
     readerSpeech.innerHTML = '<span class="reader-control-icon" aria-hidden="true">' + audioSvg + '</span> <span class="reader-control-label">' + label("reader_title") + '</span>';
     readerSpeech.title = label("reader_title");
+    readerSpeech.setAttribute("aria-controls", "modal-speech");
+    readerSpeech.setAttribute("aria-expanded", "false");
     readerSpeech.dataset.help = label(canRender ? "reader_help" : "reader_help_plan");
     var anchor = toolbar.querySelector(".reader-analysis-toggle-controls") ||
                  toolbar.querySelector("#workbench-overview-open") ||
@@ -2034,28 +2618,42 @@
   document.addEventListener("lixity:open-speech-studio", function(e) {
     if (e && e.detail && e.detail.take) { receiveTake(e.detail); return; }
     var targetMode = (e && e.detail && e.detail.mode) || "reference";
-    open(targetMode);
+    open(targetMode, e.detail?.passage, e.detail?.opener);
   });
-  document.addEventListener("lixity:workbench-change", function() {
-    if (!dialog || !dialog.open) return;
+  document.addEventListener("lixity:workbench-change", function(event) {
+    if (!dialog || !dialog.open || placingSpeech) return;
+    if (speechDocked && event.detail) {
+      visibleReaderSpeech(event.detail);
+      if (!dialog.hidden) return;
+    }
     if (profileSaving || voiceSaving) { status(label("saving")); return; }
     if (direction.busy() || direction.dirty()) {
       status(label(direction.busy() ? "saving" : "direction_switch_first")); return;
     }
-    if (mode === "profiles" && pronunciationPending()) { status(label("pronunciation_pending")); return; }
-    if (mode === "profiles" && profilesDirty) { status(label("profiles_unsaved")); return; }
-    dialog.close();
+    closeAudioSurface();
   });
   new MutationObserver(function() {
     if (!dialog || !dialog.open || context() === openedContext) return;
-    if (mode === "profiles" && (pronunciationPending() || profilesDirty || profileSaving)) {
+    if (mode === "reference" && (recordingDurationChanged() || profileSaving)) {
+      updateRecordingDuration(); status(label(profileSaving ? "saving" : "recording_duration_unsaved"));
+      return;
+    }
+    if (mode === "profiles" && (profileDraftMessage() || profileSaving)) {
       invalidate(); fields.save.disabled = fields.create.disabled = fields.remove_profile.disabled = fields.profile.disabled = true;
+      updateRecordingDuration();
       status(label(pronunciationPending() && !profilesDirty ? "pronunciation_context_changed" : "profiles_context_changed")); return;
     }
     if (direction.dirty() || direction.busy()) {
       invalidate(); direction.stale(); status(label("direction_context_changed")); return;
     }
-    dialog.close();
+    if (importedTake && !matchingTakeContext(takeTokens)) {
+      fields.saveVoiceBtn.disabled = true;
+      fields.recBtn.disabled = true;
+      updateRecordingDuration();
+      status(label("take_context"));
+      return;
+    }
+    closeAudioSurface();
   }).observe(body, {
     subtree: true, attributes: true, attributeFilter: ["data-project-token", "data-manuscript-source-sha256", "data-manuscript-project-token"]});
 })();

@@ -3,7 +3,7 @@ import json
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from contextlib import closing
 from hashlib import sha256
-from threading import Event
+from threading import Barrier, Event
 
 import pytest
 
@@ -252,6 +252,26 @@ def test_two_tabs_only_one_wins(tmp_path):
     assert source.read_text() in ("1", "2")
 
 
+def test_first_saves_share_one_recovery_schema(tmp_path):
+    first, _ = store(tmp_path)
+    other_path = tmp_path / "another.md"
+    other_path.write_text("Other original.\n", encoding="utf-8")
+    second = ManuscriptStore(tmp_path, other_path)
+    ready = Barrier(2)
+
+    def first_save(editor):
+        opened = editor.open()
+        ready.wait(timeout=5)
+        return save(editor, opened, "Another synthetic sentence.\n")
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(first_save, (first, second)))
+
+    assert results[0]["document"] != results[1]["document"]
+    assert len(first.timeline()) == len(second.timeline()) == 2
+    assert len(first.open()["recovery"]) == len(second.open()["recovery"]) == 1
+
+
 def test_pending_save_orders_writes_and_discards_without_blocking_readers(tmp_path, monkeypatch):
     editor, source = store(tmp_path)
     opened = editor.open()
@@ -302,6 +322,26 @@ def test_original_version_recoverable_without_overwriting_current(tmp_path):
     row = next(row for row in editor.open()["recovery"] if row["kind"] == "version")
     assert editor.recover(row["id"])["text"] == opened["text"]
     assert source.read_text() == "New text"
+
+
+@pytest.mark.parametrize("oversized", [False, True], ids=["integer", "over-limit"])
+def test_invalid_retained_content_is_withheld_without_touching_source(tmp_path, oversized):
+    editor, source = store(tmp_path)
+    opened = editor.open()
+    saved = save(editor, opened, "The accepted revision.\n")
+    with closing(editor._database()) as db, db:
+        if oversized:
+            db.execute("UPDATE recovery SET content=zeroblob(?) WHERE document=? AND id=?",
+                       (4 * 1024 * 1024 + 1, editor.document, opened["revision"]))
+        else:
+            db.execute("UPDATE recovery SET content=123 WHERE document=? AND id=?",
+                       (editor.document, opened["revision"]))
+    with pytest.raises(ValueError, match="Recovery content is invalid or exceeds"):
+        editor.recover(opened["revision"])
+    changed_config = ManuscriptStore(tmp_path, source, project_config={"sticky_min_words": 9})
+    comparison = changed_config.delta(opened["revision"], saved["revision"])
+    assert comparison["has_baseline"] is False
+    assert source.read_text(encoding="utf-8") == "The accepted revision.\n"
 
 
 def test_large_manuscript_save_and_recovery(tmp_path):
@@ -731,6 +771,40 @@ def test_flags_count_migration_from_not_null_zero_to_nullable(tmp_path):
     assert delta["deltas"]["flags_count"] is None
 
 
+def test_read_recovers_interrupted_pre_wal_journal(tmp_path):
+    import sqlite3
+    import subprocess
+    import sys
+
+    editor, _ = store(tmp_path)
+    editor.directory.mkdir(parents=True)
+    db_path = editor.directory / "recovery.sqlite3"
+    payload = b"A" * 2048
+    with closing(sqlite3.connect(db_path)) as db, db:
+        db.execute("PRAGMA journal_mode=DELETE")
+        db.execute(
+            "CREATE TABLE recovery (document TEXT, id TEXT, kind TEXT, content BLOB, "
+            "created REAL, PRIMARY KEY(document,id))"
+        )
+        db.executemany("INSERT INTO recovery VALUES (?, ?, 'version', ?, ?)", [
+            (editor.document, f"{index:032x}", payload, index) for index in range(40)
+        ])
+    script = """
+import os, sqlite3, sys
+db = sqlite3.connect(sys.argv[1])
+db.execute('PRAGMA cache_size=5')
+db.execute('BEGIN IMMEDIATE')
+db.execute('UPDATE recovery SET content=?', (b'B' * 2048,))
+os._exit(0)
+"""
+    subprocess.run([sys.executable, "-c", script, str(db_path)], check=True, timeout=10)  # noqa: S603
+
+    entries = editor.open()["recovery"]
+    assert len(entries) == 40
+    assert editor.recover(entries[0]["id"])["text"] == payload.decode()
+    assert editor._database_path.is_file()
+
+
 def test_recovery_db_enforces_wal_trusted_schema_and_skips_read_ddl(tmp_path, monkeypatch):
     import sqlite3
     from contextlib import closing
@@ -781,21 +855,115 @@ def test_recovery_db_enforces_wal_trusted_schema_and_skips_read_ddl(tmp_path, mo
             return self._inner.__exit__(*args)
 
     def tracking_connect(*args, **kwargs):
+        assert args[0].endswith("?mode=ro")
+        assert kwargs["uri"]
         spy = SpyConnection(real_connect(*args, **kwargs))
         opened_conns.append(spy)
         return spy
 
     monkeypatch.setattr("lixity.manuscript_editing.sqlite3.connect", tracking_connect)
-    assert fresh.open()["recovery"] != []
+    entries = fresh.open()["recovery"]
+    assert entries
     assert len(fresh.timeline()) == 2
     assert fresh.delta()["has_baseline"] is True
-    assert fresh._recorded_revision(opened["revision"]) is not None
+    assert fresh.recover(entries[0]["id"])["revision"] == opened["revision"]
     # One connection per read call (including one shared connection in delta())
     assert len(opened_conns) == 4
     for spy in opened_conns:
         assert "PRAGMA trusted_schema=OFF" in spy.statements
         assert spy.commits == 0
         assert not any(stmt.lstrip().startswith(("CREATE ", "ALTER ", "DROP ")) for stmt in spy.statements)
+
+
+def test_revision_comparison_only_decodes_selected_snapshots(tmp_path, monkeypatch):
+    editor, _ = store(tmp_path)
+    for number in range(6):
+        save(editor, editor.open(), f"Synthetic revision {number}.\n", f"{number:032x}")
+    history = editor.timeline()
+    decoded = []
+    decode_revision = editor._row_to_revision
+
+    def decode(row):
+        decoded.append(row["revision"])
+        return decode_revision(row)
+
+    monkeypatch.setattr(editor, "_row_to_revision", decode)
+    result = editor.delta(history[1]["revision"], history[-1]["revision"])
+
+    assert result["revisions_count"] == len(history)
+    assert result["base"] == history[1]
+    assert result["current"] == history[-1]
+    assert decoded == [history[-1]["revision"], history[1]["revision"]]
+
+
+def test_recovery_rejects_future_schema_even_in_an_existing_store(tmp_path):
+    import sqlite3
+
+    editor, source = store(tmp_path)
+    save(editor, editor.open(), "The accepted revision.\n")
+    db_path = editor.directory / "recovery.sqlite3"
+    with closing(sqlite3.connect(db_path)) as db:
+        db.execute("PRAGMA user_version=999")
+
+    with pytest.raises(ValueError, match="newer Lixity version"):
+        editor.open()
+    with pytest.raises(ValueError, match="newer Lixity version"):
+        editor.discard("a" * 32)
+    assert source.read_text(encoding="utf-8") == "The accepted revision.\n"
+    with closing(sqlite3.connect(db_path)) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 999
+
+
+def test_recovery_rechecks_schema_after_acquiring_write_transaction(tmp_path, monkeypatch):
+    import sqlite3
+
+    editor, _ = store(tmp_path)
+    save(editor, editor.open(), "The accepted revision.\n")
+    db_path = editor.directory / "recovery.sqlite3"
+    with closing(sqlite3.connect(db_path)) as db:
+        db.execute("PRAGMA user_version=2")
+    initialize = editor._initialize_schema
+
+    def concurrently_upgraded(connection):
+        with closing(sqlite3.connect(db_path)) as db:
+            db.execute("PRAGMA user_version=999")
+        initialize(connection)
+
+    monkeypatch.setattr(editor, "_initialize_schema", concurrently_upgraded)
+    with pytest.raises(ValueError, match="newer Lixity version"):
+        editor.discard("a" * 32)
+    with closing(sqlite3.connect(db_path)) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 999
+
+
+@pytest.mark.parametrize("suffix", ["", "-wal", "-shm", "-journal"])
+def test_recovery_rejects_redirected_database_members(tmp_path, suffix):
+    editor, _ = store(tmp_path)
+    save(editor, editor.open(), "The accepted revision.\n")
+    member = editor.directory / f"recovery.sqlite3{suffix}"
+    if not suffix:
+        member.unlink()
+    try:
+        member.symlink_to(tmp_path / "absent-target")
+    except OSError:
+        pytest.skip("Creating symlinks requires host permission")
+
+    with pytest.raises(ValueError, match="must be regular files"):
+        editor.open()
+    with pytest.raises(ValueError, match="must be regular files"):
+        editor.discard("a" * 32)
+    assert not (tmp_path / "absent-target").exists()
+
+
+def test_first_save_checks_sidecars_before_creating_journal(tmp_path):
+    editor, source = store(tmp_path)
+    opened = editor.open()
+    editor.directory.mkdir(parents=True)
+    (editor.directory / "recovery.sqlite3-wal").mkdir()
+    with pytest.raises(ValueError, match="must be regular files"):
+        save(editor, opened, "Save must stop before writing the source.\n")
+    assert not (editor.directory / "recovery.sqlite3").exists()
+    assert source.read_text(encoding="utf-8") == opened["text"]
 
 
 def test_compare_measures_base_current_and_draft_with_project_config(tmp_path):
@@ -880,6 +1048,42 @@ def test_resaving_with_changed_settings_keeps_archived_measurements_immutable(tm
     assert delta["has_baseline"] is True
     assert delta["deltas"]["words"] == 0
     assert delta["current"]["revision"] == saved["revision"]
+
+
+def test_historical_remeasurement_releases_reader_snapshot_and_writer_lock(tmp_path, monkeypatch):
+    import sqlite3
+
+    editor, source = store(tmp_path)
+    opened = editor.open()
+    saved = save(editor, opened, "An accepted revision.\n")
+    revised = ManuscriptStore(tmp_path, source, project_config={"appendix_marker": "AFTERWORD"})
+    measuring = Event()
+    release = Event()
+    measure = revised._measure_snapshot
+
+    def hold_first_measurement(text, config):
+        if not measuring.is_set():
+            measuring.set()
+            assert release.wait(timeout=10)
+        return measure(text, config)
+
+    monkeypatch.setattr(revised, "_measure_snapshot", hold_first_measurement)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        comparison = pool.submit(revised.delta, opened["revision"], saved["revision"])
+        try:
+            assert measuring.wait(timeout=5)
+            later = pool.submit(save, editor, saved, "Another accepted revision.\n", "b" * 32).result(timeout=3)
+            editor.discard(opened["revision"])
+            with closing(sqlite3.connect(editor.directory / "recovery.sqlite3", timeout=0.1)) as db:
+                assert db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()[0] == 0
+        finally:
+            release.set()
+        result = comparison.result(timeout=5)
+
+    assert editor.open()["revision"] == later["revision"]
+    assert result["has_baseline"] is True
+    assert result["base"]["revision"] == opened["revision"]
+    assert result["current"]["revision"] == saved["revision"]
 
 
 def test_delta_recomputes_auto_language_from_target_or_withholds_unverifiable_history(tmp_path):

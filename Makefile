@@ -1,8 +1,10 @@
-.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate release-check release-prepare release-verify screenshots videos examples brand-assets media clean-caches clean docs-check docs-generated-check docs-sync pages-deploy pages-verify run start serve stop restart status doctor
+.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate rc-verify release-check release-prepare release-verify release-tools-ready screenshots videos examples brand-assets media clean-caches clean docs-check docs-generated-check docs-sync pages-deploy pages-verify run start serve stop restart status doctor
 
 PYTHON ?= python3
 VENV ?= .venv
 VPY := $(VENV)/bin/python
+AUDIT_PYTHON ?= $(VPY)
+RELEASE_DIST ?= dist
 SCRIPT_PYTHON := $(if $(wildcard $(VPY)),$(VPY),$(PYTHON))
 RUFF_CACHE ?= .ruff_cache
 MYPY_CACHE ?= .mypy_cache
@@ -11,8 +13,8 @@ PYTEST_FLAGS := -W error -q -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
 ACTIONLINT ?= actionlint
 BROWSER_JOBS ?= $(shell (nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4) | awk '{j=int($$1/2); if(j<2)j=2; if(j>8)j=8; print j}')
 BROWSER_TOOLS_DIR ?= $(HOME)/.local/share/lixity/browser-tools
-PLAYWRIGHT_VERSION ?= 1.59.1
-AXE_CORE_VERSION ?= 4.13.0
+PLAYWRIGHT_VERSION ?= 1.65.1
+AXE_CORE_VERSION ?= 4.14.1
 PYTEST_ARGS ?= -n auto
 
 help: ## Show this help
@@ -56,35 +58,48 @@ typecheck: ## mypy --strict on the package
 workflow-check: ## Lint GitHub workflows (needs actionlint; override ACTIONLINT for its path)
 	"$(ACTIONLINT)" .github/workflows/*.yml
 
-audit: ## Dependency audit baseline (needs the dev extra with pip-audit)
-	$(VPY) -m pip_audit . --progress-spinner off
+audit: ## Dependency audit baseline (needs Python 3.11+ with pip-audit)
+	"$(AUDIT_PYTHON)" -m pip_audit . --progress-spinner off --strict
 
 check: lint typecheck test ## Canonical local source checks: Ruff, strict mypy and the full test suite
 
 fast-check: lint typecheck docs-generated-check ## Quick pre-commit check without full pytest (~5s)
 
 build: ## Build fresh source-verified sdist + wheel and checksums into dist/
-	$(VPY) scripts/check_release.py --build
+	$(VPY) scripts/check_release.py --build --dist "$(RELEASE_DIST)"
 
 release-check: ## Validate the tag first, then test once, check generated docs, audit and verify artifacts
 	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to match the source version"; exit 1)
 	$(VPY) scripts/check_release.py --source-only --require-release-notes --tag "$(RELEASE_TAG)"
 	$(MAKE) check docs-generated-check audit
-	$(VPY) scripts/check_release.py --build --smoke --tag "$(RELEASE_TAG)"
+	$(VPY) scripts/check_release.py --build --smoke --tag "$(RELEASE_TAG)" --dist "$(RELEASE_DIST)"
 
-release-prepare: ## Prepare a new release: bump version, draft notes, sync docs (make release-prepare VERSION=X.Y.Z)
+release-tools-ready:
+	@$(SCRIPT_PYTHON) -c 'import sys; sys.version_info >= (3, 10) or sys.exit("Release tooling requires Python 3.10 or newer. Set PYTHON to a supported interpreter or VENV to its environment.")'
+
+release-prepare: release-tools-ready ## Prepare a new release: bump version, draft notes, sync docs (make release-prepare VERSION=X.Y.Z)
 	@test -n "$(VERSION)" || (echo "Set VERSION=X.Y.Z (e.g. make release-prepare VERSION=0.8.1)"; exit 1)
 	PYTHONPATH=src $(SCRIPT_PYTHON) scripts/prepare_release.py "$(VERSION)" $(if $(RELEASE_DATE),--release-date "$(RELEASE_DATE)")
 
-github-check: ## Inspect gh CLI, attestation support, worktrees and optional RELEASE_TAG channel state
+github-check: release-tools-ready ## Inspect gh CLI, attestation support, worktrees and optional RELEASE_TAG channel state
 	$(SCRIPT_PYTHON) scripts/release_channels.py doctor --root . --repo mfahsold/lixity $(if $(RELEASE_TAG),--tag "$(RELEASE_TAG)",)
 
-rc-gate: ## Trigger pre-tag release-candidate qualification on main (source, sharded browser, Windows/macOS)
-	env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run rc.yml --ref main
+rc-gate: release-tools-ready ## Qualify this commit on remote main before tagging (RELEASE_TAG=vX.Y.Z)
+	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to qualify a release candidate"; exit 1)
+	$(SCRIPT_PYTHON) scripts/check_release.py --source-only --require-release-notes --tag "$(RELEASE_TAG)"
+	@commit=$$(git rev-parse --verify HEAD) && \
+		env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run rc.yml \
+		--repo mfahsold/lixity --ref main --raw-field expected_sha="$$commit"
+
+rc-verify: release-tools-ready ## Check the hosted result and artifact availability for this commit (RELEASE_TAG=vX.Y.Z)
+	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to check a release candidate"; exit 1)
+	@commit=$$(git rev-parse --verify HEAD) && \
+		$(SCRIPT_PYTHON) scripts/release_channels.py verify-rc --root . --tag "$(RELEASE_TAG)" \
+		--expected-commit "$$commit" --repo mfahsold/lixity
 
 RELEASE_VERIFY_ROOT ?= .
 
-release-verify: ## Verify a published release (RELEASE_TAG=vX.Y.Z, optionally RELEASE_VERIFY_ARGS)
+release-verify: release-tools-ready ## Verify a published release (RELEASE_TAG=vX.Y.Z, optionally RELEASE_VERIFY_ARGS)
 	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to verify a published release"; exit 1)
 	@commit=$$(git -C "$(RELEASE_VERIFY_ROOT)" rev-parse --verify "$(RELEASE_TAG)^{commit}") && \
 		$(SCRIPT_PYTHON) scripts/release_channels.py verify-release --root "$(RELEASE_VERIFY_ROOT)" --tag "$(RELEASE_TAG)" --expected-commit "$$commit" --repo mfahsold/lixity --dist "$(or $(RELEASE_VERIFY_DIR),dist-verified)" --check-zenodo $(RELEASE_VERIFY_ARGS)

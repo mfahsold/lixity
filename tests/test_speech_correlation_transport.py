@@ -156,7 +156,8 @@ def test_parallel_http_requests_keep_ids_separate_and_reject_busy_safely(recorde
     first_ids = {re.search(r" id=([0-9a-f]{16}) ", line).group(1) for line in lines if "render_id=1111111111111111" in line}
     second_ids = {re.search(r" id=([0-9a-f]{16}) ", line).group(1) for line in lines if "render_id=2222222222222222" in line}
     assert len(first_ids) == len(second_ids) == 1 and first_ids.isdisjoint(second_ids)
-    assert any("status=rejected category=busy" in line and "render_id=2222222222222222" in line for line in lines)
+    assert any(all(field in line for field in ("status=rejected", "category=busy", "render_id=2222222222222222"))
+               for line in lines)
     assert "PRIVATE_MANUSCRIPT" not in recorded.getvalue() and "PRIVATE_DIRECTION" not in recorded.getvalue()
 
 
@@ -270,7 +271,8 @@ def test_busy_response_disconnect_is_handled(recorded, monkeypatch):
     outer.reply = lambda status, *_args, **_kwargs: attempts.append(status)
     outer.do_POST()
     assert attempts == [503, 200]
-    assert "status=rejected category=busy" in recorded.getvalue()
+    assert any("status=rejected" in line and "category=busy" in line
+               for line in recorded.getvalue().splitlines())
     assert "category=transport" in recorded.getvalue()
     assert "status=success" in recorded.getvalue()
     assert "PRIVATE_SOCKET_ERROR" not in recorded.getvalue()
@@ -300,5 +302,6 @@ def test_disconnect_while_reading_request_has_no_response_or_traceback(recorded,
     handler.do_POST()
     assert attempts == []
     assert "render_id=0123456789abcdef" in recorded.getvalue()
-    assert "status=failed category=transport" in recorded.getvalue()
+    assert any("status=failed" in line and "category=transport" in line
+               for line in recorded.getvalue().splitlines())
     assert "PRIVATE_READ_ERROR" not in recorded.getvalue()

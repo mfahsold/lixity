@@ -37,7 +37,12 @@ server.serve_forever()
         await page.waitForFunction(()=>!document.querySelector('[data-speech-action=chapter_audio_import]').disabled);
         await page.locator('#speech-chapter').selectOption('2');
         const bound=await page.evaluate(()=>({project_token:document.querySelector('#settings-form').dataset.projectToken,source_sha256:document.body.dataset.manuscriptSourceSha256}));
-        await page.locator('#speech-chapter_audio_file').setInputFiles({name:'chapter.wav',mimeType:'audio/wav',buffer:Buffer.from(server.fixture.wav,'base64')});
+        const wav = {name:'chapter.wav',mimeType:'audio/wav',buffer:Buffer.from(server.fixture.wav,'base64')};
+        const file = page.locator('#speech-chapter_audio_file');
+        await file.setInputFiles(wav);
+        await page.locator('[data-speech-action=chapter_audio_discard]').click();
+        assert.equal(await file.evaluate(input => input.files.length), 0);
+        await file.setInputFiles(wav);
         const pending=page.waitForRequest(request=>request.url().endsWith('/api/speech-audio-import'));
         await page.locator('[data-speech-action=chapter_audio_import]').click();
         const submitted=(await pending).postDataJSON();
@@ -58,8 +63,8 @@ server.serve_forever()
         await page.screenshot({path:path.join(artifacts,`chapter-import-${width}.png`)});
         const inventoryFailure='Synthetic retained-audio inventory is unreadable.';
         await page.route('**/api/speech-audio-artifacts?*',route=>route.fulfill({status:503,json:{ok:false,message:inventoryFailure}}));
-        await page.locator('#speech-tab-profiles').click();
-        await page.locator('#speech-tab-reader').click();
+        await page.locator('#speech-tab-direction').click();
+        await page.locator('#speech-tab-output').click();
         await page.waitForFunction(message=>document.querySelector('#speech-chapter-audio-status').textContent===message,inventoryFailure);
         await page.locator('#speech-chapter').selectOption('1');
         assert.equal(await page.locator('#speech-chapter-audio-status').innerText(),inventoryFailure,
@@ -67,12 +72,28 @@ server.serve_forever()
         await page.locator('#speech-chapter').selectOption('2');
         assert.equal(await page.locator('#speech-chapter-audio-status').innerText(),inventoryFailure);
         await page.unroute('**/api/speech-audio-artifacts?*');
-        await page.locator('#speech-tab-profiles').click();
-        await page.locator('#speech-tab-reader').click();
+        await page.locator('#speech-tab-direction').click();
+        await page.locator('#speech-tab-output').click();
         await page.waitForFunction(()=>document.querySelector('#speech-chapter-audio-status').textContent.includes(uiLabel('speech_chapter_audio_ready')));
+        const remove = page.locator('[data-speech-action=chapter_audio_delete]');
+        page.once('dialog', dialog => dialog.dismiss());
+        await remove.click();
+        assert.equal(await remove.isVisible(), true, 'Cancelling removal leaves the recording available');
+        const stale = await page.request.post(server.fixture.url + '/api/speech-audio-delete', {
+          data: {...bound, chapter:2, audio_sha256:'0'.repeat(64)}
+        });
+        assert.equal(stale.status(), 409, 'The API rejects a delete for a different recording');
+        page.once('dialog', dialog => dialog.accept());
+        const deleted = page.waitForResponse(response => response.url().endsWith('/api/speech-audio-delete'));
+        await remove.click();
+        assert.deepEqual(await (await deleted).json(), {ok:true, cleanup_pending:false});
+        await remove.waitFor({state:'hidden'});
+        assert.equal(await file.evaluate(input => input === document.activeElement), true);
+        const remaining = await page.evaluate(async bound => (await fetch('/api/speech-audio-artifacts?' + new URLSearchParams(bound))).json(), bound);
+        assert.deepEqual(remaining.artifacts, []);
         assert.deepEqual(errors,[]);
       } finally {await page.close();}
     }
-    console.log('Chapter audio import and failed replacement passed: '+artifacts);
+    console.log('Chapter audio import, discard, safe deletion and failed replacement passed: '+artifacts);
   } finally {await browser.close();await server.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -415,25 +415,37 @@ class TestDocumentation(unittest.TestCase):
         self.assertTrue(metadata["title"].startswith("Lixity"))
         self.assertTrue(any(item["scheme"] == "url" for item in metadata["related_identifiers"]))
 
-    def test_citation_release_metadata_syncs_without_changing_authorship(self):
+    def test_citation_release_metadata_syncs_without_changing_paper_evidence(self):
         import tempfile
         from unittest.mock import patch
 
         from sync_docs import check_or_sync_files, find_version_drift
 
         citation = 'cff-version: 1.2.0\nversion: "0.1.0"\ndate-released: "2000-01-01"\nauthors: []\n'
+        paper = (
+            "[the v0.1.0 archive][release-doi] identifies the software version.\n"
+            "[samples]: https://github.com/mfahsold/lixity/tree/v0.1.0/samples\n"
+            "[release-doi]: https://doi.org/10.5281/zenodo.123456\n"
+        )
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             path = root / "CITATION.cff"
             path.write_text(citation, encoding="utf-8")
+            paper_path = root / "paper/paper.md"
+            paper_path.parent.mkdir(parents=True)
+            paper_path.write_text(paper, encoding="utf-8")
             (root / "CHANGELOG.md").write_text("## [2.3.4] - 2026-10-05\n", encoding="utf-8")
             with patch("sync_docs.ROOT", root):
                 self.assertEqual(check_or_sync_files("2.3.4", check_only=True), ["CITATION.cff"])
                 self.assertEqual(path.read_text(encoding="utf-8"), citation)
-                self.assertTrue(any("CITATION.cff" in finding for finding in find_version_drift("2.3.4")))
+                self.assertEqual(paper_path.read_text(encoding="utf-8"), paper)
+                findings = find_version_drift("2.3.4")
+                self.assertTrue(any("CITATION.cff" in finding for finding in findings))
+                self.assertFalse(any("paper/paper.md" in finding for finding in findings))
                 check_or_sync_files("2.3.4")
                 self.assertEqual(path.read_text(encoding="utf-8"), citation.replace(
                     'version: "0.1.0"', 'version: "2.3.4"').replace("2000-01-01", "2026-10-05"))
+                self.assertEqual(paper_path.read_text(encoding="utf-8"), paper)
                 self.assertEqual(check_or_sync_files("2.3.4", check_only=True), [])
                 self.assertEqual(find_version_drift("2.3.4"), [])
 

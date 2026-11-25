@@ -130,18 +130,17 @@ def _para_names(para: str, recurring: set[str]) -> set[str]:
     return {m.group(1) for m in _CAP_TOKEN_RE.finditer(para) if m.group(1) in recurring}
 
 
-def _window_content_words(
-    paragraphs: Sequence[str],
+def _paragraph_content_words(
+    paragraph: str,
     word_re: re.Pattern[str],
     blacklist: frozenset[str],
 ) -> set[str]:
-    """Collect lowercase non-function content tokens across a paragraph window."""
+    """Collect lowercase non-function content tokens in one paragraph."""
     words: set[str] = set()
-    for para in paragraphs:
-        for tok in word_re.findall(para):
-            low = str(tok).lower()
-            if len(low) >= 3 and low not in blacklist:
-                words.add(low)
+    for tok in word_re.findall(paragraph):
+        low = str(tok).lower()
+        if len(low) >= 3 and low not in blacklist:
+            words.add(low)
     return words
 
 
@@ -155,28 +154,37 @@ def _detect_implicit_breaks(
     content_blacklist: frozenset[str],
 ) -> tuple[list[dict[str, Any]], int]:
     """Detect time, place, character, and lexical-cohesion discontinuities inside a scene."""
+    if len(paragraphs) < 2:
+        return [], para_offset + len(paragraphs)
+
+    # Each boundary compares up to two paragraphs on either side. Reuse
+    # the token sets as the window advances and leave the scene edges empty.
+    paragraph_words = (_paragraph_content_words(para, word_re, content_blacklist) for para in paragraphs)
+    edge: set[str] = set()
+    older, previous, current = edge, next(paragraph_words), next(paragraph_words)
+    prev_names = _para_names(paragraphs[0], recurring_names)
     breaks: list[dict[str, Any]] = []
     for idx in range(1, len(paragraphs)):
-        prev_para = paragraphs[idx - 1]
         curr_para = paragraphs[idx]
         cues: list[str] = []
         if _IMPLICIT_TIME_RE.search(curr_para):
             cues.append("time")
         if _IMPLICIT_PLACE_RE.search(curr_para):
             cues.append("place")
-        prev_names = _para_names(prev_para, recurring_names)
         curr_names = _para_names(curr_para, recurring_names)
         if prev_names and curr_names and prev_names.isdisjoint(curr_names):
             head_names = _para_names(curr_para[:60], recurring_names)
             if head_names:
                 cues.append("character")
+        prev_names = curr_names
 
-        prev_window = paragraphs[max(0, idx - 2):idx]
-        curr_window = paragraphs[idx:min(len(paragraphs), idx + 2)]
-        prev_words = _window_content_words(prev_window, word_re, content_blacklist)
-        curr_words = _window_content_words(curr_window, word_re, content_blacklist)
-        union_size = len(prev_words | curr_words)
-        cohesion_sim = round(len(prev_words & curr_words) / union_size, 4) if union_size else 0.0
+        following = next(paragraph_words, edge)
+        prev_words = older | previous
+        curr_words = current | following
+        older, previous, current = previous, current, following
+        common = len(prev_words & curr_words)
+        union_size = len(prev_words) + len(curr_words) - common
+        cohesion_sim = round(common / union_size, 4) if union_size else 0.0
         if (
             len(prev_words) >= _COHESION_MIN_WINDOW_WORDS
             and len(curr_words) >= _COHESION_MIN_WINDOW_WORDS

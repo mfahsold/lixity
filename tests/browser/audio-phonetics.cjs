@@ -81,6 +81,8 @@ server.serve_forever()
         assert.equal(await page.locator('#speech-profile').inputValue(),'retained','Discard restores the saved profile selection before migration');
         await page.locator('[data-speech-action=create]').click();
         assert.equal(await page.locator('#speech-profile option').count(),2,'New controls require a reviewed settings migration');
+        assert.equal(await page.locator('[data-speech-action=schema_preview]').evaluate(button => button === document.activeElement),
+          true, 'A blocked create action leads to the update review');
         assert.deepEqual(fs.readFileSync(server.fixture.config),originalConfig,'Opening and requesting a new profile never silently migrates');
         await page.locator('[data-speech-action=schema_preview]').click();
         await page.waitForFunction(() => document.querySelector('#speech-schema-review').textContent.includes('lixity-audio-settings/5'));
@@ -135,7 +137,7 @@ server.serve_forever()
         assert.equal(exported.schema_version,'lixity-audio-timeline/2');
         assert.ok(exported.segments.some(row=>row.instructions.includes('export-only')),'Authored free text is retained in export');
         assert.ok(exported.segments.some(row=>row.phonemes.some(phone=>phone.ipa==='ˈfoːɡəl')),'IPA export is separate from spelling');
-        await page.locator('#speech-tab-profiles').click();
+        await page.locator('#speech-edit-project-voice').click();
         await page.locator('#speech-instructions').fill('');
         await saveProfile();
         await openProfile('Synthetic author voice');

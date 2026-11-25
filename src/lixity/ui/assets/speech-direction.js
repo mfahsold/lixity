@@ -36,6 +36,8 @@ window.LixitySpeechDirection = function(parent, h) {
   h.options(style, [["", h.label("direction_custom")], ["calm", h.label("direction_calm")], ["tense", h.label("direction_tense")], ["whisper", h.label("direction_whisper")]], "");
   var instructions = h.field(section, "direction_instructions", "textarea"); instructions.maxLength = 2000;
   instructions.setAttribute("aria-describedby", hint.id);
+  section.insertBefore(style.closest("label"), text.closest("label"));
+  section.insertBefore(instructions.closest("label"), text.closest("label"));
   var prosody = h.createProsody(section, "direction-prosody-", changed, true);
   var grid = h.node("div", section, "settings-grid");
   var before = h.field(grid, "direction_before", "number"), after = h.field(grid, "direction_after", "number");
@@ -139,7 +141,15 @@ window.LixitySpeechDirection = function(parent, h) {
     }
     loadPassage();
   }
-  return {section:section, open:open, setCapabilities:setCapabilities, draft:function() { return dirty ? read() : null; },
+  function selectAnchor(anchor) {
+    if (!view || dirty || pending) return false;
+    var encoded = JSON.stringify(anchor);
+    if (!view.passages.some(function(p) { return JSON.stringify(p.anchor) === encoded; })) return false;
+    passage.value = encoded;
+    loadPassage(); h.invalidate();
+    return true;
+  }
+  return {section:section, open:open, selectAnchor:selectAnchor, setCapabilities:setCapabilities, draft:function() { return dirty ? read() : null; },
     dirty:function() { return dirty; }, busy:function() { return pending; }, replacement:function() { return dirty && selected ? selected.id : null; },
     stale:function() { ++revision; pending = false; section.disabled = false; save.disabled = remove.disabled = true; if (chapter) chapter.disabled = true; },
     disable:function() { pending = false; section.disabled = true; if (chapter) chapter.disabled = false; }};

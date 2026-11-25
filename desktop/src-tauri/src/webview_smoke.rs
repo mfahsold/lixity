@@ -37,6 +37,12 @@ fn get_preferences() -> &'static str {
 }
 
 #[tauri::command]
+fn audio_capture_start_recording(max_duration_seconds: Option<u32>) -> Option<u32> {
+    // Verify the bridge argument without starting the microphone.
+    max_duration_seconds
+}
+
+#[tauri::command]
 fn open_external_url(url: String) -> Result<(), String> {
     is_allowed_external_url(&url).map(|_| ())
 }
@@ -134,6 +140,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             crate::commands::get_runtime_environment,
             crate::commands::read_sample_manuscript,
             crate::commands::set_workspace_title,
+            crate::commands::audio_capture_status,
+            audio_capture_start_recording,
         ])
         .setup(move |app| {
             app.set_activation_policy(ActivationPolicy::Accessory);
@@ -183,7 +191,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
                     .as_deref() == Some("A synthetic project — Lixity");
                 if observed == required && title_matches {
                     println!(
-                        "Native WebView smoke passed: authenticated runtime IPC, bundled sample, license popups and same-window external links."
+                        "Native WebView smoke passed: authenticated runtime IPC, recording status, bundled sample and external links."
                     );
                     handle.exit(0);
                 } else {

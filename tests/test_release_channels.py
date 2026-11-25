@@ -61,6 +61,30 @@ def candidate(tmp_path):
     return source, dist
 
 
+@pytest.fixture
+def candidate_sbom(channels, candidate, tmp_path, monkeypatch):
+    inventory = importlib.import_module("dependency_inventory")
+    root, dist = candidate
+    wheel = next(dist.glob("*.whl"))
+    report = {
+        "version": "1",
+        "environment": {"python_full_version": "3.12.10", "implementation_name": "cpython",
+                        "sys_platform": "linux", "platform_machine": "x86_64"},
+        "install": [
+            {"metadata": {"name": "lixity", "version": TAG[1:]}, "requested": True,
+             "download_info": {"archive_info": {"hashes": {"sha256": channels.sha256_file(wheel)}}}},
+            {"metadata": {"name": "rich", "version": "15.0.0"}, "requested": False},
+        ],
+    }
+    with monkeypatch.context() as probe:
+        probe.setattr(inventory.subprocess, "check_output", lambda command, **kwargs: SHA if command[1] == "rev-parse" else "")
+        probe.setattr(inventory, "browser_components", lambda root: [])
+        bom, _ = inventory.create_sbom(root, report, SHA, dist)
+    path = tmp_path / "lixity-release.cdx.json"
+    path.write_text(json.dumps(bom), encoding="utf-8")
+    return path
+
+
 def metadata(dist):
     return {"id": 12, "tag_name": TAG, "draft": False, "immutable": True,
             "published_at": "2026-11-16T12:00:00Z", "assets": [
@@ -149,6 +173,141 @@ def fake_git(monkeypatch, channels, sha=SHA):
     monkeypatch.setattr(channels.subprocess, "run", run)
 
 
+def rc_responses(channels, *, run=None, artifact=None):
+    valid_run = {"id": 123, "head_repository": {"full_name": REPO}, "head_branch": "main",
+                 "head_sha": SHA, "path": ".github/workflows/rc.yml", "event": "workflow_dispatch",
+                 "status": "completed", "conclusion": "success"}
+    valid_artifact = {"id": 456, "name": channels.RC_ARTIFACT, "digest": "sha256:" + "f" * 64,
+                      "expired": False, "workflow_run": {"id": 123, "head_sha": SHA, "head_branch": "main"}}
+    base = API + "/actions"
+    runs = base + f"/workflows/rc.yml/runs?branch=main&event=workflow_dispatch&status=success&head_sha={SHA}&per_page=30"
+    artifacts = base + "/runs/123/artifacts?name=verified-release-candidate"
+    return {runs: {"workflow_runs": [{**valid_run, **(run or {})}]},
+            artifacts: {"total_count": 1, "artifacts": [{**valid_artifact, **(artifact or {})}]}}
+
+
+def test_rc_cli_uses_exact_successful_run_without_needing_a_tag_ref(channels, candidate, monkeypatch, tmp_path, capsys):
+    root, _ = candidate
+    fake_git(monkeypatch, channels)
+    values = rc_responses(channels)
+    runs_url, artifacts_url = values
+    run = values[runs_url]["workflow_runs"][0]
+    values[runs_url]["workflow_runs"].insert(0, {**run, "id": 124})
+    expired_url = artifacts_url.replace("/123/", "/124/")
+    expired = {**values[artifacts_url]["artifacts"][0], "expired": True}
+    values[expired_url] = {"total_count": 1, "artifacts": [expired]}
+    opener = Responses(values)
+    client = channels.HttpClient(opener=opener)
+    monkeypatch.setattr(channels, "HttpClient", lambda **kwargs: client)
+    output = tmp_path / "github_output"
+    monkeypatch.setattr(sys, "argv", ["release_channels", "verify-rc", "--root", str(root),
+                                    "--tag", TAG, "--expected-commit", SHA, "--repo", REPO,
+                                    "--github-output", str(output)])
+    channels.main()
+    assert json.loads(capsys.readouterr().out) == {
+        "tag": TAG, "source_sha": SHA, "run_id": 123, "artifact_id": 456, "artifact_digest": expired["digest"],
+    }
+    assert {"run_id=123", "artifact_id=456"} <= set(output.read_text().splitlines())
+    assert [request.full_url for request in opener.requests] == [runs_url, expired_url, artifacts_url]
+
+
+@pytest.mark.parametrize(("run", "artifact", "error"), [
+    ({"head_sha": "b" * 40}, {}, "unexpected identity"),
+    ({"head_repository": {"full_name": "fork/lixity"}}, {}, "unexpected identity"),
+    ({"event": "pull_request"}, {}, "unexpected identity"),
+    ({"conclusion": "failure"}, {}, "unexpected identity"),
+    ({}, {"digest": None}, "invalid identity or SHA-256"),
+    ({}, {"workflow_run": {"id": 124, "head_branch": "main", "head_sha": SHA}}, "invalid identity or SHA-256"),
+    ({}, {"expired": True}, "no successful rc.yml run retains a candidate"),
+])
+def test_rc_refuses_unqualified_runs_and_artifacts(channels, candidate, monkeypatch, run, artifact, error):
+    root, _ = candidate
+    fake_git(monkeypatch, channels)
+    values = rc_responses(channels, run=run, artifact=artifact)
+    with pytest.raises(ValueError, match=error):
+        channels.verify_rc(root, TAG, SHA, REPO, channels.HttpClient(opener=Responses(values)))
+
+
+def test_rc_without_a_run_fails_with_the_pre_tag_recovery_command(channels, candidate, monkeypatch):
+    root, _ = candidate
+    fake_git(monkeypatch, channels)
+    runs_url = next(iter(rc_responses(channels)))
+    client = channels.HttpClient(opener=Responses({runs_url: {"workflow_runs": []}}))
+    with pytest.raises(ValueError, match=r"make rc-gate RELEASE_TAG=v0\.3\.0"):
+        channels.verify_rc(root, TAG, SHA, REPO, client)
+
+
+def test_candidate_bytes_are_bound_to_hosted_rc_provenance(channels, candidate, candidate_sbom, monkeypatch):
+    root, dist = candidate
+    fake_git(monkeypatch, channels)
+    subprocess_run = channels.subprocess.run
+    commands = []
+
+    def run(argv, **kwargs):
+        if argv[1:3] == ["attestation", "verify"]:
+            commands.append(argv)
+            return subprocess.CompletedProcess(argv, 0)
+        return subprocess_run(argv, **kwargs)
+
+    monkeypatch.setattr(channels.subprocess, "run", run)
+    assert channels.validate_rc_artifacts(root, None, SHA, dist, candidate_sbom) == {
+        "tag": TAG, "source_sha": SHA, "state": "validated",
+    }
+    assert not commands
+    assert channels.verify_rc_artifacts(root, TAG, SHA, REPO, dist, candidate_sbom)["state"] == "qualified"
+    assert {Path(command[3]).name for command in commands} == {path.name for path in dist.iterdir()}
+    for command in commands:
+        assert command[command.index("--source-ref") + 1] == "refs/heads/main"
+        assert command[command.index("--signer-digest") + 1] == SHA
+        assert command[command.index("--cert-identity") + 1] == (
+            "https://github.com/example/lixity/.github/workflows/rc.yml@refs/heads/main")
+        assert "--deny-self-hosted-runners" in command
+    commands.clear()
+    (dist / "SHA256SUMS").unlink()
+    with pytest.raises(ValueError, match="SHA256SUMS must be a regular file"):
+        channels.verify_rc_artifacts(root, TAG, SHA, REPO, dist, candidate_sbom)
+    assert not commands
+
+
+@pytest.mark.parametrize(("keys", "replacement", "message"), [
+    (("specVersion",), "bogus", r"CycloneDX 1\.6 inventory"),
+    (("metadata", "properties", 0, "value"), "b" * 40, "lixity:source:commit"),
+    (("metadata", "properties", 1, "value"), "modified", "lixity:source:working-tree"),
+    (("metadata", "component", "version"), "9.9.9", "package identity"),
+    (("metadata", "component", "components"), [], "wheel and sdist exactly once"),
+    (("metadata", "component", "components", 0, "hashes", 0, "content"), "b" * 64, r"file entry differs.*\.whl"),
+    (("metadata", "component", "components", 1, "hashes", 0, "content"), "b" * 64, r"file entry differs.*\.tar\.gz"),
+])
+def test_candidate_sbom_mismatches_stop_provenance(
+    channels, candidate, candidate_sbom, monkeypatch, keys, replacement, message,
+):
+    root, dist = candidate
+    fake_git(monkeypatch, channels)
+    monkeypatch.setattr(channels, "verify_attestations", lambda *args, **kwargs: pytest.fail("attestation before validation"))
+    inventory = json.loads(candidate_sbom.read_bytes())
+    owner = inventory
+    for key in keys[:-1]:
+        owner = owner[key]
+    owner[keys[-1]] = replacement
+    candidate_sbom.write_text(json.dumps(inventory), encoding="utf-8")
+    with pytest.raises(ValueError, match=message):
+        channels.verify_rc_artifacts(root, TAG, SHA, REPO, dist, candidate_sbom)
+
+
+def test_candidate_sbom_rejects_missing_and_ambiguous_source_metadata(channels, candidate, candidate_sbom, monkeypatch):
+    root, dist = candidate
+    fake_git(monkeypatch, channels)
+    inventory = json.loads(candidate_sbom.read_bytes())
+    properties = inventory["metadata"]["properties"]
+    properties.append(properties[0])
+    candidate_sbom.write_text(json.dumps(inventory), encoding="utf-8")
+    with pytest.raises(ValueError, match="ambiguous or mismatched lixity:source:commit"):
+        channels.validate_rc_artifacts(root, TAG, SHA, dist, candidate_sbom)
+    candidate_sbom.unlink()
+    with pytest.raises(ValueError, match="candidate SBOM must be a regular file"):
+        channels.validate_rc_artifacts(root, TAG, SHA, dist, candidate_sbom)
+
+
 def test_desktop_draft_and_public_recovery_use_the_same_qualified_bytes(
     channels, candidate, desktop_candidate, monkeypatch, tmp_path,
 ):
@@ -168,7 +327,7 @@ def test_desktop_draft_and_public_recovery_use_the_same_qualified_bytes(
     assert not staged.exists()
     review.write_text(json.dumps(receipt))
     assert channels.stage_desktop(root, TAG, SHA, REPO, installers, review, staged)["installer_count"] == 7
-    assert calls[-1][1] == {"desktop": True}
+    assert calls[-1][1] == {"workflow": "desktop-release.yml"}
     assert channels.QUALIFICATION_FILE not in calls[-1][0]
 
     release = metadata(dist)
@@ -240,7 +399,8 @@ def test_catalog_records_attested_public_installer_bytes_atomically(
     catalog = json.loads(output.read_bytes())
     assert catalog["tag"] == TAG
     assert {entry["filename"] for entry in catalog["installers"]} == desktop.public_installer_inventory(TAG).keys()
-    assert calls[-1] == ({path.name for path in staged.iterdir()} - {channels.QUALIFICATION_FILE}, {"desktop": True})
+    assert calls[-1] == ({path.name for path in staged.iterdir()} - {channels.QUALIFICATION_FILE},
+                         {"workflow": "desktop-release.yml"})
 
 
 @pytest.mark.parametrize("status", [401, 403, 429, 500, 503])
@@ -444,7 +604,7 @@ def test_attestation_policy_pins_repository_workflow_source_tag_and_hosted_runne
         assert env is not None and "GIT_ASKPASS" not in env
         assert env["GIT_TERMINAL_PROMPT"] == "0"
     commands.clear()
-    channels.verify_attestations([dist / "Lixity_0.3.0_aarch64.dmg"], REPO, TAG, SHA, desktop=True)
+    channels.verify_attestations([dist / "Lixity_0.3.0_aarch64.dmg"], REPO, TAG, SHA, workflow="desktop-release.yml")
     command = commands[0][0]
     assert command[command.index("--source-ref") + 1] == "refs/heads/main"
     assert command[command.index("--cert-identity") + 1] == (

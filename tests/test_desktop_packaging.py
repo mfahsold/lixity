@@ -29,6 +29,53 @@ ROOT = Path(__file__).resolve().parents[1]
 DESKTOP = ROOT / "desktop"
 
 
+def test_windows_test_install_guide_hashes_the_selected_installer():
+    guide = (DESKTOP / "packaging" / "windows" / "test-install-guide.html").read_text(encoding="utf-8")
+    commands = re.findall(r"<pre><code>(.*?)</code></pre>", guide, re.S)
+    assert commands == [
+        "$installer = Read-Host 'Installer filename'\n"
+        "Get-FileHash -Algorithm SHA256 -LiteralPath $installer"
+    ]
+
+
+@pytest.mark.parametrize("template", ["linux/test-install-guide.html", "macos/install-guide.html", "windows/test-install-guide.html"])
+def test_installer_guides_use_the_current_offline_sample_actions(template):
+    labels = json.loads((ROOT / "src" / "lixity" / "locales" / "en.json").read_text(encoding="utf-8"))
+    guide = (DESKTOP / "packaging" / template).read_text(encoding="utf-8")
+    open_sample = guide.index(f'<strong>{labels["welcome_sample_action"]}</strong>')
+    confirm_copy = guide.index(f'<strong>{labels["wizard_import_action"]}</strong>')
+    assert open_sample < confirm_copy
+
+
+def test_platform_artifact_upload_retries_only_the_same_verified_files():
+    action_path = ".github/actions/upload-desktop-installers"
+    action = (ROOT / action_path / "action.yml").read_text(encoding="utf-8")
+    first, retry = action.split("    - name: Retry upload", 1)
+    assert re.search(r"(?m)^      id: upload\n      continue-on-error: true$", first)
+    assert "if: steps.upload.outcome == 'failure'" in retry
+    assert "continue-on-error" not in retry
+    assert "overwrite: true" not in first
+    assert "overwrite: true" in retry
+    assert action.count("      uses: actions/upload-artifact@") == 2
+    for attempt in (first, retry):
+        assert "path: desktop/build/installers/*" in attempt
+        assert "name: ${{ inputs.name }}" in attempt
+        assert "retention-days: ${{ inputs.retention-days }}" in attempt
+        assert "if-no-files-found: error" in attempt
+    for workflow_name, prefix, retention in (
+        ("desktop.yml", "lixity-desktop-installers", 14),
+        ("desktop-release.yml", "desktop-installers", 30),
+    ):
+        workflow = (ROOT / ".github" / "workflows" / workflow_name).read_text(encoding="utf-8")
+        verify_at = workflow.index("python scripts/verify_desktop_artifacts.py")
+        upload_at = workflow.index(f"uses: ./{action_path}")
+        assert verify_at < upload_at
+        upload = workflow[upload_at:].split("\n\n", 1)[0]
+        assert f"name: {prefix}-${{{{ matrix.target }}}}" in upload
+        assert f"retention-days: {retention}" in upload
+        assert "continue-on-error" not in upload
+
+
 def test_desktop_menu_locales_are_synchronized_across_all_seven_languages():
     res = subprocess.run(  # noqa: S603 - fixed repository verification script
         [sys.executable, str(DESKTOP / "scripts" / "generate_menu_locales.py"), "--check"],
@@ -386,7 +433,8 @@ def test_desktop_bridge_is_native_only_and_excluded_from_read_only_exports(tmp_p
     assert marker not in (ROOT / "docs" / "demo" / "report.html").read_text(encoding="utf-8")
 
 
-def test_strip_runtime_bloat_preserves_windows_stdlib_and_removes_pip(tmp_path):
+@pytest.fixture
+def runtime_bundle_builder():
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(
@@ -396,7 +444,29 @@ def test_strip_runtime_bloat_preserves_windows_stdlib_and_removes_pip(tmp_path):
     assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    return mod
 
+
+def test_bundled_python_selection_skips_directories_and_retains_supported_paths(tmp_path, runtime_bundle_builder):
+    configured = "python/bin/python3.12"
+    primary = tmp_path / configured
+    primary.mkdir(parents=True)
+    with pytest.raises(FileNotFoundError, match="Could not locate bundled Python executable"):
+        runtime_bundle_builder.bundled_python_exe(tmp_path, configured)
+
+    windows_path = tmp_path / "python/python.exe"
+    windows_path.write_bytes(b"synthetic interpreter")
+    assert runtime_bundle_builder.bundled_python_exe(tmp_path, configured) == windows_path
+
+    if os.name != "nt":
+        primary.rmdir()
+        interpreter = primary.with_name("python3.12-real")
+        interpreter.write_bytes(b"synthetic interpreter")
+        primary.symlink_to(interpreter.name)
+        assert runtime_bundle_builder.bundled_python_exe(tmp_path, configured) == primary
+
+
+def test_strip_runtime_bloat_preserves_windows_stdlib_and_removes_pip(tmp_path, runtime_bundle_builder):
     # Synthetic Windows layout: ensure case-insensitive Lib/threading.py survives
     # while pip, distlib .exe stubs and Tcl/Tk assets are removed.
     win_py = tmp_path / "win-python"
@@ -415,7 +485,7 @@ def test_strip_runtime_bloat_preserves_windows_stdlib_and_removes_pip(tmp_path):
     (win_py / "DLLs" / "tcl86t.dll").write_bytes(b"MZ")
     (win_py / "DLLs" / "python3.dll").write_bytes(b"MZ")
 
-    mod.strip_runtime_bloat(win_py, keep_exe_name="python.exe")
+    runtime_bundle_builder.strip_runtime_bloat(win_py, keep_exe_name="python.exe")
 
     assert (win_py / "python.exe").is_file()
     assert (win_py / "Lib" / "threading.py").is_file()

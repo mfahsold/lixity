@@ -220,6 +220,7 @@ class Repository:
         #: Pre-computed strings for the per-object safety check: a snapshot of a
         #: large archive runs it tens of thousands of times.
         self._root_text = str(self.root)
+        self._root_prefix = self._root_text + os.sep
         self._revisions_text = str(self.data / "revisions")
         #: Last verified snapshot of this instance. Reused only while HEAD still
         #: names the same manifest, so another process's commit is always seen.
@@ -238,15 +239,18 @@ class Repository:
         dominated the profile of large archives.
         """
         root = self._root_text
-        if text != root and not text.startswith(root + os.sep):
+        if text == root:
+            return
+        if not text.startswith(self._root_prefix):
             raise ResearchStorageError("Research path escapes the project")
         current = root
-        for part in text[len(root):].split(os.sep):
+        for part in text[len(self._root_prefix):].split(os.sep):
             if not part:
                 continue
             if part == os.pardir:
                 raise ResearchStorageError("Parent traversal is not allowed inside the research store")
-            current = os.path.join(current, part)
+            # The separator split leaves one literal component at a time.
+            current += os.sep + part
             if os.path.islink(current):
                 raise ResearchStorageError("Symlinks are not allowed inside the research store")
 
@@ -367,7 +371,7 @@ class Repository:
 
     def _record_path(self, entry: Entry) -> str:
         """Construct a revision path for the bounded, verified read."""
-        return os.path.join(self._revisions_text, entry.kind, entry.ref.id[9:], f"{entry.ref.revision}.json")
+        return f"{self._revisions_text}{os.sep}{entry.kind}{os.sep}{entry.ref.id[9:]}{os.sep}{entry.ref.revision}.json"
 
     def snapshot(self, kinds: frozenset[str] | None = None) -> Snapshot:
         """Read the accepted snapshot; ``kinds`` narrows large archives.
@@ -431,6 +435,7 @@ class Repository:
         def loaded(kind: str) -> bool:
             return kinds is None or kind in kinds
 
+        manifest_version = int(snapshot.manifest.schema_version.rsplit("/", 1)[1])
         histories: dict[str, list[Entity]] = {}
         for (record_id, number), record in snapshot.revisions.items():
             if (record_id, number) != (record.id, record.revision) or record_id not in snapshot.records:
@@ -453,7 +458,7 @@ class Repository:
                     for revision in history
                 ):
                     raise ResearchError("Dossier revisions must retain version 8 after geography opt-in")
-            if int(record.schema_version.rsplit("/", 1)[1]) > int(snapshot.manifest.schema_version.rsplit("/", 1)[1]):
+            if int(record.schema_version.rsplit("/", 1)[1]) > manifest_version:
                 raise ResearchError(f"Version {record.schema_version[-1]} records require manifest version {record.schema_version[-1]} or later")
         sequences: set[tuple[str, int]] = set()
         descriptors: dict[str, Blob] = {}
@@ -628,7 +633,8 @@ class Repository:
 
         for record in additions:
             try:
-                ENTITY.validate_json(encode(record))
+                content = encode(record)
+                ENTITY.validate_json(content)
             except ValidationError:
                 raise ResearchError("Invalid or unsupported research schema") from None
             previous = records.get(record.id)
@@ -640,7 +646,7 @@ class Repository:
                 raise ResearchError("A record must start at revision 1")
             records[record.id] = record
             revisions[(record.id, record.revision)] = record
-            entries.append(Entry(kind=record.kind, ref=reference(record), sha256=digest(encode(record))))
+            entries.append(Entry(kind=record.kind, ref=reference(record), sha256=digest(content)))
         project = next((record for record in records.values() if isinstance(record, Project)), None)
         if project is None:
             raise ResearchError("Project record required")

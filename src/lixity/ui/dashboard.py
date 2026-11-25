@@ -1233,6 +1233,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             f'{metric_control}'
             f'<button type="button" class="ctl" id="reader-counted-results" hidden '
             f'data-help="{L("reader_evidence_results_help")}" aria-controls="craft-jump-bar"></button>'
+            '<p class="ctl-note" id="reader-counted-empty" role="status" hidden></p>'
             f'<button type="button" class="ctl" id="reader-inspect-current">{L("reading_explore_passage")}</button>'
             f'{layer_navigation}'
             '<details class="reader-settings reader-analysis-options" id="reader-analysis-options" name="reader-settings">'
@@ -1375,7 +1376,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         f'<input class="ctl" type="search" id="text-search" autocomplete="off" '
         f'placeholder="{L("text_search")}" aria-label="{L("text_search")}" '
         f'aria-controls="chapters" data-help="{L("reading_help_search")}" '
-        'aria-keyshortcuts="Enter Shift+Enter Escape"/>'
+        'aria-keyshortcuts="/ Control+F Meta+F Enter Shift+Enter Escape"/>'
         f'<kbd class="search-kbd-badge" title="{L("kbd_shortcut")}">{L("search_shortcut")}</kbd>'
         '</span>'
     )

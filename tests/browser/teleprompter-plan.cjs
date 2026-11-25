@@ -3,6 +3,7 @@ const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const labels = require('../../src/lixity/locales/de.json');
 
 (async () => {
   const browser = await launchChromium();
@@ -44,8 +45,8 @@ const path = require('node:path');
       });
       await page.goto('http://localhost:41739/');
       for (const file of ['design-tokens.css','dashboard.css','teleprompter.css']) await page.addStyleTag({content:fs.readFileSync(path.join(__dirname,'../../src/lixity/ui/assets',file),'utf8')});
-      await page.evaluate(() => {window.uiLabel=key=>({teleprompter_plan_loading:'Regie wird geladen…',teleprompter_plan_ready:'Gespeicherte Sprechprojektion',teleprompter_plan_failed:'Regie nicht verfügbar. Manuskripttext ohne Sprechhinweise.',speech_prosody_duration_scaling_factor:'Sprechdauer',speech_prosody_pitch_variance_scale:'Intonation',speech_prosody_energy_variance_scale:'Betonung',speech_export_pause_before:'Pause davor',speech_export_pause_after:'Pause danach'}[key]||key);});
-      for (const file of ['speech-presentation.js','teleprompter.js']) {
+      await page.evaluate(localized => {window.uiLabel = key => localized[key] || key;}, labels);
+      for (const file of ['vendor/preact-10.29.8.min.js','vendor/htm-3.1.1.umd.js','component-layer.js','tooltips.js','speech-presentation.js','teleprompter.js']) {
         const script=path.join(__dirname,'../../src/lixity/ui/assets',file);
         if(fs.existsSync(script)) await page.addScriptTag({content:fs.readFileSync(script,'utf8')});
       }
@@ -59,6 +60,32 @@ const path = require('node:path');
           const rect=await page.locator(selector).boundingBox();
           assert.ok(rect.x>=0 && rect.x+rect.width<=width,selector+' must remain reachable on compact screens');
         }
+        const record=page.locator('.teleprompter-btn-record');
+        await record.focus();
+        const tip=page.locator('#teleprompter-modal #lixity-tooltip.visible');
+        await tip.locator('kbd').filter({hasText:'R'}).waitFor();
+        assert.equal(await tip.evaluate(element => {
+          const rect=element.getBoundingClientRect();
+          return element.contains(document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2));
+        }),true,'Keyboard tooltip is visible above the full-screen prompter');
+        for (const [control, key] of [
+          ['.teleprompter-btn-primary', 'teleprompter_play_help'],
+          ['.teleprompter-speed-control input', 'teleprompter_speed_help'],
+        ]) {
+          await page.locator(control).focus();
+          assert.equal(await tip.locator('.tooltip-copy').textContent(), labels[key]);
+          assert.ok(await tip.locator('kbd').count(), 'The help retains the shortcut');
+        }
+        await record.focus();
+        const dossier=page.locator('.teleprompter-dossier-toggle');
+        await record.evaluate(button=>button.dispatchEvent(new KeyboardEvent('keydown', {bubbles:true,key:'d',code:'KeyQ'})));
+        assert.equal(await dossier.getAttribute('aria-pressed'),'true','Dossier uses the typed key across keyboard layouts');
+        await record.evaluate(button=>button.dispatchEvent(new KeyboardEvent('keydown', {bubbles:true,key:'d',repeat:true})));
+        assert.equal(await dossier.getAttribute('aria-pressed'),'true','A held toggle key does not close the sidebar');
+        await page.keyboard.press('d');
+        assert.equal(await dossier.getAttribute('aria-pressed'),'false');
+        await record.evaluate(button=>button.dispatchEvent(new KeyboardEvent('keydown', {bubbles:true,key:'r',altKey:true})));
+        assert.equal(await page.locator('#teleprompter-record-status').isVisible(),false,'Modified R leaves recording alone');
         assert.equal(await page.locator('.teleprompter-text #synthetic-markup').count(),0,'Manuscript markup must remain literal text, never HTML');
         await page.locator('.teleprompter-phonetic rt').waitFor();
         assert.equal(await page.locator('.teleprompter-phonetic rt').textContent(),'[ˈfoːɡəl]');
@@ -66,16 +93,21 @@ const path = require('node:path');
         assert.deepEqual(plans,[{project_token:'synthetic-project',source_sha256:'synthetic-source',mode:'manuscript',chapter:null}]);
         const cues=await page.locator('.teleprompter-cue').allTextContents();
         assert.equal(cues.length,3,'Every exported range has its own effective cues');
-        assert.ok(cues.some(text=>text.includes('Sprechdauer: 1.25')&&text.includes('Pause davor: 0.2 s')),'Pause and structured controls do not require free-text instructions');
-        assert.ok(cues.some(text=>text.includes('Leise sprechen')&&text.includes('Intonation: 1.4')));
-        assert.ok(cues.some(text=>text.includes('Betonung: 0.8')&&text.includes('Pause danach: 0.6 s')));
+        assert.ok(cues.some(text=>text.includes(labels.speech_prosody_duration_scaling_factor + ': 1.25')&&text.includes('Pause davor: 0.2 s')),'Pause and structured controls do not require free-text instructions');
+        assert.ok(cues.some(text=>text.includes('Leise sprechen')&&text.includes(labels.speech_prosody_pitch_variance_scale + ': 1.4')));
+        assert.ok(cues.some(text=>text.includes(labels.speech_prosody_energy_variance_scale + ': 0.8')&&text.includes('Pause danach: 0.6 s')));
+        assert.equal(await page.locator('#teleprompter-plan-status').textContent(), labels.teleprompter_plan_ready);
         assert.ok(!(await page.locator('#teleprompter-modal').innerText()).includes('opaque-reference'));
         assert.equal(await page.locator('.teleprompter-paragraph.is-active').count(),1,'Async plan loading preserves the active passage');
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
         const spokenBounds=await page.locator('.teleprompter-text').boundingBox();
         assert.ok(spokenBounds.x>=0 && spokenBounds.x+spokenBounds.width<=width,'Spoken text and cues fit inside the visible runway');
         await page.screenshot({path:path.join(artifacts,`plan-${width}.png`),animations:'disabled'});
-        await page.evaluate(()=>window.LixityTeleprompter.close());
+        await page.locator('.teleprompter-toolbar .teleprompter-btn-close').focus();
+        await tip.locator('kbd').filter({hasText:'Esc'}).waitFor();
+        await page.keyboard.press('Escape');
+        assert.equal(await page.locator('#teleprompter-modal').isVisible(),false);
+        assert.equal(await page.locator('#reader-teleprompter').evaluate(element=>element===document.activeElement),true);
         failPlan=true;
         await page.locator('#reader-teleprompter').click();
         await page.waitForFunction(()=>document.querySelector('#teleprompter-plan-status')?.dataset.state==='failed');

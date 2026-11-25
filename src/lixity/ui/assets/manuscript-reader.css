@@ -94,6 +94,7 @@
 .reader-shortcuts dt, .reader-shortcuts dd { margin: 0; overflow-wrap: anywhere; }
 .reader-shortcuts dd { color: var(--fg-secondary); }
 .reader-shortcuts kbd { font-family: var(--font-mono); font-size: inherit; white-space: nowrap; }
+.reader-command-palette { margin-block-start: var(--space-2); }
 .reader-settings:not([open]) > .reader-settings-body { display: none; }
 .reader-analysis-controls { display: none; }
 .workbench-analysis:not(.reader-focus):not(.workbench-overview) .reader-analysis-controls { display: flex; }

@@ -2,8 +2,10 @@
 
 import hashlib
 import json
+import sys
 import time
 from pathlib import Path
+from subprocess import CompletedProcess
 from urllib.parse import urlencode
 
 import pytest
@@ -47,6 +49,97 @@ def context(source, handler):
         "project_token": project_settings_token(handler.workspace_root, str(source)),
         "source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
     }
+
+
+def test_soundcraft_excerpt_is_bound_exact_and_ephemeral(speech_server, monkeypatch):
+    import base64
+    import io
+    import wave
+
+    from lixity import speech_trim
+
+    port, source, handler, _observed = speech_server
+    bound = context(source, handler)
+    pcm = (b"\0\0" * 12000 + b"\xff\x7f" * 12000 + b"\0\x80" * 12000 + b"\0\0" * 12000) * 32
+    start, end = 6000, 6000 + 60 * 24000
+    expected = pcm[start * 2:end * 2]
+
+    def wav_bytes(samples, rate=24000):
+        stream = io.BytesIO()
+        with wave.open(stream, "wb") as writer:
+            writer.setparams((1, 2, rate, 0, "NONE", "not compressed"))
+            writer.writeframes(samples)
+        return stream.getvalue()
+
+    original_wav = wav_bytes(pcm)
+    audio = base64.b64encode(original_wav).decode("ascii")
+    payload = {**bound, "audio": audio, "start_frame": start, "end_frame": end}
+    route = "/api/audio-take-trim"
+    settings_route = "/api/speech?" + urlencode(bound)
+    monkeypatch.delenv("LIXITY_SOUNDCRAFT_CLI", raising=False)
+    monkeypatch.setattr("lixity.speech_record.get_microphone_status", lambda: {"devices": []})
+    assert json.loads(send(port, settings_route).body)["can_trim_take"] is False
+    assert send(port, route, payload=payload).status == 400
+
+    calls = []
+    state = "exact"
+
+    def fake_soundcraft(argv, *, cwd, env, timeout, **kwargs):
+        calls.append(argv[1])
+        assert Path(argv[0]) == Path(sys.executable)
+        assert env["HOME"] == env["TMPDIR"] == str(cwd)
+        assert env["SOUNDCRAFT_NO_PREFS"] == "1"
+        assert "EXAMPLE_UNRELATED_API_SECRET" not in env
+        assert cwd.is_dir() and source.parent not in cwd.parents
+        assert 0 < timeout <= 30
+        temporary_folders.add(cwd)
+        if argv[1] == "--version":
+            return CompletedProcess(argv, 0, b"soundcraft-cli 0.20.1 (fixture)\n")
+        if argv[1] == "run":
+            assert (cwd / "take.wav").read_bytes() == original_wav
+            commands = dict(argument.split("=", 1) for argument in argv[3::2])
+            assert json.loads(commands["edit.select"]) == {"tracks": ["take"], "start": start, "end": end, "exact": True}
+        elif argv[1] == "convert":
+            assert argv[-3:] == ["--bit-depth", "16", "--no-dither"]
+            result = expected if state != "corrupt" else expected[:-2] + b"\x00\x18"
+            Path(argv[3]).write_bytes(wav_bytes(result))
+            if state == "stale":
+                source.write_text("## Revised\n\nA changed manuscript.\n", encoding="utf-8")
+        return CompletedProcess(argv, 0)
+
+    temporary_folders = set()
+    monkeypatch.setenv("LIXITY_SOUNDCRAFT_CLI", sys.executable)
+    monkeypatch.setenv("EXAMPLE_UNRELATED_API_SECRET", "secret-fixture")
+    monkeypatch.setattr(speech_trim.subprocess, "run", fake_soundcraft)
+    trim_capabilities = json.loads(send(port, settings_route).body)
+    assert trim_capabilities["can_trim_take"] is True
+    assert trim_capabilities["take_trim_limit_seconds"] == speech_trim.MAX_TRIM_INPUT_SECONDS
+    assert trim_capabilities["reference_format"] == {
+        "channels": 1, "sample_rate_hz": 24000, "sample_width_bits": 16,
+        "min_seconds": 1, "max_seconds": 60, "max_bytes": 3 * 1024**2, "max_transcript_chars": 2000,
+    }
+
+    wrong_rate = base64.b64encode(wav_bytes(pcm, 16000)).decode("ascii")
+    for invalid in ({"start_frame": True}, {"end_frame": end + 1}, {"audio": "invalid Base64"},
+                    {"audio": wrong_rate}, {"path": "unused"}):
+        assert send(port, route, payload={**payload, **invalid}).status == 400
+    assert not calls
+
+    before = set(source.parent.iterdir())
+    result = send(port, route, payload=payload)
+    assert result.status == 200, result.body
+    with wave.open(io.BytesIO(base64.b64decode(json.loads(result.body)["audio"])), "rb") as excerpt:
+        assert excerpt.getparams()[:4] == (1, 2, 24000, end - start)
+        assert excerpt.readframes(excerpt.getnframes()) == expected
+    assert calls == ["--version", "run", "convert"]
+    assert set(source.parent.iterdir()) == before
+    assert context(source, handler) == bound
+
+    state = "corrupt"
+    assert send(port, route, payload=payload).status == 400
+    state = "stale"
+    assert send(port, route, payload=payload).status == 409
+    assert all(not folder.exists() for folder in temporary_folders)
 
 
 @pytest.mark.parametrize("language", ["en", "de"])
@@ -195,7 +288,12 @@ def test_speech_fixture_does_not_probe_external_workers(speech_server, monkeypat
 
 
 def test_speech_view_exposes_actual_workers_without_sensitive_details(speech_server, monkeypatch):
-    from lixity.speech_profiles import QWEN_BASE_MODEL
+    from lixity.speech_profiles import (
+        QWEN_BASE_MODEL,
+        QWEN_DEFAULT_VOICE,
+        AudioProfile,
+        AudioSettings,
+    )
 
     port, source, handler, _observed = speech_server
     observed_targets = []
@@ -210,6 +308,12 @@ def test_speech_view_exposes_actual_workers_without_sensitive_details(speech_ser
     response = send(port, "/api/speech?" + urlencode(context(source, handler)))
     assert response.status == 200
     data = json.loads(response.body)
+    assert data["profile_constraints"] == {
+        "maximum": AudioSettings.model_json_schema()["properties"]["profiles"]["maxProperties"],
+        "default_paragraph_pause": AudioProfile.model_fields["paragraph_pause"].default,
+        "default_scene_pause": AudioProfile.model_fields["scene_pause"].default,
+    }
+    assert data["capabilities"]["qwen3"]["default_voice"] == QWEN_DEFAULT_VOICE
     assert {row["target"] for row in data["workers"]} == {"local", "jetson"}
     local, remote = data["workers"][:2]
     assert local["state"] == "ready" and local["model"] == QWEN_BASE_MODEL
@@ -217,6 +321,56 @@ def test_speech_view_exposes_actual_workers_without_sensitive_details(speech_ser
     assert all(row["model_matches"] is None for row in data["workers"])
     assert set(observed_targets) == {"local", "jetson"}
     assert "A bird crosses" not in json.dumps(data["workers"])
+
+
+@pytest.mark.parametrize(("engine", "target", "transport"), [
+    ("openai-compatible", "provider", "http"),
+    ("mlx-audio", "local", "isolated-process"),
+])
+def test_speech_view_marks_external_worker_with_its_configured_engine(
+    speech_server, monkeypatch, engine, target, transport,
+):
+    port, source, handler, _observed = speech_server
+    config = source.parent / "lixity.toml"
+    config.write_text(f'''language = "en"
+[audio]
+schema_version = "lixity-audio-settings/5"
+selected = "narrator"
+[audio.profiles.narrator]
+engine = "{engine}"
+base_url = "https://speech.example.invalid/v1"
+model = "synthetic-model"
+voice = "synthetic-voice"
+''')
+    worker = {"target": target, "transport": transport, "state": "unknown", "model": "synthetic-model"}
+
+    def provider_status(profile):
+        assert profile.engine == engine
+        return worker
+
+    monkeypatch.setattr("lixity.speech_providers.external_provider_status", provider_status)
+    response = send(port, "/api/speech?" + urlencode(context(source, handler)))
+    assert response.status == 200, response.body
+    assert json.loads(response.body)["workers"] == [{**worker, "engines": [engine]}]
+
+
+@pytest.mark.parametrize(("audio_section", "settings_present", "expected_error"), [
+    ("", False, "Unsupported Qwen language"),
+    ('\n[audio]\nschema_version = "invalid"\n', True, "schema_version"),
+])
+def test_speech_view_distinguishes_missing_and_invalid_audio_settings(
+    speech_server, audio_section, settings_present, expected_error,
+):
+    port, source, handler, _observed = speech_server
+    handler.language = "nl"
+    (source.parent / "lixity.toml").write_text('language = "nl"\n' + audio_section)
+
+    response = send(port, "/api/speech?" + urlencode(context(source, handler)))
+    assert response.status == 200, response.body
+    data = json.loads(response.body)
+    assert data["settings"] is None
+    assert data["audio_settings_present"] is settings_present
+    assert expected_error in data["configuration_error"]
 
 
 def test_speech_view_rejects_stale_context_before_probing_workers(speech_server, monkeypatch):
@@ -229,21 +383,85 @@ def test_speech_view_rejects_stale_context_before_probing_workers(speech_server,
     assert calls == []
 
 
-def test_recording_save_reports_incompatible_activation_without_switching_engine(speech_server):
+def test_voice_reference_delete_is_bound_and_protects_every_saved_profile(speech_server):
+    from lixity.speech_references import load_reference, save_reference
+
+    port, source, handler, _observed = speech_server
+    config = source.parent / "lixity.toml"
+    unused = save_reference(source.parent, generate_silence_wav(1), "Synthetic unused recording.")
+    assigned = save_reference(source.parent, generate_silence_wav(1), "Synthetic assigned recording.")
+    config.write_text(f'''language = "en"
+[audio]
+schema_version = "lixity-audio-settings/5"
+selected = "narrator"
+[audio.profiles.narrator]
+engine = "qwen3"
+[audio.profiles.other]
+engine = "qwen3-base"
+voice = "reference"
+reference_id = "{assigned.id}"
+''')
+    settings_before, text_before = config.read_bytes(), source.read_bytes()
+    route = "/api/audio-microphone"
+    payload = {**context(source, handler), "action": "delete_reference", "reference_id": unused.id}
+    assert send(port, route, payload={"action": "delete_reference", "reference_id": unused.id}).status == 400
+    assert send(port, route, payload={**payload, "source_sha256": "0" * 64}).status == 409
+    assert send(port, route, payload={**payload, "project_token": "0" * 64}).status == 409
+    assert send(port, route, payload={**payload, "reference_id": "../outside"}).status == 400
+    blocked = send(port, route, payload={**payload, "reference_id": assigned.id})
+    assert blocked.status == 409
+    assert json.loads(blocked.body)["code"] == "reference-in-use"
+    assert load_reference(source.parent, unused.id) == unused
+
+    removed = send(port, route, payload=payload)
+    assert removed.status == 200, removed.body
+    assert json.loads(removed.body) == {"ok": True, "reference_id": unused.id}
+    view = send(port, "/api/speech?" + urlencode(context(source, handler)))
+    assert view.status == 200, view.body
+    assert [item["id"] for item in json.loads(view.body)["references"]] == [assigned.id]
+    assert load_reference(source.parent, assigned.id) == assigned
+    assert config.read_bytes() == settings_before and source.read_bytes() == text_before
+
+
+def test_voice_reference_delete_rechecks_context_before_unlinking(speech_server, monkeypatch):
+    from lixity import speech_references
+
+    port, source, handler, _observed = speech_server
+    reference = speech_references.save_reference(source.parent, generate_silence_wav(1), "Synthetic recording.")
+    config = source.parent / "lixity.toml"
+    payload = {**context(source, handler), "action": "delete_reference", "reference_id": reference.id}
+    read_record = speech_references._read_record
+
+    def read_then_change(repository, reference_id):
+        current = read_record(repository, reference_id)
+        config.write_text('language = "de"\n')
+        return current
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(speech_references, "_read_record", read_then_change)
+        response = send(port, "/api/audio-microphone", payload=payload)
+    assert response.status == 409
+    assert speech_references.load_reference(source.parent, reference.id) == reference
+
+
+@pytest.mark.parametrize("duration", [1, 60])
+def test_recording_save_reports_incompatible_activation_without_switching_engine(speech_server, duration):
     import base64
 
-    from lixity.speech import generate_silence_wav
+    from lixity.speech_references import load_reference
 
     port, source, _handler, _observed = speech_server
     settings_path = source.parent / "lixity.toml"
     before = settings_path.read_bytes() if settings_path.exists() else None
+    recording = generate_silence_wav(duration)
     response = send(port, "/api/audio-microphone", payload={
         "action": "save_reference", "profile_id": "narrator", "transcript": "Synthetic reference.",
-        "audio": base64.b64encode(generate_silence_wav(1)).decode(),
+        "audio": base64.b64encode(recording).decode(),
     })
     assert response.status == 200
     data = json.loads(response.body)
     assert data["ok"] is True and data["reference"]["id"]
+    assert load_reference(source.parent, data["reference"]["id"]).audio == recording
     assert data["activation"]["state"] == "failed"
     assert data["activation"]["message"]
     assert (settings_path.read_bytes() if settings_path.exists() else None) == before
@@ -681,6 +899,7 @@ voice = "en_US-lessac-medium"
     assert response.status == 200, response.body
     data = json.loads(response.body)
     assert data["settings"] is None and set(data["capabilities"]) == {"qwen3", "qwen3-design", "qwen3-base", "coqui", "coqui-reference", "f5-tts", "ims-toucan", "openai-compatible", "mlx-audio"}
+    assert data["audio_settings_present"] is True
     assert "Piper" in data["configuration_error"] and "audio-migrate" in data["configuration_error"]
     response = send(port, "/api/speech-render", payload={**bound, "mode": "preview", "chapter": 1})
     assert response.status == 400, response.body
@@ -727,10 +946,14 @@ voice = "de_DE-thorsten-medium"
     assert handler.title == title_before
     # Unrelated settings remain editable and keep every legacy profile intact.
     response = send(port, "/api/settings", payload={
-        "project_token": bound["project_token"], "title": "Allowed synthetic title",
+        "project_token": bound["project_token"],
+        "title": "Allowed synthetic title",
+        "audio_recording": {"reference_seconds": 42},
     })
     assert response.status == 200, response.body
     assert read_explicit_project_config(source.parent)["audio"] == legacy_audio
+    recording = json.loads(send(port, "/api/speech?" + urlencode(context(source, handler))).body)["reference_recording"]
+    assert recording["duration_seconds"] == 42
     assert source.read_bytes() == source_before
     response = send(port, "/api/settings", payload={
         "project_token": context(source, handler)["project_token"],
@@ -739,6 +962,55 @@ voice = "de_DE-thorsten-medium"
     assert response.status == 200, response.body
     assert read_explicit_project_config(source.parent)["audio"] == legacy_audio
     assert source.read_bytes() == source_before
+
+
+def test_project_reference_recording_preference_round_trip(speech_server, monkeypatch):
+    from lixity.config import read_explicit_project_config
+    from lixity.speech_references import SpeechReference
+
+    port, source, handler, _observed = speech_server
+    project_root, durations = source.parent, []
+    bound = context(source, handler)
+
+    def status():
+        response = send(port, "/api/speech?" + urlencode(context(source, handler)))
+        assert response.status == 200, response.body
+        return json.loads(response.body)["reference_recording"]
+
+    def record(root, duration, transcript, **_options):
+        assert root == project_root
+        durations.append(duration)
+        return SpeechReference("a" * 64, generate_silence_wav(1), transcript)
+
+    assert status() == {"default_seconds": 60, "reference_seconds": None,
+                        "duration_seconds": 60, "configuration_error": ""}
+    preferred = {"project_token": bound["project_token"], "audio_recording": {"reference_seconds": 37}}
+    assert send(port, "/api/settings", payload=preferred).status == 200
+    assert send(port, "/api/settings", payload=preferred).status == 409
+    assert read_explicit_project_config(project_root)["audio_recording"] == {"reference_seconds": 37}
+    assert status()["duration_seconds"] == status()["reference_seconds"] == 37
+
+    monkeypatch.setattr("lixity.speech_record.record_and_save_reference", record)
+    capture = {"action": "record_reference", "transcript": "Synthetic author reference."}
+    assert send(port, "/api/audio-microphone", payload=capture).status == 200
+    assert send(port, "/api/audio-microphone", payload={**capture, "duration": 12}).status == 200
+    assert durations == [37, 12]
+
+    token = context(source, handler)["project_token"]
+    for invalid in (True, 30.5, 0, 61):
+        response = send(port, "/api/settings", payload={
+            "project_token": token, "audio_recording": {"reference_seconds": invalid},
+        })
+        assert response.status == 400, response.body
+    assert status()["reference_seconds"] == 37
+    (project_root / "lixity.toml").write_text('[audio_recording]\nreference_seconds = 61\n')
+    error = status()
+    assert error["duration_seconds"] is None and error["configuration_error"]
+    assert send(port, "/api/settings", payload={
+        "project_token": context(source, handler)["project_token"], "audio_recording": {},
+    }).status == 200
+    assert read_explicit_project_config(project_root)["audio_recording"] == {}
+    assert status()["duration_seconds"] == 60
 
 
 def test_native_direction_save_plan_and_stale_snapshot(speech_server):
@@ -827,23 +1099,46 @@ def test_audio_microphone_api_endpoints(speech_server, monkeypatch):
     port, source, handler, _observed = speech_server
     import lixity.speech_record
 
-    fake_status = {
-        "schema_version": "lixity-microphone-status/1",
-        "current_gain": 35,
-        "gain_info": {"gain": 35, "min": 0, "max": 50, "percent": 70, "db": 13.5},
-        "default_device": "plughw:CARD=I3000,DEV=0",
-        "devices": [{"card": 1, "card_id": "I3000", "label": "ISY IMI 3000", "alsa_id": "plughw:CARD=I3000,DEV=0"}],
-    }
-    monkeypatch.setattr(lixity.speech_record, "get_microphone_status", lambda: fake_status)
-    monkeypatch.setattr(lixity.speech_record, "set_alsa_gain", lambda gain, **kw: True)
-    monkeypatch.setattr(lixity.speech_record, "run_calibration", lambda **kw: {
+    mixer_calls = []
+    levels = {(None, "Mic"): 35, ("USB", "Capture"): 40}
+    devices = [
+        {"card": 1, "card_id": "DEFAULT", "label": "Synthetic internal", "alsa_id": "plughw:CARD=DEFAULT,DEV=0"},
+        {"card": 2, "card_id": "USB", "label": "Synthetic external", "alsa_id": "plughw:CARD=USB,DEV=0"},
+    ]
+
+    def run_mixer(cmd, **kwargs):
+        card = cmd[2] if cmd[1] == "-c" else None
+        action, *options = cmd[3 if card is not None else 1:]
+        if action == "scontents":
+            mixer_calls.append((card, action))
+            return CompletedProcess(cmd, 0, (
+                "Simple mixer control 'Capture',0\n"
+                "  Capabilities: cvolume\n"
+                f"  Limits: Capture 0 - 120\n  Mono: Capture {levels[card, 'Capture']} [33%]\n"
+            ))
+        control, *values = options
+        mixer_calls.append((card, action, control, *values))
+        if action == "sset":
+            if card == "USB":
+                # This mixer rounds an odd request up to its next supported step.
+                levels[card, control] = (int(values[1]) + 1) // 2 * 2
+            return CompletedProcess(cmd, 0)
+        level = levels[card, control]
+        maximum = 120 if card == "USB" else 50
+        return CompletedProcess(cmd, 0, f"Limits: Capture 0 - {maximum}\nMono: Capture {level} [25%]\n")
+
+    monkeypatch.setattr(lixity.speech_record, "list_capture_devices", lambda: devices)
+    monkeypatch.setattr(lixity.speech_record.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(lixity.speech_record, "_run_audio_tool", run_mixer)
+    fake_calibration = {
         "schema_version": "lixity-audio-calibration/1",
         "verdict": "calibrated",
         "verdict_label": "CALIBRIERT FÜR AUFNAHMEN!",
         "peak_dbfs": -10.0,
         "clipping_samples": 0,
         "snr_db": 60.0,
-    })
+    }
+    monkeypatch.setattr(lixity.speech_record, "run_calibration", lambda **kw: fake_calibration)
 
     # 1. GET /api/audio-microphone
     res = send(port, "/api/audio-microphone")
@@ -851,6 +1146,21 @@ def test_audio_microphone_api_endpoints(speech_server, monkeypatch):
     data = json.loads(res.body)
     assert data["schema_version"] == "lixity-microphone-status/1"
     assert data["current_gain"] == 35
+    assert data["default_device"] == "default"
+    assert data["gain_info"]["card"] is None
+    assert data["gain_info"]["writable"] is True
+
+    status = send(port, "/api/audio-microphone", payload={
+        "action": "status", "device": "plughw:CARD=USB,DEV=0",
+    })
+    assert status.status == 200
+    assert json.loads(status.body)["gain_info"]["card"] == "USB"
+    assert json.loads(status.body)["gain_info"]["control"] == "Capture"
+    assert json.loads(status.body)["gain_info"]["max"] == 120
+    assert json.loads(status.body)["gain_info"]["writable"] is False
+    unknown = send(port, "/api/audio-microphone", payload={"action": "status", "device": "unlisted"})
+    assert unknown.status == 200
+    assert json.loads(unknown.body)["current_gain"] is None
 
     # 2. POST /api/audio-microphone (set_gain)
     res_set = send(port, "/api/audio-microphone", payload={"action": "set_gain", "gain": 38})
@@ -858,6 +1168,24 @@ def test_audio_microphone_api_endpoints(speech_server, monkeypatch):
     data_set = json.loads(res_set.body)
     assert data_set["ok"] is True
     assert data_set["current_gain"] == 35
+    for bogus in ({}, {"gain": 35.5}, {"gain": True}):
+        assert send(port, "/api/audio-microphone", payload={"action": "set_gain", **bogus}).status == 400
+
+    selected = send(port, "/api/audio-microphone", payload={
+        "action": "set_gain", "gain": 41, "card": "USB", "control": "Capture",
+    })
+    assert selected.status == 200
+    readback = json.loads(selected.body)
+    assert readback["schema_version"] == "lixity-microphone-status/1"
+    assert readback["current_gain"] == 42
+    assert readback["gain_info"]["card"] == "USB"
+    assert readback["gain_info"]["control"] == "Capture"
+    assert readback["gain_info"]["writable"] is False
+    assert mixer_calls == [
+        (None, "sget", "Mic"), ("USB", "scontents"),
+        (None, "sset", "Mic", "capture", "38"), (None, "sget", "Mic"),
+        ("USB", "sset", "Capture", "capture", "41"), ("USB", "sget", "Capture"),
+    ]
 
     # 3. POST /api/audio-microphone (calibrate)
     res_cal = send(port, "/api/audio-microphone", payload={"action": "calibrate", "gain": 35})

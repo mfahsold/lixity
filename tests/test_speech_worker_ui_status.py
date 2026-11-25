@@ -24,9 +24,13 @@ def _status(worker: dict[str, object], *, engine: str = "qwen3", language: str =
 const worker = WORKER, engine = ENGINE;
 const labels = LABELS;
 const document = {documentElement: {lang: LANGUAGE}};
-const fields = {worker_status: {}, engine: {value: engine}, target: {value: "local"}, worker_guide: {}};
+const fields = {worker_status: {}, engine: {value: engine}, worker_target: {value: "local"}, worker_guide: {}};
 const settingsForm = {dataset: {}};
-const capabilities = {qwen3: {model: "qwen", name: "Qwen"}, coqui: {model: "coqui", name: "Coqui"}};
+const capabilities = {
+    qwen3: {model: "qwen", name: "Qwen"},
+    coqui: {model: "coqui", name: "Coqui"},
+    "mlx-audio": {model: "zonos", name: "ZONOS3", configurable_model: true, provider_fields: false}
+};
 const workers = [worker];
 function profileCapability() { return capabilities[engine] || {}; }
 function label(key) { return labels["speech_" + key] || key; }
@@ -70,6 +74,18 @@ def test_mismatched_worker_does_not_claim_selected_model_is_loaded() -> None:
                       "model_state": "unloaded", "active": False, "idle_timeout_seconds": 300})
     assert "not the selected model" in status
     assert "idle" not in status
+
+
+def test_local_provider_status_only_applies_to_its_configured_engine() -> None:
+    worker: dict[str, object] = {
+        "target": "local", "state": "ready", "model": "zonos",
+        "transport": "isolated-process", "engines": ["mlx-audio"],
+    }
+    assert "matches the selected model" in _status(worker, engine="mlx-audio")
+    labels = WORKSPACE_LABELS["en"]
+    assert _status(worker, engine="qwen3") == labels["speech_worker_unknown"].format(
+        target=labels["speech_target_local"],
+    )
 
 
 def test_old_worker_and_external_provider_keep_existing_status() -> None:

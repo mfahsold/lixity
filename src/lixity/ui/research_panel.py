@@ -326,7 +326,10 @@ def render_research_panel(
     parts.append('<div id="r-dos-geography-host"></div>')
     parts.append('<div class="row">')
     parts.append(
-        f'<button class="ctl primary" id="r-dos-create-btn">{L("research_dossier_action")}</button>'
+        f'<button type="button" class="ctl primary" id="r-dos-create-btn">{L("research_dossier_action")}</button>'
+    )
+    parts.append(
+        f'<button type="button" class="ctl" id="r-dos-discard-btn">{L("research_dossier_draft_revision_discard")}</button>'
     )
     parts.append(
         f'<button type="button" class="ctl" data-close-disclosure="r-dos-composer">{L("disclosure_collapse")}</button>'

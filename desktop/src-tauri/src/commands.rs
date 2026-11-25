@@ -444,7 +444,8 @@ pub async fn audio_capture_start_recording(
     state: State<'_, DesktopState>,
     device_name: Option<String>,
     filename: String,
-) -> Result<(), String> {
+    max_duration_seconds: Option<u32>,
+) -> Result<RecordingLiveStatus, String> {
     let recorder = Arc::clone(&state.recorder);
     tauri::async_runtime::spawn_blocking(move || {
         let open = || {
@@ -456,12 +457,12 @@ pub async fn audio_capture_start_recording(
         if !open() {
             return Err("The recording window has closed".to_string());
         }
-        recorder.start(window.label().to_string(), device_name, filename)?;
+        recorder.start(window.label().to_string(), device_name, filename, max_duration_seconds)?;
         if !open() {
             recorder.cancel(window.label());
             return Err("The recording window has closed".to_string());
         }
-        Ok(())
+        Ok(recorder.status(window.label()))
     })
     .await
     .map_err(|e| format!("Failed starting recording task: {e}"))?

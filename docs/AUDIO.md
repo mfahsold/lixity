@@ -82,7 +82,7 @@ Prerequisites depend on the task:
 - Browser recording needs browser microphone permission. Hardware gain and
   calibration use tools and devices on the server computer; they do not grant
   that permission or select the browser's input.
-- A voice reference needs a reviewed 1–30 second mono, 24 kHz, 16-bit PCM WAV
+- A voice reference needs a reviewed 1–60 second mono, 24 kHz, 16-bit PCM WAV
   and the exact spoken transcript. A complete chapter recording has
   [different import limits](#retain-or-import-chapter-audio).
 
@@ -374,28 +374,36 @@ Lixity does not silently translate unsupported phonemes or markup into text.
 
 ## Author voice recording and listening
 
-In 0.8.0, these entry points open one dialog with four tabs:
+| Where to work | Controls and scope |
+| --- | --- |
+| **Project → Settings → Audio and services → Voice profiles** | Choose a profile and edit its voice, model, delivery and pronunciation. A project with one profile displays its name. Models group by the input they use. Open **Speech service** for worker diagnostics. The inspection target applies to this check. |
+| **Author's voice** | Read a sample or custom text, record or import a take, review it, and explicitly save it as a project voice reference. The project recording limit is available beside the recording controls. |
+| **Mic & levels** | Inspect the recording inputs and run a level check. Desktop capture uses the chosen input during the current project session. Browser recording uses the browser's input and site permission. Available mixer controls apply to the server computer. |
+| **Manuscript → Listen and direct** | Keep the selected paragraph and its surrounding prose available while editing a direction, listening to a short preview or exporting a plan. The panel shows the saved narrator and links to the project profile. |
+| **Manuscript → Chapter audio** | Generate or import chapter audio, discard a pending file selection, or delete the current project recording after confirmation. Export a plan or inspect a recording with a timestamped transcript. Plan export and transcript comparison each have their own text scope. |
 
-- **Author's voice**: read a sample or custom text, record a take, listen before
-  saving, upload a studio WAV, and review the project's saved references.
-- **Voice profiles**: choose the model, voice reference, language, delivery,
-  tempo and standard pauses; edit pronunciation replacements and inspect the
-  speech service. Save or discard profile drafts explicitly.
-- **Listen & direct**: select a chapter or passage, edit its direction, preview
-  or generate audio, export JSON/SSML, and inspect an external recording with an
-  optional timestamped transcript. Export remains available without synthesis.
-- **Mic & levels**: inspect local capture hardware, set its gain and run
-  calibration. These controls affect the server computer's hardware; browser
-  recording uses the input selected in the browser's permission prompt.
+The project settings and manuscript each link to the other entry point. Chapter
+audio and Listen and direct share the current passage, playback controls and
+render options. Reopening the panel starts a new run with saved defaults. Plan
+export remains available without synthesis.
+
+**Delete chapter recording** applies to the exact recording shown for the
+selected chapter. It affects audio available to future exports. Existing
+exports and the WAV originally chosen for import retain their copies.
+**Discard recording** clears the current take and transcript from a recording
+panel. Exported copies remain available for reimport.
 
 Help on the controls explains their scope and limits. The shared compact player
 shows elapsed and total time, play/pause, seeking, mute and volume. Its live
 frequency spectrum displays measured frequency levels during playback or
 recording; it is not a recording-quality score.
 
-The short sample is selected initially. Recordings use 24 kHz mono 16-bit PCM,
-with a 30-second limit; saving requires at least one second. Before saving,
-review the transcript in the take card and retain only words actually spoken.
+The short sample is selected initially. Choose the phonetic sample for a longer
+read. Recordings use 24 kHz mono 16-bit PCM. Stop when you finish, or let the
+recorder stop at the project's recording limit. The timer shows elapsed time and
+the limit. Press Enter or Space with the record button focused to start or stop.
+Saving requires at least one second. Review the transcript in the take card and
+retain only words actually spoken.
 Check **I checked that this transcript matches the recording** before saving;
 editing the text clears that confirmation. **Save as author voice for this book**
 retains the reference explicitly. Saving and activating are separate outcomes:
@@ -403,6 +411,28 @@ if activation fails, the recording may already be saved. Read the result before
 retrying, and select a valid reference profile from the recordings list.
 A successful activation refreshes the project view; reload if the UI reports
 that the saved settings could not be refreshed.
+
+In **Author's voice → Choose from recordings**, select **Delete recording** and
+confirm to remove an unused recording from the project. When any saved profile
+uses it, choose another recording for that profile and save the change first.
+
+Under **Author's voice → Project recording default**, set a whole number from
+1 to 60 seconds. **Change recording limit** beside the recording controls
+opens the same setting. Select **Save recording limit** to apply it. Clear the
+field and save to use the built-in 60-second default. The browser and desktop
+recorders use the saved duration for new takes. The CLI uses the same project
+override for timed voice reference recording.
+
+The equivalent entry in the project root's `lixity.toml` is:
+
+```toml
+[audio_recording]
+reference_seconds = 45
+```
+
+Use `[tool.lixity.audio_recording]` in a project `pyproject.toml`.
+The setting governs capture. Reviewed reference files and SoundCraft excerpts
+use the independent format bounds of 1–60 seconds.
 
 Browser recording requires microphone access. If access is denied, allow the
 microphone for the current local address in the browser's site permissions,
@@ -436,6 +466,24 @@ excerpt or format conversion, then import it again. Recordings in the saved list
 are selected by readable text and duration; internal IDs are for configuration
 and machine output.
 
+### Trim a take locally with SoundCraft
+
+Configure a verified [SoundCraft CLI v0.20.1 release](https://github.com/storytold/soundcraft/releases/tag/v0.20.1)
+by setting `LIXITY_SOUNDCRAFT_CLI` to the absolute path of its executable before
+starting Lixity. The tool is optional. For a local browser service, set the
+variable when starting the service. On macOS, quit Lixity and pass it to the app
+with `open -a Lixity --env "LIXITY_SOUNDCRAFT_CLI=/absolute/path/to/soundcraft-cli"`.
+
+In **Author's voice**, record or import a 24 kHz mono PCM16 WAV of up to two
+minutes. Open **Trim an excerpt with SoundCraft**, enter the start and end times
+and choose **Create excerpt**. The excerpt must be shorter than the take and
+between 1 and 60 seconds. Lixity verifies that the rendered audio contains the
+exact selected samples and keeps the original available in the review dialog.
+Listen to the excerpt and enter and confirm its own transcript before saving.
+The desktop and browser recorders handle microphone capture. SoundCraft only
+receives the take selected for local editing in a temporary directory.
+[SoundCraft headless commands](https://github.com/storytold/soundcraft/blob/v0.20.1/docs/cli.md)
+
 ## Experimental reference voices
 
 ZONOS3 and Qwen Base both reuse immutable project voice references, but they do so
@@ -449,9 +497,10 @@ workflow creates a short reference with VoiceDesign and reuses it with the
 separately installed Qwen3-TTS 1.7B Base model. Alternatively, record your own
 voice or use another recording you have permission to use. The reference is a
 recording and its exact spoken transcript, not a voice-design prompt. Lixity
-accepts a 1–30 second, mono, 24 kHz, 16-bit PCM WAV and a UTF-8 transcript of
+accepts a 1–60 second, mono, 24 kHz, 16-bit PCM WAV and a UTF-8 transcript of
 at most 2,000 characters. A recording may be longer if you select a suitable
-continuous excerpt before creating the reference.
+continuous excerpt before creating the reference. Takes longer than 30 seconds
+require an application and reference worker that support the 60-second limit.
 
 Start and stop the recording yourself. For example, on a Linux desktop with
 PipeWire's `pw-record` and a selected default microphone, the following creates
@@ -573,22 +622,35 @@ naturalness and pronunciation still require listening.
 
 ## Microphone settings and calibration (`audio-microphone`, `audio-calibrate`, `audio-reference record`)
 
-In the browser, open **Project → Settings → Audio and services → Microphone and levels**
-(the **Mic & levels** tab). Inspect the detected input and mixer range before
-changing gain; a read-only hardware range must be changed in the system audio
-settings. These settings control the server computer, even when the browser is
-on another machine.
+Open **Project → Settings → Audio and services → Microphone and levels**
+(the **Mic & levels** tab). In the desktop app, the operating system supplies
+the actual microphone names and identifies its default. One microphone appears
+as text. With several connected microphones, choose an input for level checks
+and for **Author's voice** while the manuscript workspace is open. Use
+**Refresh devices** after connecting or disconnecting an input. On macOS,
+adjust the input volume in **System Settings → Sound → Input** if the device
+offers that control. Use **Check level** to speak briefly and see whether the
+input came in low, high, in the target range or with no measurable signal.
+The check measures one sample and leaves the hardware gain as set.
+[macOS sound input settings](https://support.apple.com/en-euro/guide/mac-help/mchlp2567/mac)
 
-Hardware capture uses optional local tools (`arecord`, `amixer`, `ffmpeg` or
-`pw-record`). Available devices and mixer controls depend on the operating system
-and hardware. These controls are separate from browser microphone permission.
-The CLI accepts raw gain values 0–100; the actual mixer range depends on hardware.
-For `audio-microphone`, `--card` and `--control` apply only to `set`; status reads
-the default mixer. `--device` applies to calibration, and capture fallbacks can
-use other inputs. These are not device autodetection guarantees. Inspect the
-chosen mixer and the resulting recording; calibration recommendations are a
-separate heuristic, not a dB conversion. Use `lixity audio-microphone --help` for
-the installed action-specific options.
+In the browser, this tab checks the server computer’s recording hardware.
+If it can identify a mixer, it shows the range and any available gain control.
+After applying gain, Lixity reads the same mixer and displays the reported
+value. Device rounding, rejection and an unavailable confirmation are shown
+beside the gain control.
+The browser uses its own microphone selection and site permission when
+recording **Author's voice**. Server capture and CLI calibration use optional
+local tools (`arecord`, `amixer`, `ffmpeg` or `pw-record`). Available devices
+and mixer controls depend on the operating system and hardware.
+The CLI accepts raw gain values from 0 to 100 within the observed mixer range.
+`audio-microphone status --device DEVICE` reads that input's mixer if it can
+identify a single capture control on the device. `status` and `set` also accept
+an explicit card and control. Recording and calibration use the system's logical
+default when `--device` is omitted.
+An explicit `--device` stays bound to that input and reports failure
+if it cannot be captured. A proposed gain is actionable only when it is bound to
+the verified mixer. Use `lixity audio-microphone --help` for action-specific options.
 The calibration command measures one test recording and suggests a gain adjustment;
 it does not automatically tune the microphone or certify recording quality:
 
@@ -597,13 +659,13 @@ it does not automatically tune the microphone or certify recording quality:
 
    ```sh
    # View microphone status, active gain, and detected devices:
-   lixity audio-microphone
+   lixity audio-microphone status --device 'plughw:CARD=USB,DEV=0'
 
    # List all audio input hardware:
    lixity audio-microphone devices
 
    # Set ALSA hardware gain immediately:
-   lixity audio-microphone set --gain 35
+   lixity audio-microphone set --card USB --control Capture --gain 35
    ```
 
 2. **Calibrate microphone gain:**
@@ -611,7 +673,7 @@ it does not automatically tune the microphone or certify recording quality:
    an 8-second test window:
 
    ```sh
-   lixity audio-calibrate --gain 35
+   lixity audio-calibrate --device 'plughw:CARD=USB,DEV=0' --gain 35
    ```
 
    During the 8-second recording, perform 3× loud "POPP", 2× hand claps, and 1× spoken phrase
@@ -626,11 +688,14 @@ it does not automatically tune the microphone or certify recording quality:
    IPA reference passage "Der Nordwind und die Sonne" / "The North Wind and the Sun"):
 
    ```sh
-   # Display teleprompter, count down 2s, and record phonetically balanced reference:
+   # Display the full phonetic prompt and use the project's recording window:
    lixity audio-reference record --project ./novel --calibration-text --gain 35
    ```
 
-   The terminal displays a suggested passage. The selected recording duration does not
+   Pass `--duration` to set the timed window for one command. Without it, the
+   CLI uses `audio_recording.reference_seconds` if present. Its built-in defaults
+   are 60 seconds for the full phonetic prompt and 15 seconds for a short prompt
+   or custom transcript. The selected recording duration does not
    prove that all of it was spoken: review the audio and ensure the supplied transcript
    matches it. This CLI path saves the immutable reference directly to
    `.lixity/audio-references/`; use the browser review card or a raw WAV first when
@@ -689,7 +754,9 @@ without synthesizing speech:
      Initial text size is 28 px and can be adjusted with the size controls;
      active text has no full-paragraph highlight box.
    - **Play / Pause:** Toggle scrolling with the **`Space`** bar or the top toolbar button.
-   - **Typographic Controls:** Adjust font size on the fly with **`A−`** and **`A+`** (20–56px).
+   - **Typographic controls:** Adjust font size (20–56 px) with **`A−`** and
+     **`A+`** or the `-`, `=` and `+` keys. Focus a toolbar control to read its
+     shortcut in the tooltip.
 
 3. **Phonetic Pronunciations and Vocal Direction Cues:**
    The prompter requests the selected profile's manuscript speech plan without generating audio.
@@ -709,7 +776,7 @@ without synthesizing speech:
 5. **Integrated Recording:**
    Click **Take record** (**Take aufnehmen** in German, `R`) in the prompter
    header and grant microphone access. The Desktop app uses its Rust recorder
-   and stops the take automatically after 30 seconds. The browser uses its
+   and stops the take automatically after 60 seconds. The browser uses its
    microphone capture and the portable WAV size limit. Pending, recording and
    failed states appear beside the control. Stop to review the PCM WAV take.
    Playback starts only when requested.
@@ -721,8 +788,9 @@ without synthesizing speech:
    that information; a mismatched or corrupt file does not replace the current take.
    A reading script is a draft, not evidence of the words actually recorded. Review and confirm
    the exact transcript before saving a voice reference; editing it requires confirmation again.
-   Longer recordings remain downloadable, but voice references require 1–30 seconds of
-   24 kHz mono 16-bit PCM and a confirmed transcript of at most 2,000 characters.
+   Voice references require 1–60 seconds of 24 kHz mono 16-bit PCM and a
+   confirmed transcript of at most 2,000 characters. Download longer recordings
+   as takes or prepare a selected excerpt for reference review.
    The browser does not silently trim or convert incompatible imports. Portable takes are
    limited to 64 MiB WAV, 1 MiB metadata and 100,000 transcript characters.
 
@@ -821,7 +889,7 @@ synthesis with FFmpeg; the 1.2 default is a product default, not a tuned value
 for Thorsten, so compare 1.0 with listening. The worker stays silent about the
 expected discards of the phonetic tie bar, the non-syllabic mark and
 typographic quotation marks, which Thorsten's vocabulary cannot represent, and
-warns with code points about any other discarded character. Listen to the
+logs a count of other distinct discarded character types. Listen to the
 resulting pronunciation either way. The OpenVoice step mainly changes timbre;
 phrasing and intonation come from Thorsten, and the converted voice inherits the
 channel of its reference, including a bandwidth limit. Check a reference
@@ -986,20 +1054,30 @@ renders; an existing WAV is not changed automatically.
 
 ## Passage direction
 
-The native manuscript **Listen and direct** dialog can attach an author's direction
-to an exact passage or selected range. Open it from the manuscript, choose the
-passage, and select text in the read-only **Spoken text** field for a smaller
-range. With no selection, **Use selected text / whole passage** restores the
-whole passage. Choose a compatible delivery profile or inherit the current narrator
+In the manuscript reader, open a paragraph's action menu and choose **Passage
+direction**. The editor opens beside the manuscript in a wide window and just
+below the chosen paragraph in a narrow window. The selected paragraph has a
+visible marker. Read and scroll the surrounding prose while editing or checking
+a preview. The headphones button also opens **Listen and direct**, using the
+selected passage or chapter. Switch to **Chapter audio** for chapter delivery
+and recording comparison. A draft stays open across those two tabs.
+
+Select text in the read-only **Spoken text** field for a smaller range, then
+choose **Use selected text / whole passage**. With no selection, this action
+restores the whole passage. Choose a compatible delivery profile or inherit the current narrator
 (see [single narrator rules](#single-narrator-and-delivery-variation)),
 write local direction, and optionally set silence before/after in seconds.
 The calm/tension/whisper choices are editable English prompt starting points,
 not measured emotion controls. Under **Export direction**, choose **Selected passage** and **Preview export**
 to inspect spoken text, voice choice, combined instructions and silence without
 calling a model. A passage preview uses the draft; chapter/manuscript export or
-generation requires saving or discarding it first. **Save passage direction**
-retains the direction explicitly.
-Profile settings and passage direction have separate save actions.
+generation requires saving or discarding it first. Save or discard before
+editing another passage or closing the editor. **Save passage direction** updates
+the direction record for the selected source.
+Profile settings and passage direction have separate save actions. A chapter
+operation can explicitly omit passage directions for that run. Saving the profile
+sets defaults for later runs. The current render target, export scope, comparison
+scope and cache reuse choice are temporary controls.
 
 **Services & audio queue** in Project settings reports the actual model identity advertised by each available
 local or Jetson worker; an unknown identity is shown as unknown. The dialog also
@@ -1011,7 +1089,7 @@ its exact paragraph line/hash identity and a Unicode-code-point range in the
 advertised spoken projection. Repeated wording at another location is a different
 passage. Changed or moved paragraphs are preserved as stale records and require
 explicit review/removal; they are never automatically reassigned. Overlapping
-ranges and missing saved profiles fail before synthesis. The native dialog lists
+ranges and missing saved profiles fail before synthesis. The passage editor lists
 stale records with explicit removal controls. To retain this private metadata
 when moving a project, follow [private audio backup](PROJECT_BACKUP.md#back-up-private-audio-separately).
 
@@ -1105,13 +1183,12 @@ SSML. `read-aloud --timeline` and `--ssml` imply export-only behavior;
 `read-aloud --plan-only` keeps the native speech-plan contract (`/1`, or `/2`
 when those controls require it).
 The browser offers JSON/SSML downloads for a passage, chapter or manuscript.
-In 0.8.0, open the audio dialog from **Project → Settings → Audio and services** or **Listen and direct**
-in the manuscript. In the **Listen & direct** tab, **Export direction → Preview
-export** prepares downloads separately from the **Generate audio** controls.
-Export does not require a running speech service. Voice profiles, author recordings,
-microphone configuration and services/queue controls share the audio section of
-Project settings. Recording references are selected by reading text and duration;
-their internal identifiers remain in stored settings and machine exports.
+Open **Listen and direct** or **Chapter audio** in the manuscript, and choose
+**Export direction → Preview export**. Synthesis and chapter audio import have
+their own actions. Export can run offline with the saved voice profile. Choose
+voice profiles, author recordings, microphone configuration and service settings
+in Project settings. Recording references are selected by reading text and
+duration. Their internal identifiers remain in stored settings and machine exports.
 JSON retains effective text, original spoken text, pronunciation substitutions,
 direction, profile choices and pause values. Speech start times and durations
 are unknown before synthesis; planned pauses are not measured timestamps.
@@ -1326,15 +1403,19 @@ full audit JSON for download; it does not create a saved chapter recording. See 
 ## Retain or import chapter audio
 
 A complete chapter recording can accompany the same chapter in a
-[reader export](WORKSPACE.md#include-existing-chapter-recordings). It is separate from a 1–30 second voice
+[reader export](WORKSPACE.md#include-existing-chapter-recordings). It is separate from a 1–60 second voice
 reference and from a teleprompter take's optional transcript metadata.
 
-In **Listen & direct**, select the intended chapter, open **Chapter recording**,
+In **Chapter audio**, select the intended chapter, open **Chapter recording**,
 choose **Completed chapter WAV** and select **Import chapter WAV**. The browser
 accepts at most 48 MiB. **Ready for reader export** confirms that the project
 artifact was saved. Import replaces this chapter's previous recording and binds
 it to the exact full manuscript revision; it does not check whether the recording
 speaks that chapter or infer word/paragraph timing.
+
+**Discard file selection** clears a WAV chosen for import. To remove the
+recording already saved for the selected chapter, choose **Delete chapter
+recording** and confirm.
 
 For larger recordings or scripts, use the CLI with an explicit project, chapter
 and the full `source_sha256` from `audio-direction inspect`:
@@ -1468,9 +1549,21 @@ different lifetimes.
 | Source, profile or direction changed during render | Reopen the current project and inspect the updated plan, then start a new job. Context guards prevent publishing audio for stale inputs. |
 | Saved passage is stale | Review the manuscript location and remove or replace the stale direction explicitly. Lixity does not relocate it by similar wording. |
 | No microphone or permission denied | Use browser site/system permissions for browser capture; use **Mic & levels** for the server's hardware. See [recording recovery](#author-voice-recording-and-listening). |
-| Take cannot become a reference | Check exact transcript confirmation, 1–30 second duration, 24 kHz mono 16-bit PCM and transcript length. Export and prepare an excerpt deliberately; no automatic trimming/conversion occurs. |
+| Take cannot become a reference | Check exact transcript confirmation, 1–60 second duration, 24 kHz mono 16-bit PCM and transcript length. Export and prepare an excerpt deliberately; no automatic trimming/conversion occurs. |
 | Calibration or capture unavailable | Check optional host tools and the actual device/mixer; choose the device and control explicitly. Browser capture may still be available. |
 | Chapter render interrupted | Start it again to reuse matching completed segments. `--fresh-audio` or the UI reuse switch requests a new interpretation; previews are always fresh. |
 | CLI says audio was written but chapter retention failed | Keep the completed output, resolve the project storage/context error, and use `audio-import` with the reviewed source hash. The output may exist even though the command reports failure. |
 | Audio inspection cannot compare words | Supply a timestamped transcript bound to those exact audio bytes. Signal measurements alone cannot establish word fidelity. |
+
+### Match an audio failure to a log entry
+
+Open the browser's Network inspector, reproduce the problem and read
+`X-Lixity-Diagnostic-Id` on the failed audio POST response. Search the local
+service log for that value. `audio_operation` reports the route, status and
+dispatch time through response headers. Render and worker events use the same
+ID for that render. Set `LIXITY_LOG_FORMAT=json` for structured Python output
+or `LIXITY_SPEECH_LOG_LEVEL=DEBUG` for segment diagnostics during a local run.
+Microphone failures that occur before a request appear in the client console
+with the failing stage and error class. Review unrelated log lines before
+sharing a local log. [Logging and test diagnostics](ARCHITECTURE.md#logging)
 

@@ -19,8 +19,7 @@ from lixity.speech_profiles import AudioProfile
 def events(monkeypatch):
     logger = get_logger("speech.jobs")
     records = []
-    monkeypatch.setattr(logger, "info", lambda template, *args: records.append(template % args))
-    monkeypatch.setattr(logger, "warning", lambda template, *args: records.append(template % args))
+    monkeypatch.setattr(logger, "log", lambda _level, message, **_kwargs: records.append(message))
     monkeypatch.setattr(logger, "getEffectiveLevel", lambda: logging.INFO)
     return records
 

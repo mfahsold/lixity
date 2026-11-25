@@ -18,7 +18,8 @@ def test_command_palette_supports_essential_shortcuts():
     # Ctrl/Cmd + P and Ctrl/Cmd + K
     assert 'key === "p"' in palette_js
     assert 'key === "k"' in palette_js
-    assert "e.ctrlKey || e.metaKey" in palette_js
+    for chord in ("Control+P", "Meta+P", "Control+K", "Meta+K"):
+        assert chord in palette_js
     # Escape
     assert 'e.key === "Escape"' in palette_js
     # Focus mode shortcut F

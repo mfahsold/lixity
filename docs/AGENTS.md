@@ -1010,6 +1010,10 @@ schema changes. Explicit historical dossier reads/history/comparisons add
 created_at, created_by}`; active response shapes stay unchanged. See
 [retirement semantics](research/USAGE.md#withdrawal-vs-purge) for preserved pins
 and rejected writes.
+The desktop `POST /api/research-dossier` action `withdraw` uses the same
+contract with `research_token`, `dossier_id`, `expected_revision`,
+`expected_snapshot`, and explicit `dry_run`. Review a dry run before sending
+`dry_run:false` with the same guards.
 
 `research_api.compare_source()` returns a dictionary by default, or a string
 with `format="md"`. The implementation helper
@@ -1437,6 +1441,11 @@ request envelope; the CLI supports up to 200 MiB. Both use
 chapter, byte length, duration, channel count, sample rate/width and frame count.
 The latest successful recording per chapter is retained under
 `.lixity/audio/exports`; previews and author-reference audio do not enter this store.
+`POST /api/speech-audio-delete` requires the same context fields, a `chapter`
+and the reviewed `audio_sha256`. A changed selection returns HTTP 409.
+Successful deletion removes the active chapter recording from subsequent
+exports. `cleanup_pending:true` means the selection was removed and the
+unselected WAV could not be cleaned up.
 
 Audio changes the site manifest to `lixity-read-only-site/3` and the curated
 publication to `lixity-reader-publication/2`. Both carry the same `audio` object:
@@ -2320,11 +2329,15 @@ When `--calibration-text` is passed, a live teleprompter prints the phonetically
 `audio-reference generate --project PATH [--language de|en] [--variant phonetic|short] [--voice-description DESC]` generates
 a synthetic reference audio from the calibration text via VoiceDesign.
 `audio-reference calibration-text [--language de|en] [--variant phonetic|short]` prints the calibration passage.
-`audio-microphone [status|set|devices|calibrate] [--gain N] [--card C] [--control NAME] [--json]` inspects or sets hardware capture gain and enumerates detected audio devices.
-`audio-calibrate [--gain N] [--duration SEC] [--json]` measures one test recording,
+`audio-microphone [status|set|devices|calibrate] [--device DEVICE] [--gain N] [--card C] [--control NAME] [--json]` inspects or sets hardware capture gain and enumerates detected audio devices. Use `--device` with `status` or `calibrate`. `status` and `set` accept `--card` and `--control`.
+`audio-calibrate [--device DEVICE] [--gain N] [--duration SEC] [--json]` measures one test recording,
 optionally setting the requested gain once. It returns `lixity-audio-calibration/1`
 with peak dBFS, clipping, a quietest-window RMS floor estimate and a heuristic
-gain recommendation; it does not automatically retune the device.
+gain recommendation when a specific physical input can be attributed to its
+mixer. `mixer` gives that ALSA card ID and control when available. A missing
+association leaves `recommended_gain` null. `signal_present` indicates whether
+the measured sample contains any nonzero PCM values. The check can run without
+a gain change.
 The browser teleprompter (`#reader-teleprompter`, key `P`) reads the selected profile's
 canonical manuscript speech plan without synthesis. It displays all current range controls,
 spelling substitutions and explicit IPA ruby with approximate scrolling. Dossier context
@@ -2346,7 +2359,7 @@ Base profiles and passage ranges reject nonempty delivery instructions. A Base
 worker must be selected explicitly; it does not infer or assign character voices.
 Older installations that do not support the new engine reject these profiles.
 The [reference-voice workflow](AUDIO.md#experimental-reference-voices) describes
-human-controlled recording and review, the 1–30 second PCM format, exact
+human-controlled recording and review, the 1–60 second PCM format, exact
 transcript and an unsaved Base preview. Format and immutable-record checks do
 not verify that the transcript matches the sound or that a voice is suitable.
 
@@ -2379,8 +2392,26 @@ there is no compatibility engine or native model rate control.
 All native speech reads require same-origin access and exactly one
 `project_token` plus `source_sha256`. Tokens guard context, not authentication.
 `GET /api/speech` returns `lixity-speech-local/1`, settings (or an explicit
-configuration error), backend capabilities and source chapter bounds. A
-`control_support` object per engine identifies literal text substitution,
+configuration error), backend capabilities and source chapter bounds.
+`audio_settings_present` reports whether the project has stored audio settings.
+Engine capabilities can include a `short_name` for compact controls. The
+`name` remains the full display name, and the engine key identifies saved profiles.
+When `settings` is null, this distinguishes missing configuration from an
+existing configuration that could not be read.
+`profile_constraints` supplies the profile count limit and default paragraph and
+scene pauses. The Qwen preset capabilities supply their initial `default_voice`.
+`reference_format` supplies the WAV sample rate, channel count, bit width,
+minimum and maximum seconds, maximum WAV bytes, and maximum transcript length
+in characters.
+`reference_recording` gives `default_seconds`, the effective `duration_seconds`,
+the project `reference_seconds` override or null, and `configuration_error`.
+A malformed recording preference has a null effective duration. The project
+key is `[audio_recording] reference_seconds` in `lixity.toml`. Use the existing
+`POST /api/settings` with the current `project_token` and
+`"audio_recording": {"reference_seconds": 45}` to save the preference. An empty
+recording object restores the built-in default. See
+[author voice recording](AUDIO.md#author-voice-recording-and-listening).
+A `control_support` object per engine identifies literal text substitution,
 model-interpreted delivery, explicit silence, IPA and structured prosody support.
 It also reports unsupported controls. It describes the Lixity adapter rather than
 promising model compliance. Existing speech-plan version 1 remains unchanged.
@@ -2393,11 +2424,28 @@ The native UI compares the returned model with the currently selected profile;
 unknown identities stay unknown. A snapshot does not guarantee future readiness,
 and the UI does not switch or download a worker. After validating the workspace,
 the server probes those endpoints concurrently outside the workspace lock, with a
-1.5-second timeout per endpoint. For a selected external profile, the list instead
-contains the configured provider with unknown readiness and no network probe.
+1.5-second timeout per endpoint. For a selected external profile, the single
+worker entry identifies that profile's engine in `engines`. The fixed local
+MLX-Audio binding checks the runtime and model cache. An HTTP provider reports
+unknown readiness without a network probe.
 The strict `requires_migration` boolean identifies retained Piper profiles: normal settings
 saves cannot replace them, and the dialog disables replacement controls until
 explicit migration. Unrelated settings saves remain available.
+`GET /api/speech` reports `can_trim_take` when the server has an explicitly
+configured SoundCraft executable and `take_trim_limit_seconds` for its input
+limit. `POST /api/audio-take-trim` accepts exactly
+`project_token`, `source_sha256`, base64 WAV `audio`, `start_frame` and
+exclusive `end_frame`. It processes 24 kHz mono PCM16 takes of up to 120 seconds
+and returns `ok` with base64 `audio` for a verified 1–60 second excerpt. The
+server checks the workspace context before and after processing and the exact
+PCM slice before returning. The request includes neither a file path nor a
+transcript and leaves project files untouched. See the
+[optional SoundCraft setup](AUDIO.md#trim-a-take-locally-with-soundcraft).
+`POST /api/audio-microphone` action `status` accepts the selected ALSA `device`
+and returns the available devices and that input's mixer status. `gain_info`
+is available when the capture control and its bounds are verified. Its `writable`
+flag tells whether Lixity can write across the reported hardware range. Action
+`set_gain` reads back the requested `card` and `control` after applying gain.
 `POST /api/audio-microphone` action `save_reference` accepts captured `project_token` and
 `source_sha256` together. A partial binding fails with 400; changed complete bindings
 fail with 409 before any reference or settings write. Current browser clients always
@@ -2407,6 +2455,10 @@ activation have distinct outcomes: `activation.state` is `activated`, `failed` o
 `not_requested`, with a readable message. Saving never implicitly changes the profile's
 engine. If settings publication succeeds but view refresh fails, activation remains
 `activated`; `reload_required` and `refresh_warning` report the separate refresh issue.
+`POST /api/audio-microphone` action `delete_reference` requires the same project and
+source binding plus one exact `reference_id`. A saved profile that uses the recording
+causes a 409 response with code `reference-in-use`. Success returns the deleted ID.
+The operation leaves profile settings and other project files intact.
 `POST /api/speech-render` accepts those context fields, `mode: preview|chapter`,
 a positive `chapter`, and either `profile_id` or a validated draft `profile`.
 Optional `fresh_audio` is a strict boolean: true bypasses reuse for that render.

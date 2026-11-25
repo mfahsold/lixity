@@ -40,6 +40,8 @@ manuscript = project / 'manuscript.md'
 manuscript.write_text('## Erstes Kapitel\\n\\nDie Tür zum Garten steht offen.\\n', encoding='utf-8')
 api.init(project, title='Synthetische Recherche', language='de')
 dossier = api.create_dossier(project, 'Original dossier', 'Die erste Notiz zur Figur.')
+claim = api.create_claim(project, title='Linked claim', statement='Eine synthetische Aussage.',
+                         dossier_id=dossier['dossier_id'])
 api.revise_record(project, 'dossier', dossier['dossier_id'], changes={
     'title': 'Current dossier', 'body': 'Die zweite Notiz zur Figur.'},
     expected_revision=1, change_kind='correction', reason='Synthetische Überarbeitung.')
@@ -49,7 +51,8 @@ LixityServerHandler.exports_dir = str(project / 'exports')
 LixityServerHandler.language = 'de'
 LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
-print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'id': dossier['dossier_id']}), flush=True)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'id': dossier['dossier_id'],
+    'claim': claim['claim_id']}), flush=True)
 server.serve_forever()
 `, artifacts);
   try {
@@ -138,6 +141,7 @@ server.serve_forever()
         await revisions.locator('[data-research-revision="1"]').click();
         const history = page.locator('#research-revision-history-detail');
         await expect(history).toContainText('Die erste Notiz zur Figur.');
+        await expect(history.locator('[data-dossier-withdraw]')).toHaveCount(0);
         await downloadPdf(history, 1, 'pinned-version');
         if (width === 1440) {
           await page.evaluate(() => {
@@ -188,7 +192,133 @@ server.serve_forever()
         assert.deepEqual(errors, []);
       } finally { await page.close(); }
     }
+    await checkDossierWithdrawal(browser, server.fixture, recordUrl);
   } finally { await server.close(); }
+}
+
+async function checkDossierWithdrawal(browser, fixture, recordUrl) {
+  const {url, id, claim} = fixture;
+  const page = await browser.newPage({viewport:{width:320,height:900}});
+  page.setDefaultTimeout(8000);
+  const posts = [], errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('request', request => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/research-dossier') {
+      posts.push(request.postDataJSON());
+    }
+  });
+  function respondToConfirm(accept) {
+    return page.waitForEvent('dialog').then(async dialog => {
+      const message = dialog.message();
+      await (accept ? dialog.accept() : dialog.dismiss());
+      return message;
+    });
+  }
+  try {
+    await page.goto(url);
+    await page.locator('#tab-view-research').click();
+    const composer = page.locator('#r-dos-composer');
+    const composerSummary = composer.locator(':scope > summary');
+    await composerSummary.click();
+    await page.locator('#r-dos-title').fill('Unsaved title');
+    await page.locator('#r-dos-body').fill('Unsaved notes.');
+    const discard = composer.getByRole('button', {name:'Entwurf verwerfen', exact:true});
+    let confirmation = respondToConfirm(false);
+    await discard.click();
+    assert.match(await confirmation, /Dossierentwurf verwerfen/);
+    await expect(page.locator('#r-dos-body')).toHaveValue('Unsaved notes.');
+    confirmation = respondToConfirm(true);
+    await discard.click();
+    await confirmation;
+    await expect(composerSummary).toBeFocused();
+    await expect(page.locator('#r-dos-title')).toHaveValue('');
+    await expect(page.locator('#r-dos-body')).toHaveValue('');
+    assert.deepEqual(posts, [], 'Discard must neither create nor withdraw a dossier');
+
+    const card = page.locator(`#research-dossiers-list [data-research-detail=dossier][data-record-id="${id}"]`).locator('..');
+    const dialog = page.locator('#modal-research-revision');
+    const edit = page.locator(`#research-dossiers-list [data-research-revise=dossier][data-record-id="${id}"]`);
+    await edit.click();
+    const editBody = dialog.locator('textarea[name=body]');
+    await expect(editBody).toHaveValue('Die zweite Notiz zur Figur.');
+    await dialog.locator('#research-revision-history-tab').click();
+    await expect(dialog.locator('[data-dossier-withdraw]')).toBeVisible();
+    await dialog.locator('#research-revision-edit-tab').click();
+    await editBody.fill('Discard this unsaved revision.');
+    await dialog.locator('#research-revision-history-tab').click();
+    await expect(dialog.locator('[data-dossier-withdraw]')).toBeHidden();
+    await dialog.locator('#research-revision-edit-tab').click();
+    await dialog.getByRole('button', {name:'Änderungen verwerfen', exact:true}).click();
+    await expect(dialog).toBeHidden();
+    await expect(edit).toBeFocused();
+    await edit.click();
+    await expect(editBody).toHaveValue('Die zweite Notiz zur Figur.');
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+    assert.deepEqual(posts, []);
+
+    await card.locator('summary[data-research-detail]').click();
+    const remove = card.getByRole('button', {name:'Dossier zurückziehen', exact:true});
+    const before = await (await page.request.get(recordUrl)).json();
+    const rootToken = await page.locator('#research-manager').getAttribute('data-research-token');
+    const payload = {action:'withdraw', dossier_id:id, expected_revision:2, expected_snapshot:before.snapshot, dry_run:false};
+    const endpoint = url + '/api/research-dossier';
+    assert.equal((await page.request.post(endpoint,{data:payload})).status(),400,'A write without a root token is rejected');
+    assert.equal((await page.request.post(endpoint,{data:{...payload,research_token:rootToken,dry_run:null}})).status(),400,
+      'An absent or invalid preview/apply choice cannot withdraw the dossier');
+    assert.equal((await page.request.post(endpoint,{data:{...payload,research_token:'0'.repeat(64)}})).status(),409,
+      'A token from another root is rejected');
+    assert.equal((await page.request.post(endpoint,{data:{...payload,research_token:rootToken,expected_revision:1}})).status(),409,
+      'A stale dossier revision is rejected');
+    assert.equal((await page.request.post(endpoint,{data:{...payload,research_token:rootToken,expected_snapshot:'0'.repeat(64)}})).status(),409,
+      'A stale archive snapshot is rejected');
+    confirmation = respondToConfirm(false);
+    await remove.press('Enter');
+    assert.match(await confirmation, /Current dossier.*Fassungen.*Verknüpfungen bleiben im Archiv/);
+    await expect(remove).toBeFocused();
+    assert.equal((await (await page.request.get(recordUrl)).json()).snapshot, before.snapshot);
+    assert.deepEqual(posts.map(post => post.dry_run), [true], 'Cancel leaves the dry-run as the only request');
+
+    await page.locator(`[data-workspace-dossier="${id}"]`).click();
+    await expect(page.locator('#workspace-reader-body')).toContainText('Die zweite Notiz zur Figur.');
+    await expect(page.locator('#workspace-reader-body [data-dossier-withdraw]')).toHaveCount(0);
+    await page.locator('#tab-view-research').click();
+    await page.locator(`#research-dossiers-list [data-research-history=dossier][data-record-id="${id}"]`).click();
+    const withdraw = dialog.locator('[data-dossier-withdraw]');
+    await expect(withdraw).toBeVisible();
+    let releasePreview;
+    const blockedPreview = new Promise(resolve => { releasePreview = resolve; });
+    await page.route('**/api/research-dossier', async route => {
+      await blockedPreview;
+      await route.continue();
+    }, {times:1});
+    await withdraw.click();
+    await expect(withdraw).toHaveAttribute('aria-busy','true');
+    await dialog.locator('#research-revision-edit-tab').click();
+    await expect(dialog.locator('#research-revision-history-tab')).toHaveAttribute('aria-selected','true');
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeVisible();
+    confirmation = respondToConfirm(true);
+    releasePreview();
+    await confirmation;
+    await expect(dialog).toBeHidden();
+    await expect(card).toHaveCount(0);
+    await expect(page.locator('#research-status-bar')).toContainText('Dossier zurückgezogen');
+    await expect(page.locator('#workspace-reader-dossier')).not.toHaveValue(id);
+    await expect(page.locator('#workspace-reader-body')).not.toContainText('Die zweite Notiz zur Figur.');
+    assert.deepEqual(posts.map(post => post.dry_run), [true,true,false]);
+    for (const actual of posts) {
+      assert.equal(actual.research_token, rootToken);
+      assert.equal(actual.expected_revision, 2);
+      assert.equal(actual.expected_snapshot, before.snapshot);
+    }
+    const historical = await (await page.request.get(recordUrl + '&revision=1')).json();
+    assert.equal(historical.record.body, 'Die erste Notiz zur Figur.');
+    assert.equal(historical.availability, 'withdrawn');
+    const linked = await (await page.request.get(`${url}/api/research/record?kind=claim&id=${encodeURIComponent(claim)}`)).json();
+    assert.deepEqual(linked.record.dossier_ref, {id,revision:1});
+    assert.deepEqual(errors, []);
+  } finally { await page.close(); }
 }
 
 (async () => {
@@ -373,11 +503,11 @@ server.serve_forever()
       await readOnly.goto('http://lixity.test/');
       assert.equal(await readOnly.evaluate(detail => {
         const host = document.createElement('div');
-        host.innerHTML = researchDossierDetailHtml(detail, true, {recordView: true});
-        return host.querySelectorAll('[data-dossier-pdf-export]').length;
-      }, detail), 0, 'Read-only dossier pages never advertise a native download');
+        host.innerHTML = researchDossierDetailHtml({...detail, snapshot: 'a'.repeat(64)}, false, {recordView: true});
+        return host.querySelectorAll('[data-dossier-pdf-export], [data-dossier-withdraw]').length;
+      }, detail), 0, 'Read-only dossier pages never advertise a native download or withdrawal');
     } finally { await readOnly.close(); }
     await checkNativeDossierPdf(browser);
-    console.log('Dossier document: authored structure, independent embeddings, static gating and exact native PDF downloads passed at desktop/mobile. ' + artifacts);
+    console.log('Dossier document: authored structure, exact native PDF downloads, draft discard, reviewed withdrawal and preserved history passed. ' + artifacts);
   } finally {await browser.close();}
 })().catch(error => {console.error(error);process.exitCode=1;});

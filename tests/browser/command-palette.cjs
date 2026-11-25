@@ -13,6 +13,7 @@ const { launchChromium, modShortcut } = require('../../scripts/browser_tools.cjs
   const iconsJs = fs.readFileSync('src/lixity/ui/assets/icons.js', 'utf8');
   const componentLayerJs = fs.readFileSync('src/lixity/ui/assets/component-layer.js', 'utf8');
   const paletteJs = fs.readFileSync('src/lixity/ui/assets/command-palette.js', 'utf8');
+  const editorJs = fs.readFileSync('src/lixity/ui/assets/markdown-editor.js', 'utf8');
   const css = fs.readFileSync('src/lixity/ui/assets/components.css', 'utf8');
 
   await page.setContent(`<!DOCTYPE html>
@@ -38,6 +39,7 @@ const { launchChromium, modShortcut } = require('../../scripts/browser_tools.cjs
     };
   </script>
   <script>${paletteJs}</script>
+  <script>${editorJs}</script>
 </head>
 <body class="manuscript-reading">
   <div id="workspace">
@@ -50,6 +52,7 @@ const { launchChromium, modShortcut } = require('../../scripts/browser_tools.cjs
     <input id="r-search-query" type="search" />
     <button id="research-tab-dossiers" data-rtab="dossiers" type="button">Dossiers</button>
     <details id="r-dos-composer"><summary>New</summary><input id="r-dos-title" type="text" /></details>
+    <textarea id="research-notes" aria-label="Research notes"></textarea>
     <div id="content">Reading Area</div>
   </div>
 </body>
@@ -112,6 +115,7 @@ const { launchChromium, modShortcut } = require('../../scripts/browser_tools.cjs
 
   await page.keyboard.press(modShortcut('k'));
   await page.fill('#command-palette-search', 'Suchmaske');
+  assert.equal(await page.locator('.command-palette-item-shortcut').count(), 0, 'Research search does not advertise an inactive letter shortcut');
   await page.keyboard.press('Enter');
   assert.equal(await page.evaluate(() => document.activeElement.id), 'r-search-query', 'Research search command focuses #r-search-query');
 
@@ -126,6 +130,19 @@ const { launchChromium, modShortcut } = require('../../scripts/browser_tools.cjs
     await page.fill('#command-palette-search', missing);
     assert.equal(await page.locator('.command-palette-item').count(), 0, 'Unavailable destination ' + missing + ' has no command');
   }
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => LixityMarkdownEditor.mount(document.getElementById('research-notes')));
+  const notes = page.locator('#research-notes');
+  await notes.fill('source');
+  await notes.evaluate(el => el.select());
+  await page.keyboard.press(modShortcut('k'));
+  assert.equal(await notes.inputValue(), '[source](https://)', 'The focused Markdown editor owns Mod+K');
+  assert.equal(await page.locator('#command-palette-dialog').isVisible(), false);
+  assert.equal(await page.getByRole('button', {name: 'Link', exact: true}).getAttribute('aria-keyshortcuts'), 'Control+K Meta+K');
+  await page.keyboard.press(modShortcut('Shift+k'));
+  assert.equal(await page.locator('#command-palette-dialog').isVisible(), false, 'Modified browser or editor chords remain independent');
+  await page.keyboard.press(modShortcut('p'));
+  assert.equal(await page.locator('#command-palette-dialog').isVisible(), true, 'Mod+P remains available from Markdown');
 
   await browser.close();
   console.log('Command palette browser checks passed successfully.');

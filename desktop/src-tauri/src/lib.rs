@@ -176,6 +176,7 @@ fn apply_menu_zoom(app: &AppHandle, factor: f64) {
 #[derive(Debug)]
 pub(crate) enum StartupFailure {
     RuntimeMissing,
+    RuntimeClient,
     RuntimeLaunch(std::io::ErrorKind),
     RuntimeReadiness,
     WorkspaceWindow,
@@ -185,7 +186,9 @@ impl StartupFailure {
     fn message<'a>(&self, labels: &'a MenuLabels) -> &'a str {
         match self {
             Self::RuntimeMissing => &labels.startup_runtime_missing,
-            Self::RuntimeLaunch(_) | Self::RuntimeReadiness => &labels.startup_runtime_failed,
+            Self::RuntimeClient | Self::RuntimeLaunch(_) | Self::RuntimeReadiness => {
+                &labels.startup_runtime_failed
+            }
             Self::WorkspaceWindow => &labels.startup_window_failed,
         }
     }
@@ -194,6 +197,7 @@ impl StartupFailure {
         // Subprocess and WebView errors may include local paths or handshake URLs.
         let phase = match self {
             Self::RuntimeMissing => "runtime-files",
+            Self::RuntimeClient => "runtime-client",
             Self::RuntimeLaunch(_) => "runtime-launch",
             Self::RuntimeReadiness => "runtime-readiness",
             Self::WorkspaceWindow => "workspace-window",
@@ -691,6 +695,7 @@ mod tests {
 
         let cases = [
             (StartupFailure::RuntimeMissing, "runtime-files"),
+            (StartupFailure::RuntimeClient, "runtime-client"),
             (
                 StartupFailure::RuntimeLaunch(ErrorKind::PermissionDenied),
                 "runtime-launch kind=PermissionDenied",

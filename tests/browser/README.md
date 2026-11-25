@@ -19,10 +19,10 @@ accept `--firefox` and use synthetic native projects. They run in the analysis
 browser group. The exact-revision `/api/manuscript-view` contract is covered
 separately by `tests/test_manuscript_editing_http.py`.
 
-Run after installing the Python development environment and Playwright with
-Chromium. Install `axe-core` as well to run the audio direction accessibility
-audit. `make browser-tools` installs the pinned Playwright 1.59.1, Chromium and
-axe-core 4.13.0 into `$HOME/.local/share/lixity/browser-tools/`, outside the
+Run after installing the Python development environment, Node.js 20 or newer,
+and Playwright with Chromium. Install `axe-core` to run the audio direction accessibility
+audit. `make browser-tools` installs the pinned Playwright 1.65.1, Chromium and
+axe-core 4.14.1 into `$HOME/.local/share/lixity/browser-tools/`, outside the
 product and repository dependency trees. The shared launcher discovers that
 location automatically. Override `BROWSER_TOOLS_DIR`, `PLAYWRIGHT_VERSION` or
 `AXE_CORE_VERSION` only while deliberately testing a tooling update.
@@ -173,9 +173,11 @@ The manually dispatched `browser` workflow accepts an optional space-separated
 `rc.yml` gates shard the full suite across four hosted runners on the selected
 commit. The jobs use Microsoft's digest-pinned Playwright Noble image for
 Chromium and its system libraries. Keep the image version and the installed
-Playwright npm version in sync when updating the workflow. The shared launcher
-uses the full Chromium headless channel when Playwright supplies the executable,
-so the microphone suite exercises Chromium's permission implementation.
+Playwright npm version in sync when updating the workflow. Before starting the
+suites, the workflow launches Chromium through the same helper they use,
+requires axe-core to resolve, and records the three tool versions. The hosted
+launcher uses the bundled full Chromium headless channel, so the microphone
+suite exercises Chromium's permission implementation.
 
 For the equivalent local run, use
 `make browser-full PYTHON=python BROWSER_JOBS=2 BROWSER_ARGS="--shard ${SHARD}/4"`.
@@ -184,15 +186,17 @@ estimated duration to the shard with the lowest estimated workload. Each shard
 queues its longest suites first. All four shards together run every suite once.
 Use `--list --shard INDEX/TOTAL` to inspect a shard's assignments.
 
-The weights in `scripts/run_browser_suites.py` use the slower wall time for each
-suite across two successful full-matrix release runs with two workers per shard,
-rounded up to seconds. An unmeasured suite gets 36 seconds, the rounded-up upper
-quartile of those weights. For the 105 suites at adoption, the model puts the
-slowest two-worker shard at 433 seconds, down from 538 seconds for the previous
-assignment using the same weights. These estimates cover the suite steps and
-exclude runner setup.
-[Release run 43936636750](https://github.com/mfahsold/lixity/actions/runs/43936636750)
-and [release run 43955134184](https://github.com/mfahsold/lixity/actions/runs/43955134184).
+The weights in `scripts/run_browser_suites.py` use the slowest observed wall
+time per suite across three successful full-matrix release runs with two workers
+per shard, rounded up to seconds. An unmeasured suite gets 49 seconds, the
+rounded-up upper quartile of those weights. The latest run completed all 105
+suites, with shard times of 405–555 seconds. Replaying those per-suite times
+with the updated weights gives an estimated 453–494 seconds, excluding setup
+and harness time. A hosted run is needed to measure the new assignment because
+different pairs of suites can contend for resources.
+[Release run 43936636750](https://github.com/mfahsold/lixity/actions/runs/43936636750) ·
+[Release run 43955134184](https://github.com/mfahsold/lixity/actions/runs/43955134184) ·
+[Release run 45481787784](https://github.com/mfahsold/lixity/actions/runs/45481787784)
 
 To refresh the weights, download `browser-evidence-*` from comparable successful
 full-matrix runs. Use `suites[].seconds` from all four passing `results.json`
@@ -206,6 +210,12 @@ synthetic log tails per process, and at most 4 runner-owned PNG captures
 (`<= 2 MiB` each, `64 MiB` total) from failed processes only; `--summary DIAGNOSTICS_DIR`
 validates that manifest and prints a Markdown summary. Full synthetic fixture
 workspaces stay temporary and are not retained in the evidence bundle.
+For synthetic native server fixtures, this mode also forwards the production
+`audio_operation` record into the suite log. Retained fields are the generated
+diagnostic ID, route, operation, HTTP status and duration. Match the ID to the
+response header when investigating an audio failure. The harness test exercises
+the allowlist with synthetic values and verifies that unrelated stderr and request
+contents stay outside this stream.
 
 A failed Git comparison, including an invalid `BASE`, stops selection with an
 error. Shared support files and runner changes select all suites, as do unknown
@@ -377,12 +387,13 @@ change server logging. Backend request/error UTC timestamps
 are checked separately in `tests/test_server_debug.py`.
 
 Browser suites are local-first: run `make browser` after UI changes and before
-preparing a release. The manual `browser` workflow (Actions → browser → Run
-workflow) runs the same script in one Chromium job (`BROWSER_JOBS=2` for full
-runs) with bounded 7-day `browser-evidence-<run_id>-<attempt>` diagnostic
-artifacts (`results.json`, bounded log tails, and failure-only owned PNGs) and
-a Markdown step summary; full synthetic fixture workspaces stay temporary and
-are not uploaded. The manual `research-platforms` workflow covers macOS and Windows.
+preparing a release. Hosted runs keep
+`browser-evidence-<run_id>-<attempt>-shard-<index>` for seven days. Each bundle
+contains `results.json`, bounded logs and runner-owned PNGs from failed processes.
+The job summary identifies the source commit and each setup stage's outcome. The
+suite step has its own 20-minute deadline inside the job budget so a timeout can
+still leave time to upload the last saved state. Full fixture workspaces stay
+temporary. The manual `research-platforms` workflow covers macOS and Windows.
 
 The research test starts its own disposable loopback server and archive. It checks
 persistent New/Open/Show guidance actions after dismissal and in a loaded project,

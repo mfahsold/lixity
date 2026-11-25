@@ -27,6 +27,7 @@ workers and integrations.
 | Leave an explicit note in the manuscript | [Work markers](#work-markers-editor-visible) |
 | Inspect files and project settings | [Project structure](#inspect-project-structure), [Saved project settings](#saved-project-settings) |
 | Record or listen | [Audio manual](AUDIO.md#author-voice-recording-and-listening) |
+| Edit the delivery of a passage while reading | [Passage direction beside the manuscript](AUDIO.md#passage-direction) |
 | Prepare a recipient's copy | [Manuscript PDF](#download-a-manuscript-pdf), [Dossier PDF](#download-a-dossier-pdf), [Reading website](#export-a-reading-website), [Preflight](#check-a-reading-website-before-exporting) |
 | Recover an unavailable source or missing control | [Source freshness](#source-availability-and-saved-analysis), [Troubleshooting](#troubleshooting) |
 
@@ -96,9 +97,11 @@ the editor stays available. With a network error or interrupted save, use
    text**, **Current file** and **Draft to review**. The last acknowledged text
    is the editor's last confirmed revision. To compare a recovery copy, choose
    it in **Versions** before opening the comparison.
-2. Check the two saved texts and edit **Draft to review**. **Use as draft**
-   brings your candidate into the editor with autosave paused. Closing an edited
-   comparison asks for confirmation before discarding its changes.
+2. Check the two saved texts and edit **Draft to review**. Expand **Unsaved
+   text in the editor** to copy from your current working text when there are
+   unsaved changes. **Use as draft** brings your candidate into the editor with
+   autosave paused. Lixity asks before replacing different unsaved text or
+   closing a comparison with edits.
 3. Choose **Save this draft** to apply the result. The save checks the exact
    file revision shown in the comparison. If the file changed again, open a
    fresh comparison before trying to save.
@@ -120,9 +123,9 @@ otherwise focus on the text and the current save status.
 
 Choose an entry in **Versions → Choose a recovery copy**. **Load as draft**
 opens a retained copy for review with saving paused. If the editor already has
-unsaved changes, **Load as draft** downloads that buffer and leaves the text
-in the editor. To combine text from both drafts, use **Compare versions** with
-the recovery copy selected.
+unsaved changes, choose **Compare versions** to review the selected copy
+alongside your working text. **Download draft** saves a separate Markdown copy
+of the text currently in the editor.
 
 Recovery lives in `.lixity/editing/recovery.sqlite3`, with up to 20 previous source
 versions and eight unresolved drafts per document. Unresolved drafts are not
@@ -242,18 +245,10 @@ record claims and decisions, and link them to manuscript passages. The
 
 ### A connected first session
 
-1. Open or import a manuscript, confirm its language and read a chapter with analysis
-   off. The import preview writes nothing until you confirm the destination.
-2. Turn analysis on for one question. Use **Underline counted passages** to inspect the original
-   words or sentences. **Mark differing paragraphs** compares the paragraph
-   with its chapter. Return to the unmarked passage before deciding what to change.
-3. Open a linked dossier beside the manuscript. Follow its retained source passages,
-   claims and decisions; distinguish an exact earlier link from the current record.
-4. For spoken review, open **Listen and direct** from the manuscript toolbar. The
-   [audio manual](AUDIO.md) covers plans, recording, profiles and synthesis. Plan
-   export is available without a speech service; recording and synthesis are separate actions.
-5. Choose a review workspace, curated reader/companion or PDF for the intended recipient.
-   Check the prepared export and test the resulting copy without the local service.
+Follow the [first-session checklist](ONBOARDING.md#session-checklist) to open a
+project, explain one result in its paragraph and return to the text. The routes
+below expand that workflow when you want to compare chapters, open a dossier
+beside the manuscript, check spoken delivery or prepare a reading copy.
 
 The [demo workspace](demo/report.html), [reader copy](demo/reader/index.html) and
 [standalone companion](demo/companion/index.html) show different projections of one
@@ -571,9 +566,24 @@ decisions. Author work markers are a separate action in the paragraph menu.
 
 ### Keyboard, touch and focus reading
 
-**Reading settings → Keyboard shortcuts**
-lists the passage menu, search and close keys. Hovering or focusing key controls
-also gives a short explanation; Escape dismisses a tooltip. Mouse hints wait
+**Reading settings → Keyboard shortcuts** lists the passage menu, search and
+close keys and opens the command palette. In the manuscript reader, use these
+keys from the corresponding view or control.
+
+| Action | Key and scope |
+| --- | --- |
+| Open the passage menu | `Shift+F10` on a focused paragraph |
+| Enter or leave focus reading | `F` or `Cmd/Ctrl+Shift+F` in the manuscript reader. `Escape` also leaves active focus reading. |
+| Focus manuscript search | `/` or `Cmd/Ctrl+F` in the manuscript reader |
+| Navigate search results | `Enter`, `Shift+Enter` or `Escape` in the search field |
+| Clear a research list filter | `Escape` in the source or dossier filter field |
+| Open the speech tools | `P` for Teleprompter or `D` for Listen and direct in the manuscript reader |
+| Open the command palette | `Cmd/Ctrl+K` or `Cmd/Ctrl+P` in the workspace. In Markdown text, `Cmd/Ctrl+K` inserts a link. |
+| Format in the writing editor | `Cmd/Ctrl+B` for bold or `Cmd/Ctrl+I` for italics |
+| Import a manuscript in the desktop app | `Cmd/Ctrl+Shift+I` from the native File menu |
+
+Hovering or focusing a control shows its explanation and any declared shortcut
+for the current platform. Escape dismisses a tooltip. Mouse hints wait
 briefly for deliberate hovering, then switch faster between neighboring tools.
 They appear beside the hovered control near the pointer;
 keyboard and touch hints keep room for adjacent toolbar actions. They show the control name, its explanation and any declared

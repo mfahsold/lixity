@@ -85,7 +85,8 @@ async function researchApiPost(action, payload) {
   } finally {
     invalidateResearchStatusReads();
   }
-  if (data.ok && ["research-ingest", "research-dossier", "research-claim-add", "research-decision-add"].includes(action)) {
+  if (data.ok && ["research-ingest", "research-dossier", "research-claim-add", "research-decision-add"].includes(action) &&
+      !(action === "research-dossier" && payload.action === "withdraw" && payload.dry_run)) {
     await refreshResearchProjectInfo();
   }
   return data;
@@ -137,6 +138,16 @@ function fieldSnapshot(identifiers) {
   }));
 }
 
+function clearResearchFields(identifiers) {
+  identifiers.forEach(function(identifier) {
+    var field = document.getElementById(identifier);
+    if (!field) return;
+    if (field._geographyEditor) field._geographyEditor.reset();
+    else if (field.type === "checkbox") field.checked = false;
+    else field.value = "";
+  });
+}
+
 async function submitResearchForm(button, action, payload, fields, clearFields, complete, refresh) {
   if (button.disabled) return;
   var submitted = fieldSnapshot(fields), context = researchReadContext();
@@ -149,12 +160,7 @@ async function submitResearchForm(button, action, payload, fields, clearFields, 
     researchFormStatus(button, result.ok ? uiLabel(complete) : result.message || uiLabel("research_status_unavailable"), result.ok ? "ok" : "err");
     if (result.ok) {
       if (JSON.stringify(fieldSnapshot(fields)) === JSON.stringify(submitted)) {
-        clearFields.forEach(function(identifier) {
-          var field = document.getElementById(identifier);
-          if (field._geographyEditor) field._geographyEditor.reset();
-          else if (field.type === "checkbox") field.checked = false;
-          else field.value = "";
-        });
+        clearResearchFields(clearFields);
       }
       refresh();
     }

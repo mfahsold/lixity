@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import math
 import multiprocessing
 import os
@@ -18,7 +19,7 @@ from multiprocessing.connection import Connection, wait
 from multiprocessing.process import BaseProcess
 from typing import Any
 
-from .log import get_logger
+from .log import get_logger, log_event
 from .speech_worker import (
     MAX_BASE_REQUEST_BYTES,
     MAX_RESPONSE_BYTES,
@@ -168,7 +169,7 @@ class ModelLifecycle:
             self._runtime = {}
             self._state = state
         if process is not None:
-            self._logger.info("event=worker_model_release status=%s", state)
+            log_event(self._logger, "worker_model_release", status=state)
 
     def _expire(self, completed: float) -> None:
         with self._operation:
@@ -193,7 +194,7 @@ class ModelLifecycle:
             started = time.monotonic()
             try:
                 if loading:
-                    self._logger.info("event=worker_model_load status=started")
+                    log_event(self._logger, "worker_model_load", status="started")
                     with self._state_lock:
                         self._state = "loading"
                     context = multiprocessing.get_context("spawn")
@@ -212,8 +213,8 @@ class ModelLifecycle:
                     with self._state_lock:
                         self._runtime = metadata
                         self._state = "loaded"
-                    self._logger.info("event=worker_model_load status=ready duration_ms=%d",
-                                      int((time.monotonic() - started) * 1000))
+                    log_event(self._logger, "worker_model_load", status="ready",
+                              duration_ms=int((time.monotonic() - started) * 1000))
                 if self._connection is None:
                     raise RuntimeError("Native model process is disconnected")
                 self._connection.send_bytes(payload)
@@ -223,8 +224,8 @@ class ModelLifecycle:
                 return data
             except Exception as exc:
                 if loading:
-                    self._logger.warning("event=worker_model_load status=failed duration_ms=%d",
-                                         int((time.monotonic() - started) * 1000))
+                    log_event(self._logger, "worker_model_load", logging.WARNING, status="failed",
+                              duration_ms=int((time.monotonic() - started) * 1000))
                 self._dispose("failed")
                 raise RuntimeError("Native model process failed during loading or synthesis") from exc
             finally:

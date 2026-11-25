@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {launchChromium, playwrightModule, browserLocales} = require('../../scripts/browser_tools.cjs');
+const {launchChromium, playwrightModule, browserLocales, modShortcut} = require('../../scripts/browser_tools.cjs');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const {pythonFixture} = require('./support/python-fixture.cjs');
 
@@ -160,7 +160,9 @@ async function keyboardActions(page) {
     'Escape returns keyboard focus to the paragraph action that opened the menu');
 
   const search = page.locator('#text-search');
-  assert.equal(await search.getAttribute('aria-keyshortcuts'), 'Enter Shift+Enter Escape');
+  assert.equal(await search.getAttribute('aria-keyshortcuts'), '/ Control+F Meta+F Enter Shift+Enter Escape');
+  await page.keyboard.press('/');
+  await expect(search).toBeFocused();
   await search.fill('pending synthetic query');
   await search.press('Escape');
   assert.equal(await search.inputValue(), '', 'Search Escape clears its query even while contextual help is visible');
@@ -185,6 +187,13 @@ async function keyboardActions(page) {
   assert.equal(await search.inputValue(), '');
   assert.equal(await page.locator('#chapters .text-hit').count(), 0);
   assert.equal(await page.locator('body').evaluate(node => node.classList.contains('text-search-active')), false);
+  const focus = page.locator('#reader-focus');
+  await focus.focus();
+  await page.keyboard.press('f');
+  await expect(focus).toHaveAttribute('aria-pressed', 'true');
+  await expect(focus).toHaveAttribute('aria-keyshortcuts', 'F Control+Shift+F Meta+Shift+F Escape');
+  await page.keyboard.press(modShortcut('Shift+f'));
+  await expect(focus).toHaveAttribute('aria-pressed', 'false');
 }
 
 async function hoverTiming(browser) {
@@ -205,7 +214,9 @@ async function hoverTiming(browser) {
     assert.equal(await tip.getAttribute('aria-hidden'), 'true', 'The first hint waits for deliberate dwell');
     await page.clock.runFor(20);
     await expect(tip).toHaveAttribute('aria-hidden', 'false');
-    await expect(tip.locator('.tooltip-heading')).toHaveText(fixtures.en.labels.reading_focus);
+    await expect(tip.locator('.tooltip-heading')).toContainText(fixtures.en.labels.reading_focus);
+    const macKeyboard = await page.evaluate(() => /Mac/.test(navigator.platform));
+    assert.deepEqual(await tip.locator('.tooltip-heading kbd').allTextContents(), ['F', macKeyboard ? 'Cmd+Shift+F' : 'Ctrl+Shift+F']);
     await expect(tip.locator('.tooltip-copy')).toHaveText(fixtures.en.labels.reading_help_focus);
     await expect(focus).toHaveAccessibleDescription(fixtures.en.labels.reading_help_focus);
     const focusBox = await focus.boundingBox(), hintBox = await tip.boundingBox();
@@ -418,7 +429,9 @@ async function shortcutReference(page, labels, locale, width, height = 900) {
   for (const key of ['reading_teleprompter', 'reading_shortcut_actions', 'reading_shortcut_search', 'reading_shortcut_close']) {
     await expect(reference).toContainText(labels[key]);
   }
-  assert.deepEqual(await reference.locator('kbd').allTextContents(), ['P', 'D', 'Shift+F10', 'Enter', 'Esc']);
+  assert.deepEqual(await reference.locator('kbd').allTextContents(), ['F', 'P', 'D', 'Shift+F10', '/', 'Enter', 'Esc']);
+  const launcher = reference.getByRole('button', {name: labels.cmd_aria_label});
+  await expect(launcher).toHaveAttribute('aria-keyshortcuts', 'Control+K Meta+K Control+P Meta+P');
   const body = page.locator('#reader-settings .reader-settings-body');
   if (height === 480) {
     const openingBounds = await page.evaluate(async () => {
@@ -432,12 +445,23 @@ async function shortcutReference(page, labels, locale, width, height = 900) {
   const bounds = await body.boundingBox();
   assert.ok(bounds.x >= 0 && bounds.x + bounds.width <= width && bounds.y >= 0 && bounds.y + bounds.height <= height,
     `The settings popover remains bounded at desktop, narrow and short heights: ${JSON.stringify({locale, width, height, bounds})}`);
-  for (const row of await reference.locator('strong, kbd, dd').all()) {
+  for (const row of await reference.locator('strong, kbd, dd, button').all()) {
     await row.scrollIntoViewIfNeeded();
     const box = await row.boundingBox();
     assert.ok(box.x >= bounds.x && box.x + box.width <= bounds.x + bounds.width + 1 &&
       box.y >= bounds.y - 1 && box.y + box.height <= bounds.y + bounds.height + 1,
     'Every localized shortcut row remains reachable through the settings scrollport');
+  }
+  if (locale === 'en' && width === 1440 && height === 900) {
+    const tip = page.locator('#lixity-tooltip');
+    await launcher.focus();
+    await expect(tip).toHaveAttribute('aria-hidden', 'false');
+    const modifier = await page.evaluate(() => /Mac/.test(navigator.platform) ? 'Cmd' : 'Ctrl');
+    assert.deepEqual(await tip.locator('kbd').allTextContents(), [`${modifier}+K`, `${modifier}+P`]);
+    await launcher.press('Enter');
+    await expect(page.locator('#command-palette-search')).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(launcher).toBeFocused();
   }
   await page.screenshot({path: path.join(artifacts, `${locale}-${width}-${height}-shortcuts.png`)});
   await page.locator('#reader-settings > summary').focus();

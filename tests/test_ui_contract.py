@@ -545,6 +545,7 @@ class TestJsDomContract(unittest.TestCase):
         ids.discard("workbench-thread")  # mounted once by the shared reading-thread owner
         ids.discard("lixity-site-data")  # injected only by the prepared website exporter
         ids.discard("speech-chapter")  # created dynamically by the speech dialog
+        ids.discard("reader-speech")  # added to the reader toolbar when native speech is available
         self.assertTrue(ids)
         # Onboarding controls exist only in the empty/research-only state.
         html = (

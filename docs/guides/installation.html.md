@@ -1,18 +1,20 @@
 # Install Lixity and open your manuscript
 
-Find the [desktop app for your computer](#desktop). If you work from the terminal or there is no installer for your system, use the [local browser app and CLI](#install). Built-in analysis runs locally without a Lixity account. See the [installation manual](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) for updates, optional tools and troubleshooting.
+Check [desktop availability](#desktop) for your computer, or install the [published local browser app and CLI](#install). Built-in analysis runs on your computer without a Lixity account.
 
-Updated 24 November 2026
+Want to see the workflow first? [Open a marked sentence in the read-only example](first-look.html#passage). The [installation manual](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) covers updates, optional tools and troubleshooting.
+
+Updated 25 November 2026
 
 <a id="desktop"></a>
 
 ## Desktop downloads
 
-Desktop installers are in testing. For the current public release, [install the local browser app and CLI](#install). [Get a desktop test installer](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build).
+Desktop installers are currently available as test builds. To start with the published release, [install the local browser app and CLI](#install). To test the desktop app, [sign in to GitHub and find a test build](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#download-a-test-build).
 
-The desktop app includes Python. Open Lixity from your application menu to start the bundled local engine.
+The desktop app includes Python. After installation, open Lixity from your application menu. For a Linux AppImage, keep the executable file and open it again from the same location.
 
-For a test build, sign in to GitHub and keep the installer and checksum list from the same workflow run.
+For a test build, choose the workflow run for the version or commit you want to test. Check that its artifact is still available, then use the installer and checksum list from that same run.
 
 <a id="macos"></a>
 
@@ -52,17 +54,21 @@ Windows may flag an unsigned test build as an unknown publisher or unrecognized 
 
 3. On Debian or Ubuntu, open the verified `.deb` with your package installer and start **Lixity** from the applications menu. To run the verified `.AppImage` from its folder, allow it to execute in the file's properties and open it.
 
-For an AppImage FUSE error, follow the [instructions for your distribution](https://docs.appimage.org/user-guide/troubleshooting/fuse.html). See the [Linux verification and installation steps](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#linux-desktop-test) for the Terminal commands.
+For Linux testing, use a build whose workflow passed the installed-app runtime check. If an earlier DEB reports a missing ALSA library, see the [Linux troubleshooting steps](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#linux-desktop-test). For an AppImage FUSE error, follow the [instructions for your distribution](https://docs.appimage.org/user-guide/troubleshooting/fuse.html).
 
 <a id="desktop-first-launch"></a>
 
 ### First launch
 
-Choose **Open a project folder**, **Import a manuscript**, or **Start writing** in the welcome window. Choose **Try the example offline** to preview the bundled English manuscript. Confirm to save an editable local copy. New projects use `~/Lixity` by default, and the form shows the destination before saving.
+1. To try the workflow with a sample, choose **Try the example offline** and preview the bundled English manuscript. Check the destination and choose **Import and analyze manuscript** to create an editable local copy. New projects use `~/Lixity` by default.
 
-For a test build, use a separate account or test machine and explore the example first. If the workspace cannot start, the error dialog can open the log folder. After the app opens, use **Tools → Open Logs Folder**. See the [platform log locations](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#find-the-desktop-logs) if no window opens. The [first-session guide](first-look.html) walks through reading your first finding.
+2. In **Manuscript**, read a paragraph and [inspect one counted passage](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#read-and-explore). Return to the text. You can then choose **Write** or keep reading.
 
-This source guide describes **v0.9.2**. Its changes are listed in the source [release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.2.md). The browser and CLI installation uses the package published on [PyPI](https://pypi.org/project/lixity/). Check `lixity --version` and [Latest on GitHub](https://github.com/mfahsold/lixity/releases/latest) for the published version. Historical 1.x and 3.x tags predate the version reset.
+3. When you are ready to work on your own text, choose **Open a project folder**, **Import a manuscript**, or **Start writing**. The import preview shows the new destination and analysis language before you confirm.
+
+For a test build, use a separate account or test machine. If startup fails, the error dialog can open the log folder. After the app opens, use **Tools → Open Logs Folder**. See the [platform log locations](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#find-the-desktop-logs) if no window opens.
+
+This source guide describes **v0.9.3**. Its changes are listed in the source [release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.3.md). The browser and CLI installation uses the package published on [PyPI](https://pypi.org/project/lixity/). Check `lixity --version` and [Latest on GitHub](https://github.com/mfahsold/lixity/releases/latest) for the published version. Historical 1.x and 3.x tags predate the version reset.
 
 <a id="requirements"></a>
 
@@ -70,13 +76,7 @@ This source guide describes **v0.9.2**. Its changes are listed in the source [re
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/). It supplies managed Python 3.12 and installs Lixity from [PyPI](https://pypi.org/project/lixity/). You can also find the current wheel and its checksums on [GitHub Releases](https://github.com/mfahsold/lixity/releases/latest). Installation needs an internet connection. Analysis runs offline afterward. PDF import has [additional requirements](research-pdf.html#ocr).
 
-**License:**
-
-Lixity is open source under AGPL-3.0-or-later; every writing purpose is covered, including self-publishing. A separate written commercial license exists only for closed-source integrations. Read the
-
-[licensing guide](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)
-
-.
+Lixity is open source under AGPL-3.0-or-later. You can write and self-publish with it. A separate commercial license is available for closed-source integrations. [Licensing guide](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)
 
 <a id="install"></a>
 
@@ -120,11 +120,11 @@ The default browser address is `http://127.0.0.1:8765/`. A fresh start opens an 
 
 1. Choose **Open Project** to continue in an existing folder. To copy a manuscript into a new project, choose **Analyze a manuscript** and review the import preview. Confirm the analysis language.
 
-2. Read in **Manuscript**. Choose a paragraph's **… → Paragraph details** for its inspector. The separate **Analysis** switch shows diagnostics across the manuscript.
+2. Read one paragraph in **Manuscript**. Turn on **Analysis**, choose **Sentence length**, then choose **Text matches** to read a counted sentence. [First session](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#read-and-explore)
 
 3. Use **Analysis overview** for chapter comparisons, then **Back to passage** to return.
 
-English is the default analysis language; automatic detection is an explicit choice. The [first-session guide](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md) explains project selection. For a short example before importing, try the [Warehouse 4 walkthrough](first-look.html). Its public demo cannot import, edit or save.
+English is the default analysis language. Choose automatic detection explicitly when you need it. The [Warehouse 4 walkthrough](first-look.html) shows the same reading task in a fixed public example.
 
 **Pinned release wheel**
 

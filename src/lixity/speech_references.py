@@ -11,6 +11,7 @@ import json
 import os
 import re
 import stat
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
 
 from .io import FileUtils
 from .research.repository import Repository
-from .speech_qwen import MAX_BASE_REQUEST_BYTES, MAX_REFERENCE_BYTES, _decode_reference
+from .speech_worker import MAX_BASE_REQUEST_BYTES, MAX_REFERENCE_BYTES, _decode_reference
 
 _SCHEMA = "lixity-audio-reference/1"
 _IDENTITY = re.compile(r"[0-9a-f]{64}\Z")
@@ -34,6 +35,10 @@ class SpeechReference:
     id: str
     audio: bytes = field(repr=False)
     transcript: str = field(repr=False)
+
+
+class VoiceReferenceInUse(ValueError):
+    """A saved voice profile still points to the selected recording."""
 
 
 def _identity(audio: bytes, transcript: str) -> str:
@@ -159,6 +164,30 @@ def save_reference(project: str | Path, audio: bytes, transcript: str) -> Speech
             if existing != reference:
                 raise ValueError("Existing audio reference identity does not match")
     return reference
+
+
+def delete_reference(
+    project: str | Path, reference_id: str, *, before_delete: Callable[[], None] | None = None,
+) -> None:
+    """Remove exactly one verified recording when no saved profile uses it."""
+    from .config import read_explicit_project_config
+    from .speech_profiles import parse_audio_settings
+
+    repository = _repository(project)
+    path = _path(repository, reference_id)
+    with repository.locked():
+        raw_audio = read_explicit_project_config(repository.root).get("audio")
+        if raw_audio is not None:
+            settings = parse_audio_settings(raw_audio)
+            if any(profile.reference_id == reference_id for profile in settings.profiles.values()):
+                raise VoiceReferenceInUse("A saved voice profile uses this recording")
+        try:
+            _read_record(repository, reference_id)
+        except FileNotFoundError as exc:
+            raise ValueError("Saved recording is unavailable") from exc
+        if before_delete is not None:
+            before_delete()
+        repository.safe(path).unlink()
 
 
 CALIBRATION_TEXTS: dict[str, dict[str, str]] = {

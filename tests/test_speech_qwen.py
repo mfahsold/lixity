@@ -18,6 +18,8 @@ import pytest
 from lixity.speech import SpeechCancelled, generate_silence_wav, render_speech_audio
 from lixity.speech_profiles import QWEN_MODEL, AudioProfile
 from lixity.speech_qwen import ENDPOINT, SYNTHESIS_TIMEOUT_SECONDS, synthesize_qwen, worker_server
+from lixity.speech_references import save_reference
+from lixity.speech_worker import MAX_BASE_REQUEST_BYTES, synthesize_native
 
 
 def _write_qwen_assets(path):
@@ -135,12 +137,12 @@ def test_worker_health_validation_and_pcm():
         with opener.open(request) as response:
             assert response.headers["X-Lixity-Voice"] == "Ryan"
             assert response.read().startswith(b"RIFF")
-        payload["model"] = "wrong"
-        request.data = json.dumps(payload).encode()
-        with pytest.raises(urllib.error.HTTPError) as error:
-            opener.open(request)
-        with error.value:
-            assert error.value.code == 400
+        for update in ({"model": "wrong"}, {"x_vector_only": True}):
+            request.data = json.dumps({**payload, **update}).encode()
+            with pytest.raises(urllib.error.HTTPError) as error:
+                opener.open(request)
+            with error.value:
+                assert error.value.code == 400
         assert len(calls) == 1
     finally:
         server.shutdown()
@@ -148,7 +150,7 @@ def test_worker_health_validation_and_pcm():
         thread.join()
 
 
-def test_base_worker_accepts_bounded_reference_and_rejects_unsupported_direction():
+def test_base_worker_accepts_bounded_reference_and_rejects_unsupported_direction(tmp_path):
     model_id = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
     calls = []
     server = worker_server(lambda request: calls.append(request) or generate_silence_wav(.01), port=0, model=model_id)
@@ -156,8 +158,9 @@ def test_base_worker_accepts_bounded_reference_and_rejects_unsupported_direction
     thread.start()
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     url = f"http://127.0.0.1:{server.server_address[1]}"
+    full_reference = generate_silence_wav(60)
     payload = {"model": model_id, "input": "A short synthetic passage.", "voice": "reference", "language": "de",
-               "instructions": "", "response_format": "wav", "reference_audio": base64.b64encode(generate_silence_wav(1)).decode(),
+               "instructions": "", "response_format": "wav", "reference_audio": base64.b64encode(full_reference).decode(),
                "reference_text": "Referenztext."}
 
     def post(value):
@@ -171,21 +174,30 @@ def test_base_worker_accepts_bounded_reference_and_rejects_unsupported_direction
         with post(payload) as response:
             assert response.status == 200 and response.headers["X-Lixity-Voice"] == "reference"
         assert len(calls) == 1
+        assert base64.b64decode(calls[0]["reference_audio"]) == full_reference
         for update in ({"instructions": "Whisper"}, {"reference_audio": "!"},
                        {"reference_audio": base64.b64encode(generate_silence_wav(1, 16000)).decode()},
                        {"reference_audio": base64.b64encode(generate_silence_wav(.01)).decode()},
+                       {"reference_audio": base64.b64encode(generate_silence_wav(60 + 1 / 24000)).decode()},
                        {"reference_text": ""}, {"reference_text": "text\x00invalid"},
-                       {"reference_text": "\ud800"}, {"voice": "Ryan"}):
+                       {"reference_text": "\ud800"}, {"voice": "Ryan"},
+                       {"x_vector_only": 1}, {"x_vector_only": "true"}):
             with pytest.raises(urllib.error.HTTPError) as error:
                 post({**payload, **update})
             with error.value:
                 assert error.value.code == 400
         assert len(calls) == 1
+        reference = save_reference(tmp_path, full_reference, payload["reference_text"])
+        selected = AudioProfile(engine="qwen3-base", language="de", voice="reference", reference_id=reference.id)
+        assert synthesize_native("Ein kurzer Satz.", selected, reference=reference,
+                                 endpoints={"local": url + "/v1/audio/speech"}).startswith(b"RIFF")
+        assert calls[1]["x_vector_only"] is True
+        assert base64.b64decode(calls[1]["reference_audio"]) == full_reference
         connection = http.client.HTTPConnection("127.0.0.1", server.server_address[1])
         try:
             connection.putrequest("POST", "/v1/audio/speech")
             connection.putheader("Content-Type", "application/json")
-            connection.putheader("Content-Length", str(3 * 1024 * 1024))
+            connection.putheader("Content-Length", str(MAX_BASE_REQUEST_BYTES + 1))
             connection.endheaders()
             assert connection.getresponse().status == 400
         finally:
@@ -822,7 +834,8 @@ def test_base_worker_reuses_only_matching_reference_prompt(tmp_path, monkeypatch
     monkeypatch.setattr('lixity.speech_qwen.importlib.import_module',
                         lambda name:{'torch':torch,'qwen_tts':qwen,'soundfile':soundfile,'numpy':np}[name])
     worker = load_local_model(tmp_path, variant='base')
-    reference = base64.b64encode(generate_silence_wav(1)).decode()
+    recording = generate_silence_wav(60)[:-2] + b"\x01\x00"
+    reference = base64.b64encode(recording).decode()
     request = {'input':'Ein kurzer Satz.', 'language':'de', 'instructions':'',
                'reference_audio':reference, 'reference_text':'Referenztext.'}
     assert worker(request).startswith(b'RIFF')
@@ -835,7 +848,8 @@ def test_base_worker_reuses_only_matching_reference_prompt(tmp_path, monkeypatch
         'prompt-1', 'prompt-1', 'prompt-2', 'prompt-3', 'prompt-4']
     assert created[0]['ref_text'] == request['reference_text']
     assert created[0]['ref_audio'][1] == 24000
-    assert len(created[0]['ref_audio'][0]) == 24000
+    assert len(created[0]['ref_audio'][0]) == 60 * 24000
+    assert created[0]['ref_audio'][0][-1] == 1 / 32768
     assert all('instruct' not in kwargs for kwargs in generated)
 
 

@@ -59,6 +59,8 @@ server.serve_forever()
         await page.locator('#tab-view-project').click();
         await page.locator('#settings-speech-output').click();
         await page.waitForFunction(() => document.querySelector('#speech-name')?.value === 'Narrator');
+        assert.equal(await page.locator('#modal-speech').evaluate(dialog => dialog.matches('.speech-docked[open]:not(:modal)')), true,
+          'The project shortcut opens chapter output beside the manuscript');
         assert.equal(await page.locator('#settings-form #settings-speech-output').count(), 0,
           'Audio actions are separate from applying project settings');
         assert.equal(await page.locator('.speech-export-section [data-speech-action=direction_plan]').isVisible(), true);
@@ -86,8 +88,16 @@ server.serve_forever()
         assert.deepEqual(JSON.parse(fs.readFileSync(server.fixture.requests)), []);
         await page.locator('.speech-plan').screenshot({path: path.join(folder, 'export.png')});
         await page.locator('.settings-section').filter({has: page.locator('#speech-audit_audio')}).locator('summary').click();
+        const auditScope = page.locator('#speech-audit_scope');
+        assert.equal(await auditScope.inputValue(), 'chapter');
         await page.locator('#speech-audit_audio').setInputFiles(server.fixture.audio);
+        const auditRequest = page.waitForRequest(request => request.url().endsWith('/api/audio-audit'));
         await page.locator('[data-speech-action=audit_run]').click();
+        const auditPayload = (await auditRequest).postDataJSON();
+        assert.equal(auditPayload.mode, 'chapter', 'Manuscript plan scope does not change the comparison scope');
+        assert.equal(auditPayload.chapter, 1);
+        assert.equal(Object.hasOwn(auditPayload, 'profile'), false);
+        assert.equal(Object.hasOwn(auditPayload, 'profile_id'), false, 'The audit resolves the saved voice on the server');
         await page.waitForSelector('[data-speech-action=audit_download]');
         const auditDownload = page.waitForEvent('download');
         await page.locator('[data-speech-action=audit_download]').click();
@@ -96,6 +106,7 @@ server.serve_forever()
         const transcript = {schema_version: 'lixity-audio-transcript/1', model: 'synthetic',
           audio_sha256: crypto.createHash('sha256').update(fs.readFileSync(server.fixture.audio)).digest('hex'),
           words: 'First The red bird sings The bird answers Second The river flows'.split(' ').map((text, i) => ({text, start: i * 0.05, end: i * 0.05 + 0.04}))};
+        await auditScope.selectOption('manuscript');
         await page.locator('#speech-audit_transcript').setInputFiles({name: 'transcript.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(transcript))});
         assert.equal(await page.locator('[data-speech-action=audit_download]').count(), 0, 'Changing evidence clears stale audit results');
         await page.locator('[data-speech-action=audit_run]').click();
@@ -105,7 +116,28 @@ server.serve_forever()
         const compared = JSON.parse(fs.readFileSync(await (await comparedDownload).path(), 'utf8'));
         assert.equal(compared.alignment.status, 'compared');
         assert.deepEqual(compared.alignment.missing_words.map(row => row.text), ['blue']);
+        await page.locator('#speech-ignore-direction').check();
+        await page.locator('#speech-reuse').uncheck();
+        await page.locator('#speech-tab-direction').click();
+        assert.equal(await page.locator('#speech-export_scope').inputValue(), 'manuscript');
+        assert.equal(await page.locator('#speech-ignore-direction').isChecked(), true,
+          'Switching between the passage and output controls keeps the overrides for this run');
+        await page.locator('#speech-tab-output').click();
+        assert.equal(await page.locator('#speech-reuse').isChecked(), false);
         await page.locator('#modal-speech [data-speech-action=close]').click();
+        await page.locator('#tab-view-project').click();
+        await page.locator('#settings-speech-output').click();
+        await page.waitForFunction(() => !document.querySelector('[data-speech-action=direction_plan]').disabled);
+        assert.equal(await page.locator('#speech-export_scope').inputValue(), 'chapter');
+        assert.equal(await auditScope.inputValue(), 'chapter');
+        for (const field of ['audit_audio', 'audit_transcript']) {
+          assert.equal(await page.locator('#speech-' + field).evaluate(input => input.files.length), 0,
+            'A fresh run must not attach the previous recording or transcript');
+        }
+        assert.equal(await page.locator('#speech-ignore-direction').isChecked(), false);
+        assert.equal(await page.locator('#speech-reuse').isChecked(), true);
+        await page.locator('#modal-speech [data-speech-action=close]').click();
+        await page.locator('#tab-view-project').click();
         await page.locator('#settings-speech').click();
         await page.waitForFunction(() => !document.querySelector('[data-speech-action=schema_preview]')?.hidden);
         await page.locator('[data-speech-action=schema_preview]').click();
@@ -131,6 +163,8 @@ server.serve_forever()
         await page.locator('#tab-view-project').click();
         await page.locator('#settings-speech-output').click();
         await page.waitForFunction(() => document.querySelector('#speech-engine')?.value === 'openai-compatible');
+        assert.equal(await page.locator('#speech-target').isVisible(), false,
+          'One available execution target does not require a choice');
         await page.locator('[data-speech-action=preview]').click();
         await page.waitForFunction(() => !document.querySelector('#speech-audio-player')?.hidden);
         const requests = JSON.parse(fs.readFileSync(server.fixture.requests));
@@ -197,8 +231,13 @@ server.serve_forever()
       await page.locator('#settings-speech-output').click();
       await page.waitForFunction(() => document.querySelector('#speech-chapter')?.options.length === 1);
       assert.equal(await page.locator('[data-speech-action=direction_plan]').isDisabled(), true, 'Unconfigured profiles cannot export a plan');
-      await page.locator('#modal-speech [data-speech-action=close]').click();
-      await page.locator('#settings-speech').click();
+      await page.locator('#speech-edit-project-voice').click();
+      assert.equal(await page.locator('#speech-tab-profiles').getAttribute('aria-selected'), 'true');
+      const picker = page.locator('.speech-profile-picker');
+      await picker.waitFor();
+      assert.equal(await picker.locator('#speech-profile').isVisible(), false,
+        'An empty project provides a create action without an empty selector');
+      assert.ok((await picker.locator('.speech-choice-readout strong').textContent()).trim());
       await page.locator('[data-speech-action=create]').click();
       await page.locator('#speech-engine').selectOption('openai-compatible');
       assert.equal(await page.locator('#speech-provider_language').inputValue(), 'nl');

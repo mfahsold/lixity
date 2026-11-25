@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import logging
 import re
 import wave
 from collections.abc import Callable
@@ -18,7 +19,7 @@ from typing import Literal
 
 from .audio_audit import _wav_format, _wave_reader_is_integer_pcm
 from .io import FileUtils
-from .log import get_logger
+from .log import get_logger, log_event
 from .research.repository import Repository
 from .speech_references import read_reference_input
 
@@ -26,6 +27,10 @@ MAX_CHAPTER_AUDIO_BYTES = 200 * 1024 * 1024
 _SCHEMA = "lixity-chapter-audio/1"
 _HASH = re.compile(r"[0-9a-f]{64}\Z")
 _POINTER = re.compile(r"chapter-([1-9][0-9]{0,5})\.json\Z")
+
+
+class ChapterAudioChanged(ValueError):
+    """The recording offered for removal is no longer selected."""
 
 
 @dataclass(frozen=True)
@@ -116,6 +121,32 @@ def _read_pointer(repo: Repository, chapter: int) -> ChapterAudioArtifact:
     except (TypeError, UnicodeError, json.JSONDecodeError) as exc:
         raise ValueError("Invalid chapter audio metadata") from exc
     return entry
+
+
+def delete_chapter_audio(project_root: str | Path, *, source_sha256: str, chapter: int, audio_sha256: str) -> bool:
+    """Remove the exact selected recording. Return whether its WAV was cleaned up."""
+    _binding(source_sha256, chapter)
+    if not isinstance(audio_sha256, str) or not _HASH.fullmatch(audio_sha256):
+        raise ValueError("Chapter audio deletion requires an exact audio SHA-256")
+    repo = _repository(project_root)
+    with repo.locked():
+        try:
+            entry = _read_pointer(repo, chapter)
+        except FileNotFoundError as exc:
+            raise ChapterAudioChanged from exc
+        if entry.source_sha256 != source_sha256 or entry.audio_sha256 != audio_sha256:
+            raise ChapterAudioChanged
+        path = _audio_path(repo, entry)
+        # Commit the selection change first so a failed WAV cleanup cannot
+        # strand an active pointer to a missing recording.
+        _pointer(repo, chapter).unlink()
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            log_event(get_logger("speech.artifacts"), "chapter_audio", logging.WARNING,
+                      stage="cleanup", status="failed")
+            return False
+    return True
 
 
 def read_project_audio(project_root: str | Path, artifact: ChapterAudioArtifact) -> bytes:
@@ -209,5 +240,6 @@ def retain_chapter_audio(project_root: str | Path, audio: bytes, *, source_sha25
             except (OSError, ValueError):
                 # The pointer is already committed. Report cleanup degradation
                 # without falsely reporting a failed import or exposing paths.
-                get_logger("speech.artifacts").warning("chapter_audio stage=cleanup status=failed")
+                log_event(get_logger("speech.artifacts"), "chapter_audio", logging.WARNING,
+                          stage="cleanup", status="failed")
     return entry

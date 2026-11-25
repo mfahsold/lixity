@@ -58,7 +58,10 @@ def render_publication(
         raise ValueError("Reader audio must remain within the manuscript chapter cap")
     language = language_key if language_key not in {"generic", "auto"} else "en"
     title = esc(publication["title"])
-    ui_labels = {**workspace_labels_for(language), **(labels or {})}
+    ui_labels = {
+        key: value for key, value in {**workspace_labels_for(language), **(labels or {})}.items()
+        if not key.startswith("speech_") or (audio and key.startswith("speech_player_"))
+    }
     # A keyword is deliberately conservative: false positives retain the library.
     # Inspect every prepared entry, including content revealed after later chapters.
     has_diagrams = any("mermaid" in text.casefold() for text in (

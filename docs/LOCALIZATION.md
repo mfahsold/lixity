@@ -132,6 +132,11 @@ claiming a consistent regional voice. No regional compatibility modes are implie
 
 ### Review in context
 
+Use a tooltip to explain what a control will open, change, or save. Keep
+the control label as its accessible name and give shortcut keys separately
+through `aria-keyshortcuts`. Place the reason and recovery action next to
+a disabled or unavailable control so they can be read without hover or focus.
+
 Review a complete interaction: visible name, explanation, empty/error state,
 accessible name, resulting object, persistence and return path. Ask authors or
 editors to predict the effect before clicking and to explain what is known,

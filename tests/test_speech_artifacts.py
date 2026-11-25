@@ -8,6 +8,8 @@ import pytest
 
 from lixity.speech import generate_silence_wav
 from lixity.speech_artifacts import (
+    ChapterAudioChanged,
+    delete_chapter_audio,
     list_project_audio,
     read_project_audio,
     retain_chapter_audio,
@@ -44,6 +46,39 @@ def test_latest_success_replaces_pointer_and_old_audio(tmp_path):
     assert len(list((tmp_path / ".lixity/audio/exports").glob("*.wav"))) == 1
     with pytest.raises((ValueError, FileNotFoundError)):
         read_project_audio(tmp_path, previous)
+
+
+def test_delete_only_the_reviewed_chapter_recording(tmp_path):
+    previous = retain(tmp_path)
+    current = retain(tmp_path, generate_silence_wav(.1))
+    other_chapter = retain_chapter_audio(tmp_path, generate_silence_wav(.1),
+                                         source_sha256=SOURCE, chapter=2, origin="imported")
+    for source, audio in ((SOURCE, previous.audio_sha256), (OTHER, current.audio_sha256)):
+        with pytest.raises(ChapterAudioChanged):
+            delete_chapter_audio(tmp_path, source_sha256=source, chapter=1, audio_sha256=audio)
+    assert list_project_audio(tmp_path, source_sha256=SOURCE, max_chapter=2) == [current, other_chapter]
+    assert delete_chapter_audio(tmp_path, source_sha256=SOURCE, chapter=1, audio_sha256=current.audio_sha256)
+    assert list_project_audio(tmp_path, source_sha256=SOURCE, max_chapter=2) == [other_chapter]
+    folder = tmp_path / ".lixity/audio/exports"
+    assert not (folder / f"chapter-1-{current.audio_sha256}.wav").exists()
+    with pytest.raises(ChapterAudioChanged):
+        delete_chapter_audio(tmp_path, source_sha256=SOURCE, chapter=1, audio_sha256=current.audio_sha256)
+
+
+def test_failed_audio_cleanup_keeps_the_recording_unselected(tmp_path, monkeypatch):
+    entry = retain(tmp_path)
+    wav = next((tmp_path / ".lixity/audio/exports").glob("*.wav"))
+    unlink = type(wav).unlink
+
+    def fail_cleanup(path, *args, **kwargs):
+        if path == wav:
+            raise PermissionError("Synthetic cleanup failure")
+        unlink(path, *args, **kwargs)
+
+    monkeypatch.setattr(type(wav), "unlink", fail_cleanup)
+    assert not delete_chapter_audio(tmp_path, source_sha256=SOURCE, chapter=1, audio_sha256=entry.audio_sha256)
+    assert wav.is_file()
+    assert list_project_audio(tmp_path, source_sha256=SOURCE, max_chapter=1) == []
 
 
 def test_invalid_or_cancelled_replacement_keeps_existing_record(tmp_path):
@@ -160,12 +195,13 @@ def test_combined_budget_is_checked_before_audio_reads(tmp_path, monkeypatch):
 
 def test_cleanup_failure_does_not_claim_committed_replacement_failed(tmp_path, monkeypatch):
     from pathlib import Path
-    from types import SimpleNamespace
+
+    from lixity.log import get_logger
 
     previous = retain(tmp_path)
     original_unlink = Path.unlink
     logged = []
-    monkeypatch.setattr("lixity.speech_artifacts.get_logger", lambda _name: SimpleNamespace(warning=logged.append))
+    monkeypatch.setattr(get_logger("speech.artifacts"), "log", lambda _level, message, **_kwargs: logged.append(message))
 
     def fail_previous(path, *args, **kwargs):
         if previous.audio_sha256 in path.name:
@@ -175,7 +211,7 @@ def test_cleanup_failure_does_not_claim_committed_replacement_failed(tmp_path, m
     monkeypatch.setattr(Path, "unlink", fail_previous)
     current = retain(tmp_path, generate_silence_wav(.1))
     assert list_project_audio(tmp_path, source_sha256=SOURCE, max_chapter=1) == [current]
-    assert logged == ["chapter_audio stage=cleanup status=failed"]
+    assert logged == ["event=chapter_audio stage=cleanup status=failed"]
 
 
 def test_old_symlink_is_rejected_before_replacement_commit(tmp_path):

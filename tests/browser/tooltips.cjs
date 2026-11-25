@@ -50,6 +50,8 @@ const comparisonAction = 'Explain measurement';
         <dialog id="modal"><span class="help" id="modal-help" tabindex="0" data-help="Synthetic native dialog help.">Help</span>
           <input id="modal-input" aria-label="Synthetic field" data-help="Synthetic field guidance.">
           <button id="modal-close" class="modal-close" aria-keyshortcuts="Escape" title="Close dialog">Close</button></dialog>
+        <div id="role-modal" role="dialog" aria-modal="true" aria-label="Synthetic dialog" hidden style="position:fixed;inset:20px">
+          <button id="role-modal-close" type="button" aria-keyshortcuts="Escape" data-help="Close the synthetic dialog.">Close</button></div>
         <div class="pswp" id="vendor-viewer" hidden><button id="vendor-close" title="Close synthetic viewer">Close</button></div>
         <div role="button" style="position:fixed;top:460px;left:20px"><span class="help" id="nested-help" tabindex="0" data-help="Nested term explanation.">Term</span></div>
         <script>
@@ -61,6 +63,9 @@ const comparisonAction = 'Explain measurement';
           });
           document.querySelector('#modal').addEventListener('keydown',event=>{
             if(event.key==='Escape'&&event.target.id==='modal-input')event.currentTarget.close();
+          });
+          document.querySelector('#role-modal').addEventListener('keydown',event=>{
+            if(event.key==='Escape')event.currentTarget.hidden=true;
           });
           document.querySelector('#vendor-viewer').addEventListener('keydown',event=>{
             if(event.key==='Escape')event.currentTarget.hidden=true;
@@ -367,6 +372,14 @@ const comparisonAction = 'Explain measurement';
       await page.keyboard.press('Escape');
       await expect(page.locator('#modal')).not.toBeVisible();
       await expect(tip).toHaveAttribute('aria-hidden','true');
+      const roleDialog = page.locator('#role-modal');
+      await roleDialog.evaluate(dialog => {dialog.hidden = false;});
+      await page.locator('#role-modal-close').focus();
+      await expect(roleDialog.locator('#lixity-tooltip')).toBeVisible();
+      await expect(tip.locator('kbd')).toHaveText('Esc');
+      await page.keyboard.press('Escape');
+      await expect(roleDialog).not.toBeVisible();
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
       await page.close();
     }
     assert.deepEqual(errors, []);

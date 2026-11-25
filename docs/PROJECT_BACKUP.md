@@ -64,6 +64,14 @@ an explicit retention decision: visible filenames are not a guarantee that their
 contents contain no secrets. Research retains only bytes already accepted into
 its store. This is a complete backup of the stated inventory, not a disk image.
 
+To retain a recovery draft for use in a restored folder, open the draft in the
+original workspace and save the text you need as a separate file. The recovery
+journal can hold private manuscript bytes and its document keys depend on the
+original project and source paths. Copying the main SQLite file of a running
+workspace can omit committed WAL transactions. A future journal backup needs a
+consistent SQLite snapshot and a reviewed way to associate the recovered text
+with its destination. [SQLite backup semantics](https://www.sqlite.org/backup.html)
+
 ## Back up private audio separately
 
 The bundle excludes these three paths. Copy the ones you need to protected backup

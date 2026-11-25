@@ -1,0 +1,24 @@
+name: Build isolated desktop runtime
+description: Bundle the Lixity wheel with the pinned managed Python and smoke-test the result
+inputs:
+  target:
+    description: Rust target triple of the native runner
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Build and verify the bundled runtime
+      shell: bash
+      env:
+        LIXITY_DESKTOP_TARGET: ${{ inputs.target }}
+        LIXITY_DESKTOP_PYTHON_VERSION: "3.12.16"
+      run: |
+        export UV_PYTHON_INSTALL_DIR="$RUNNER_TEMP/lixity-python"
+        python -m pip install 'uv==0.13.10'
+        uv python install --no-bin "$LIXITY_DESKTOP_PYTHON_VERSION"
+        uv build --no-sources --managed-python --python "$LIXITY_DESKTOP_PYTHON_VERSION" --wheel --out-dir dist
+        python desktop/scripts/build_runtime_bundle.py \
+          --target "$LIXITY_DESKTOP_TARGET" \
+          --auto-uv \
+          --output desktop/build/runtime/current
+        python desktop/scripts/smoke_desktop_runtime.py desktop/build/runtime/current

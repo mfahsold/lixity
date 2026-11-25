@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import array
 import io
+import logging
 import math
 import re
 import shutil
 import subprocess
+import sys
 import time
 import wave
 from pathlib import Path
@@ -18,13 +20,21 @@ from typing import Any
 
 from .audio_audit import _wave_reader_is_integer_pcm
 from .io import sanitized_subprocess_env
-from .speech_qwen import SAMPLE_RATE
+from .log import get_logger, log_event
+from .speech_recording_settings import MAX_REFERENCE_SECONDS, MIN_REFERENCE_SECONDS
 from .speech_references import SpeechReference, save_reference
+from .speech_worker import SAMPLE_RATE
 
-DEFAULT_DEVICE = "plughw:CARD=I3000,DEV=0"
-MAX_RECORD_SECONDS = 30.0
-MIN_RECORD_SECONDS = 1.0
+DEFAULT_DEVICE = "default"
+DEFAULT_MIXER_CONTROL = "Mic"
+DEFAULT_CALIBRATION_SECONDS = 8.0
+DEFAULT_CALIBRATION_COUNTDOWN = 4.0
+CALIBRATION_SAMPLE_RATE = 48_000
+MAX_CALIBRATION_SECONDS = 30
+MAX_CAPTURE_GAIN = 100
 _CONTROL_TIMEOUT_SECONDS = 15.0
+NO_SIGNAL_DBFS = -120.0
+_log = get_logger("speech.capture")
 
 
 def _audio_tool_env() -> dict[str, str]:
@@ -55,46 +65,66 @@ def _run_audio_tool(
     else:
         kwargs["stdout"] = subprocess.DEVNULL
         kwargs["stderr"] = subprocess.DEVNULL
+    started = time.monotonic()
+    result: subprocess.CompletedProcess[Any] | None = None
     try:
-        return subprocess.run(cmd, check=False, **kwargs)  # noqa: S603 - fixed command vector
+        result = subprocess.run(cmd, check=False, **kwargs)  # noqa: S603 - fixed command vector
+        outcome = "ok" if result.returncode == 0 else "error"
     except subprocess.TimeoutExpired as exc:
+        outcome = "timeout"
         if allow_timeout_stdout and exc.stdout is not None:
-            return subprocess.CompletedProcess(cmd, -1, stdout=exc.stdout, stderr=exc.stderr)
-        return None
+            result = subprocess.CompletedProcess(cmd, -1, stdout=exc.stdout, stderr=exc.stderr)
+            outcome = "duration_limit"
     except OSError:
-        return None
+        outcome = "unavailable"
+    log_event(
+        _log, "capture_tool_finished", logging.DEBUG,
+        tool=Path(cmd[0]).name, outcome=outcome,
+        elapsed_ms=round((time.monotonic() - started) * 1000, 1),
+        exit_code=result.returncode if result is not None and outcome != "duration_limit" else None,
+    )
+    return result
 
 
-def set_alsa_gain(gain: int, card: int | str = 1, control: str = "Mic") -> bool:
+def _alsa_mixer_args(command: str, card: int | str | None, control: str | None) -> list[str]:
+    return [*(["-c", str(card)] if card is not None else []), command, *([control] if control is not None else [])]
+
+
+def set_alsa_gain(gain: int, card: int | str | None = None, control: str = DEFAULT_MIXER_CONTROL) -> bool:
     """Set ALSA hardware capture gain safely without shell execution."""
-    if not 0 <= gain <= 100:
-        raise ValueError("Gain must be between 0 and 100")
+    if not 0 <= gain <= MAX_CAPTURE_GAIN:
+        raise ValueError(f"Gain must be between 0 and {MAX_CAPTURE_GAIN}")
     amixer = shutil.which("amixer")
     if amixer is None:
         return False
-    cmd = [amixer, "-c", str(card), "sset", str(control), str(gain)]
+    cmd = [amixer, *_alsa_mixer_args("sset", card, control), "capture", str(gain)]
     res = _run_audio_tool(cmd, capture_output=False)
     return res is not None and res.returncode == 0
 
 
-def get_alsa_gain(card: int | str = 1, control: str = "Mic") -> int | None:
-    """Read current ALSA capture volume if available."""
+def _read_alsa_mixer(card: int | str | None, control: str | None) -> str | None:
+    """Read one explicit ALSA control or enumerate the card's simple controls."""
     amixer = shutil.which("amixer")
     if amixer is None:
         return None
-    cmd = [amixer, "-c", str(card), "sget", str(control)]
+    cmd = [amixer, *_alsa_mixer_args("sget" if control is not None else "scontents", card, control)]
     res = _run_audio_tool(cmd, text=True)
     if res is None or res.returncode != 0:
         return None
-    stdout = res.stdout.decode("utf-8", errors="replace") if isinstance(res.stdout, bytes) else (res.stdout or "")
-    match = re.search(r"Capture\s+(\d+)\s+\[", stdout)
-    return int(match.group(1)) if match else None
+    return res.stdout.decode("utf-8", errors="replace") if isinstance(res.stdout, bytes) else (res.stdout or "")
+
+
+def get_alsa_gain(card: int | str | None = None, control: str = DEFAULT_MIXER_CONTROL) -> int | None:
+    """Read current ALSA capture volume if available."""
+    gain, _ = _alsa_gain_readback(card, control)
+    return gain
 
 
 def list_capture_devices() -> list[dict[str, Any]]:
     """List hardware audio capture devices detected by ALSA."""
     arecord = shutil.which("arecord")
-    fallback = [{"card": None, "card_id": "default", "card_name": "Standard Audio", "device": 0, "alsa_id": "default", "label": "Standard-Aufnahmegerät (default)"}]
+    fallback = [{"card": None, "card_id": DEFAULT_DEVICE, "card_name": "Standard Audio", "device": 0,
+                 "alsa_id": DEFAULT_DEVICE, "label": "Standard-Aufnahmegerät (default)"}]
     if arecord is None:
         return fallback
     res = _run_audio_tool([arecord, "-l"], text=True)
@@ -118,26 +148,37 @@ def list_capture_devices() -> list[dict[str, Any]]:
     return devices if devices else fallback
 
 
-def get_alsa_gain_info(card: int | str = 1, control: str = "Mic") -> dict[str, Any] | None:
+def get_alsa_gain_info(card: int | str | None = None, control: str = DEFAULT_MIXER_CONTROL) -> dict[str, Any] | None:
     """Read detailed ALSA capture gain info (current, min, max, percent, dB)."""
-    amixer = shutil.which("amixer")
-    if amixer is None:
-        return None
-    cmd = [amixer, "-c", str(card), "sget", str(control)]
-    res = _run_audio_tool(cmd, text=True)
-    if res is None or res.returncode != 0:
-        return None
-    stdout = res.stdout.decode("utf-8", errors="replace") if isinstance(res.stdout, bytes) else (res.stdout or "")
-    m_val = re.search(r"Capture\s+(\d+)\s+\[(\d+)%\](?:\s+\[([-\d\.]+)dB\])?", stdout)
-    m_lim = re.search(r"Limits:\s*Capture\s+(\d+)\s*-\s*(\d+)", stdout)
+    _, info = _alsa_gain_readback(card, control)
+    return info
+
+
+def _alsa_gain_readback(card: int | str | None, control: str) -> tuple[int | None, dict[str, Any] | None]:
+    """Return the observed value and any verified bounds from one mixer query."""
+    stdout = _read_alsa_mixer(card, control)
+    if stdout is None:
+        return None, None
+    return _parse_alsa_gain(stdout, card, control)
+
+
+_CAPTURE_LIMITS = re.compile(r"^[ \t]*Limits:[^\n]*?\bCapture[ \t]+(-?\d+)[ \t]*-[ \t]*(-?\d+)", re.MULTILINE)
+
+
+def _parse_alsa_gain(stdout: str, card: int | str | None, control: str) -> tuple[int | None, dict[str, Any] | None]:
+    m_val = re.search(r"Capture[ \t]+(-?\d+)[ \t]+\[(?:(\d+)%\])?(?:[ \t]+\[([+-]?\d+(?:\.\d+)?)dB\])?", stdout)
     if not m_val:
-        return None
+        return None, None
     gain_val = int(m_val.group(1))
+    m_lim = _CAPTURE_LIMITS.search(stdout)
+    if not m_val.group(2) or not m_lim:
+        return gain_val, None
     percent = int(m_val.group(2))
     db = float(m_val.group(3)) if m_val.group(3) else None
-    min_lim = int(m_lim.group(1)) if m_lim else 0
-    max_lim = int(m_lim.group(2)) if m_lim else 50
-    return {
+    min_lim, max_lim = map(int, m_lim.groups())
+    if not min_lim <= gain_val <= max_lim:
+        return gain_val, None
+    return gain_val, {
         "card": card,
         "control": control,
         "gain": gain_val,
@@ -145,14 +186,60 @@ def get_alsa_gain_info(card: int | str = 1, control: str = "Mic") -> dict[str, A
         "db": db,
         "min": min_lim,
         "max": max_lim,
+        "writable": 0 <= min_lim < max_lim <= MAX_CAPTURE_GAIN,
     }
 
 
-def get_microphone_status() -> dict[str, Any]:
-    """Return a comprehensive snapshot of microphone hardware and settings."""
+def _discover_alsa_capture_gain(card: str) -> tuple[int | None, dict[str, Any] | None]:
+    """Attribute gain only when ALSA exposes one unambiguous capture control."""
+    stdout = _read_alsa_mixer(card, None)
+    if not stdout:
+        return None, None
+    blocks = re.split(r"^Simple mixer control '(.+)',([0-9]+)[ \t]*\n", stdout, flags=re.MULTILINE)
+    candidates = []
+    for name, index, body in zip(blocks[1::3], blocks[2::3], blocks[3::3], strict=True):
+        caps = re.search(r"^[ \t]*Capabilities:([^\n]*)", body, re.MULTILINE)
+        caps_names = caps[1].split() if caps else ()
+        if _CAPTURE_LIMITS.search(body) or "cvolume" in caps_names or (
+            "volume" in caps_names and re.search(r"^[ \t]*Capture channels:", body, re.MULTILINE)
+        ):
+            candidates.append((name, index, body))
+    if len(candidates) != 1:
+        return None, None
+    name, index, body = candidates[0]
+    if index != "0" or name[0] in "-'\"" or "," in name or name != name.strip():
+        return None, None
+    return _parse_alsa_gain(body, card, name)
+
+
+def _listed_card(device: str, devices: list[dict[str, Any]]) -> str | None:
+    card = next(
+        (str(item["card_id"]) for item in devices if item["alsa_id"] == device and item["card"] is not None),
+        None,
+    )
+    if card is None:
+        return None
+    # A card-level control cannot be attributed to one of several capture inputs.
+    return card if sum(item["card_id"] == card for item in devices) == 1 else None
+
+
+def get_microphone_status(
+    *, card: int | str | None = None, control: str | None = None, device: str | None = None,
+) -> dict[str, Any]:
+    """List capture devices and read the gain from the specified ALSA control."""
     devices = list_capture_devices()
-    gain_info = get_alsa_gain_info()
-    current_gain = gain_info["gain"] if gain_info else get_alsa_gain()
+    gain_info = None
+    current_gain = None
+    if device and device != DEFAULT_DEVICE:
+        # A requested input has no implicit association with the default mixer.
+        card = _listed_card(device, devices)
+        if card is not None:
+            if control is None:
+                current_gain, gain_info = _discover_alsa_capture_gain(card)
+            else:
+                current_gain, gain_info = _alsa_gain_readback(card, control)
+    else:
+        current_gain, gain_info = _alsa_gain_readback(card, DEFAULT_MIXER_CONTROL if control is None else control)
     return {
         "schema_version": "lixity-microphone-status/1",
         "current_gain": current_gain,
@@ -162,7 +249,7 @@ def get_microphone_status() -> dict[str, Any]:
     }
 
 
-def set_microphone_gain(gain: int, card: int | str = 1, control: str = "Mic") -> bool:
+def set_microphone_gain(gain: int, card: int | str | None = None, control: str = DEFAULT_MIXER_CONTROL) -> bool:
     """Set capture gain safely and return success."""
     return set_alsa_gain(gain, card=card, control=control)
 
@@ -176,19 +263,34 @@ def record_audio(
     countdown: float = 0.0,
 ) -> bytes:
     """Record mono 16-bit PCM WAV from microphone using arecord, pw-record or ffmpeg."""
-    if not MIN_RECORD_SECONDS <= duration <= MAX_RECORD_SECONDS:
-        raise ValueError(f"Recording duration must be between {MIN_RECORD_SECONDS} and {MAX_RECORD_SECONDS} seconds")
+    if not MIN_REFERENCE_SECONDS <= duration <= MAX_REFERENCE_SECONDS:
+        raise ValueError(f"Recording duration must be between {MIN_REFERENCE_SECONDS} and {MAX_REFERENCE_SECONDS} seconds")
+    if rate <= 0:
+        raise ValueError("Recording sample rate must be positive")
+    if not math.isfinite(countdown) or countdown < 0:
+        raise ValueError("Countdown must be a finite, non-negative duration")
 
+    dev = device or DEFAULT_DEVICE
     if gain is not None:
-        set_alsa_gain(gain)
+        card = _listed_card(dev, list_capture_devices()) if dev != DEFAULT_DEVICE else None
+        control = DEFAULT_MIXER_CONTROL
+        if dev != DEFAULT_DEVICE:
+            _, info = _discover_alsa_capture_gain(card) if card is not None else (None, None)
+            if info is None or not info["writable"]:
+                raise ValueError("The recording input does not expose a single adjustable ALSA capture gain")
+            if not info["min"] <= gain <= info["max"]:
+                raise ValueError("Gain is outside the selected input's ALSA range")
+            control = info["control"]
+        if not set_alsa_gain(gain, card=card, control=control):
+            raise RuntimeError("Could not set the recording input gain")
 
     if countdown > 0:
         time.sleep(countdown)
 
-    # 1. Try arecord (preferred for direct ALSA device access)
+    # ALSA tools always receive the same input. An explicitly selected hardware
+    # input is never replaced by another device or by PipeWire's default source.
     arecord = shutil.which("arecord")
     if arecord is not None:
-        dev = device or DEFAULT_DEVICE
         cmd = [
             arecord,
             "-D", dev,
@@ -201,47 +303,53 @@ def record_audio(
         ]
         res = _run_audio_tool(cmd, timeout=duration + 5.0)
         if res is not None and res.returncode == 0 and isinstance(res.stdout, bytes) and res.stdout.startswith(b"RIFF"):
-            return _trim_wav_duration(res.stdout, duration, rate)
+            return _trim_wav_duration(res.stdout, duration)
 
-    # 2. Try ffmpeg (generic ALSA or Pulse fallback)
+    # 2. Try ffmpeg with the same ALSA input.
     ffmpeg = shutil.which("ffmpeg")
     if ffmpeg is not None:
-        for src_input in (device or "default", "hw:1,0", "default"):
-            cmd = [
-                ffmpeg,
-                "-y",
-                "-f", "alsa",
-                "-i", src_input,
-                "-t", str(duration),
-                "-ac", "1",
-                "-ar", str(rate),
-                "-c:a", "pcm_s16le",
-                "-f", "wav",
-                "pipe:1",
-            ]
-            res = _run_audio_tool(cmd, timeout=duration + 5.0)
-            if res is not None and res.returncode == 0 and isinstance(res.stdout, bytes) and res.stdout.startswith(b"RIFF"):
-                return res.stdout
-
-    # 3. Try pw-record (PipeWire)
-    pw_record = shutil.which("pw-record")
-    if pw_record is not None:
         cmd = [
-            pw_record,
+            ffmpeg, "-y", "-f", "alsa", "-i", dev, "-t", str(duration), "-ac", "1",
+            "-ar", str(rate), "-c:a", "pcm_s16le", "-f", "wav", "pipe:1",
+        ]
+        res = _run_audio_tool(cmd, timeout=duration + 5.0)
+        if res is not None and res.returncode == 0 and isinstance(res.stdout, bytes) and res.stdout.startswith(b"RIFF"):
+            return _trim_wav_duration(res.stdout, duration)
+
+    # PipeWire streams raw PCM to stdout so an interrupted capture does not
+    # depend on the tool updating a WAV header before it exits.
+    pw_record = shutil.which("pw-record")
+    if pw_record is not None and dev == DEFAULT_DEVICE and gain is None:
+        cmd = [
+            pw_record, "--raw",
             "--rate", str(rate),
             "--channels", "1",
             "--format", "s16",
+            "-",
         ]
-        # PipeWire pw-record does not take a duration flag natively, run with timeout
         res = _run_audio_tool(cmd, timeout=duration, allow_timeout_stdout=True)
-        if res is not None and isinstance(res.stdout, bytes) and res.stdout.startswith(b"RIFF"):
-            return _trim_wav_duration(res.stdout, duration, rate)
+        if res is not None and res.returncode in (0, -1) and isinstance(res.stdout, bytes):
+            frames = min(len(res.stdout) // 2, int(duration * rate))
+            if frames:
+                pcm = res.stdout[:frames * 2]
+                if sys.byteorder == "big":
+                    samples = array.array("h")
+                    samples.frombytes(pcm)
+                    samples.byteswap()
+                    pcm = samples.tobytes()
+                wav = io.BytesIO()
+                with wave.open(wav, "wb") as writer:
+                    writer.setparams((1, 2, rate, 0, "NONE", "not compressed"))
+                    writer.writeframes(pcm)
+                return wav.getvalue()
 
+    if dev != DEFAULT_DEVICE:
+        raise RuntimeError("Could not record from the selected ALSA input. Check that it is connected and available")
     raise RuntimeError("No working audio capture tool found (install arecord, ffmpeg or pw-record)")
 
 
-def _trim_wav_duration(wav_data: bytes, target_seconds: float, expected_rate: int) -> bytes:
-    """Ensure exact duration and rate format in WAV output."""
+def _trim_wav_duration(wav_data: bytes, target_seconds: float) -> bytes:
+    """Trim complete capture frames and write a finalized WAV header."""
     try:
         with wave.open(io.BytesIO(wav_data), "rb") as reader:
             if not _wave_reader_is_integer_pcm(reader):
@@ -266,7 +374,7 @@ def _trim_wav_duration(wav_data: bytes, target_seconds: float, expected_rate: in
 
 def dbfs(v: float) -> float:
     """Calculate dBFS relative to 16-bit full scale."""
-    return 20.0 * math.log10(max(v, 1.0) / 32768.0)
+    return NO_SIGNAL_DBFS if v == 0.0 else 20.0 * math.log10(max(v, 1.0) / 32768.0)
 
 
 def analyze_signal(wav_bytes: bytes) -> dict[str, Any]:
@@ -279,6 +387,8 @@ def analyze_signal(wav_bytes: bytes) -> dict[str, Any]:
             n = w.getnframes()
             data = array.array("h")
             data.frombytes(w.readframes(n))
+            if sys.byteorder == "big":
+                data.byteswap()
     except Exception as exc:
         raise ValueError(f"Invalid WAV audio data: {exc}") from exc
 
@@ -286,9 +396,10 @@ def analyze_signal(wav_bytes: bytes) -> dict[str, Any]:
         return {
             "duration_seconds": 0.0,
             "sample_rate": rate,
-            "peak_dbfs": -120.0,
+            "signal_present": False,
+            "peak_dbfs": NO_SIGNAL_DBFS,
             "clipping_samples": 0,
-            "noise_floor_dbfs": -120.0,
+            "noise_floor_dbfs": NO_SIGNAL_DBFS,
             "snr_db": 0.0,
             "segments": [],
             "verdict": "too_quiet",
@@ -303,7 +414,7 @@ def analyze_signal(wav_bytes: bytes) -> dict[str, Any]:
     # Noise floor: quietest 0.5s RMS window
     floors: list[float] = []
     segments: list[dict[str, Any]] = []
-    half_sec = rate // 2
+    half_sec = max(1, rate // 2)
 
     for i in range(math.floor(n / half_sec)):
         chunk = data[i * half_sec : (i + 1) * half_sec]
@@ -319,28 +430,25 @@ def analyze_signal(wav_bytes: bytes) -> dict[str, Any]:
             "clipping": cp >= 32600,
         })
 
-    floor_db = dbfs(min(floors)) if floors else -120.0
+    floor_db = dbfs(min(floors)) if floors else NO_SIGNAL_DBFS
     snr_db = max(0.0, peak_db - floor_db)
 
     # Verdict according to calibration rubric:
     # Target: Burst-Peaks between -13.0 and -7.0 dBFS
-    current_gain = get_alsa_gain() or 35
     if -13.0 <= peak_db <= -7.0:
         verdict = "calibrated"
         verdict_label = "CALIBRIERT FÜR AUFNAHMEN!"
-        recommended_gain = current_gain
     elif peak_db > -7.0:
         verdict = "too_hot"
         verdict_label = "ZU HEISS"
-        recommended_gain = max(0, current_gain - 10)
     else:
         verdict = "too_quiet"
         verdict_label = "MEHR LUFT ALS NÖTIG"
-        recommended_gain = min(50, current_gain + 6)
 
     return {
         "duration_seconds": round(n / rate, 2),
         "sample_rate": rate,
+        "signal_present": peak_val > 0,
         "peak_dbfs": round(peak_db, 1),
         "clipping_samples": clipping,
         "noise_floor_dbfs": round(floor_db, 1),
@@ -348,24 +456,40 @@ def analyze_signal(wav_bytes: bytes) -> dict[str, Any]:
         "segments": segments,
         "verdict": verdict,
         "verdict_label": verdict_label,
-        "recommended_gain": recommended_gain,
+        "recommended_gain": None,
     }
 
 
 def run_calibration(
     gain: int | None = None,
-    duration: float = 8.0,
-    countdown: float = 4.0,
+    duration: float = DEFAULT_CALIBRATION_SECONDS,
+    countdown: float = DEFAULT_CALIBRATION_COUNTDOWN,
     device: str | None = None,
 ) -> dict[str, Any]:
-    """Execute automated calibration loop."""
-    if gain is not None:
-        set_alsa_gain(gain)
-    raw_wav = record_audio(duration, rate=48000, countdown=countdown, device=device)
+    """Measure one test capture and suggest gain only for a verified control."""
+    if not MIN_REFERENCE_SECONDS <= duration <= MAX_CALIBRATION_SECONDS:
+        raise ValueError(f"Calibration duration must be between {MIN_REFERENCE_SECONDS} and {MAX_CALIBRATION_SECONDS} seconds")
+    raw_wav = record_audio(duration, rate=CALIBRATION_SAMPLE_RATE, countdown=countdown, device=device, gain=gain)
     metrics = analyze_signal(raw_wav)
+    current_gain = None
+    mixer = None
+    if device and device != DEFAULT_DEVICE:
+        card = _listed_card(device, list_capture_devices())
+        if card is not None:
+            current_gain, info = _discover_alsa_capture_gain(card)
+            if info:
+                mixer = {"card": card, "control": info["control"]}
+                if metrics["signal_present"] and info["writable"]:
+                    delta = {"too_hot": -10, "too_quiet": 6, "calibrated": 0}[metrics["verdict"]]
+                    metrics["recommended_gain"] = max(info["min"], min(info["max"], info["gain"] + delta))
+    elif gain is not None:
+        # An explicit gain request uses ALSA. The logical input still has no
+        # stable association with a physical control.
+        current_gain = get_alsa_gain()
     return {
         "schema_version": "lixity-audio-calibration/1",
-        "current_gain": get_alsa_gain(),
+        "current_gain": current_gain,
+        "mixer": mixer,
         **metrics,
     }
 
