@@ -1490,7 +1490,9 @@ async function checkSandboxQuotationPairs(page) {
         await expect(page, 'An eager visitor can reach installation through the header and its dedicated section')
           .toHaveURL(origin + '/lixity/guides/installation.html');
         const platformLinks = page.getByRole('navigation', {name: 'Desktop installation by operating system'});
-        for (const [label, anchor] of [['macOS', 'macos'], ['Windows', 'windows'], ['Linux', 'linux']]) {
+        await expect(page.locator('.install-heading img')).toBeVisible();
+        assert.equal(await page.locator('.install-heading img').evaluate(img => img.naturalWidth > 0), true);
+        for (const [label, anchor] of [['Mac', 'macos'], ['Windows', 'windows'], ['Linux', 'linux']]) {
           await platformLinks.getByRole('link', {name: label, exact: true}).click();
           await expect(page).toHaveURL(origin + '/lixity/guides/installation.html#' + anchor);
           await expect(page.locator('#' + anchor)).toBeInViewport();

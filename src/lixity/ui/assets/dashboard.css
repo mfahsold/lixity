@@ -109,7 +109,8 @@ display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none;
 .fdr-marker { display: inline-block; margin-left: .25rem; font-size: .55rem; vertical-align: super; }
 .band-summary { display: block; font-size: var(--text-micro); font-variant-numeric: tabular-nums; color: var(--muted); }
 .product-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem .8rem; margin-bottom: .7rem; }
-.product-name { color: var(--accent); font-size: var(--text-small); font-weight: var(--weight-strong); letter-spacing: .05em; }
+.product-name { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--accent); font-size: var(--text-small); font-weight: var(--weight-strong); letter-spacing: .05em; }
+.product-name img { flex: none; }
 .version-badge, .license-badge { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: var(--radius-pill); padding: .15rem .55rem; font-size: var(--text-micro); line-height: 1.35; color: var(--muted); background: var(--surface); }
 .license-badge { margin-left: auto; }
 .license-terms { margin-top: var(--space-3); padding: 0; font-size: var(--text-note); line-height: var(--line-compact); overflow-wrap: anywhere; }
@@ -938,7 +939,9 @@ padding: var(--space-5);
 margin-block-end: var(--space-5);
 & .welcome-dismiss { display: flex; margin-inline-start: auto; margin-block-end: var(--space-3); }
 & .welcome-inner { max-width: 54rem; margin-inline: auto; }
-& .welcome-title { margin: 0 0 var(--space-2); font-size: var(--text-heading); line-height: var(--line-heading); color: var(--fg); }
+& .welcome-heading { display: flex; align-items: center; gap: var(--space-3); margin-block-end: var(--space-2); }
+& .welcome-heading img { flex: none; inline-size: clamp(2rem, 7vw, 3rem); block-size: auto; }
+& .welcome-title { min-inline-size: 0; margin: 0; font-size: var(--text-heading); line-height: var(--line-heading); color: var(--fg); }
 & .welcome-desc { margin: 0 0 var(--space-5); color: var(--muted); }
 & .welcome-actions {
     display: grid;

@@ -91,12 +91,22 @@ output shows failed subtests. To display passing subtests, include
 `-o verbosity_subtests=1` in `PYTEST_ARGS`. Default Ruff, mypy and pytest
 caches stay inside each checkout. Override `RUFF_CACHE`, `MYPY_CACHE` or
 `PYTEST_CACHE` to use a different location.
+`make clean-caches` removes the default checkout caches and coverage output.
+Custom cache overrides have a separate lifecycle. `make clean` also removes
+the checkout's `build/`, `dist/` and Python package metadata.
 Use the same pinned Ruff in the editor and optional commit hook; its native
 [language server](https://docs.astral.sh/ruff/editors/) reports issues while
 editing. Keep strict mypy as the shared type-checking authority rather than
 introducing a second incompatible checker configuration. For edited JavaScript,
 `node --check path/to/file.js` catches syntax errors before a browser run.
 These checks complement focused behavior tests; they do not prove runtime behavior.
+
+Clean up disposable checkouts with `git worktree remove <path>` after checking
+their status, including ignored build output. Preserve uncommitted changes and
+release evidence before removing a checkout. Keep one reusable native build
+cache when several temporary worktrees share it. For a direct check of the
+installed desktop's bundled Python, use `-I -B` to protect the app signature
+from new bytecode files.
 
 #### Trace runtime warnings
 

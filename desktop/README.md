@@ -86,10 +86,14 @@ successful run for the intended commit, and download its archive under
 
 | Platform | Workflow artifact | Installer files | Setup |
 | --- | --- | --- | --- |
-| macOS Apple Silicon | `desktop-installers-aarch64-apple-darwin` | `Lixity_VERSION_aarch64.dmg` | [macOS](../docs/INSTALLATION.md#macos-desktop-dmg) |
-| macOS Intel | `desktop-installers-x86_64-apple-darwin` | `Lixity_VERSION_x64.dmg` | [macOS](../docs/INSTALLATION.md#macos-desktop-dmg) |
-| Windows x64 | `desktop-installers-x86_64-pc-windows-msvc` | `Lixity_VERSION_x64-setup.exe`, `Lixity_VERSION_x64_de-DE.msi` or `Lixity_VERSION_x64_en-US.msi` | [Windows](../docs/INSTALLATION.md#windows-desktop-test) |
-| Linux x64 | `desktop-installers-x86_64-unknown-linux-gnu` | `Lixity_VERSION_amd64.deb` or `Lixity_VERSION_amd64.AppImage` | [Linux](../docs/INSTALLATION.md#linux-desktop-test) |
+| Mac with Apple silicon | `Lixity-Desktop-Mac-Apple-Silicon` | `Lixity_VERSION_aarch64.dmg` | [macOS](../docs/INSTALLATION.md#macos-desktop-dmg) |
+| Mac with an Intel processor | `Lixity-Desktop-Mac-Intel` | `Lixity_VERSION_x64.dmg` | [macOS](../docs/INSTALLATION.md#macos-desktop-dmg) |
+| Windows 64-bit Intel or AMD | `Lixity-Desktop-Windows-64-bit` | `Lixity_VERSION_x64-setup.exe`, `Lixity_VERSION_x64_de-DE.msi` or `Lixity_VERSION_x64_en-US.msi` | [Windows](../docs/INSTALLATION.md#windows-desktop-test) |
+| Linux 64-bit Intel or AMD | `Lixity-Desktop-Linux-64-bit` | `Lixity_VERSION_amd64.deb` or `Lixity_VERSION_amd64.AppImage` | [Linux](../docs/INSTALLATION.md#linux-desktop-test) |
+
+Older runs display the full build target in names such as
+`desktop-installers-aarch64-apple-darwin`. The download guide links to each
+archive by its artifact ID, and the installer files retain their verified names.
 
 Extract the ZIP to keep the installer, `SHA256SUMS-TARGET.txt` and
 `desktop-artifacts-TARGET.json` together. Use the platform setup instructions
@@ -134,6 +138,10 @@ The script builds a fresh wheel and runtime, packages a local development app,
 applies an ad-hoc signature and smoke-tests the embedded runtime. Its final
 JSON reports the app path and runtime smoke result. Use `--offline` once build
 inputs are cached. Omit it on an initial build that needs to fetch dependencies.
+Use the same absolute `CARGO_TARGET_DIR` for temporary worktrees to reuse one
+compilation cache. The build locks that cache through app assembly and copies
+each completed bundle to its own build directory under the current checkout.
+The default cache is `desktop/build/macos-local/target`.
 Add `--dmg` to package the app with the CI disk-image script. It mounts the
 image read-only, verifies the embedded signature and exercises the embedded
 runtime again. The runtime smoke checks an authenticated welcome workspace

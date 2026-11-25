@@ -130,10 +130,12 @@ def build(*, offline: bool, dmg: bool, revision: str | None = None) -> dict[str,
     )
     override = output / "tauri-local.json"
     override.write_text(json.dumps({"bundle": {"resources": resources}}), encoding="utf-8")
-    cache = OUTPUT_ROOT / "target"
+    target_dir = os.environ.get("CARGO_TARGET_DIR")
+    cache = (DESKTOP / Path(target_dir).expanduser()).resolve() if target_dir else OUTPUT_ROOT / "target"
+    cache.mkdir(parents=True, exist_ok=True)
     name = f"{config['productName']}.app"
     app = output / name
-    with (OUTPUT_ROOT / "build.lock").open("a") as build_lock:
+    with (cache / ".lixity-app-build.lock").open("a") as build_lock:
         # Tauri assembles the app in the Cargo target tree. Copy it while holding
         # the lock so simultaneous local builds have distinct verified output.
         fcntl.flock(build_lock, fcntl.LOCK_EX)
@@ -166,7 +168,8 @@ def build(*, offline: bool, dmg: bool, revision: str | None = None) -> dict[str,
     _run(["codesign", "--verify", "--deep", "--strict", str(app)])
     report: dict[str, Any] = {"app": str(app), "runtime_smoke": smoke}
     if dmg:
-        image = output / f"{app.stem}_{version}_{target.split('-', 1)[0]}.dmg"
+        chip = "Apple-Silicon" if target == "aarch64-apple-darwin" else "Intel"
+        image = output / f"{app.stem}-{version}-macOS-{chip}.dmg"
         env = dict(os.environ)
         for key in ("APPLE_SIGNING_IDENTITY", "APPLE_NOTARY_PROFILE"):
             env.pop(key, None)

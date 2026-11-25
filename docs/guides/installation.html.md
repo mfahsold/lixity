@@ -1,3 +1,5 @@
+![](../assets/mark.svg)
+
 # Install Lixity and open your manuscript
 
 Choose your computer below, download Lixity and open it from your applications menu. The desktop app includes its runtime. Built-in analysis runs on your computer.
@@ -14,29 +16,35 @@ These test archives have expired. [Find another test build](https://github.com/m
 
 <a id="macos"></a>
 
-### macOS
+### Mac
 
-[macOS · Apple Silicon test archive (ZIP)](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043122730)
+macOS 12 or later
 
-[macOS · Intel test archive (ZIP)](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043707385)
+[**Mac with Apple silicon**Test ZIP · DMG disk image](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043122730)
 
-[macOS setup steps](#macos-setup)
+[**Mac with an Intel processor**Test ZIP · DMG disk image](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043707385)
+
+[Mac setup steps](#macos-setup)
 
 <a id="windows"></a>
 
-### Windows x64
+### Windows
 
-[Windows · x64 test archive (ZIP)](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043787157)
+64-bit Intel or AMD PCs
 
-[Windows x64 setup steps](#windows-setup)
+[**Windows Installer**Test ZIP · Setup EXE](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043787157)
+
+[Windows setup steps](#windows-setup)
 
 <a id="linux"></a>
 
-### Linux x86-64
+### Linux
 
-[Linux · x86-64 test archive (ZIP)](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15044072040)
+64-bit Intel or AMD PCs
 
-[Linux x86-64 setup steps](#linux-setup)
+[**Linux Installer**Test ZIP · DEB or AppImage](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15044072040)
+
+[Linux setup steps](#linux-setup)
 
 <a id="installer-check-heading"></a>
 

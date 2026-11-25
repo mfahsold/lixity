@@ -640,7 +640,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
            f'aria-label="{L("navigation_collapse")}" aria-controls="workspace-navigation-content" aria-expanded="true" '
            f'title="{L("navigation_collapse")}">'
            f'{ui_icon("panel-left", size=20)}</button>',
-           f'<span class="product-name">{esc(engine_name)}</span></div>') if controls else ()),
+           f'<span class="product-name"><img src="{FAVICON_DATA_URI}" width="20" height="20" alt=""/>'
+           f'{esc(engine_name)}</span></div>') if controls else ()),
     ]
 
     if not controls:
@@ -746,7 +747,10 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 f'  <button type="button" class="ctl welcome-dismiss" id="welcome-dismiss" aria-controls="welcome-hero">{L("welcome_dismiss")}</button>'
             )
         parts.append('  <div class="welcome-inner">')
-        parts.append(f'    <h2 class="welcome-title" id="welcome-title">{L("welcome_title")}</h2>')
+        parts.append(
+            f'    <div class="welcome-heading"><img src="{FAVICON_DATA_URI}" width="48" height="48" alt=""/>'
+            f'<h2 class="welcome-title" id="welcome-title">{L("welcome_title")}</h2></div>'
+        )
         parts.append(f'    <p class="welcome-desc">{L("welcome_desc")}</p>')
         if controls:
             parts.append('    <ul class="welcome-actions">')

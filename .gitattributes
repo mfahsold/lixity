@@ -1,3 +1,5 @@
+# Keep shell entry points usable from Windows checkouts.
+*.sh text eol=lf
 # The reviewed demo audio pins the manuscript's exact SHA-256 on every platform.
 samples/first-look.md -text
 # Preserve audited vendored bytes across platforms and whitespace in Mermaid template literals.

@@ -42,20 +42,24 @@ UTC_TIMESTAMP = "%Y-%m-%dT%H:%M:%SZ"
 DOWNLOAD_BLOCK = re.compile(r"(<!-- desktop-downloads:start -->\n).*?(\n<!-- desktop-downloads:end -->)", re.S)
 
 INSTALLER_LABELS = {
-    ("aarch64-apple-darwin", "macos-dmg"): "macOS · Apple Silicon",
-    ("x86_64-apple-darwin", "macos-dmg"): "macOS · Intel",
-    ("x86_64-pc-windows-msvc", "windows-nsis"): "Windows · x64 · setup",
-    ("x86_64-pc-windows-msvc", "windows-msi"): "Windows · x64 · MSI",
-    ("x86_64-unknown-linux-gnu", "linux-deb"): "Linux · x64 · Debian package",
-    ("x86_64-unknown-linux-gnu", "linux-appimage"): "Linux · x64 · AppImage",
+    ("aarch64-apple-darwin", "macos-dmg"): "Mac with Apple silicon",
+    ("x86_64-apple-darwin", "macos-dmg"): "Mac with an Intel processor",
+    ("x86_64-pc-windows-msvc", "windows-nsis"): "Windows Setup",
+    ("x86_64-pc-windows-msvc", "windows-msi"): "Windows MSI",
+    ("x86_64-unknown-linux-gnu", "linux-deb"): "Ubuntu and Debian",
+    ("x86_64-unknown-linux-gnu", "linux-appimage"): "Linux AppImage",
 }
 TEST_TARGETS = {
-    "aarch64-apple-darwin": ("macOS · Apple Silicon", "macos"),
-    "x86_64-apple-darwin": ("macOS · Intel", "macos"),
-    "x86_64-pc-windows-msvc": ("Windows · x64", "windows"),
-    "x86_64-unknown-linux-gnu": ("Linux · x86-64", "linux"),
+    "aarch64-apple-darwin": ("Mac with Apple silicon", "macos", "DMG disk image"),
+    "x86_64-apple-darwin": ("Mac with an Intel processor", "macos", "DMG disk image"),
+    "x86_64-pc-windows-msvc": ("Windows Installer", "windows", "Setup EXE"),
+    "x86_64-unknown-linux-gnu": ("Linux Installer", "linux", "DEB or AppImage"),
 }
-PLATFORMS = {"macos": "macOS", "windows": "Windows x64", "linux": "Linux x86-64"}
+PLATFORMS = {
+    "macos": ("Mac", "macOS 12 or later"),
+    "windows": ("Windows", "64-bit Intel or AMD PCs"),
+    "linux": ("Linux", "64-bit Intel or AMD PCs"),
+}
 
 
 def validate_catalog(catalog: dict[str, Any]) -> None:
@@ -169,11 +173,12 @@ def render_platforms(links: Iterable[tuple[str, str]]) -> str:
     for target, link in links:
         by_platform[TEST_TARGETS[target][1]].append(link)
     sections = []
-    for platform, name in PLATFORMS.items():
+    for platform, (name, requirement) in PLATFORMS.items():
         choices = by_platform[platform]
         actions = '<div class="desktop-download-actions">' + '\n'.join(choices) + '</div>' if choices else ''
         sections.append(f'<section class="desktop-download-card" aria-labelledby="{platform}">\n'
-                        f'<h3 id="{platform}">{name}</h3>\n{actions}\n'
+                        f'<h3 id="{platform}">{name}</h3>\n'
+                        f'<p class="desktop-platform-requirement">{requirement}</p>\n{actions}\n'
                         f'<p><a href="#{platform}-setup">{name} setup steps</a></p>\n</section>')
     return '<div class="desktop-download-grid">\n' + '\n'.join(sections) + '\n</div>'
 
@@ -199,10 +204,10 @@ def render(catalog: dict[str, Any], test_build: dict[str, Any] | None = None) ->
             validate_test_build(test_build)
             run = f'{REPOSITORY}/actions/runs/{test_build["run_id"]}'
             links = []
-            for target, (label, _) in TEST_TARGETS.items():
+            for target, (label, _, format_label) in TEST_TARGETS.items():
                 artifact = test_build["artifacts"][target]
                 links.append((target, f'<a class="ctl primary desktop-test-archive" href="{run}/artifacts/{artifact}">'
-                                      f'{label} test archive (ZIP)</a>'))
+                                      f'<strong>{label}</strong><span>Test ZIP · {format_label}</span></a>'))
             expires = test_build["expires_at"]
             login = f'https://github.com/login?return_to=%2Fmfahsold%2Flixity%2Factions%2Fruns%2F{test_build["run_id"]}'
             return (f'<p id="desktop-test-downloads">The {test_build["tag"]} downloads are desktop test builds. '
@@ -223,15 +228,17 @@ def render(catalog: dict[str, Any], test_build: dict[str, Any] | None = None) ->
                 f'To test the desktop app, <a href="{TEST_BUILDS}">sign in to GitHub and find a test build</a>.</p>\n'
                 + render_platforms([]))
     installers = sorted(catalog["installers"], key=lambda asset: (
-        INSTALLER_LABELS[(asset["target"], asset["kind"])], asset["filename"],
+        tuple(INSTALLER_LABELS).index((asset["target"], asset["kind"])), asset["filename"],
     ))
     links = []
     for asset in installers:
         label = INSTALLER_LABELS[(asset["target"], asset["kind"])]
         filename = asset["filename"]
+        if asset["kind"] == "windows-msi":
+            label += " (German)" if filename.endswith("_de-DE.msi") else " (English)"
         size = asset["bytes"] / (1024 * 1024)
-        links.append((asset["target"], f'<a class="ctl" href="{RELEASES}/download/{tag}/{filename}">{label} '
-                                       f'<code>{filename}</code> · {size:.1f} MiB</a>'))
+        links.append((asset["target"], f'<a class="ctl" href="{RELEASES}/download/{tag}/{filename}">'
+                                       f'<strong>{label}</strong><span>{filename} · {size:.1f} MiB</span></a>'))
     return ('<p>Choose the installer for your computer to run Lixity as a desktop app. '
             f'<a href="{RELEASES}/tag/{tag}">Release {tag}</a> · '
             f'<a href="{RELEASES}/download/{tag}/{CHECKSUMS}">Check SHA-256 sums</a>.</p>\n'

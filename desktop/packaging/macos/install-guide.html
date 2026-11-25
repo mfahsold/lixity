@@ -17,13 +17,15 @@
       font: 1rem/1.55 system-ui, sans-serif;
     }
     h1, h2, h3 { line-height: 1.2; }
-    h1 { margin-block: 0 1rem; }
+    header { display: flex; align-items: center; gap: .85rem; }
+    header img { flex: none; }
+    h1 { margin: 0; }
     li + li { margin-block-start: .5rem; }
   </style>
 </head>
 <body>
   <main>
-    <h1>Lixity</h1>
+    <header><img src=".lixity-mark.svg" width="52" height="52" alt=""><h1>Install Lixity on your Mac</h1></header>
     <section>
       <h2>Check a test build</h2>
       <p>If Finder shows <strong>Lixity Test Build</strong>, confirm where the

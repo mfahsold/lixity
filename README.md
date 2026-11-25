@@ -1,29 +1,50 @@
-# Lixity
+# <img src="https://mfahsold.github.io/lixity/assets/brand/icon-192.png" width="64" height="64" alt=""> Lixity
 
 [![PyPI](https://img.shields.io/pypi/v/lixity)](https://pypi.org/project/lixity/)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue)](https://github.com/mfahsold/lixity/blob/main/LICENSE)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23390297.svg)](https://doi.org/10.5281/zenodo.23390297)
 
-Lixity is an open-source workspace for writing and revising manuscripts on your
-own computer. When a sentence runs long or a phrase repeats, go straight to the
-passage and read it in context. Keep the notes and sources behind a scene close
-by, and choose what to share when the draft is ready.
+Lixity is an open-source manuscript workspace for writers, editors and
+researchers. When a sentence is marked, open the words that were counted and
+read them in context. Revise the draft, keep the sources that shaped it close
+by, and share the reading copy you choose. Built-in analysis runs offline.
 
 [Download Lixity for desktop](https://mfahsold.github.io/lixity/guides/installation.html#desktop) ·
-[Edit a paragraph in the browser exercise](https://mfahsold.github.io/lixity/sandbox/index.html) ·
-[Follow a finding in the read-only demo](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Visit the product website](https://mfahsold.github.io/lixity/)
+
+<a id="start-here"></a>
+
+## Install and start
+
+1. Choose a desktop download for a
+   [Mac with Apple silicon or an Intel processor](https://mfahsold.github.io/lixity/guides/installation.html#macos),
+   [Windows 64-bit PC](https://mfahsold.github.io/lixity/guides/installation.html#windows)
+   or [Linux 64-bit PC](https://mfahsold.github.io/lixity/guides/installation.html#linux).
+   The current desktop test archives require GitHub sign-in. Windows and Linux
+   builds target x86-64.
+2. Extract the archive, [check the installer in your browser](https://mfahsold.github.io/lixity/guides/installation.html#installer-check)
+   and follow the setup steps for your computer. The desktop app includes the analysis runtime.
+3. Open Lixity. Choose **Try the example offline**
+   for an editable sample, **Open a project folder** for work already in a
+   project, or **Import a manuscript** to bring in a Word, Markdown or text file.
+   [First session](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md)
+
+Try the [browser exercise](https://mfahsold.github.io/lixity/sandbox/index.html)
+or follow a finding in the [read-only demo](https://mfahsold.github.io/lixity/demo/report.html)
+before installing. The published
+[local browser app and CLI](https://mfahsold.github.io/lixity/guides/installation.html#install)
+are available through PyPI. [Installation and updates](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md)
 
 <a id="choose-what-leaves-the-project"></a>
 
 ## Work with a draft
 
-- **Read and revise.** Compare chapters and saved versions, open the words or
-  sentences behind a measurement, and decide what to change in the draft.
-  [First session](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md)
-- **Keep research by the text.** Review a character's appearances in context.
-  Link manuscript passages to your dossiers, notes and exact source quotations.
+- **Read and revise.** Follow a measurement to its passage, compare chapters
+  or saved versions, and revisit earlier drafts.
+  [Writing and recovery](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript)
+- **Keep research by the text.** Link passages to dossiers, notes and exact
+  source quotations. Revisit the retained source version behind a citation.
   [Research and dossiers](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md)
 - **Read it aloud.** Rehearse in the teleprompter and keep delivery notes with
   the passage. Review a recording before deciding whether to retain it.
@@ -32,63 +53,36 @@ by, and choose what to share when the draft is ready.
   reading website with the chapters and background you choose.
   [Reading website export](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#export-a-reading-website)
 
-Built-in analysis runs offline. The interface is available in German, English,
-French, Spanish, Italian, Portuguese and Dutch. Measurement coverage depends
-on the language. [Language coverage](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md) ·
-[Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md)
-
-<a id="start-here"></a>
-
-## Install and start
-
-Choose your operating system and processor, then follow the download and setup
-steps. The desktop app includes its analysis runtime. Open Lixity from your
-applications menu and choose **Try the example offline** for a first session.
-[Desktop downloads](https://mfahsold.github.io/lixity/guides/installation.html#desktop) ·
-[macOS](https://mfahsold.github.io/lixity/guides/installation.html#macos)
-· [Windows x64](https://mfahsold.github.io/lixity/guides/installation.html#windows)
-· [Linux x64](https://mfahsold.github.io/lixity/guides/installation.html#linux)
-
-For desktop test builds, sign in to GitHub and check the installer in your
-browser or use the included SHA-256 checksum list.
-[Check an installer](https://mfahsold.github.io/lixity/guides/installation.html#installer-check)
-
-For a system without a compatible desktop build, use the published package for
-the [local browser app and CLI](https://mfahsold.github.io/lixity/guides/installation.html#install).
-[Installation and updates](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md)
+The interface is available in German, English, French, Spanish, Italian,
+Portuguese and Dutch. Measurement coverage depends on the language.
+[Language coverage](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md) ·
+[Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) ·
+[Manuals by task](https://github.com/mfahsold/lixity/blob/main/docs/README.md)
 
 ## Use the analysis engine
 
-Run the CLI directly on a file. English is the default. Use `--language auto`
-to opt into language detection.
-
-```sh
-lixity analyze manuscript.md --language en
-lixity profile manuscript.md --language en --layer asl --evidence
-```
-
-Project settings live in the project folder. The same engine supports the
-Python and local HTTP APIs and the read-only MCP server.
+Use the CLI for repeatable file analysis. English is the default. Choose
+`--language auto` to opt into detection. The same engine supports the Python
+and local HTTP APIs and the read-only MCP server.
 [Commands and configuration](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md) ·
 [Automation contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md) ·
 [Agent skill](https://github.com/mfahsold/lixity/blob/main/skills/lixity/SKILL.md)
 
-## Project structure and data boundaries
+## How the project is built
 
-Python owns the shared engine and project data operations. Browser components
-display the results and handle reading and editing interactions. Rust/Tauri
-provides the desktop window, native controls and bundled runtime. Project files
-and retained research stay in project storage. Optional connected services have
-their own data requirements.
+The Python engine serves the CLI, local browser app and Rust/Tauri desktop
+host. The desktop host provides the native window, platform controls and
+bundled runtime. Project files and retained research stay in project storage.
+Optional connected services have their own data requirements.
 [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) ·
 [Project backup](https://github.com/mfahsold/lixity/blob/main/docs/PROJECT_BACKUP.md) ·
-[Manuals by task](https://github.com/mfahsold/lixity/blob/main/docs/README.md)
+[Product direction](https://github.com/mfahsold/lixity/blob/main/docs/PRODUCT.md)
 
 ## Contribute and verify
 
-Use synthetic or public-domain text when reproducing a problem. Include the
-installed build, operating system and steps to reproduce it. Contributors can
-use the [documentation map](https://github.com/mfahsold/lixity/blob/main/docs/README.md#maintain-the-documentation)
+Report the installed build, operating system and steps to reproduce the problem
+with synthetic or public-domain text. Use the
+[documentation map](https://github.com/mfahsold/lixity/blob/main/docs/README.md#maintain-the-documentation)
 to find the source of a guide or example before editing it.
 
 ```sh
@@ -103,11 +97,10 @@ make check
 ## Release, citation and license
 
 > **Version line:** The documentation source version is **v0.9.3**, in the pre-1.0 **0.x** line.
-> Historical 1.x and 3.x tags predate the numbering reset. Use the release
-> identified as current on GitHub.
+> Historical 1.x and 3.x tags predate the numbering reset.
 
-The published package comes from the verified tag. The read-only demo and
-desktop test builds can show changes from the development checkout.
+The published package comes from the verified tag. The demo and test builds
+identify the source that produced them.
 [Latest GitHub release](https://github.com/mfahsold/lixity/releases/latest) ·
 [v0.9.3 release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.3.md) ·
 [Changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md)

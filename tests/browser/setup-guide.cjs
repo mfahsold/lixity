@@ -39,6 +39,10 @@ print(json.dumps(fixtures))
         return route.fulfill({contentType: 'text/html', body: fixtures[language].html});
       });
       await page.goto('http://lixity.test/');
+      const mark = page.locator('#welcome-hero .welcome-heading img');
+      assert.equal(await mark.isVisible(), true);
+      assert.equal(await mark.evaluate(img => img.complete && img.naturalWidth > 0), true);
+      assert.equal(await mark.getAttribute('alt'), '');
       await page.locator('#welcome-hero').screenshot({path: path.join(artifacts, `welcome-${language}-${width}.png`)});
       assert.equal(await page.locator('#analysis-review').count(), 0, 'An empty workspace shows no invented analysis');
       assert.equal(await page.locator('.welcome-more').getAttribute('open'), null,

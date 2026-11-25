@@ -20,13 +20,18 @@ FORBIDDEN_PATHS = (
     ".claude/", ".cursor/", ".codex/", ".agent/", ".remember/", ".local/",
     ".pytest-artifacts/", "exports/", "nda/", ".screenshots/",
     "playwright-report/", "test-results/", ".playwright-cli/",
+    "outreach/", "logs/", "manuscripts/", "private/", "research/", "backup/", "backups/",
+    "build/", "dist/", "dist-desktop/", "dist-verified/", ".release-candidate/",
+    "desktop/build/", "desktop/target/", "desktop/src-tauri/gen/",
 )
 FORBIDDEN_SUFFIXES = (".key", ".pem", ".p12", ".pfx", ".jks", ".keystore")
 FORBIDDEN_NAMES = ("uv.lock", ".pypirc", ".netrc", ".npmrc", "nohup.out")
 #: Process, database and editor leftovers that belong to a working copy only.
 FORBIDDEN_STATE_ENDINGS = (".log", ".pid", ".sock", ".sqlite", ".sqlite3",
-                           ".sqlite-wal", ".sqlite-shm", ".db", ".db-wal",
-                           ".db-shm", ".swp", ".swo", ".orig", ".bak")
+                           ".sqlite-wal", ".sqlite-shm", ".sqlite-journal",
+                           ".sqlite3-wal", ".sqlite3-shm", ".sqlite3-journal",
+                           ".db", ".db-wal", ".db-shm", ".db-journal",
+                           ".swp", ".swo", ".orig", ".bak")
 BINARY_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".ico", ".webm", ".mp4", ".pdf",
                    ".woff2", ".whl", ".gz", ".tar", ".zip", ".so", ".dylib", ".bin")
 SECRET_PATTERNS = (
@@ -60,8 +65,33 @@ def tracked_files() -> list[str]:
 
 def test_no_planning_or_local_state_is_tracked() -> None:
     offenders = [name for name in tracked_files()
-                 if name.startswith(FORBIDDEN_PATHS) or Path(name).name in FORBIDDEN_NAMES]
+                 if name.startswith(FORBIDDEN_PATHS) or ".lixity" in Path(name).parts
+                 or Path(name).name in FORBIDDEN_NAMES]
     assert offenders == [], f"Local planning or tool state must not be tracked: {offenders}"
+
+
+def test_ignore_rules_distinguish_local_outputs_from_source(tmp_path: Path) -> None:
+    git = shutil.which("git")
+    assert git is not None
+    subprocess.run([git, "init", "--quiet", "--template="], cwd=tmp_path, check=True)  # noqa: S603
+    shutil.copyfile(ROOT / ".gitignore", tmp_path / ".gitignore")
+    ignored = (
+        "dist-desktop/Lixity.dmg", "dist-verified/SHA256SUMS",
+        ".release-candidate/release.cdx.json", ".pytest_cache_py310/v/cache/lastfailed",
+        "logs/workspace.jsonl", "outreach/calendar.json", "samples/.lixity/cache.sqlite3",
+        "cache.sqlite-journal", "cache.sqlite3-journal", "cache.db-journal",
+        "scripts/editor/node_modules/package/index.js",
+    )
+    source = (
+        "docs/research/USAGE.md", "docs/examples/build/guide.md", "docs/examples/dist/guide.md",
+        "desktop/Cargo.lock", "scripts/editor/package-lock.json", ".env.example", ".env.template",
+    )
+    result = subprocess.run(  # noqa: S603 - resolved git executable
+        [git, "-c", "core.excludesFile=", "check-ignore", "--stdin"],
+        input="\n".join((*ignored, *source)) + "\n", cwd=tmp_path,
+        check=True, capture_output=True, text=True,
+    )
+    assert set(result.stdout.splitlines()) == set(ignored)
 
 
 def test_no_process_or_editor_state_is_tracked() -> None:

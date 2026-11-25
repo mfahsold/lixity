@@ -12,6 +12,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Lead the product site and setup guides with platform downloads. Check the
   desktop installer locally in the browser and keep terminal setup available
   as a fallback.
+- Show plain-language computer names and package formats on the download page.
+  Use the Lixity mark on the download page, in the workspace and in the offline
+  Mac setup guide. Use platform and chip names on new hosted archives and
+  versioned local Mac disk images.
 - Find the installed Lixity executable through uv when creating a Linux menu
   entry outside the tool's executable search path.
 

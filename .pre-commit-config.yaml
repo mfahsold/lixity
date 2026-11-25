@@ -4,8 +4,11 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
+      # These assets have checksum or upstream byte-preservation contracts.
       - id: trailing-whitespace
+        exclude: &byte_preserved '^(src/lixity/ui/assets/vendor/|docs/demo/((reader|companion)/)?licenses/|samples/first-look\.md$)'
       - id: end-of-file-fixer
+        exclude: *byte_preserved
       - id: check-yaml
       - id: check-added-large-files
         args: ["--maxkb=512"]

@@ -1,3 +1,4 @@
+# Python environments and bytecode
 __pycache__/
 *.py[cod]
 *$py.class
@@ -6,18 +7,24 @@ __pycache__/
 venv/
 venv*/
 .env/
-build/
-dist/
-desktop/build/
-desktop/target/
-desktop/src-tauri/gen/
 *.egg-info/
 *.egg
 .eggs/
 pip-wheel-metadata/
 
+# Build and release outputs at their actual workspace roots
+/build/
+/dist/
+/dist-desktop/
+/dist-verified/
+/.release-candidate/
+/desktop/build/
+/desktop/target/
+/desktop/src-tauri/gen/
+
 # Test & lint caches
 .pytest_cache/
+/.pytest_cache_*/
 .ruff_cache/
 .mypy_cache/
 .coverage
@@ -30,7 +37,12 @@ coverage.xml
 .dmypy.json
 dmypy.json
 
-# Tooling / agent workspaces (local only)
+# Tooling, agent workspaces and local operations
+.worktrees/
+.planning/
+.artifacts/
+/outreach/
+/logs/
 .remember/
 .claude/
 .cursor/
@@ -49,13 +61,20 @@ dmypy.json
 /.config/
 /.mcp.json
 /.claude.json
-.worktrees/
 .superpowers/
 /docs/superpowers/plans/
 /docs/superpowers/specs/
-.planning/
-.artifacts/
-/outreach/
+.aider*
+.continue/
+.windsurf/
+.cline/
+.serena/
+.crush/
+.qwen/
+.codeium/
+.roo/
+
+# Browser and test tooling
 .pytest-artifacts/
 .mutmut-cache
 node_modules/
@@ -85,6 +104,7 @@ lixity-dashboard.html
 # Secrets & private stores (never commit)
 .env
 .env.*
+.envrc
 !.env.example
 !.env.template
 *.enc
@@ -102,17 +122,19 @@ credentials*
 .npmrc
 .pypirc
 pip.conf
-config.local.json
 *.keystore
 *.sqlite
 *.sqlite3
 *.sqlite-wal
 *.sqlite-shm
+*.sqlite-journal
 *.sqlite3-wal
 *.sqlite3-shm
+*.sqlite3-journal
 *.db
 *.db-wal
 *.db-shm
+*.db-journal
 *.backup
 *.backup.*
 
@@ -141,7 +163,6 @@ nohup.out
 .#*
 #*#
 *.code-workspace
-*.local.md
 .eslintcache
 .ipynb_checkpoints/
 
@@ -162,15 +183,3 @@ yarn-debug.log*
 
 # Lockfiles from local tooling (the project pins via pyproject and release wheels)
 uv.lock
-
-# Further local agent/tool state (never commit)
-.aider*
-.continue/
-.windsurf/
-.cline/
-.serena/
-.crush/
-.qwen/
-.codeium/
-.roo/
-.envrc

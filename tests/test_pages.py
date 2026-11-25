@@ -123,7 +123,8 @@ class TestDesktopDownloads(unittest.TestCase):
         run = "https://github.com/mfahsold/lixity/actions/runs/12345"
         archive_links = re.findall(r'href="([^" ]+/artifacts/\d+)"', rendered)
         self.assertCountEqual(archive_links, [f"{run}/artifacts/{asset}" for asset in (101, 102, 103, 104)])
-        for label in ("Apple Silicon", "Intel", "Windows", "Linux", "v0.9.3", "SHA-256"):
+        for label in ("Mac with Apple silicon", "Mac with an Intel processor", "Windows Installer",
+                      "Linux Installer", "Setup EXE", "DEB or AppImage", "v0.9.3", "SHA-256"):
             self.assertIn(label, rendered)
         self.assertIn("aaaaaaa", rendered)
         self.assertIn("test build", rendered.lower())

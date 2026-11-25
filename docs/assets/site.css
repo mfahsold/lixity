@@ -220,14 +220,19 @@ footer nav { display: flex; flex-wrap: wrap; gap: 1rem; }
 .guide > .site-breadcrumbs { padding: 0 0 var(--space-3); }
 .guide h1 { font-size: var(--text-display); }
 .guide > h1 { margin-block: var(--space-3) var(--space-4); }
+.install-heading { display: flex; align-items: center; gap: var(--space-4); margin-block: var(--space-3) var(--space-4); }
+.install-heading h1 { margin: 0; min-inline-size: 0; }
+.install-heading img { flex: none; inline-size: clamp(2.5rem, 8vw, 4rem); block-size: auto; }
 .guide h2 { margin-block-start: calc(2 * var(--panel-padding)); }
 .install-platforms { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .desktop-download-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--space-3); }
-.desktop-download-card { min-inline-size: 0; padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
-.desktop-download-card h3 { margin-block-start: 0; }
-.desktop-download-card p { margin-block-end: 0; }
+.desktop-download-card { display: flex; flex-direction: column; gap: var(--space-3); min-inline-size: 0; padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+.desktop-download-card :is(h3, p) { margin: 0; }
+.desktop-download-card .desktop-platform-requirement { margin-block-start: calc(-1 * var(--space-2)); color: var(--muted); font-size: var(--text-small); }
+.desktop-download-card p:last-child { margin-block-start: auto; }
 .desktop-download-actions { display: grid; gap: var(--space-2); }
-.desktop-download-actions .ctl { white-space: normal; }
+.desktop-download-actions .ctl { display: grid; justify-items: start; gap: var(--space-1); text-align: start; white-space: normal; }
+.desktop-download-actions .ctl span { font-size: var(--text-small); font-weight: var(--weight-normal); }
 #installer-check { margin-block: var(--space-4); }
 #installer-check-file { display: block; max-inline-size: 100%; margin-block-start: var(--space-2); }
 #installer-check-status:empty { margin: 0; }

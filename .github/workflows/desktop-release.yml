@@ -63,18 +63,22 @@ jobs:
         include:
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
+            archive: Linux-64-bit
             bundles: deb,appimage
             expect_args: "--expect-kind linux-deb --expect-kind linux-appimage"
           - os: macos-latest
             target: aarch64-apple-darwin
+            archive: Mac-Apple-Silicon
             bundles: app
             expect_args: "--expect-kind macos-dmg"
           - os: macos-15-intel
             target: x86_64-apple-darwin
+            archive: Mac-Intel
             bundles: app
             expect_args: "--expect-kind macos-dmg"
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            archive: Windows-64-bit
             bundles: nsis,msi
             expect_args: "--expect-kind windows-nsis --expect-kind windows-msi"
     steps:
@@ -255,7 +259,7 @@ jobs:
       - name: Upload per-platform verified installers
         uses: ./.github/actions/upload-desktop-installers
         with:
-          name: desktop-installers-${{ matrix.target }}
+          name: Lixity-Desktop-${{ matrix.archive }}
           retention-days: 30
 
   combine-checksums:
@@ -278,7 +282,7 @@ jobs:
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          pattern: desktop-installers-*
+          pattern: Lixity-Desktop-*
           path: dist-desktop
           merge-multiple: true
 

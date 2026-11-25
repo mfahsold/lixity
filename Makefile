@@ -9,7 +9,7 @@ SCRIPT_PYTHON := $(if $(wildcard $(VPY)),$(VPY),$(PYTHON))
 RUFF_CACHE ?= .ruff_cache
 MYPY_CACHE ?= .mypy_cache
 PYTEST_CACHE ?= .pytest_cache
-PYTEST_FLAGS := -W error -q -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
+PYTEST_FLAGS := -W error -q -p no:asyncio -o "cache_dir=$(PYTEST_CACHE)"
 ACTIONLINT ?= actionlint
 BROWSER_JOBS ?= $(shell (nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4) | awk '{j=int($$1/2); if(j<2)j=2; if(j>8)j=8; print j}')
 BROWSER_TOOLS_DIR ?= $(HOME)/.local/share/lixity/browser-tools
@@ -50,10 +50,10 @@ browser-full: ## Run every browser suite with the full locale/theme/pointer matr
 	LIXITY_BROWSER_FULL=1 $(SCRIPT_PYTHON) scripts/run_browser_suites.py --jobs $(BROWSER_JOBS) $(BROWSER_ARGS)
 
 lint: ## Ruff lint (src, tests, scripts)
-	RUFF_CACHE_DIR=$(RUFF_CACHE) "$(VPY)" -m ruff check src tests scripts
+	RUFF_CACHE_DIR="$(RUFF_CACHE)" "$(VPY)" -m ruff check src tests scripts
 
 typecheck: ## mypy --strict on the package
-	MYPY_CACHE_DIR=$(MYPY_CACHE) "$(VPY)" -m mypy --strict src
+	MYPY_CACHE_DIR="$(MYPY_CACHE)" "$(VPY)" -m mypy --strict src
 
 workflow-check: ## Lint GitHub workflows (needs actionlint; override ACTIONLINT for its path)
 	"$(ACTIONLINT)" .github/workflows/*.yml
@@ -139,11 +139,11 @@ pages-verify: ## Verify that live Pages matches the checked-out commit and stage
 	@commit=$$(git rev-parse --verify HEAD) && \
 		$(SCRIPT_PYTHON) scripts/release_channels.py verify-pages --root . --expected-commit "$$commit"
 
-clean-caches: ## Remove tool and test caches without deleting dist/
-	rm -rf $(PYTEST_CACHE) $(MYPY_CACHE) $(RUFF_CACHE) htmlcov .coverage
+clean-caches: ## Remove default checkout test, lint and coverage caches
+	rm -rf -- .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage .coverage.* coverage.xml
 
-clean: clean-caches ## Remove caches and build artifacts
-	rm -rf build dist *.egg-info src/*.egg-info
+clean: clean-caches ## Clean the checkout's Python build and default caches
+	rm -rf -- build dist *.egg-info src/*.egg-info
 
 PORT_OPTION = $(if $(strip $(LIXITY_PORT)),--port "$(LIXITY_PORT)")
 

@@ -15,6 +15,8 @@ OUT_DMG="$2"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INSTALL_GUIDE="$SCRIPT_DIR/../packaging/macos/install-guide.html"
 INSTALL_GUIDE_NAME="Start Here.html"
+BRAND_MARK="$SCRIPT_DIR/../../docs/assets/mark.svg"
+BRAND_MARK_NAME=".lixity-mark.svg"
 
 VOLUME_NAME="Lixity Test Build"
 if [ -n "${APPLE_SIGNING_IDENTITY:-}" ] && [ -n "${APPLE_NOTARY_PROFILE:-}" ]; then
@@ -74,6 +76,7 @@ echo "[2/4] Staging signed Lixity.app, Applications shortcut and installation gu
 ditto "$APP_BUNDLE" "$STAGE_DIR/Lixity.app"
 ln -s /Applications "$STAGE_DIR/Applications"
 install -m 0644 "$INSTALL_GUIDE" "$STAGE_DIR/$INSTALL_GUIDE_NAME"
+install -m 0644 "$BRAND_MARK" "$STAGE_DIR/$BRAND_MARK_NAME"
 
 mkdir -p "$(dirname "$OUT_DMG")"
 rm -f "$OUT_DMG"
@@ -115,6 +118,7 @@ else
 fi
 MOUNTED=1
 codesign --verify --deep --strict --verbose=2 "$VERIFY_MNT/Lixity.app"
+cmp "$BRAND_MARK" "$VERIFY_MNT/$BRAND_MARK_NAME"
 if [ -n "${APPLE_SIGNING_IDENTITY:-}" ] && [ -n "${APPLE_NOTARY_PROFILE:-}" ]; then
     xcrun stapler validate "$VERIFY_MNT/Lixity.app"
 fi
