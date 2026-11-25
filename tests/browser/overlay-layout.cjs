@@ -58,6 +58,8 @@ async function viewportContains(locator) {
         const toggle = page.locator('#workspace-navigation-toggle');
         const before = await toggle.innerHTML(), box = await toggle.boundingBox();
         const identity = await page.locator('.workspace-shell .product-name').boundingBox();
+        const mark = page.locator('.workspace-shell-header .product-name img');
+        assert.equal(await mark.isVisible(), true);
         assert.ok(box.width >= 40 && box.width <= 44 && box.height >= 40 && box.height <= 44,
           'The sidebar control has a compact reachable target');
         assert.ok(box.y < identity.y + identity.height && box.y + box.height > identity.y,
@@ -67,6 +69,7 @@ async function viewportContains(locator) {
         assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
         assert.equal(await toggle.innerHTML(), before, 'The sidebar glyph stays stable');
         assert.equal(await page.locator('.workspace-shell .product-name').isVisible(), true);
+        assert.equal(await mark.isVisible(), true, 'Collapsed navigation keeps the mark visible');
         const collapsed = await toggle.boundingBox(), collapsedIdentity = await page.locator('.workspace-shell .product-name').boundingBox();
         assert.equal(collapsed.y, box.y, 'The sidebar control stays in its learned row');
         assert.ok(collapsed.y < collapsedIdentity.y + collapsedIdentity.height && collapsed.y + collapsed.height > collapsedIdentity.y,

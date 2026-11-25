@@ -1248,6 +1248,7 @@ body.lixity-workspace { padding: 1.5rem 1.5rem 3rem 17rem; }
 body.lixity-workspace.navigation-collapsed { padding-left: 8rem; }
 .lixity-workspace.navigation-collapsed .workspace-shell { width: 7rem; padding: 1.25rem .5rem; }
 .navigation-collapsed.has-workspace-navigation .workspace-shell-header { gap: var(--space-1); }
+.navigation-collapsed.has-workspace-navigation .workspace-shell-header .product-name span { display: none; }
 [data-desktop-platform="macos"] .lixity-workspace .workspace-shell { padding-block-start: var(--space-3); }
 }
 /* Empty Analysis State */

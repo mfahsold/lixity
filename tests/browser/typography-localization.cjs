@@ -196,14 +196,18 @@ async function textRole(locator) {
         assert.equal((await textRole(page.locator('.hero-cta a').first())).family, body.family);
       });
       await page.goto('http://lixity.test/site/guides/installation.html');
+      const terminal = page.locator('#install');
+      assert.equal(await terminal.getAttribute('open'), null, 'Desktop setup leads with terminal instructions collapsed');
+      await terminal.locator(':scope > summary').click();
+      const commands = terminal.locator('pre:visible').first();
       await check(`Pages-${width} guide code size`, async () => {
-        const pre = await textRole(page.locator('pre:visible').first());
-        const code = await textRole(page.locator('pre:visible code').first());
+        const pre = await textRole(commands);
+        const code = await textRole(commands.locator('code'));
         assert.equal(code.size, pre.size, 'Guide commands inherit their pre size');
         assert.equal(code.family, pre.family);
         assert.notEqual(code.family, (await textRole(page.locator('body'))).family);
       });
-      await page.locator('pre:visible').first().screenshot({path: path.join(artifacts, `guide-code-${width}.png`)});
+      await commands.screenshot({path: path.join(artifacts, `guide-code-${width}.png`)});
       await page.goto('http://lixity.test/app/en');
       await page.locator('#tab-view-analysis').click();
       await page.locator('#workbench-overview-open').click();

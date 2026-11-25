@@ -640,8 +640,9 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
            f'aria-label="{L("navigation_collapse")}" aria-controls="workspace-navigation-content" aria-expanded="true" '
            f'title="{L("navigation_collapse")}">'
            f'{ui_icon("panel-left", size=20)}</button>',
-           f'<span class="product-name"><img src="{FAVICON_DATA_URI}" width="20" height="20" alt=""/>'
-           f'{esc(engine_name)}</span></div>') if controls else ()),
+           f'<span class="product-name" role="img" aria-label="{esc(engine_name)}">'
+           f'<img src="{FAVICON_DATA_URI}" width="20" height="20" alt=""/>'
+           f'<span aria-hidden="true">{esc(engine_name)}</span></span></div>') if controls else ()),
     ]
 
     if not controls:
