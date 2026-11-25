@@ -26,6 +26,10 @@ if [[ ${1:-} == probe ]]; then
   if [[ $result == 0 ]]; then sleep 3; fi
   xwd -root -silent -out "$QA_OUTPUT/$stage.xwd" || true
   xdotool search --onlyvisible --name . getwindowname %@ > "$QA_OUTPUT/$stage-windows.txt" 2>&1 || true
+  if [[ $stage == lixity && $result == 0 ]]; then
+    timeout 90 /usr/bin/python3 "$QA_SCRIPTS/sample.py" > "$QA_OUTPUT/lixity-sample.log" 2>&1 || result=$?
+    cat "$QA_OUTPUT/lixity-sample.log"
+  fi
   exit "$result"
 fi
 
@@ -37,7 +41,7 @@ run_stage() {
   mkdir -m 700 "$profile/run"
   HOME="$profile" XDG_RUNTIME_DIR="$profile/run" XDG_CONFIG_HOME="$profile/config" \
     XDG_CACHE_HOME="$profile/cache" XDG_STATE_HOME="$profile/state" XDG_DATA_HOME="$profile/data" \
-    timeout 90 xvfb-run -a -s '-screen 0 1440x950x24 -nolisten tcp' dbus-run-session -- \
+    timeout 165 xvfb-run -a -s '-screen 0 1440x950x24 -nolisten tcp' dbus-run-session -- \
       bash "$QA_SCRIPTS/launch.sh" probe "$stage" "$@" > "$QA_OUTPUT/$stage-session.log" 2>&1
   local result=$?
   if [[ -f "$profile/state/lixity/service/desktop-sidecar.log" ]]; then
