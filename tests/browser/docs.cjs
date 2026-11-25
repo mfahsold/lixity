@@ -1414,6 +1414,10 @@ async function checkSandboxQuotationPairs(page) {
           }
           assert.equal(await page.locator('link[rel=canonical]').getAttribute('href'), 'https://mfahsold.github.io/lixity/' + route);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${route} overflows at ${width}px`);
+          if (route === 'guides/installation.html') {
+            const markWidth = await page.locator('.install-heading img').evaluate(img => img.getBoundingClientRect().width);
+            assert.ok(markWidth >= 40 && markWidth <= 64, `The installation mark stays icon-sized at ${width}px`);
+          }
           const overflowingCells = await page.locator('.guide table td, .guide table th').evaluateAll(cells =>
             cells.filter(cell => cell.scrollWidth > cell.clientWidth + 1).map(cell => cell.textContent));
           assert.deepEqual(overflowingCells, [], `${route}: guide table text must stay inside its own column at ${width}px`);

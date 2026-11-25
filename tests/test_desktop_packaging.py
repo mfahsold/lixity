@@ -62,16 +62,26 @@ def test_platform_artifact_upload_retries_only_the_same_verified_files():
         assert "name: ${{ inputs.name }}" in attempt
         assert "retention-days: ${{ inputs.retention-days }}" in attempt
         assert "if-no-files-found: error" in attempt
-    for workflow_name, prefix, retention in (
-        ("desktop.yml", "lixity-desktop-installers", 14),
-        ("desktop-release.yml", "desktop-installers", 30),
-    ):
+    names_by_target = {
+        "aarch64-apple-darwin": "Mac-Apple-Silicon",
+        "x86_64-apple-darwin": "Mac-Intel",
+        "x86_64-pc-windows-msvc": "Windows-64-bit",
+        "x86_64-unknown-linux-gnu": "Linux-64-bit",
+    }
+    for workflow_name, retention in (("desktop.yml", 14), ("desktop-release.yml", 30)):
         workflow = (ROOT / ".github" / "workflows" / workflow_name).read_text(encoding="utf-8")
         verify_at = workflow.index("python scripts/verify_desktop_artifacts.py")
         upload_at = workflow.index(f"uses: ./{action_path}")
         assert verify_at < upload_at
         upload = workflow[upload_at:].split("\n\n", 1)[0]
-        assert f"name: {prefix}-${{{{ matrix.target }}}}" in upload
+        found = dict(re.findall(r"(?m)^ +target: (\S+)\n +archive: (\S+)$", workflow))
+        expected = names_by_target.copy()
+        if workflow_name == "desktop.yml":
+            del expected["x86_64-apple-darwin"]
+        else:
+            assert "pattern: Lixity-Desktop-*" in workflow
+        assert found == expected
+        assert "name: Lixity-Desktop-${{ matrix.archive }}" in upload
         assert f"retention-days: {retention}" in upload
         assert "continue-on-error" not in upload
 
