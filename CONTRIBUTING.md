@@ -360,7 +360,12 @@ Commit, push, tag and publication each use their own operation.
    serialized Pages job checks whether the tag is still the latest published
    release and whether its commit can advance the live deployment. A rerun
    skips deployment when the live site already includes newer or diverged work.
-   Manual Pages deployments retain their separate review procedure.
+   Set the repository variable `PAGES_DEFERRED_RELEASE_TAG` to the exact tag
+   before pushing it when the website must stay at its measured revision.
+   The matching tag still publishes to GitHub and PyPI. Verify those channels
+   with `RELEASE_VERIFY_ARGS=--skip-pages`, then use the separately reviewed
+   Pages deployment when the measurement window closes. Remove the variable
+   after that deployment has been verified.
 4. **Verify each channel and perform any authorized local rollout.**
    Run `make release-verify RELEASE_TAG=vX.Y.Z` from the exact tagged checkout
    to check the GitHub Release and attestations, PyPI archive bytes, live Pages

@@ -8,8 +8,7 @@ Keep selected text, PDF, PNG/JPEG and MP4/WebM sources in an explicit local proj
 bring notes and evidence together; claims record assertions; decisions explain
 the author's choices. The workspace preserves saved versions and exact quotations.
 Text sources can be analysed separately or compared with a manuscript.
-This is the implemented user manual. [Design history and proposals](README.md#design-history)
-are separate from available commands.
+[Design history and proposals](README.md#design-history) are available separately.
 
 Product versions describe development maturity; response, record/manifest and
 physical storage versions are independent. The current reader supports research
@@ -126,7 +125,7 @@ Replace `PASSAGE_ID` with a full returned ID. To continue in the browser, use
 CLI research commands keep the browser's project selection. [Project onboarding](../ONBOARDING.md)
 explains the existing-project and import paths.
 
-**Since v0.7.6:** a new dossier without `--language` inherits the explicit
+A new dossier without `--language` inherits the explicit
 research project's language. An explicit language overrides it. Manuscript
 analysis settings do not silently replace the research language, and ordinary
 body updates preserve an existing dossier's language. The Python API and native
@@ -168,7 +167,7 @@ claims, decisions, dossiers and manuscript quotations. Historical maps and
 photographs remain source material; character journeys and their scene context
 are authored project records.
 
-**Since v0.7.1:** the research view starts with dossiers. The saved
+The research view starts with dossiers. The saved
 evidence area keeps Zotero selection and optional local import behind compact
 disclosures. Revision previews, historical comparisons and explicit Markdown
 editing reuse the existing archive. Dossier `--file` now reads an existing UTF-8
@@ -250,8 +249,8 @@ lixity research search --query "reading room"
 lixity research link PASSAGE_ID CLAIM_ID --relation contextualizes
 ```
 
-Use returned IDs. v0.7.1 also accepts complete bare UUIDv4 selectors in the
-CLI and canonicalizes them to `urn:uuid:…`; API and stored identifiers stay strict.
+Use returned IDs. The CLI also accepts complete bare UUIDv4 selectors and
+canonicalizes them to `urn:uuid:…`. The API and stored identifiers use canonical IDs.
 Grouped help and discovery expose command aliases, including `dossiers`, `claims`
 and `decisions`, without separate command implementations.
 `link` creates evidence; `link-evidence` also supports
@@ -262,7 +261,7 @@ The citation still identifies the whole paragraph, not a sentence-level selector
 Ambiguous or cross-paragraph selections fail; whole-passage actions remain
 available for touch use. Preparing a draft writes nothing.
 
-Since v0.7.3, loading a claim's empty evidence list offers **Link passage
+Loading a claim's empty evidence list offers **Link passage
 evidence to claim**. It opens the existing form and selects the claim only if
 the draft has none; existing passage, claim and rationale choices stay intact.
 Use **Find source passage** to continue the research. A claim can exist without
@@ -273,7 +272,7 @@ preview with an installation link. Unchanged archive refreshes keep an opened
 evidence panel. A changed archive or project clears it so you can reload the
 current evidence.
 
-**Since v0.7.4:** loaded claim evidence is grouped under the
+Loaded claim evidence is grouped under the
 collapsible **Source quotations** heading. Closing and reopening it keeps the
 loaded quotations and unsaved fields without another read. Authored search
 results use **View entry** to open the current record; **View
@@ -292,7 +291,7 @@ neither document, evidence links nor the statistical baseline. See
 [reader controls](../WORKSPACE.md#reading-paragraphs) for display preferences,
 keyboard access, navigation and the desktop split.
 
-**Since v0.7.6:** exact saved manuscript associations appear as
+Exact saved manuscript associations appear as
 neutral dotted marks and a book-icon **Research** control with an association
 count. They stay distinct from metric colors and counted-text underlines, even
 with Analysis Off. Use the control or paragraph menu by keyboard; clicking an
@@ -375,7 +374,7 @@ selections fail. Paths escaping the project, including through
 symlinks, are rejected. Source bytes are checked again before publication; this
 optimistic guard does not lock an external editor.
 
-**Since v0.7.6:** `find-anchor --quote` aliases `--query`; in
+`find-anchor --quote` aliases `--query`; in
 `reconcile-manuscript`, `--quote` aliases `--new-quote` and retains its explicit
 replacement semantics and `--link-id` requirement. Original flags remain valid.
 Saving an already active link for the same claim and exact manuscript occurrence
@@ -395,7 +394,7 @@ re-pin. Ambiguous quotes are not re-pinned; an edited quote requires an explicit
 reviewed, uniquely resolvable replacement through `--new-quote`. These flags
 request a human review, not a semantic contradiction check or factual verdict.
 
-**Since v0.7.6:** manuscript associations are grouped by their current chapter
+Manuscript associations are grouped by their current chapter
 in the review view, also when opened from a dossier's quotation count. The CLI
 `review-manuscript --format text` or `--format table` shows the same current
 chapter; JSON adds `resolved_chapter_num` and `resolved_chapter_title` to each
@@ -405,7 +404,7 @@ quotations have null chapter fields. Refreshing this view does not write dossier
 revisions, change accepted links or detect all mentions of an entity. It is an
 index of retained quotations, not a character-presence or scene matrix.
 
-**Since v0.7.3:** the paragraph menu's **Saved research**, its
+The paragraph menu's **Saved research**, its
 saved-association count and exact saved quotation marks open the existing right
 context tool. It shows up to five exact associations and their total, with pinned
 claim/dossier titles and versions, author-assigned confidence and separately
@@ -417,7 +416,7 @@ facts or relevant research. Opening, closing or retrying this summary performs
 reads only, without retention, indexing, version upgrades or repinning. Research
 setup remains explicit. This presentation adds no API or archive schema version.
 
-**Since v0.7.4:** the shared **Paragraph details** inspector calls
+The shared **Paragraph details** inspector calls
 this **Research for this passage**. Quotations of the same pinned claim are
 grouped under **Text associations**; its assessment belongs to that exact claim
 version. The title opens the current entry, while **Linked version N** explicitly
@@ -491,17 +490,12 @@ confirms permission to retain the selected quote; it does not publish anything.
 Existing `link-manuscript --quote`, `--selection` and reconciliation
 `--new-quote` continue to require exact displayed text and unchanged write guards.
 
-The manuscript path is accepted positionally (like `analyze`, `scenes`, `showing`)
-or as `--manuscript PATH`; pass exactly one of the two forms. Since v0.7.2,
-read-only `review-manuscript` alone also permits omission when the selected
-project's root config explicitly sets `manuscript = "drafts/manuscript.md"`.
-The root `lixity.toml` takes precedence over root `[tool.lixity]`; user and
-ancestor settings are excluded. Explicit input wins. The published v0.7.2 release
-keeps other manuscript paths required. Since v0.7.3,
-`find-anchor`, `link-manuscript`, `unlink-manuscript`,
-`reconcile-manuscript` and `compare` also reuse this root-local default. Existing
-argument forms and write/retention/revision guards remain; Python input stays
-explicit.
+`review-manuscript`, `find-anchor`, `link-manuscript`, `unlink-manuscript`,
+`reconcile-manuscript` and `compare` accept a positional manuscript path or
+`--manuscript PATH`. Use one form. When you omit the path, the CLI uses the
+selected project's explicit root setting, such as
+`manuscript = "drafts/manuscript.md"`. Root `lixity.toml` takes precedence over
+root `[tool.lixity]`. Python calls require explicit manuscript input.
 
 The default is resolved inside the already validated explicit/working-directory
 project, never inferred from a filename or another project. Invalid config or
@@ -537,7 +531,7 @@ review again. `unlink-manuscript` retracts one
 association while retaining history, even if its manuscript is unavailable.
 Optional snapshot/revision guards make retraction strict.
 
-**Since v0.7.6:** in **Research → Review**, **Inspect candidate passage** opens
+In **Research → Review**, **Inspect candidate passage** opens
 the current paragraph for a uniquely moved or adjusted saved quotation before
 acceptance. This also works in a read-only review website. From a dossier, its
 saved manuscript-quotation count opens the corresponding filtered review.
@@ -573,13 +567,13 @@ project-relative path. Format details belong to the
 
 ### Read entries and earlier versions without losing context
 
-**Since v0.7.4:** ordinary entry actions open the current
+Ordinary entry actions open the current
 version in the shared read-only viewer. Explicit linked-version actions open
 their exact pin. The **Versions** disclosure loads the version list only when
 opened; expanding it never changes the displayed record. Choosing a version is
 explicit. The context names the selected kind, version and current/earlier state
 once; change provenance remains available without repeated version headings.
-**Edit** keeps its separate draft. In 0.8.1, the browser uses
+**Edit** keeps its separate draft. The browser displays
 record names and source excerpts instead of technical IDs or snapshot hashes.
 Reference selectors retain their exact stored IDs and version pins. When the
 name of a pinned historical record is unavailable, the UI says so explicitly;
@@ -595,8 +589,7 @@ Arrow keys, Home and End move between the editor's tabs; returning to Edit keeps
 an unsaved draft. Reading earlier versions does not revise or retarget a record.
 
 For daily CLI reads, list dossiers and copy a complete ID into the next command.
-Since v0.7.4, human dossier, claim and decision lists print complete IDs without
-ellipsis. JSON keeps the same identifiers and response fields.
+Dossier, claim and decision lists print complete IDs in both human and JSON output.
 
 ```sh
 lixity research dossier list --project ./novel --format table
@@ -829,7 +822,7 @@ lixity research terms --project ./novel --set-term "CURIA" --case-sensitive --no
 ### Claims linked to a dossier
 
 The dossier detail groups **Dossier notes**, **Linked claims** and
-**Source quotations** in one place. **Since v0.7.6:** its reading
+**Source quotations** in one place. Its reading
 surface preserves the original heading order and nesting, including repeated
 headings. The section lookup does not reorder or replace the document. Unique
 editable sections have an editing action beside their heading; repeated names
@@ -1038,7 +1031,7 @@ reading copies. Use the [explicit body comparison](#compare-a-markdown-reading-c
 for that separate question. There is no separate
 "stable audit" mode that hides newly accepted revisions.
 
-**Since v0.7.6:** audit also verifies the complete accepted manifest ancestry.
+Audit also verifies the complete accepted manifest ancestry.
 Missing, modified, foreign-project or non-contiguous ancestor manifests fail
 integrity. Its `records` count refers to accepted revision objects, including
 historical authored revisions, rather than current identities or source files.
@@ -1120,7 +1113,7 @@ Add `--compact` to
 advancing HEAD. Default JSON and Python/HTTP responses remain complete.
 `--format text --compact` gives a human receipt on `dossier`, `claim` and `decision`.
 
-Since v0.7.2, a validated authored update whose normalized content is unchanged
+A validated authored update whose normalized content is unchanged
 returns the existing record and revision. It does not advance the archive HEAD
 or rebuild the index. Revision/snapshot guards, metadata and association checks
 still apply; a stale request can fail even when its fields appear unchanged.
@@ -1134,7 +1127,7 @@ lixity research claim --project ./novel --claim-id CLAIM_ID --update \
   --statement "A revised author assertion"
 ```
 
-**Since v0.7.1:** `--update --dry-run` validates the exact proposed
+`--update --dry-run` validates the exact proposed
 write, including revision, reason, association pins and optional snapshot, without
 taking the writer lock or publishing records. It does not merge drafts or promise
 that a later commit will succeed. `--diff` instead compares supplied fields with
@@ -1154,8 +1147,7 @@ the corresponding pin options. Historical comparisons never repin. Python shares
 these semantics; HTTP, images, acknowledgements and batches keep explicit guards.
 
 For dossier body input, use `--file existing.md` or `--body "Literal text"`, never
-both. v0.7.1 rejects missing, unreadable or non-UTF-8 files before a write;
-it no longer interprets a missing filename as body text. This applies equally to
+both. Missing, unreadable or non-UTF-8 files are rejected. This applies equally to
 creation, updates, preparation and prospective comparison.
 
 ### Resolve conflicting drafts
@@ -1195,7 +1187,7 @@ It adds no final newline. The ordinary human display is not a replacement file:
 copying its title/version/heading into `--file` would store that display metadata
 as section content. JSON remains the default and keeps its existing fields.
 
-**Since v0.7.6:** omit `--section` from a selected dossier
+Omit `--section` from a selected dossier
 `--format text --body-only` read to export its entire authored body with the same
 exact UTF-8 bytes and no added newline. Redirect output to a file when the source
 contains terminal controls or Unicode formatting. `--title` also accepts a
@@ -1230,8 +1222,7 @@ result contracts are in the [automation reference](../AGENTS.md#51-research-api-
 
 #### Read, edit and verify a section
 
-This Bash example uses invented notes in a new scratch directory. The
-`--body-only` and `--compact` steps require v0.7.6 or newer.
+This Bash example uses invented notes in a new scratch directory.
 
 ```sh
 cat > notes.md <<'MD'
@@ -1340,7 +1331,7 @@ also rejects unrelated archive changes.
 
 ### Edit the dossier preamble explicitly
 
-**Since v0.7.6:** `dossier ID --preamble` selects the exact source
+`dossier ID --preamble` selects the exact source
 before the first actual ATX heading. It does not invent an `Overview` heading or
 match a real section with that name. In a heading-free body, it selects the entire
 body. Read a draft with `--format text --body-only`; update with `--file` or
@@ -1390,7 +1381,7 @@ controls for original media and the research view for current claim links.
 
 ### Edit an exported Markdown dossier
 
-**Since v0.7.1:** the archive remains authoritative. Export an
+The archive remains authoritative. Export an
 existing dossier, edit the file, preview reconciliation, then apply the reviewed
 packet explicitly:
 
@@ -1410,7 +1401,7 @@ not substituting a newer digest. Applying reads the packet, not later edits to
 the Markdown file. Export and packet output require new files outside the archive
 and its internal `.lixity` directory; existing files are never overwritten.
 
-Since v0.7.4, `dossier show ID --export-edit draft.md` and the direct ID form
+`dossier show ID --export-edit draft.md` and the direct ID form
 are equivalent. Explicit incompatible inspection/editing modes still fail.
 
 For several related edits in one dossier, change all affected sections in this
@@ -1444,7 +1435,7 @@ Saving a UTF-8 dossier body does not ingest its images: ordinary relative,
 Use **Add image**/`dossier-image` to capture and attach a local image, or reference
 an already retained exact version with `lixity:image/SOURCE_ID/VERSION_ID`.
 
-**Since v0.7.6:** the current dossier record viewer also offers this
+The current dossier record viewer also offers this
 action. Its notes occupy a full-width reading column rather than a metadata
 cell. An ordinary missing image reference offers **Choose image file**; saving
 replaces that exact, unique reference in one new revision, leaving other text
@@ -1452,8 +1443,8 @@ untouched. Historical, explicitly pinned and exported views stay read-only.
 
 Earlier dossier revisions retain exact image versions. Withdrawn/purged/missing
 images show unavailable placeholders. Source-page URLs are metadata, never fetched.
-Click an image to enlarge it; Escape closes it. v0.7.1 uses a shared
-PhotoSwipe zoom viewer for retained images and rendered diagrams. Images create no text passages,
+Click an image to enlarge it. Escape closes the shared zoom viewer, which also
+opens rendered diagrams. Images create no text passages,
 linguistic scores, OCR or factual verification. Label generated/reconstructed
 references in the caption and `context.provenance_note`; retain the actual source
 of documentary photographs.
@@ -1481,7 +1472,7 @@ exact dossier snapshot/revision guards. Canonical destinations are
 `lixity:image/SOURCE_ID/VERSION_ID` with UUID URNs. Purge identity metadata uses
 record schema v2; unprovable older image associations remain missing.
 
-**Since v0.7.6:** `dossier --summary` keeps its short body excerpt
+`dossier --summary` keeps its short body excerpt
 but reports image and media references from the entire selected dossier revision.
 It no longer misses attachments placed after the excerpt.
 
@@ -1492,7 +1483,7 @@ lixity research dossier-images --project ./novel --limit 100 --offset 0
 lixity research dossier-images --project ./novel --dossier-id ID --limit 100
 ```
 
-**Since v0.7.6:** `dossier-images --json` explicitly selects its JSON
+`dossier-images --json` explicitly selects its JSON
 output. `dossier-image --compact` and `dossier-media --compact` return the existing
 `research-revision-write-summary-local/1` receipt after saving, without copying
 the dossier body. Image batch saves accept the same flag; batch `--dry-run`
@@ -1527,7 +1518,7 @@ Storage-full/user-quota CLI failures additionally identify temporary storage
 not establish remaining user quota. Check both the project and temporary
 filesystems; the diagnostic does not authorize deletion or automatic repair.
 
-**Since v0.7.6, batch attachment:** `dossier-image --batch FILE`
+For batch attachments, `dossier-image --batch FILE`
 accepts an explicit `research-dossier-image-batch/1` JSON manifest with an
 `items` array. Each item contains `file` and optional `alt`, `caption`, `title`,
 `context`, `origin_url`, `section` or `replace_reference`. Section and replacement
@@ -1565,7 +1556,7 @@ multi-dossier operations and an interactive batch gallery are not implemented.
 
 ### Retain a PDF or video in a dossier
 
-**Since v0.7.6:** choose **Add PDF / video** in the same dossier
+Choose **Add PDF / video** in the same dossier
 toolbar. Select a local PDF, MP4 or WebM, provide an accessible description and
 confirm retention. Existing files in your project's folders can be selected
 directly; their original bytes and paths are not modified. Source title,
@@ -1621,7 +1612,7 @@ No project folder is scanned and no URL is fetched automatically.
 
 ### Correct retained media provenance without reattaching
 
-**Since v0.7.6:** `research media-context` corrects `origin_url`
+`research media-context` corrects `origin_url`
 and/or `provenance_note` for a selected retained image, video or retained-only PDF.
 Use the exact source/version identifiers from the selected dossier and preview
 before saving:
@@ -1668,7 +1659,7 @@ before preparing an explicit pin change in the owning decision or claim.
 Atomic change sets can save reviewed revisions together, but a guided bulk-pin
 review or `review --resolve-all` is not implemented.
 
-**Since v0.7.3:** **Read decision with dossier** opens a
+**Read decision with dossier** opens a
 reversible comparison inside **Review** or **Affected dossiers**. It reads the
 exact latest saved decision and dossier versions named by that report. When an
 earlier assessment exists, its dossier version is separately available; the
@@ -1742,7 +1733,7 @@ remain intact. See [archive compatibility](#limits).
 
 ### Keep places and journeys in a dossier
 
-**Since v0.7.0.** Use **Places and routes** in the existing dossier
+Use **Places and routes** in the existing dossier
 editor to add named points, paths and areas, with descriptions, periods, actors
 and transport choices. Import supported GeoJSON or enter coordinates in the form.
 The [harbour example](examples/harbour-geography.json) contains deliberately
@@ -1766,7 +1757,7 @@ The line joins the supplied coordinates. It does not snap to roads. There is
 currently no click-to-draw editor, route playback or animated journey. A map
 feature's name is not an automatic link to a matching prose heading.
 
-Coordinates are finite WGS84 longitude/latitude pairs. **Since v0.7.1:** the
+Coordinates are finite WGS84 longitude/latitude pairs. The
 numbered sketch and interactive Leaflet vectors work offline. Maps open with OpenStreetMap. Turn off the background or choose the sketch for
 offline use; tile requests disclose the viewed area and client IP to the provider
 and stop outside the visible map/project context. There is no geocoding, road
@@ -1815,9 +1806,8 @@ of 100; item pages accept a limit of 1–100. `next_start` is a continuation hin
 not a total count; a final full page may lead to an empty page. External metadata
 and notes remain untrusted evidence.
 
-Capture selects one locally available PDF, UTF-8 text or Markdown attachment.
-**Since v0.7.0,** capture also accepts PNG/JPEG through the existing image
-pipeline; these visual sources have no text passages or OCR.
+Capture selects one locally available PDF, UTF-8 text, Markdown, PNG or JPEG
+attachment. Images use the visual capture pipeline and produce no text passages.
 The existing ingestion pipeline retains stable bytes, the parent title and origin
 URL. `provenance_note` records a bounded summary of creators, date, parent and
 attachment versions. `context.external_reference` separately records provider,
@@ -1853,10 +1843,8 @@ registers that handler for the desktop account, and the running or newly started
 Zotero app selects the item. If a click has no effect, the protocol handler is
 missing — for example with a manually installed or portable copy; update or
 reinstall Zotero's desktop integration. This link is independent of the local API.
-**Since 0.8.1:** the local-import form remains available alongside Zotero.
-Earlier versions can hide it when every active source is Zotero-linked; direct
-CLI/API import remains available for standalone projects and recovery. Retained
-evidence history is not removed.
+The local-import form stays available alongside Zotero. Standalone projects
+can also import local sources through the CLI or Python API.
 
 The bridge uses GET requests to `127.0.0.1:23119`, with a 10-second socket timeout,
 bounded responses, no proxies or redirects. Files must resolve to local regular
@@ -1946,7 +1934,7 @@ the search cache if needed with `lixity research reindex --project ./restored-pa
 
 ## Search current authored records
 
-The default CLI/Python/HTTP search still searches source passages and returns
+The default CLI, Python and HTTP search covers source passages and returns
 `research-search-local/1`. Select `--scope all`, `dossiers`, `claims` or
 `decisions` to include current authored records with a typed
 `research-search-local/2` response:
@@ -1961,7 +1949,7 @@ Python: `api.search("./novel", "inspector", scope="all")`.
 HTTP: `POST /api/research-search` with `{"query":"inspector","scope":"all"}`.
 The dashboard defaults to **All records** and offers the same type filters.
 Its details button opens the existing record history with the current revision.
-**Since 0.8.1:** press Enter in the search field or use **Search** to submit the
+Press Enter in the search field or use **Search** to submit the
 same query. Highlighted excerpts preserve the source's literal text, including
 ampersands and angle brackets.
 
@@ -1979,6 +1967,12 @@ lexical relevance, not authority. Query words must all occur in one record;
 there is no semantic search, identity resolution or automatic contradiction
 resolution. The result limit applies across all matching types. Use type filters
 when numerous source hits obscure authored records.
+
+The browser and CLI refresh the disposable catalogue when needed. Use
+`--strict` to require an existing, up-to-date index in the CLI. Python defaults
+to that strict mode and accepts `ensure_fresh=True` for recovery. A successful
+refresh is reported in `warnings`. The [data model](DATA_MODEL.md#search-database-and-deletion)
+describes how results are verified against the archive.
 
 CLI search automatically refreshes stale or missing indexes by default to avoid
 interrupting research tasks with manual maintenance detours. Callers who require
@@ -2082,7 +2076,7 @@ default parsing and the archived source language; it does not inherit custom
 project `chapter_regex`/`appendix_marker`. Inspect the chapter trace before
 comparing with a differently configured dashboard.
 
-Since v0.7.4, the CLI uses explicit `--language` first, otherwise the selected
+The CLI uses explicit `--language` first, otherwise the selected
 project's root-local `language`, otherwise English. Root `lixity.toml` overrides
 root `[tool.lixity]`; ancestor, user and nested manuscript settings are excluded.
 The archive's project language is not a fallback for a missing analysis setting.
@@ -2137,12 +2131,12 @@ when inspecting archive files.
   links remain for their audit trail, but their purged citations are marked
   `availability: "purged"` and expose no deleted quotation text.
 
-Original files and extracted text can share exact bytes across sources. Since
-v0.7.2, the purge plan considers both kinds of blob reference, preserves shared
-bytes and removes unshared extraction text as well as originals. A dry run's
-`deleted_blobs` lists planned deletions, not a completed erase operation.
+Original files and extracted text can share exact bytes across sources. The
+purge plan checks both kinds of blob reference, preserves shared bytes and
+removes unshared extraction text as well as originals. A dry run's
+`deleted_blobs` lists the files it would remove.
 
-**Since v0.7.1:** `withdraw` also retires a dossier through the same
+`withdraw` also retires a dossier through the same
 tombstone mechanism. In the active dossier details or current revision viewer,
 choose **Withdraw dossier**, review the effect and confirm. **Discard draft**
 in **New dossier** and **Discard changes** in the revision editor clear the
@@ -2219,8 +2213,8 @@ material. The selected HEAD determines which revisions are accepted.
 
 ### Migrate manifest storage
 
-**Since v0.7.6:** new archives use compressed manifest storage.
-Existing uncompressed projects require an explicit migration before normal use:
+New archives use compressed manifest storage. For an existing uncompressed
+project, migrate explicitly before normal use.
 
 ```sh
 lixity research migrate-storage --project ./novel \
@@ -2268,9 +2262,9 @@ lixity research ingest --project ./novel --file ./notes.txt --allow-retention \
 The URL must be absolute HTTP(S), at most 2,000 characters, without credentials,
 whitespace or control characters. It is stored as submitted, never requested or
 used to accept a claim. Prefer stable source addresses over signed links with
-private query tokens. The browser displays it as escaped text. In 0.8.1,
-choose either a local file or pasted text for each import; if both contain data,
-the form asks for a choice and retains both. Failed imports and edits made while
+private query tokens. The browser displays it as escaped text. Choose a local
+file or pasted text for each import. If both contain data, the form asks you to
+choose and retains both. Failed imports and edits made while
 an import is in progress remain in the form. On success, only an unchanged
 submitted form is cleared. The local importer remains available alongside Zotero.
 
@@ -2443,8 +2437,8 @@ PDFs for completeness. A successful native import is not an OCR-success claim.
 
 For local scans, use the built-in Tesseract backend described above. Custom model
 deployment belongs to a separately maintained adapter implementing this worker
-protocol. The former experimental CPU bridge was removed in 2.1.0; its limited
-experiment is recorded in [deployment boundaries](OCR_INTEGRATION.md#historical-cpu-experiment).
+protocol. The [adapter reference](OCR_INTEGRATION.md#historical-cpu-experiment)
+records the retired CPU experiment.
 
 ### What is actually retained
 
@@ -2464,8 +2458,8 @@ behavior belongs to its deployment's privacy boundary.
 
 Dossier bodies support headings, emphasis, quotations, lists, code, tables,
 callouts and a bounded subset of inline/display math. This is not a full
-CommonMark or LaTeX implementation; raw HTML stays escaped. **Since v0.7.1:** bundled Mermaid tiny 12.2.0
-renders supported `mermaid` fences offline instead of the former partial renderer.
+CommonMark or LaTeX implementation. Raw HTML stays escaped. Bundled Mermaid
+tiny 12.2.0 renders supported `mermaid` fences offline.
 The library initializes when a diagram first becomes visible. Image/resource
 syntax, click actions and configuration/style directives are disabled; unsupported
 or invalid diagrams keep their inspectable source. Rendered SVGs share the local
@@ -2512,11 +2506,11 @@ Text inputs are at most 2 MiB and must be valid UTF-8 without NUL bytes.
 PDF inputs are at most 50 MiB. Both routes allow at most 5,000 nonempty extracted
 passages. Search uses literal Unicode words joined with AND; it is
 not stemming, translation or semantic search. BM25 scores are ranks, not truth
-probabilities. Language tags do not translate quotations. Empty queries and
-missing FTS5 support produce errors. Stale indexes refresh automatically unless
-strict validation is requested. Index failures report their path and the actual
-SQLite cause; storage exhaustion or a damaged index does not imply missing FTS5.
-After resolving the reported cause, use `research reindex` to rebuild the
+probabilities. Language tags do not translate quotations. Empty or whitespace-only
+queries fail validation. Queries with no searchable words return no matches.
+Missing FTS5 support produces an error. For SQLite failures, the search error
+reports the path and the SQLite cause. After resolving the cause, use
+`research reindex` to rebuild the
 disposable catalogue. A rebuild failure before replacement keeps the previously
 published index; rebuilding does not modify canonical research records.
 Source analysis emits `original_language_supplied` when source context names

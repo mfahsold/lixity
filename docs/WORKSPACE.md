@@ -1,10 +1,11 @@
-# Lixity browser workspace manual
+# Lixity workspace manual
 
 Use this manual to read a manuscript, inspect language patterns, keep research
 linked to passages and prepare copies for readers. These activities share one
-local project. The native writing, reading and research workflows below are
-available in the local app. The **Versions** menu and the text association
-display control beside the editor describe the current development build.
+local project. The desktop app and local browser service use the same
+writing, reading and research workspace. The menus below follow the source
+version. Check your [installed build](INSTALLATION.md#where-lixity-is-published)
+when a label or control differs.
 Start with [Onboarding](ONBOARDING.md) to create, import or open a project;
 use [Installation](INSTALLATION.md) for application setup and service updates.
 The [CLI reference](USAGE.md), [audio manual](AUDIO.md) and
@@ -33,12 +34,11 @@ workers and integrations.
 
 ## Before you begin
 
-Start the installed local app with `lixity service start --open`. It normally opens
-`http://127.0.0.1:8765/`; use **Open Project** for an existing folder or follow
-the import preview to create a copy at an explicit destination. Import confirmation
-writes the new project; opening reconnects an existing one. The manuscript stays
-in its project folder. Use your text editor or the native
-[Write workflow](#write-a-manuscript).
+Open the desktop app from your application launcher, or use
+`lixity service start --open` for the local browser app. Choose **Open Project**
+to reconnect an existing project, or confirm an import preview to create a
+copy at the selected destination. The manuscript stays in its project folder.
+[First session and offline example](ONBOARDING.md#choose-your-starting-point)
 
 The DOCX importer accepts at most 32 MiB of source bytes, 4,096 ZIP
 entries, 32 MiB of streamed document XML and 16 MiB of converted UTF-8 text.
@@ -166,7 +166,7 @@ then read the passage to decide what the difference means in context.
 1. Open the text and confirm its analysis language in **Project → Settings**.
    Website language preferences do not select a linguistic profile. Applying
    analysis settings rebuilds the dashboard; record the settings used for a comparison.
-2. Open **Analysis overview**. In the unreleased native navigation, choose
+2. Open **Analysis overview**. In the local workspace, choose
    **Compare chapters** for the chapter matrix or style measurements, or
    **Explore patterns** for sentence rhythm. Choose a comparison within the
    supplied text rather than treating its internal reference as a population norm.
@@ -300,8 +300,7 @@ Happy path for an author or lector (no technical setup beyond the local app):
    **Mark differing paragraphs**, then return to the unmarked passage before deciding.
 3. In **Analysis overview**, choose one task: **Review passages**
    (**Textstellen prüfen**), **Compare chapters** (**Kapitel vergleichen**) or
-   **Explore patterns** (**Muster erkunden**). These unreleased native entrypoints
-   replace the exhaustive section list. Pick a secondary view only when needed;
+   **Explore patterns** (**Muster erkunden**). Pick a secondary view when needed;
    the next-passage action remains available above the views.
 4. Follow research beside the text via **Dossiers** or **Paragraph details →
    Research for this passage**. Distinguish the exact retained quotation from
@@ -319,7 +318,7 @@ Alternative and power-user paths that reach the same features (all legitimate, p
 | Sentence rhythm & dialogue | `Analysis overview` → `Explore patterns` → sentence lengths or quoted text; `Analysis On` → `Measure`, or `D` (**Direct Speech Mode**) | Measure layers (`Sentence length`, `Sticky sentences`, `Dialogue-tag density`, `Word echoes`, `Indirect speech`), command palette, KPI tile drill-down, outlier stepper `◀` / `▶` |
 | Tense review | `Analysis overview` → `Review passages`, or paragraph review badge with `Analysis On` | Command palette `Highlight Grammatical Tense`, `#flags` triage table `Read passage`, `.chip` click in chapter strip |
 | Feature-rank projection & scenes | `Compare chapters` → `Style` → projection, or `Explore patterns` → scenes | Command palette `Open Style Space Comparison` / `Open Scenes & Registers`, `Stil` tabs (`Heatmap` / `Bänder` / `Projektion der Merkmalsränge`), 3D canvas point click |
-| Passage values & evidence | Paragraph `…` button → `Paragraph details` → `Explain measurement` | Click paragraph with `Analysis Off`, click paragraph comparison badge, keyboard `Shift+F10` / right-click context menu, `?` guide actions |
+| Passage values & evidence | Paragraph `…` button → `Paragraph details` → `Explain this passage` | Click paragraph with `Analysis Off`, click paragraph comparison badge, keyboard `Shift+F10` / right-click context menu, `?` guide actions |
 | Research & quotation linking | `Research for this passage` in inspector or `Dossiers` | Select prose text → floating selection toolbar (`Link quotation`), inspector backlink card `Historical Evidence / Dossier`, command palette `Open Research Search` / `Create New Research Dossier` / `Open Chronology & Timeline` |
 | Spoken review & teleprompter | `Listen and direct` or `Teleprompter` in toolbar | Keyboard shortcut `P` in reader, select prose text → `Read selection`, inspector backlink card `Vocal Directions & Teleprompter`, command palette |
 | Project settings & PDF export | `Project` tab → settings form; sidebar `Project actions` → `Manuscript PDF` | Command palette `Switch to Project Settings` / `Export Manuscript as PDF`, URL hash `#view-project` |
@@ -378,7 +377,7 @@ chapter comparisons.
 If a chapter has too few eligible paragraphs or too many tied values to
 calculate a comparison, the chapter strip explains why once. Choose **Matches
 in this chapter** to read any counted passages there. The strip keeps its
-paragraph links, and **Paragraph details** and **Explain measurement** still
+paragraph links, and **Paragraph details** and **Explain this passage** still
 show available measurements. A measured zero remains a value.
 
 Use **Text matches** to open the next counted passage for the selected
@@ -447,7 +446,7 @@ These routes share existing actions rather than creating separate records:
 
 | Task | Passage route | Other access |
 | --- | --- | --- |
-| Explain counted text | **Paragraph details → Explain measurement** | Hover, click or tap a marked word or sentence |
+| Explain counted text | **Paragraph details → Explain this passage** | Hover, click or tap a marked word or sentence |
 | Read explicitly linked research | **Paragraph details → Research for this passage** | The paragraph's association count |
 | Link a quotation to a claim | **Link selection to claim** in the paragraph menu | The selection toolbar or `Alt+L`, with a valid selection inside one paragraph |
 | Add a work marker | The paragraph menu's marker actions | The compact selection toolbar offers **Check**; the overview lists saved work markers |
@@ -457,7 +456,7 @@ These routes share existing actions rather than creating separate records:
 for this passage** follows associations saved for the selected paragraph. Merely opening
 a dossier beside the manuscript does not link it to that passage.
 
-**Paragraph details → Explain measurement** also works by keyboard or right-click,
+**Paragraph details → Explain this passage** also works by keyboard or right-click,
 including with Analysis Off or Focus reading. That explicit action enables
 Analysis and chooses Sentence length if no metric is selected, while preserving
 both display-switch preferences.
@@ -481,7 +480,7 @@ for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
 browser preferences; display changes do not edit the source.
 
-**Unreleased native navigation:** the overview opens with **Manuscript
+The local overview opens with **Manuscript
 measurements**, manuscript status, the next passage and three task choices.
 Selecting **Review passages**, **Compare
 chapters** or **Explore patterns** reveals one existing analysis section.
@@ -505,7 +504,7 @@ default outputs and JSON contracts are unchanged.
 
 ### Compare scene evidence and rehearse an intent
 
-**Unreleased.** Open **Analysis overview → Explore patterns → Scenes & style
+Open **Analysis overview → Explore patterns → Scenes & style
 registers**. Read down the two tracks in manuscript order. One shows the share
 of counted words within recognized quotations or marked speech. The other shows
 mean words per sentence. Each track has its own unit and scale. If there are no
@@ -800,8 +799,8 @@ establish a switch from the previous paragraph.
 **Open passage** in the overview opens the first paragraph meeting the
 selected tense threshold, otherwise the opening paragraph, clearing filters and
 focusing the passage. Choose **Compare chapters** for chapter comparisons or
-**Explore patterns** for sentence rhythm and other patterns in the unreleased
-native navigation. Passage/chapter links navigate to the corresponding prose.
+**Explore patterns** for sentence rhythm and other patterns. Passage and
+chapter links navigate to the corresponding prose.
 These are review locations, not rankings or instructions to revise.
 
 The native overview keeps only the selected analysis section visible.
@@ -861,7 +860,7 @@ Keep the three comparison scopes separate:
 The [methods](METHODS.md) define these quantities; the
 [interpretation guide](guides/interpretation.html) explains their limits.
 
-**Unreleased chapter measurements.** Select a heatmap cell or a style-reference
+Select a heatmap cell or a style-reference
 cutoff-hit count to see what the selected metric measures, its unit and sample,
 the chapter value and the manuscript's typical value (the median in the style
 reference).
@@ -909,7 +908,7 @@ The matrix color scale stays fixed at z* = −2.5 to +2.5. A **●** marks an
 FDR-selected cell; color alone is not a significance decision. Cell details
 include raw values, z*, standardized effect and Cliff's δ. The style reference
 shows the manuscript median ± 2 robust standard deviations, with sample counts.
-**Unreleased:** a shared legend distinguishes the ±2σ band, SE-adjusted
+The legend distinguishes the ±2σ band, SE-adjusted
 chapter cutoff, nominal FDR selection and chapter-local paragraph cutoff.
 `consistency` counts measurable cells below the chapter deviation cutoff, not
 inside the ±2σ band. A per-feature notice explains when only two distinct
@@ -983,7 +982,7 @@ outside that pair. Return to 3D to rotate the same data. The line follows chapte
 gaps where a chapter has no measured position. **Reset** restores the view,
 without changing chapter scores or analysis settings.
 
-**Unreleased:** this view is labelled a feature-rank projection. The regularization
+This view is labelled a feature-rank projection. The regularization
 notice shows ridge lambda and the complete-chapter/feature counts. Reported
 variance shares refer to the regularized matrix's eigenvalues, not necessarily
 empirical score variance. They do not establish literary registers. Mahalanobis

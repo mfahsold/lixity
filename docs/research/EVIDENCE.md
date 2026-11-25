@@ -9,8 +9,8 @@ Use [Research usage](USAGE.md#find-a-task) for implemented tasks and
 This is a targeted selection of primary publications and official documentation,
 not a systematic review.
 Study findings, engineering reports and our architecture inferences are separated.
-No experiments below were reproduced for this documentation PR. Versioned links
-are used where practical; current product documentation may change.
+The review did not reproduce these experiments. Versioned links identify the
+works examined where available.
 
 ## Research that changes the architecture
 

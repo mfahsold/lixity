@@ -302,10 +302,11 @@ jobs:
 
   pages:
     needs: [publish, pypi]
-    # A PyPI catch-up can select an older release. Only tag-triggered runs
-    # deploy that release's documentation.
+    # A PyPI catch-up can select an older release. Tag publication can also
+    # defer the site for one release when an approved measurement window is open.
     if: >-
       !cancelled() && github.event_name == 'push' && needs.publish.result == 'success' &&
+      vars.PAGES_DEFERRED_RELEASE_TAG != github.ref_name &&
       (needs.pypi.result == 'success' ||
        (vars.PUBLISH_PYPI != 'true' && needs.pypi.result == 'skipped'))
     permissions:

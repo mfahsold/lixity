@@ -23,7 +23,7 @@ These names and explanations change no stored enum or record identity.
 
 ## Reading website projection
 
-Since v0.7.4, `lixity.site_export` produces a static publication projection of
+`lixity.site_export` produces a static publication projection of
 one selected project. It does not add a reader role to an archive entity or
 change a stored permission: the recipient receives a copy of the included
 content. The source archive's entity and manifest contracts are unchanged.
@@ -212,8 +212,8 @@ outcomes are distinct:
 Ordinary authored updates request no artifact deletion. Ingestion, purge and
 append-only acknowledgements have their own inputs and lifecycle effects.
 Previews do not reserve a snapshot. A later save must still pass the locked comparison. Failed
-drafts are never automatically retried or repinned to newer evidence. Since
-v0.7.2, unchanged authored updates return their accepted revision after validation
+drafts are never automatically retried or repinned to newer evidence.
+Unchanged authored updates return their accepted revision after validation
 and the locked check; acknowledgements remain append-only events.
 
 Files are flushed before publication, with directory syncing on POSIX. Local
@@ -235,14 +235,15 @@ A `metadata` table records the snapshot digest. Two FTS5 projections serve sourc
 passages and current searchable passages/dossiers/claims/decisions; they are not
 relational storage for domain entities or citation authority.
 
-Search opens the cache read-only with `trusted_schema=OFF`, uses bound query
-parameters and checks its recorded digest against the accepted snapshot. Missing,
-stale indexes can be rebuilt when the caller requests refresh; otherwise they
-fail explicitly. Structurally unusable caches may require explicit reindexing.
-Returned references resolve against that snapshot, with lifecycle/current-source
-checks. Lexical rank is not a truth probability. Current search excludes
-withdrawn/purged sources and withdrawn dossiers; historical citations retain
-their distinct availability rules.
+Search reads the cache digest and rows in one read-only transaction with
+`trusted_schema=OFF` and bound query parameters. If the cache was replaced
+concurrently, search checks whether its digest matches the newly accepted
+snapshot. The transaction closes before search verifies results and prepares
+citations or previews from that matching snapshot. Refresh-enabled search can
+rebuild a missing, stale or unreadable cache once. Current search checks the
+retained references and excludes withdrawn or purged sources and withdrawn
+dossiers. Historical citations follow their own availability rules. See the
+[search workflow](USAGE.md#search-current-authored-records).
 
 Original-source and extracted-text descriptors both participate in blob
 reachability. Equal bytes can be shared across either role and across sources;
@@ -252,7 +253,7 @@ Backups include authoritative records, manifests and blobs, not SQLite or locks.
 
 ### Backup validation and publication
 
-**Since v0.7.3:** backup creation holds the existing project
+Backup creation holds the existing project
 writer lock until accepted records and blobs have been copied into a closed
 compressed candidate. This includes protection from concurrent purge. The
 candidate carries the selected HEAD and initial project bytes, with verified

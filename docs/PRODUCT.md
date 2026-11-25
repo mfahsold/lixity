@@ -47,6 +47,7 @@ features and the changelog for work on the current branch.
 | Installation | GitHub and PyPI publish the local browser app and CLI. Actions test builds cover Apple Silicon, Intel macOS, Windows x64 and Linux x64. The download guide uses the qualified desktop catalog to show public availability. | Verify the first public desktop candidate on clean systems, then generate the catalog from that release. [Desktop distribution](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#remaining-work-before-distribution) |
 | Close reading and revision | The shared workspace links findings to passages, supports draft and saved comparisons, and recovers interrupted editing sessions. Synthetic tests cover the browser workflow and the German and English passage return in macOS WKWebView at standard and compact sizes. | Observe authors and editors completing the same task. Check input methods, assistive technology and the other native WebViews. [Editing workflow](WORKSPACE.md#write-a-manuscript) |
 | Research and project recovery | Dossiers retain source and manuscript evidence. Project bundles restore the selected saved text, configuration and archived research. | Exercise a fresh-profile restore and verify saved content hashes and retained evidence. Exercise draft recovery in the original workspace. [Project backup](PROJECT_BACKUP.md) |
+| Voice and passage direction | The local workspace keeps delivery notes beside the manuscript. Desktop test builds use the native capture bridge for voice reference review. Browser and native smoke tests cover the controls and the distinction between microphone access and worker readiness. | Check actual recording hardware and permissions on each target. Qualify optional speech and editing tools in their own environments. [Audio workflow](AUDIO.md) |
 | Large projects | The editor reuses measurements for unchanged chapters. Local tests and benchmarks distinguish initial reading, evidence loading, snapshot calculation and archive search. | Measure the complete workflows with the same inputs across the desktop platforms. [Desktop and large-project priorities](RUST_EVALUATION_RFC.md#desktop-and-large-project-priorities) |
 
 ## What should come next
@@ -94,7 +95,7 @@ traceable evidence in the acceptance checks.
 
 | Priority | What to verify |
 | --- | --- |
-| Large-project reading | Compare launch to first readable passage, evidence latency, scroll frame times and memory. Start with the existing live-reader workload on each desktop WebView. |
+| Large-project reading | Use the macOS live-reader benchmark as a baseline. Measure readiness, time to readable text, evidence and return separately in each desktop WebView before deciding which stage to optimize. |
 | Revision workflow | Verify interrupted saves, undo and edits from multiple windows. Gather examples where a named revision checkpoint would help during real work. |
 | Archive search | Measure validated archive reads and index queries separately. Preserve exact citations and detection of changed or unavailable sources. |
 

@@ -13,6 +13,12 @@ and Dutch. The technical manuals are maintained in English.
 | Find the installer or check your version | [Installation and updates](INSTALLATION.md) |
 | Open your first manuscript and inspect a finding | [Find a marked sentence in the demo](guides/first-look.html#passage) · [First session in your project](ONBOARDING.md) |
 
+Use **Tools → System Status & Extensions** to identify a desktop build, or
+`lixity --version` for the CLI and local browser app. Check
+[Latest on GitHub](https://github.com/mfahsold/lixity/releases/latest) for the
+published version. The [installation manual](INSTALLATION.md#read-documentation-offline)
+explains offline help.
+
 ## Find a task
 
 | I want to… | Workflow | Detailed reference |
@@ -39,13 +45,19 @@ and Dutch. The technical manuals are maintained in English.
 | Product priorities and feedback criteria | [Product direction](PRODUCT.md) · [Compare manuscript workflows](guides/manuscript-analysis-tools.html) |
 | Licensing and reporting issues | [Licensing](LICENSING.md) · [Security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) |
 
-Use **Tools → System Status & Extensions** to identify your desktop build. For
-the CLI and local browser app, use `lixity --version`. The [installation
-manual](INSTALLATION.md#read-documentation-offline) explains offline help.
-The [Wiki](https://github.com/mfahsold/lixity/wiki), [illustrated guides](https://mfahsold.github.io/lixity/#guides)
-and [articles](blog/index.html) link to the maintained references.
-`llms-full.txt` bundles those references for offline tools and is generated
-from the canonical Markdown and HTML.
+## Maintain the documentation
+
+| Surface | Where to make the change |
+| --- | --- |
+| First session, commands, data boundaries or analysis methods | Use the maintained manuals above. Check the command help, response contract or visible interface label for the installed version. |
+| Product website and localized homepages | Edit `templates/` and `locales/`. These sources generate the public homepages. |
+| Illustrated guides and articles | Edit the HTML source under `guides/` or `blog/`. `make docs-sync` regenerates the paired `.html.md` alternates and the blog feed. |
+| Demo, example reports, screenshots and videos | Follow the [demo maintenance guide](https://github.com/mfahsold/lixity/blob/main/docs/demo/README.md), [screenshot](screenshots/README.md) and [video](videos/README.md) procedures. They identify the source fixture, reviewed outputs and generation order. |
+| Wiki and offline reference bundle | `wiki/` provides short entries into the manuals. The `llms-full.txt` bundle is generated from maintained documentation. |
+
+Use the [public guides](https://mfahsold.github.io/lixity/#guides),
+[articles](blog/index.html) or [Wiki](https://github.com/mfahsold/lixity/wiki)
+for shareable introductions.
 [Documentation workflow](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#updating-documentation-and-pages)
 
 ## Historical records and proposals

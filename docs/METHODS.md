@@ -332,7 +332,9 @@ Lixity estimates its median/MAD from the same chapters it scores and then
 applies a normal tail to the custom $z^*$. That calibration has not been
 established. Runs/lag diagnostics and switching to BY do not establish it.
 
-### Decision legend and small chapter sets (Unreleased)
+<a id="decision-legend-and-small-chapter-sets-unreleased"></a>
+
+### Decision legend and small chapter sets
 
 The reference panel, text passport and additive
 `passport.meta.interpretation` contract (`style-interpretation/1`) distinguish:

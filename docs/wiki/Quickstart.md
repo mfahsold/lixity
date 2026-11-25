@@ -19,13 +19,15 @@ browser app, follow the local service instructions.
 
 ## 3. Opening a manuscript
 
-Connect an existing project folder, copy a manuscript file into a new project
-or start from a blank page.
+Connect an existing project, import a copy or start a new manuscript. On the
+desktop welcome screen, **Try the example offline** opens a preview of the
+bundled sample. Confirm its destination to create an editable project.
 [Choose your starting point](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#choose-your-starting-point)
 
 ## 4. The three main workspaces
 
-**Manuscript** is where you read, write and inspect highlighted passages.
+In **Manuscript**, open **Paragraph details → Explain this passage** on a
+marked passage. Return to the text and choose **Write** when you are ready.
 **Research** holds sources, claims and dossiers. **Project** holds settings and
 project structure. Find the actions in the
 [workspace manual](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md).

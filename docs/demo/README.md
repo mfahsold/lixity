@@ -22,10 +22,11 @@ previews later material within the exported range. Progress stays in the local
 browser. Hiding notes is a reading aid, not content protection: a chapter cap
 must omit later material from the export itself.
 
-Start with **Compare chapters 1 and 2** to see how many words each sentence
-contains on average in the harbour description and the action scene. Then
-choose **Inspect chapter 2** and read the opening sentences aloud. Try a passage
-of your own in the [browser sandbox](../sandbox/index.html).
+Start with **Try the draft examples → Check a sticky sentence**. Choose
+**Paragraph details → Explain this passage** to see the 22 function words
+within 31 counted words and read them in context. Then try **Compare chapters 1
+and 2** to compare average sentence length across scenes.
+[First-look walkthrough](../guides/first-look.html#passage)
 
 The manuscript is a deliberately rough draft. Open **Try the draft examples**
 for direct links to a wordy sentence in **The Blank Line**, a past-to-present
@@ -104,7 +105,7 @@ only reviewed synthetic/public-domain material and explicit code defaults.
 
 ### Open the synthetic project locally
 
-**Unreleased:** create an ordinary editable project from a source checkout:
+Create an editable copy from a source checkout with the demo fixture builder.
 
 ```sh
 .venv/bin/python scripts/example_project.py --output .artifacts/warehouse-4-project

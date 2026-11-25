@@ -8,6 +8,16 @@ provides the local browser workspace and CLI.
 [Installation guide](../docs/INSTALLATION.md#packaging-direction)
 · [Published releases](https://github.com/mfahsold/lixity/releases)
 
+| Build | Where to find it | How to verify its identity |
+| --- | --- | --- |
+| Local macOS development build | Checkout build output or the app replaced by the local rollout command | Exact checkout commit for a rollout, app bundle path and ad-hoc code signature |
+| Hosted desktop test build | Selected GitHub Actions run | Run source commit, platform target, installer SHA-256 and build manifest |
+| Public desktop installer | Published release and desktop download catalog | Published tag, installer SHA-256, attestation and accepted platform trust evidence |
+
+Use the [test-build route](#download-a-test-build) while the public catalog
+has no verified installer for your platform. The installed app and the
+standalone Python package each own their own runtime.
+
 ## Implemented
 
 - One bundled Python 3.12 runtime serves the shared workspace on an
@@ -44,7 +54,7 @@ provides the local browser workspace and CLI.
 
 ## Native installers
 
-| Platform | Release build matrix | Other packaging assets |
+| Platform | Installer build targets | Other packaging assets |
 | --- | --- | --- |
 | macOS (Apple Silicon and Intel) | `.dmg` containing `Lixity.app` | Homebrew Cask template |
 | Windows (x64) | NSIS per-user `.exe` with seven installer languages, WiX `.msi` with German and English | WinGet manifest templates |
@@ -61,36 +71,21 @@ for your operating system and processor. The workflow keeps these test builds
 for 30 days. [Desktop release builds](https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml)
 · [GitHub artifact download instructions](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts)
 
-| Platform | Workflow artifact | Installer files |
-| --- | --- | --- |
-| macOS Apple Silicon | `desktop-installers-aarch64-apple-darwin` | `Lixity_VERSION_aarch64.dmg` |
-| macOS Intel | `desktop-installers-x86_64-apple-darwin` | `Lixity_VERSION_x64.dmg` |
-| Windows x64 | `desktop-installers-x86_64-pc-windows-msvc` | `Lixity_VERSION_x64-setup.exe`, `Lixity_VERSION_x64_de-DE.msi` or `Lixity_VERSION_x64_en-US.msi` |
-| Linux x64 | `desktop-installers-x86_64-unknown-linux-gnu` | `Lixity_VERSION_amd64.deb` or `Lixity_VERSION_amd64.AppImage` |
+| Platform | Workflow artifact | Installer files | Setup |
+| --- | --- | --- | --- |
+| macOS Apple Silicon | `desktop-installers-aarch64-apple-darwin` | `Lixity_VERSION_aarch64.dmg` | [macOS](../docs/INSTALLATION.md#macos-desktop-dmg) |
+| macOS Intel | `desktop-installers-x86_64-apple-darwin` | `Lixity_VERSION_x64.dmg` | [macOS](../docs/INSTALLATION.md#macos-desktop-dmg) |
+| Windows x64 | `desktop-installers-x86_64-pc-windows-msvc` | `Lixity_VERSION_x64-setup.exe`, `Lixity_VERSION_x64_de-DE.msi` or `Lixity_VERSION_x64_en-US.msi` | [Windows](../docs/INSTALLATION.md#windows-desktop-test) |
+| Linux x64 | `desktop-installers-x86_64-unknown-linux-gnu` | `Lixity_VERSION_amd64.deb` or `Lixity_VERSION_amd64.AppImage` | [Linux](../docs/INSTALLATION.md#linux-desktop-test) |
 
-Extract the ZIP and open its folder. The installer files,
-`SHA256SUMS-TARGET.txt` and `desktop-artifacts-TARGET.json` sit together. The
-filenames contain the version of the selected run in place of `VERSION`.
-Verify the checksum from that folder before opening the installer.
-New Windows and Linux test archives also include a platform-specific
-**Start Here** HTML guide for offline setup.
+Extract the ZIP to keep the installer, `SHA256SUMS-TARGET.txt` and
+`desktop-artifacts-TARGET.json` together. Use the platform setup instructions
+to verify the checksum before opening the installer. An ad-hoc DMG contains
+**Start Here.html**. Windows and Linux test archives from the desktop-release
+workflow include a platform-specific offline start guide on the test path.
 
-- On macOS, verify the matching SHA-256 file before opening the disk image.
-  Ad hoc images mount as **Lixity Test Build**, with **Start Here.html** inside.
-  [macOS test build instructions](../docs/INSTALLATION.md#macos-desktop-dmg)
-- On Windows, run `Get-FileHash -Algorithm SHA256 -LiteralPath .\Lixity_VERSION_x64-setup.exe`
-  in PowerShell with the extracted installer filename. Compare the hash with
-  that filename's entry in `SHA256SUMS-x86_64-pc-windows-msvc.txt`. Open the
-  verified per-user setup executable or the MSI in your preferred installer language.
-- On Linux, run `sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt`. Open the
-  verified `.deb` with your package installer on a Debian-based distribution.
-  For the AppImage, give the file execute permission and launch it.
-  [Troubleshooting missing runtime libraries](../docs/INSTALLATION.md#linux-desktop-test)
-  [Linux test build instructions](../docs/guides/installation.html#linux)
-
-Actions archives are temporary development builds. Public stable installers
-are listed in the installation guide after release qualification. The same
-guide links to the published browser package. [Installation guide](https://mfahsold.github.io/lixity/guides/installation.html#desktop)
+Keep the run ID, source commit, target and SHA-256 together if you report a
+finding. Different test builds can print the same version.
 
 ## Local build and verification
 
@@ -112,14 +107,16 @@ standalone Python build used by the installer matrix.
 .venv/bin/python desktop/scripts/build_macos_app.py --offline
 ```
 
-The script builds a fresh wheel and runtime, packages the app, applies an ad-hoc
-signature and smoke-tests the runtime embedded in the signed bundle. Its final
+The script builds a fresh wheel and runtime, packages a local development app,
+applies an ad-hoc signature and smoke-tests the embedded runtime. Its final
 JSON reports the app path and runtime smoke result. Use `--offline` once build
-inputs have been cached. Omit it on an initial build that needs to fetch
-dependencies. Add `--dmg` to build a disk image with the same packager as CI.
-It mounts the image read-only, verifies the embedded signature and starts a
-synthetic authenticated workspace from the embedded runtime. The smoke imports
-a synthetic manuscript from the welcome screen into a temporary user directory.
+inputs are cached. Omit it on an initial build that needs to fetch dependencies.
+Add `--dmg` to package the app with the CI disk-image script. It mounts the
+image read-only, verifies the embedded signature and exercises the embedded
+runtime again. The runtime smoke checks an authenticated welcome workspace
+and imports synthetic manuscript bytes through its local HTTP API into a
+temporary user directory. The native WebView check exercises the window and
+bridge separately.
 The disk image mounts as **Lixity Test Build** and includes **Start Here.html**
 for Finder. The output directory contains the DMG and its companion
 `SHA256SUMS-TARGET.txt`. The final JSON reports both paths and the image's
@@ -205,13 +202,12 @@ remain separate checks.
   dependency checks. Dispatch with
   `build_bundle=true` to also build, verify and upload installers on three OSes.
   [Desktop checks workflow](../.github/workflows/desktop.yml)
-- The desktop release build covers the four targets above. Its Apple packaging
-  steps sign the embedded app before building the disk image and smoke-test the
-  runtime from the mounted image. The build uploads
-  verified installers, checksums, Homebrew and WinGet manifests and build
-  provenance as workflow artifacts. Set `notarize_macos=true` on dispatch
-  for a Developer ID candidate. Both macOS jobs import the certificate into
-  an isolated runner keychain and verify app and DMG notarization.
+- The desktop release build targets all four rows. Apple jobs sign the app
+  before creating its DMG and smoke-test the runtime from the mounted image.
+  Each run records the installer checksums and build provenance and produces
+  Homebrew and WinGet manifests. Test runs can use ad-hoc macOS signing and
+  Windows installers without a publisher signature. Request both signing
+  options for [public desktop qualification](#public-desktop-downloads).
   [Desktop release workflow](../.github/workflows/desktop-release.yml)
 - Both installer workflows retry a failed per-platform upload once on the same
   runner using the already verified files. A second upload failure fails the
@@ -225,18 +221,29 @@ remain separate checks.
 
 ## Remaining work before distribution
 
-| Order | Work | Required evidence |
-| --- | --- | --- |
-| 1 | Verify the same candidate on the release matrix. | Rust checks, packaged runtime smoke, installer checksums and build provenance for all four targets. |
-| 2 | Exercise the app as an author on clean desktop sessions. | Open and switch projects, type and undo with real IME and dead keys, use the keyboard and screen reader, follow an analysis finding to the manuscript, open help and license links, export a dossier PDF, and verify microphone permission, recording and playback. Cover WKWebView, WebView2 and WebKitGTK. Use a synthetic or public-domain manuscript. |
-| 3 | Exercise installation, upgrade and rollback. | Test a fresh user without development tools, the operating system's trust checks, bundled runtime cleanup on exit, project and settings retention, and relaunch after upgrading or rolling back. Confirm any first-install dependencies, including the WebView2 bootstrapper on Windows. |
-| 4 | Prepare distribution and first-run help. | Verify public macOS signing and notarization and Windows publisher signing. Show how to open an existing manuscript or try an example and explain how to diagnose unavailable optional tools. Publish platform requirements and installation steps with the verified artifacts. |
+Attach results to the exact source commit and installer SHA-256. The hosted
+build, installed runtime, system WebView and platform trust each have their
+own evidence.
 
-For each installer, record its SHA-256, OS and WebView versions, graphics mode
-and results. In the same synthetic project, follow a passage to its evidence
-and back, save one edit and export a dossier. Reopen the project after upgrade
-and rollback and verify the saved text, preferences and archived evidence.
-Use those records in the existing installer qualification receipt.
+| Check | How to establish it | Further evidence for public distribution |
+| --- | --- | --- |
+| Build and contents | Match the successful matrix run, installer manifest, signature state and checksum to the selected candidate. | Review the release-eligible bundle and attestation for that commit. |
+| Installed runtime | Verify synthetic offline analysis and welcome import from the packaged Python, session authentication and listener cleanup. Use the clean Ubuntu container check for the DEB dependencies. | Retry on fresh user systems without development tools. Verify first-install WebView2 or Linux package dependencies and exercise a real AppImage launch. |
+| Native author workflow | Use the WKWebView smoke on macOS and the installed DEB WebKitGTK probe on Linux. Chromium and browser WebKit check the shared interface. | Exercise WKWebView, WebView2 and WebKitGTK on the relevant platforms. Write and undo using an IME and dead keys, use the screen reader, follow passage evidence, open help, export a dossier and verify microphone permission, recording and playback. |
+| Trust, upgrade and rollback | Validate platform trust for the exact artifacts. Upgrade and roll back the same synthetic project. | Record Developer ID, notarization and Gatekeeper on both Mac architectures, Windows publisher signatures, and the project, settings and research readback after each transition. |
+
+The `4efec747` candidate for v0.9.3 passed a local Apple Silicon development
+rollout. The mounted DMG and installed Python 3.12.16 runtime passed the
+synthetic import and analysis checks. The installed host opened a synthetic
+workspace and closed its loopback listener on exit. The rollout preserved a
+verified v0.9.2 backup. CoreAudio enumeration returned one input on that host.
+Actual recording, fresh-user platform trust and each hosted target have
+their own qualification evidence.
+
+Record the OS and WebView versions, graphics mode, installer SHA-256, install
+scope and author workflow results in the existing qualification receipt.
+Use a synthetic or public-domain manuscript and preserve the same saved text,
+preferences and archived evidence for the upgrade and rollback readbacks.
 
 [Tauri distribution and signing guide](https://tauri.app/distribute/#signing)
 
@@ -368,23 +375,32 @@ Homebrew, WinGet and repository-installed Linux packages should be updated by
 their package managers. A separate `uv` installation uses its own update path.
 [User update instructions](../docs/INSTALLATION.md#updates-and-removal)
 
-To replace an installed macOS development build, commit the tested checkout,
-save open work and quit Lixity. Run the local build with explicit update intent.
+#### Local macOS development rollout
+
+Commit the candidate and use a clean checkout of that exact commit. Save open
+work, finish or cancel active and queued audio, then quit Lixity and its
+bundled engine. Run the local build with explicit update intent.
 
 ```sh
 .venv/bin/python desktop/scripts/build_macos_app.py --offline --dmg --update-installed
 ```
 
-The command verifies the app and disk image before applying the update. It
-compares the installed version and code signature, stages the replacement
-and preserves the old bundle at the backup path in `local_update`. It can
-replace a different build of the same test version. The app needs to be closed
-and both bundles must have ad-hoc signatures. If the replacement fails
-verification, the previous bundle is restored. Reopen Lixity and check the
-selected project. For a manual rollback, quit Lixity and use the backup
-listed in `rollout.json`.
-**Tools → System Status & Extensions** shows the source commit for builds
-installed with this command.
+The command verifies the app and disk image before replacing the existing
+ad-hoc-signed bundle at `/Applications/Lixity.app`. It can replace a different
+build of the same test version. The `local_update` result records the commit,
+both code hashes and the backup path in `rollout.json`. If the staged or
+installed bundle fails verification, the previous bundle is preserved or
+restored. Keep the backup for manual rollback.
+
+After the replacement, verify the installed bundle and launch a synthetic
+project. Open **Tools → System Status & Extensions** to confirm the source
+commit and bundled runtime. Check a local analysis result and confirm that
+the bundled engine exits when you quit. Desktop and browser services have
+separate lifecycles. For manual rollback, quit the app before restoring the
+verified backup listed in `rollout.json`.
+[Desktop logs](../docs/INSTALLATION.md#find-the-desktop-logs)
+
+#### App-managed updates
 
 Keep app-managed installation behind a release gate. The Tauri v2 Updater
 supports signed macOS app archives, Windows NSIS/MSI installers and Linux

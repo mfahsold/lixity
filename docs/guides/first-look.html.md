@@ -38,7 +38,7 @@ Use the [browser exercise](../sandbox/index.html) to edit a sample paragraph and
 
 1. Read the first paragraph of **The Loose Board**. What is Mara doing, and where do you pause?
 
-2. Choose its **… → Paragraph details → Explain measurement**. The card shows the selected sentence. “A board moved.” counts as three words. Read **Why this is marked** and **What to check while reading**.
+2. Choose its **… → Paragraph details → Explain this passage**. The card shows the selected sentence. “A board moved.” counts as three words. Read **Why this is marked** and **What to check while reading**.
 
 3. Read chapter 1's harbour description using the **opening chapter** link in the task card. Compare the reading experience, not just the averages.
 

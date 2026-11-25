@@ -205,9 +205,8 @@ def search(
     path = _index_path(repository)
     if not path.is_file():
         if not ensure_fresh:
-            # Distinguish "never built" from "unusable". Without this the missing
-            # file surfaces as sqlite's "unable to open database file", which the
-            # handler below reports as an FTS5 problem the user cannot act on.
+            # Distinguish an index that has never been built from an existing
+            # cache that SQLite cannot read.
             raise ResearchError("Search index not built; run research reindex")
         _, snapshot = _reindex_snapshot(repository)
         refreshed = True

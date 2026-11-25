@@ -11,7 +11,7 @@ passage and read it in context. Keep the notes and sources behind a scene close
 by, and choose what to share when the draft is ready.
 
 [Edit a paragraph in the browser exercise](https://mfahsold.github.io/lixity/sandbox/index.html) ·
-[Follow a finding in the read-only demo](https://mfahsold.github.io/lixity/guides/first-look.html#passage) ·
+[Follow a finding in the read-only demo](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Visit the product website](https://mfahsold.github.io/lixity/)
 
 <a id="choose-what-leaves-the-project"></a>
@@ -24,6 +24,9 @@ by, and choose what to share when the draft is ready.
 - **Keep research by the text.** Review a character's appearances in context.
   Link manuscript passages to your dossiers, notes and exact source quotations.
   [Research and dossiers](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md)
+- **Read it aloud.** Rehearse in the teleprompter and keep delivery notes with
+  the passage. Review a recording before deciding whether to retain it.
+  [Audio and passage direction](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md)
 - **Share a reading copy.** Export a manuscript or dossier PDF, or prepare a
   reading website with the chapters and background you choose.
   [Reading website export](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#export-a-reading-website)
@@ -37,10 +40,9 @@ on the language. [Language coverage](https://github.com/mfahsold/lixity/blob/mai
 
 ## Install and start
 
-**Desktop app.** Check the download guide for your operating system and
-processor. The guide shows public installers when a qualified release is
-available. The app includes Python and opens from your system's application
-launcher.
+**Desktop app.** Start with the download guide for your operating system and
+processor. It shows the available installer channels and explains how to
+verify a download. The app includes its analysis runtime.
 [Desktop downloads and setup](https://mfahsold.github.io/lixity/guides/installation.html#desktop)
 
 **Desktop test builds.** Sign in to GitHub and get a build and its checksum list
@@ -99,7 +101,9 @@ their own data requirements.
 ## Contribute and verify
 
 Use synthetic or public-domain text when reproducing a problem. Include the
-installed build and steps to reproduce it.
+installed build, operating system and steps to reproduce it. Contributors can
+use the [documentation map](https://github.com/mfahsold/lixity/blob/main/docs/README.md#maintain-the-documentation)
+to find the source of a guide or example before editing it.
 
 ```sh
 make install-dev

@@ -52,7 +52,7 @@ host. Compatibility changes follow the reviewed migration process.
 
 ## Desktop host boundary
 
-The unreleased Rust/Tauri host starts and supervises one bundled Python 3.12
+The Rust/Tauri host starts and supervises one bundled Python 3.12
 process bound to an OS-selected port on `127.0.0.1`. It delivers a per-launch
 secret and initial nonce through stdin. The WebView exchanges a single-use
 nonce at `/_desktop/handshake` for an HttpOnly session cookie. Additional
@@ -109,7 +109,7 @@ and public contracts. [Rust analysis evaluation](RUST_EVALUATION_RFC.md)
 | `lixity.server` | Loopback transport, request guards, one shared dashboard assembly and selected-workspace transitions | A second renderer, a second analysis path or CLI/service lifecycles |
 | `config` / `io` / `workspace` | Explicit project metadata, atomic byte I/O and manuscript discovery | Implicit identity/publication defaults or duplicate writers |
 | `lixity.service` | Managed local process lifecycle (start/stop/restart/status) | Adopting externally managed units |
-| `desktop/src-tauri` *(unreleased)* | Native windows and OS integrations, bundled runtime supervision and authenticated bridge | Analysis and rendering, manuscript mutations, research storage or background network telemetry |
+| `desktop/src-tauri` | Native windows and OS integrations, bundled runtime supervision and authenticated bridge | Analysis and rendering, manuscript mutations, research storage or background network telemetry |
 | Project adapters | Manuscript access, publication actions and local services | Copies of the engine |
 
 ### Analysis ownership across Python, Rust and JavaScript
@@ -203,7 +203,7 @@ workspace. Valid directories without a unique manuscript can still open as empty
 workspaces; `--no-project` explicitly starts without project selection.
 
 `DocumentAnalysis` reuses corpus/chapter measurements for the fingerprint and
-renderers. **Unreleased:** it also prepares paragraph-layer cells, including
+renderers. It also prepares paragraph-layer cells, including
 rounded z and the canonical notability decision. The typed `DashboardRenderInput`
 passes these through to `render_prepared_dashboard`; `render_analysis` accepts
 `DashboardContent` for reports and `DashboardOptions` for presentation and host
@@ -1533,7 +1533,9 @@ workflows. Release verification compares packaged modules, UI assets and typing
 metadata against source bytes. Adapter tests belong with their project; no private
 manuscript is required. See [contributor checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#development-setup).
 
-## External research libraries (since v1.19.0)
+<a id="external-research-libraries-since-v1190"></a>
+
+## External research libraries
 
 Zotero owns acquisition, bibliographic editing, ordinary reading and notes.
 Lixity owns retained evidence, authored project records and manuscript associations.
@@ -1875,7 +1877,9 @@ controls while export preserves author intent. Cache identities include all new
 synthesis inputs. Existing profiles are preserved by reviewed schema `/5` upgrades;
 new direction/plan/timeline data uses `/2` while old representations remain stable.
 
-### Native model residency (unreleased)
+<a id="native-model-residency-unreleased"></a>
+
+### Native model residency
 
 `speech_lifecycle` owns the common native worker policy, spawned inference child,
 completion-based idle deadline and shutdown/retry cleanup. Qwen, Coqui/OpenVoice

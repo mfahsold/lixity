@@ -48,7 +48,7 @@ normalized text. Unknown, repeated or empty query parameters are rejected.
 `POST /api/manuscript-edit-discard` with `document` and `id` explicitly
 deletes that recovery copy. The same Host/Origin checks protect these operations.
 
-Unreleased `POST /api/manuscript-compare` accepts `document`, the current
+`POST /api/manuscript-compare` accepts `document`, the current
 file's `revision`, `base_text` and `draft_text` as strings. An optional
 `settings_sha256` pins the effective settings from an earlier response.
 The operation measures both supplied texts and the revision read from disk
@@ -58,7 +58,7 @@ UTF-8 limit. A stale revision or settings fingerprint returns 409.
 `current_to_draft` and `primary_diff`. Chapter differences are available
 for paired chapters. The request has no manuscript or history writes.
 
-Unreleased `POST /api/motif-search` searches the selected manuscript with
+`POST /api/motif-search` searches the selected manuscript with
 a required `query` and optional `regex`, `case_sensitive`, `limit`
 and `project_token`. `lixity-motif-search/1` identifies the source by
 `source_sha256` and returns mappable `occurrences`, `total_matches`
@@ -115,7 +115,7 @@ flags each use separate rules. [Stability](STABILITY.md) explains uncertainty
 and the scope of each comparison. Source analysis uses `source_internal`.
 An explicit source–manuscript comparison returns a separate lexical/register
 report. The manuscript baseline uses manuscript passages.
-**Unreleased:** source HTML visibly identifies this scope and unverified
+Source HTML visibly identifies this scope and unverified
 user-supplied context, with the retained source/version IDs in a provenance
 disclosure. `AnalysisIdentity` carries these backend-owned fields separately
 from descriptive `document_context`; titles and imported context cannot set them.
@@ -168,7 +168,7 @@ The archive audit reads the project explicitly named in its request.
 - `lixity_about`: Engine version, languages, supported features and thresholds.
   Optional `section` selects `languages`, `features`, `heuristics`, `commands`
   or `configuration`. Both the CLI and this tool retain `meta` for section reads.
-- `lixity_service_status` (unreleased): Observe the managed dashboard on an
+- `lixity_service_status`: Observe the managed dashboard on an
   explicit integer `port` from 1 through 65535. Returns the same
   `lixity-service-status/1` result as `lixity service status --port PORT --json`,
   including `state`, `installed_version` and `running_version`. The tool
@@ -532,7 +532,7 @@ The response carries `meta`, `features`, `deviations`, `fdr_flagged`,
 diagnostics. Use `features[].feature` to join the feature rows to chapter-keyed
 deviation/FDR maps; localized `feat_*` strings are display keys.
 
-**Unreleased additive contract:** `meta.interpretation` has
+`meta.interpretation` has
 `schema_version: "style-interpretation/1"`, `mode: "exploratory"`,
 `normal_tail_calibration: "not_established"` and `fdr_guarantee: "not_established"`.
 Its `band`, `deviation`, `consistency`, `fdr`, `normal_model_reference` and
@@ -1318,7 +1318,7 @@ and offline reports continue to carry their own results.
 
 #### Author intent endpoints
 
-**Unreleased.** Native editable workspaces advertise `analysis_intents` in the
+Native editable workspaces advertise `analysis_intents` in the
 API index. The selected view uses `GET /api/analysis-intents?project_token=...`,
 with its `body[data-manuscript-project-token]` selection token. A read returns
 `lixity-analysis-intents/1` with `source_sha256`, `analysis_sha256`,
@@ -1980,7 +1980,7 @@ discover a project. It returns `{meta: {schema_version: 1, ...}, scenes}` with
 `items`, `baselines`, `explicit_scene_breaks` and `scenes_are_chapters`.
 Each item contains `id` (chapter:scene), `group`, sample counts, the existing
 16 `features`, approximate `standard_errors`, `targets` and `data_support`.
-Unreleased additive v1 fields report `quote_block_limits`
+Additive v1 fields report `quote_block_limits`
 (`short_max_words`, `long_min_words`) and `within_scene_limits` (`min_words`,
 `min_sentences`, `asl_delta_words`, `quote_delta_pp`). Each measured item
 also exposes `quote_blocks` (`short`, `medium`, `long`, `words`,
@@ -2020,7 +2020,7 @@ A custom publication/export adapter is a separate integration, not a native
 workspace upgrade. Missing panels can result from omitted renderer inputs even
 when the installed package is current. Reuse one resolved project configuration
 and `analyze_document(text, config, thresholds, include_evidence=True)` result.
-**Unreleased adapter change:** `render_analysis(result, resolved, ...)` wires
+`render_analysis(result, resolved, ...)` wires
 chapters, paragraphs, metrics, fingerprint, `paragraph_evidence` and prepared
 `paragraph_layers` together. Pass optional reports as
 `content=DashboardContent(scenes=scene_report, reader_document=blocks)` and host
@@ -2620,7 +2620,7 @@ Use `audio-status --help` for engine names supported by the installed version.
 actual per-target state, model identity and nullable comparison with the selected
 project profile or explicitly selected engine. Omitted/unknown information is not a negative match. No
 manuscript prose, pronunciations or delivery descriptions are included.
-**Unreleased additive worker metadata:** native target observations can include
+Native target observations can include
 `model_state` (`unloaded|loading|loaded|failed`), strict boolean `active`, and
 actual `idle_timeout_seconds`. Missing residency is unknown, not proof that a
 model is loaded. `state=ready` means the service accepts requests. Health probes

@@ -73,6 +73,7 @@ def test_catchup_uses_workflow_helpers_and_immutable_assets_without_rebuilding()
     pages = job(source, "pages")
     assert "needs: [publish, pypi]" in pages
     assert "github.event_name == 'push'" in pages
+    assert "vars.PAGES_DEFERRED_RELEASE_TAG != github.ref_name" in pages
     assert "workflow_dispatch" not in pages and "inputs.tag" not in pages
     assert "needs.pypi.result == 'success'" in pages
     assert "vars.PUBLISH_PYPI != 'true' && needs.pypi.result == 'skipped'" in pages

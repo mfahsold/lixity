@@ -15,7 +15,7 @@ a custom executable and expects `blocks` JSON; Baidu's entrypoints do not
 implement that protocol. Setting `LIXITY_OCR_WORKER` to upstream `infer.py`,
 `vllm`, or a server URL does not bridge the two interfaces.
 
-The existing model and source pins are current at the review date:
+The review used these upstream revisions.
 
 | Item | Verified upstream revision | Meaning in Lixity |
 | --- | --- | --- |
@@ -51,8 +51,8 @@ endpoint and a 3,600-second client timeout. Single-image window size is 128;
 multi-image requests use 1024. Missing recipe settings can cause empty output
 or repetition.
 
-That recipe still says the architecture is unavailable in a stable wheel.
-However, the [vLLM v0.29.0 source](https://github.com/vllm-project/vllm/blob/v0.29.0/vllm/model_executor/models/unlimited_ocr.py)
+At the review date, the recipe described the architecture as unavailable in a
+stable wheel. The [vLLM v0.29.0 source](https://github.com/vllm-project/vllm/blob/v0.29.0/vllm/model_executor/models/unlimited_ocr.py)
 contains its implementation. The corresponding
 [versioned API reference](https://docs.vllm.ai/en/v0.29.0/api/vllm/model_executor/models/unlimited_ocr/)
 documents attention-backend constraints and different single-/multi-image
@@ -80,13 +80,12 @@ never execute generated expressions, and test page-boundary preservation.
 There is no basis here for inventing a calibrated confidence value for each
 recognized block.
 
-The external worker boundary has these narrower guarantees; local provenance
-and fallback behavior in v1.24.1 are described above and below:
+The current worker guarantees apply to the local adapter boundary.
 
 | Area | Implemented behavior | Operational consequence |
 | --- | --- | --- |
 | Invocation | One executable receives a temporary JSON filename | A separate protocol adapter is required |
-| Input images | Poppler renders at 150 dpi; JSON includes only PDF path and page checksums | A worker must render its own input; 300-dpi images will not match those PNG checksums |
+| Input images | Poppler renders at 150 dpi. The request includes a PDF path, page numbers and PNG checksums alongside the requested model and recipe identifiers | A worker renders its own input. Matching the PNG checksums requires consistent rasterization |
 | Timeout | `LIXITY_OCR_TIMEOUT`: integer 1–3600 seconds, default 120, for the whole subprocess | Size the deadline for cold start and every page; this is not a per-page budget |
 | Failure | Execution failure/timeout rejects capture unless native fallback is explicitly permitted; invalid response or incomplete page coverage always rejects it | No silent fallback or acceptance of incomplete worker output |
 | Native fallback | Extracts readable text-layer pages using the physical page count; an undetermined count or extraction timeout rejects capture | Mixed scanned/native documents report unreadable pages and need explicit completeness inspection |

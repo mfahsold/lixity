@@ -800,7 +800,7 @@ Select a chapter in the style space, inspect its
 values and open its passage. The view and CLI explain their coverage, axes,
 cutoffs and unavailable values in place; JSON exposes `dimension_diagnostics`.
 
-**Unreleased native navigation:** open **Compare chapters → Style → Feature-rank
+In the local workspace, open **Compare chapters → Style → Feature-rank
 projection** when dimension scores are available. CLI standalone reports retain
 direct section links. A dashed ring marks an axis cutoff;
 a separate solid outer ring marks the selected chapter, including when both
@@ -864,7 +864,7 @@ chapter style, paragraph profiles and work markers as data permits. See the
 [workspace manual](WORKSPACE.md) to move from measurements to passages.
 A compatible server provides explicit project actions and marker saves.
 
-**Unreleased native overview.** Choose **Review passages**, **Compare chapters**
+In the local overview, choose **Review passages**, **Compare chapters**
 or **Explore patterns** based on the question you have about the manuscript.
 For example, compare words per sentence across chapters to locate a change in
 rhythm, then read those chapters in context. Selecting a style comparison cell
@@ -1313,7 +1313,7 @@ Use `--min-chapters` on style/dashboard/build or server startup, or
 style baseline is available. The minimum is 2; fewer usable chapters mean
 unavailable evidence, not a perfectly consistent style.
 
-**Unreleased:** two distinct usable chapter values still receive z* scores. In
+Two distinct usable chapter values still receive z* scores. In
 exact arithmetic, |z*| cannot exceed 1/1.4826; numerical zero-SE bounds additionally
 guard the unreachable-cutoff notice against floating-point midpoint rounding.
 The reference panel and text export explain this per feature and show a shared

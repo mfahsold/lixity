@@ -57,13 +57,14 @@ English is the default. For automatic language detection, choose
 
 ## Use the interactive workspace
 
-Start the CLI-installed browser workspace with this command.
+Open the installed desktop app from your applications menu. If you installed
+through the CLI, start the browser workspace with this command.
 
 ```sh
 lixity service start --open
 ```
 
-Open the address reported by the service. The default is
+For the browser app, open the address reported by the service. The default is
 `http://127.0.0.1:8765/`. Use **Project actions** to open or create a project.
 This menu starts expanded in an empty workspace. It may be collapsed when a
 manuscript is already open. [Start, reconnect or change ports](INSTALLATION.md#running-the-server)
@@ -71,10 +72,10 @@ manuscript is already open. [Start, reconnect or change ports](INSTALLATION.md#r
 ### Open or import?
 
 **Open Project** connects to the existing folder and its research archive.
-Confirm the path to open it in the current tab. To keep two projects open,
-open the service's root address in a new tab and choose **Open Project** there.
-Tabs with the same `/w/…/` address share a view. Reopen projects from the service
-root after restarting. [Service management](USAGE.md#lixity-service)
+Use **File → New Window** in the desktop app or open the browser service's
+root address in a new tab to keep a second project open. Browser tabs with
+the same `/w/…/` address share a view. Reopen a browser project from the
+service root after restarting. [Service management](USAGE.md#lixity-service)
 
 **Import a manuscript** opens a preview of one Markdown (`.md`, `.markdown`),
 plain-text (`.txt`), or Word (`.docx`) file. The preview estimates words and
@@ -100,7 +101,7 @@ can show older labels. [Check your installed version](INSTALLATION.md#cli-curren
    card to continue through the matches in your current reading scope. To
    mark them throughout the visible prose, open **Reading marks** and choose
    **Underline counted passages**. To inspect the paragraph you are already
-   reading, use **… → Paragraph details → Explain measurement**.
+   reading, use **… → Paragraph details → Explain this passage**.
 3. Read **Why this is marked** and **What to check while reading**. For sentence
    length, “A board moved.” counts as three words. In **Sticky sentences**, the
    card highlights the contributing function words and shows the rule and the
