@@ -7,6 +7,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep unsaved voice profile edits open when applying a reviewed audio settings
+  upgrade. Bind the upgrade review to the manuscript open in the app.
+- Show the selected speech worker's availability and setup link beside the
+  rendering controls.
+
 ## [0.9.3] - 2026-11-25
 
 ### Added

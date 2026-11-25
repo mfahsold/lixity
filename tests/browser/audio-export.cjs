@@ -59,6 +59,9 @@ server.serve_forever()
         await page.locator('#tab-view-project').click();
         await page.locator('#settings-speech-output').click();
         await page.waitForFunction(() => document.querySelector('#speech-name')?.value === 'Narrator');
+        const runtimeHint = page.locator('#speech-runtime-hint');
+        assert.match(await runtimeHint.textContent(), /worker on This computer was unavailable/i);
+        await page.locator('.speech-render-section').getByRole('link', {name:'Speech service setup'}).waitFor();
         assert.equal(await page.locator('#modal-speech').evaluate(dialog => dialog.matches('.speech-docked[open]:not(:modal)')), true,
           'The project shortcut opens chapter output beside the manuscript');
         assert.equal(await page.locator('#settings-form #settings-speech-output').count(), 0,

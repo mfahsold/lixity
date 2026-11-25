@@ -2193,6 +2193,7 @@
   "speech_save_help": "Enregistrez les profils vocaux et substitutions de prononciation dans ce projet, sans lancer de synthèse.",
   "speech_saving": "Enregistrement…",
   "speech_scene_pause": "Pause entre scènes (secondes)",
+  "speech_schema_applied_draft": "Réglages audio mis à jour. Vos modifications de profil sont toujours ouvertes. Choisissez Enregistrer les profils pour les conserver.",
   "speech_schema_apply": "Appliquer la mise à jour audio vérifiée",
   "speech_schema_configuration_required": "Aucune voix n’est encore configurée. Créez un profil vocal externe pour la langue du projet après la mise à jour.",
   "speech_schema_default_profile": "Le narrateur implicite devient un profil enregistré.",

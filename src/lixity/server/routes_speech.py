@@ -176,20 +176,22 @@ class SpeechRoutesMixin(ResponseMixin):
                 if root is None:
                     raise ValueError("Open a manuscript project first")
                 with Repository(root).locked() if apply else nullcontext():
-                    prepared = (prepare_schema5_migration(root) if schema == "lixity-audio-settings/5"
-                                else prepare_schema4_migration(root))
+                    prepare = prepare_schema5_migration if schema == "lixity-audio-settings/5" else prepare_schema4_migration
+                    prepared = prepare(root, source_input=self.source_input)
                     if not apply:
                         self._json({"ok": True, "migration": prepared.public_dict()})
                         return
                     if payload.get("snapshot") != prepared.snapshot:
                         raise ValueError("Migration snapshot changed; preview the upgrade again")
+                    next_token = project_settings_token(root, self.source_input, config_bytes=prepared.candidate_config_bytes)
                     data_root = Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share")))
                     backup_dir = data_root / "lixity" / "audio-backups"
                     backup_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
                     backup = backup_dir / f"audio-schema-{token_hex(12)}.zip"
                     result = prepared.apply(backup)
                 self.refresh()
-                self._json({"ok": True, "migration": result, "backup": str(backup)})
+                self._json({"ok": True, "migration": result, "backup": str(backup), "settings": prepared.schema_audio,
+                            "project_token": next_token})
         except (OSError, ValueError, RuntimeError, UserWarning) as exc:
             self._speech_error(exc)
 

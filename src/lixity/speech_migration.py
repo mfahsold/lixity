@@ -29,14 +29,31 @@ _MAX_CONFIG_BYTES = 1024 * 1024
 _MAX_SOURCE_BYTES = 64 * 1024 * 1024
 
 
-def _source_snapshot(root: Path, settings: Mapping[str, Any]) -> tuple[str | None, tuple[int, ...] | None, str | None]:
+def _source_snapshot(
+    root: Path, settings: Mapping[str, Any], *, source_input: str | Path | None = None,
+) -> tuple[str | None, tuple[int, ...] | None, str | None]:
+    """Fingerprint the selected manuscript or use CLI project discovery."""
+    if source_input is None:
+        try:
+            source = Path(discover(root=str(root), project_config=settings).manuscript)
+        except FileNotFoundError:
+            return None, None, None
+    else:
+        source = root / source_input
     try:
-        source = Path(discover(root=str(root), project_config=settings).manuscript)
-    except FileNotFoundError:
-        return None, None, None
-    relative = source.resolve().relative_to(root)
+        if not source.is_relative_to(root):
+            # Rebase aliases to the project root while retaining each component
+            # below that root for the symlink checks.
+            source_root = next((parent for parent in source.parents if parent.resolve() == root), root)
+            source = root / source.relative_to(source_root)
+        relative = source.relative_to(root)
+        source.resolve().relative_to(root)
+    except ValueError as exc:
+        raise ValueError("Migration source must remain inside the project") from exc
+    if not relative.parts or ".." in relative.parts:
+        raise ValueError("Migration source must remain inside the project")
     current = root
-    for part in source.relative_to(root).parts:
+    for part in relative.parts:
         current /= part
         if current.is_symlink():
             raise ValueError("Migration source must not be a symlink")
@@ -59,6 +76,13 @@ class PreparedAudioMigration:
     retained_profile_count: int = 0
     creates_default_profile: bool = False
     configuration_required: bool = False
+    schema_audio: dict[str, Any] | None = None
+    _source_input: str | Path | None = None
+
+    @property
+    def candidate_config_bytes(self) -> bytes:
+        """The exact candidate bytes used for the next project settings token."""
+        return self._settings.content
 
     def public_dict(self, *, applied: bool = False) -> dict[str, Any]:
         """Expose replacement decisions and a token, never source or private style."""
@@ -83,7 +107,7 @@ class PreparedAudioMigration:
                 != self._settings.pyproject_original):
             raise ValueError("Project configuration changed; prepare and review the migration again")
         settings = read_explicit_project_config(root, maximum_bytes=_MAX_CONFIG_BYTES)
-        if _source_snapshot(root, settings) != self._source:
+        if _source_snapshot(root, settings, source_input=self._source_input) != self._source:
             raise ValueError("Project source changed; prepare and review the migration again")
 
     def apply(self, backup: str | Path) -> dict[str, Any]:
@@ -162,17 +186,23 @@ def prepare_schema3_migration(project: str | Path) -> PreparedAudioMigration:
     return _prepare_schema_migration(project, 3)
 
 
-def prepare_schema4_migration(project: str | Path) -> PreparedAudioMigration:
+def prepare_schema4_migration(
+    project: str | Path, *, source_input: str | Path | None = None,
+) -> PreparedAudioMigration:
     """Prepare an explicit provider-capable schema without changing saved voices."""
-    return _prepare_schema_migration(project, 4)
+    return _prepare_schema_migration(project, 4, source_input=source_input)
 
 
-def prepare_schema5_migration(project: str | Path) -> PreparedAudioMigration:
+def prepare_schema5_migration(
+    project: str | Path, *, source_input: str | Path | None = None,
+) -> PreparedAudioMigration:
     """Enable phonetic controls after review, retaining every existing profile."""
-    return _prepare_schema_migration(project, 5)
+    return _prepare_schema_migration(project, 5, source_input=source_input)
 
 
-def _prepare_schema_migration(project: str | Path, version: int) -> PreparedAudioMigration:
+def _prepare_schema_migration(
+    project: str | Path, version: int, *, source_input: str | Path | None = None,
+) -> PreparedAudioMigration:
     candidate = Path(project).expanduser()
     if candidate.is_symlink() or not candidate.is_dir():
         raise ValueError("Migration requires an existing nonsymlink project directory")
@@ -192,7 +222,7 @@ def _prepare_schema_migration(project: str | Path, version: int) -> PreparedAudi
         raise ValueError(f"Project already uses audio schema /{version} or later")
     data = audio.model_dump(by_alias=True)
     data["schema_version"] = f"lixity-audio-settings/{version}"
-    source = _source_snapshot(root, settings)
+    source = _source_snapshot(root, settings, source_input=source_input)
     prepared = prepare_project_settings(root, {"audio": data})
     if prepared.original != original or prepared.pyproject_original != pyproject:
         raise ValueError("Project configuration changed while preparing migration")
@@ -206,6 +236,8 @@ def _prepare_schema_migration(project: str | Path, version: int) -> PreparedAudi
         retained_profile_count=len(audio.profiles) if raw_audio is not None else 0,
         creates_default_profile=raw_audio is None and bool(audio.profiles),
         configuration_required=not audio.profiles,
+        schema_audio=data,
+        _source_input=source_input,
     )
     result._unchanged()
     return result

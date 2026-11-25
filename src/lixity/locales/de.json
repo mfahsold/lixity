@@ -2193,6 +2193,7 @@
   "speech_save_help": "Speichere Stimmprofile und Aussprache-Ersetzungen in diesem Projekt. Dadurch startet keine Vertonung.",
   "speech_saving": "Wird gespeichert…",
   "speech_scene_pause": "Szenenpause (Sekunden)",
+  "speech_schema_applied_draft": "Audioeinstellungen aktualisiert. Deine Profiländerungen sind noch geöffnet. Wähle „Profile speichern“, um sie zu übernehmen.",
   "speech_schema_apply": "Geprüfte Audioaktualisierung übernehmen",
   "speech_schema_configuration_required": "Es ist noch keine Stimme eingerichtet. Lege nach der Aktualisierung ein externes Stimmprofil für die Projektsprache an.",
   "speech_schema_default_profile": "Der bisher implizite Erzähler wird als Profil gespeichert.",

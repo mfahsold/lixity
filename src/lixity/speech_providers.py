@@ -18,6 +18,7 @@ import urllib.parse
 import urllib.request
 import wave
 from pathlib import Path
+from string import Template
 from typing import TYPE_CHECKING, Any
 
 from .audio_audit import _wave_reader_is_integer_pcm
@@ -119,7 +120,16 @@ def _zonos_runtime_status(profile: AudioProfile | None) -> dict[str, Any]:
     from .speech_profiles import MLX_AUDIO_TTS_MODEL
 
     runtime = Path.home() / ".local/share/lixity/runtimes/mlx-audio/bin/python"
-    snapshots = Path.home() / ".cache/huggingface/hub/models--mlx-community--ZONOS3-Mini/snapshots"
+    worker_env = _zonos_worker_env()
+    # Use the cache precedence of huggingface_hub inside the isolated worker.
+    xdg_cache = worker_env.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))
+    hf_home = Template(os.path.expanduser(worker_env.get(
+        "HF_HOME", os.path.join(xdg_cache, "huggingface")
+    ))).safe_substitute(worker_env)
+    hub_cache = Template(os.path.expanduser(worker_env.get(
+        "HF_HUB_CACHE", os.path.join(hf_home, "hub")
+    ))).safe_substitute(worker_env)
+    snapshots = Path(hub_cache) / "models--mlx-community--ZONOS3-Mini/snapshots"
     runtime_available = (runtime.is_file() and os.access(runtime, os.X_OK)
                          and Path(__file__).with_name("speech_mlx_zonos.py").is_file())
     model_cached = any(snapshot.joinpath("config.json").is_file()

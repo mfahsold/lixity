@@ -235,7 +235,7 @@ async function verifyNativeSpeech(browser) {
   const artifacts=fs.mkdtempSync('/tmp/lixity-speech-native-');
   let fixtureClosing = false;
   const server=await startNativeServer(`
-import json, sys, threading
+import json, os, sys, threading
 from pathlib import Path
 from http.server import ThreadingHTTPServer
 from lixity.server import LixityServerHandler
@@ -247,6 +247,7 @@ import lixity.speech_jobs as jobs
 from lixity.speech import SpeechCancelled, generate_silence_wav
 from lixity.speech_references import save_reference
 base = Path(sys.argv[1])
+os.environ['XDG_DATA_HOME'] = str(base / 'data-home')
 from lixity.config import prepare_project_settings
 projects = []
 reference_ids = {}
@@ -263,6 +264,13 @@ for locale in LOCALES:
         'narrator': {'name':'Narrator', 'engine':'qwen3', 'language':'en', 'voice':'Ryan'}}}}).commit()
     reference_ids[locale] = save_reference(project, generate_silence_wav(2), 'Synthetic reference recording.').id
     projects.append({'locale':locale, 'root':str(project), 'source':str(source), 'config':str(config)})
+implicit = base / 'implicit-narrator'
+implicit.mkdir()
+implicit_source = implicit / 'manuscript.md'
+implicit_source.write_text('## Synthetic audio project\\n\\nAm Fluss steht ein Baum.\\n', encoding='utf-8')
+implicit_config = implicit / 'lixity.toml'
+implicit_config.write_text('language = "de"\\n', encoding='utf-8')
+implicit_reference = save_reference(implicit, generate_silence_wav(2), 'Synthetic reference recording.').id
 legacy = base / 'legacy-audio'
 legacy.mkdir()
 legacy_source = legacy / 'manuscript.md'
@@ -294,7 +302,11 @@ class TestHandler(LixityServerHandler):
             return
         super().do_GET()
 server = ThreadingHTTPServer(('127.0.0.1', 0), TestHandler)
-print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'projects':projects, 'reference_id':reference_ids[projects[0]['locale']], 'reference_ids':reference_ids, 'legacy': {'root':str(legacy), 'source':str(legacy_source), 'config':str(legacy_config)}}), flush=True)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'projects':projects,
+    'reference_id':reference_ids[projects[0]['locale']], 'reference_ids':reference_ids,
+    'implicit': {'root':str(implicit), 'source':str(implicit_source), 'config':str(implicit_config),
+                 'reference_id':implicit_reference},
+    'legacy': {'root':str(legacy), 'source':str(legacy_source), 'config':str(legacy_config)}}), flush=True)
 server.serve_forever()
 `,artifacts);
   try {
@@ -862,6 +874,69 @@ server.serve_forever()
       assert.deepEqual(fs.readFileSync(project.config),originalConfig,'Draft previews never save settings');
       await page.close();
     }
+    const implicit=server.fixture.implicit, draftName='Synthetic profile awaiting save';
+    const implicitConfig=fs.readFileSync(implicit.config), implicitSource=fs.readFileSync(implicit.source);
+    const migrationPage=await browser.newPage({viewport:{width:1440,height:1000}});
+    const migrationErrors=[];
+    migrationPage.on('pageerror', error=>migrationErrors.push(error.message));
+    assert.equal((await migrationPage.request.post(server.fixture.url+'/api/project-open',{data:{path:implicit.root}})).status(),200);
+    await migrationPage.goto(server.fixture.url);
+    await migrationPage.locator('#tab-view-project').click();
+    await migrationPage.locator('#settings-speech').click();
+    const migrationDialog=migrationPage.locator('#modal-speech');
+    const migrationAction=name=>migrationDialog.locator('[data-speech-action='+name+']');
+    const profileName=migrationDialog.locator('#speech-name');
+    const engine=migrationDialog.locator('#speech-engine');
+    const reference=migrationDialog.locator('#speech-reference_id');
+    const duration=migrationDialog.locator('#speech-prosody-duration_scaling_factor');
+    const labels=data.fixtures.de.labels;
+    await migrationPage.waitForFunction(()=>document.querySelector('#speech-name')?.value==='Narrator');
+    await profileName.fill(draftName);
+    await engine.selectOption('ims-toucan');
+    await reference.selectOption(implicit.reference_id);
+    await duration.fill('1.2');
+    await migrationAction('save').click();
+    assert.equal(await migrationDialog.locator('#speech-status').textContent(),labels.speech_phonemes_schema_required);
+    assert.deepEqual(fs.readFileSync(implicit.config),implicitConfig,'A schema mismatch cannot save the draft');
+    const schemaResponse=apply=>migrationPage.waitForResponse(response=>response.url().endsWith('/api/audio-schema') &&
+      response.request().method()==='POST' && response.request().postDataJSON().apply===apply);
+    const previewResponse=schemaResponse(false);
+    await migrationAction('schema_preview').click();
+    const review=await (await previewResponse).json();
+    assert.equal(review.migration.target_schema,'lixity-audio-settings/5');
+    assert.equal(review.migration.retained_profile_count,0);
+    assert.equal(review.migration.creates_default_profile,true);
+    assert.deepEqual(fs.readFileSync(implicit.config),implicitConfig,'Migration preview leaves the implicit profile unsaved');
+    const backupDirectory=path.join(artifacts,'data-home','lixity','audio-backups');
+    assert.equal(fs.existsSync(backupDirectory),false,'Preview cannot create a backup');
+    const applyResponse=schemaResponse(true);
+    await migrationAction('schema_apply').click();
+    const applied=await applyResponse;
+    assert.equal(applied.status(),200,await applied.text());
+    const receipt=await applied.json();
+    assert.equal(receipt.migration.applied,true);
+    assert.equal(path.dirname(receipt.backup),backupDirectory);
+    assert.ok(fs.statSync(receipt.backup).size>0,'The confirmed migration created its backup');
+    const migrated=fs.readFileSync(implicit.config,'utf8');
+    assert.match(migrated,/lixity-audio-settings\/5/);
+    assert.equal(migrated.includes(draftName),false,'Migration writes only the saved baseline');
+    await migrationAction('schema_preview').waitFor({state:'hidden'});
+    assert.equal(await migrationDialog.isVisible(),true,'Migration leaves the editor open with the unsaved draft');
+    assert.equal(await profileName.inputValue(),draftName);
+    assert.equal(await engine.inputValue(),'ims-toucan');
+    assert.equal(await reference.inputValue(),implicit.reference_id);
+    assert.equal(await duration.inputValue(),'1.2');
+    const profileSave=migrationPage.waitForResponse(response=>response.url().endsWith('/api/settings') && response.request().method()==='POST');
+    await Promise.all([migrationPage.waitForNavigation(),migrationAction('save').click()]);
+    assert.equal((await profileSave).status(),200);
+    await migrationPage.locator('#tab-view-project').click();
+    await migrationPage.locator('#settings-speech').click();
+    await migrationPage.waitForFunction(name=>document.querySelector('#speech-name')?.value===name,draftName);
+    assert.equal(await duration.inputValue(),'1.2');
+    assert.deepEqual(fs.readFileSync(implicit.source),implicitSource);
+    assert.deepEqual(migrationErrors,[]);
+    await migrationPage.close();
+
     const savedProject=server.fixture.projects[0], original=fs.readFileSync(savedProject.source);
     const savedPage=await browser.newPage({viewport:{width:1440,height:1000}});
     assert.equal((await savedPage.request.post(server.fixture.url+'/api/project-open',{data:{path:savedProject.root}})).status(),200);

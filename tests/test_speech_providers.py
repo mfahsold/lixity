@@ -101,14 +101,25 @@ def test_unsupported_controls_and_secret_values_are_rejected(changes):
         external(**changes)
 
 
-def test_local_zonos_status_checks_runtime_and_model_without_paths(tmp_path, monkeypatch):
+@pytest.mark.parametrize(('cache_env', 'cache_path'), [
+    ({}, '.cache/huggingface/hub'),
+    ({'XDG_CACHE_HOME': '$HOME/xdg'}, 'xdg/huggingface/hub'),
+    ({'XDG_CACHE_HOME': '$HOME/xdg', 'HF_HOME': '~/hf'}, 'hf/hub'),
+    ({'XDG_CACHE_HOME': '$HOME/xdg', 'HF_HOME': '~/hf', 'HF_HUB_CACHE': '${HOME}/hub'}, 'hub'),
+])
+def test_local_zonos_status_checks_runtime_and_model_without_paths(tmp_path, monkeypatch, cache_env, cache_path):
     from lixity.speech_providers import external_provider_status
 
+    for name in ('XDG_CACHE_HOME', 'HF_HOME', 'HF_HUB_CACHE'):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv('HOME', str(tmp_path))
+    for name, value in cache_env.items():
+        monkeypatch.setenv(name, value)
     runtime = tmp_path / '.local/share/lixity/runtimes/mlx-audio/bin/python'
     runtime.parent.mkdir(parents=True)
     runtime.write_text('')
     runtime.chmod(0o700)
-    snapshot = tmp_path / '.cache/huggingface/hub/models--mlx-community--ZONOS3-Mini/snapshots/test'
+    snapshot = tmp_path / cache_path / 'models--mlx-community--ZONOS3-Mini/snapshots/test'
     snapshot.mkdir(parents=True)
     (snapshot / 'config.json').write_text('{}')
     (snapshot / 'model.safetensors').write_bytes(b'')

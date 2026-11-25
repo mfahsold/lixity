@@ -2193,6 +2193,7 @@
   "speech_save_help": "Sla stemprofielen en uitspraakvervangingen in dit project op. Dit start geen synthese.",
   "speech_saving": "Opslaan…",
   "speech_scene_pause": "Scènepauze (seconden)",
+  "speech_schema_applied_draft": "Audio-instellingen bijgewerkt. Je profielwijzigingen staan nog open. Kies Profielen opslaan om ze te bewaren.",
   "speech_schema_apply": "Bekeken audio-update toepassen",
   "speech_schema_configuration_required": "Er is nog geen stem ingesteld. Maak na de update een extern stemprofiel voor de projecttaal.",
   "speech_schema_default_profile": "De impliciete verteller wordt als profiel opgeslagen.",

@@ -679,10 +679,19 @@
     fields.worker_status.textContent = message;
   }
   function updateRuntimeHint() {
-    var cap = profileCapability();
+    var engine = savedSettings?.profiles[savedSettings.selected]?.engine;
+    var cap = capabilities?.[engine] || {};
+    var target = fields.target.value || "local";
+    var worker = Array.isArray(workers) && workers.find(function(item) { return item.target === target && item.engines?.includes(engine); });
+    var unavailable = worker?.state === "unavailable";
     var key = cap.runtime_status === "unavailable" ? "engine_unavailable" : cap.local_worker ? "zonos_runtime_hint" :
       cap.configurable_model ? "provider_hint" : "runtime_hint";
-    fields.runtime_hint.textContent = label(key);
+    fields.runtime_hint.textContent = unavailable && !cap.configurable_model
+      ? uiFormat("speech_worker_unavailable", {target: label("target_" + target)}) : label(key);
+    fields.runtime_guide.hidden = !unavailable || cap.runtime_status === "unavailable" || providerFields(cap);
+    if (!fields.runtime_guide.hidden) {
+      fields.runtime_guide.href = cap.guide_url || (engine.startsWith("coqui") ? settingsForm.dataset.speechCoquiGuide : settingsForm.dataset.speechQwenGuide);
+    }
   }
   function updateModelFields() {
     var cap = profileCapability(), support = profileSupport();
@@ -2022,6 +2031,7 @@
     fields.schema_review = node("p", fields.schema_section, "ctl-note"); fields.schema_review.id = "speech-schema-review"; fields.schema_review.hidden = true;
     var schemaActions = node("div", fields.schema_section, "row");
     fields.schema_preview = button(schemaActions, "schema_preview", async function() {
+      if (profileSaving) return;
       var sequence = openSequence; fields.schema_preview.disabled = true;
       try {
         var result = await request("audio-schema", Object.assign(tokens(), {apply: false, schema_version: currentAudioSchema}));
@@ -2032,18 +2042,39 @@
         fields.schema_review.hidden = false;
         fields.schema_apply.dataset.snapshot = result.migration.snapshot; fields.schema_apply.hidden = false;
         status(label("schema_ready"));
+        fields.schema_apply.focus({preventScroll:true});
       } catch (error) { if (sequence === openSequence && dialog.open) status(error.message); }
       finally { if (sequence === openSequence) fields.schema_preview.disabled = false; }
     });
     fields.schema_apply = button(schemaActions, "schema_apply", async function() {
       if (profileSaving) return;
-      var draft = profileDraftMessage();
-      if (draft || direction.dirty()) { status(label(draft || "profiles_unsaved")); return; }
-      fields.schema_apply.disabled = true;
+      if (direction.dirty()) { status(label("direction_switch_first")); return; }
+      var draft = profileDraftMessage(), serial = generation, applied = false;
+      setProfileSaving(true);
+      fields.schema_preview.disabled = fields.schema_apply.disabled = true;
+      status(label("saving"));
       try {
-        await request("audio-schema", Object.assign(tokens(), {apply: true, snapshot: fields.schema_apply.dataset.snapshot, schema_version: currentAudioSchema}));
-        location.reload();
-      } catch (error) { status(error.message); fields.schema_apply.disabled = false; }
+        var result = await request("audio-schema", Object.assign(tokens(), {apply: true, snapshot: fields.schema_apply.dataset.snapshot, schema_version: currentAudioSchema}));
+        if (!valid(serial)) return;
+        if (!draft) { location.reload(); return; }
+        // The review covers the saved settings. Keep the draft in the form
+        // and use the committed settings as the new discard baseline.
+        savedSettings = result.settings;
+        settings.schema_version = savedSettings.schema_version;
+        settingsForm.dataset.projectToken = result.project_token;
+        openedContext = context();
+        schemaReviewAvailable = false;
+        fields.schema_review.hidden = fields.schema_apply.hidden = true;
+        arrangeSections();
+        status(label("schema_applied_draft"));
+        applied = true;
+      } catch (error) {
+        if (valid(serial)) status(error.message);
+      } finally {
+        fields.schema_preview.disabled = fields.schema_apply.disabled = false;
+        setProfileSaving(false);
+        if (applied) (pronunciationPending() ? fields.pronunciation_term : fields.save).focus();
+      }
     });
     fields.schema_apply.hidden = true;
     fields.schema_apply.classList.add("primary");
@@ -2056,7 +2087,7 @@
     var targetHint = node("span", fields.target.closest("label"), "ctl-note", label("target_scope"));
     targetHint.id = "speech-target-hint"; fields.target.setAttribute("aria-describedby", targetHint.id);
     fields.target.addEventListener("change", function() {
-      invalidate();
+      invalidate(); updateRuntimeHint();
     });
     field(content, "worker_target", "select").addEventListener("change", updateWorkerStatus);
     fields.worker_status = node("p", content, "ctl-note"); fields.worker_status.id = "speech-worker-status";
@@ -2067,8 +2098,8 @@
     fields.worker_refresh = button(content, "worker_refresh", async function() {
       var sequence = openSequence; fields.worker_refresh.disabled = true;
       function currentOpen() { return sequence === openSequence && dialog.open && openedContext === context(); }
-      try { var data = await request("speech"); if (currentOpen()) { workers = data.workers; updateWorkerStatus(); } }
-      catch (_) { if (currentOpen()) { workers = null; updateWorkerStatus(); } }
+      try { var data = await request("speech"); if (currentOpen()) { workers = data.workers; updateWorkerStatus(); updateRuntimeHint(); } }
+      catch (_) { if (currentOpen()) { workers = null; updateWorkerStatus(); updateRuntimeHint(); } }
       finally { if (currentOpen()) fields.worker_refresh.disabled = false; }
     });
     fields.editor = node("fieldset", content, "settings-section speech-profile-editor");
@@ -2152,6 +2183,8 @@
       }
     });
     fields.runtime_hint = node("p", content, "ctl-note", label("runtime_hint")); fields.runtime_hint.id = "speech-runtime-hint";
+    fields.runtime_guide = node("a", content, "ctl-link", label("worker_guide"));
+    fields.runtime_guide.target = "_blank"; fields.runtime_guide.rel = "noopener noreferrer"; fields.runtime_guide.hidden = true;
     var ignore = node("label", content, "form-checkbox");
     fields.ignore_direction = node("input", ignore); fields.ignore_direction.type = "checkbox"; fields.ignore_direction.id = "speech-ignore-direction";
     node("span", ignore, "", label("ignore_direction"));
@@ -2383,9 +2416,10 @@
     var serviceActions = node("div", null, "row");
     serviceActions.append(fields.worker_guide, fields.worker_refresh);
     fields.service_section.append(fields.worker_target.closest("label"), fields.worker_status, serviceActions);
-    fields.render_section.append(fields.runtime_hint, reuse, actions, fields.context, fields.progress);
+    fields.render_section.append(fields.runtime_hint, fields.runtime_guide, reuse, actions, fields.context, fields.progress);
     fields.playback_section.append(fields.player_controls, fields.download);
-    fields.profile_row.after(fields.editor, fields.lexicon_section, fields.phonemes_section, fields.service_section, fields.schema_section);
+    fields.profile_row.before(fields.schema_section);
+    fields.profile_row.after(fields.editor, fields.lexicon_section, fields.phonemes_section, fields.service_section);
     fields.audit_section.before(fields.render_section, fields.export_section);
     fields.export_section.after(fields.chapter_audio_section);
     content.append(fields.playback_section, fields.reader_shortcut);

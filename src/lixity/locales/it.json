@@ -2193,6 +2193,7 @@
   "speech_save_help": "Salva profili vocali e sostituzioni di pronuncia nel progetto, senza avviare la sintesi.",
   "speech_saving": "Salvataggio…",
   "speech_scene_pause": "Pausa tra scene (secondi)",
+  "speech_schema_applied_draft": "Impostazioni audio aggiornate. Le modifiche al profilo sono ancora aperte. Scegli Salva profili per conservarle.",
   "speech_schema_apply": "Applica aggiornamento audio verificato",
   "speech_schema_configuration_required": "Nessuna voce è ancora configurata. Dopo l’aggiornamento, crea un profilo vocale esterno per la lingua del progetto.",
   "speech_schema_default_profile": "Il narratore implicito viene salvato come profilo.",

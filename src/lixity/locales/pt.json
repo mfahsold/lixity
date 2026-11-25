@@ -2193,6 +2193,7 @@
   "speech_save_help": "Guarde perfis e substituições de pronúncia neste projeto, sem iniciar a síntese.",
   "speech_saving": "A guardar…",
   "speech_scene_pause": "Pausa entre cenas (segundos)",
+  "speech_schema_applied_draft": "Definições de áudio atualizadas. As alterações do perfil continuam abertas. Escolha Guardar perfis para as manter.",
   "speech_schema_apply": "Aplicar atualização de áudio revista",
   "speech_schema_configuration_required": "Ainda não há voz configurada. Após a atualização, crie um perfil de voz externo para o idioma do projeto.",
   "speech_schema_default_profile": "O narrador implícito é guardado como perfil.",

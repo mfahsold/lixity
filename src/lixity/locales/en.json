@@ -2193,6 +2193,7 @@
   "speech_save_help": "Save the voice profiles and pronunciation replacements in this project. This does not start synthesis.",
   "speech_saving": "Saving…",
   "speech_scene_pause": "Scene pause (seconds)",
+  "speech_schema_applied_draft": "Audio settings updated. Your profile changes are still open. Choose Save profiles to keep them.",
   "speech_schema_apply": "Apply reviewed audio upgrade",
   "speech_schema_configuration_required": "No voice is configured yet. Create an external voice profile for the project language after the upgrade.",
   "speech_schema_default_profile": "The implicit narrator becomes a saved profile.",

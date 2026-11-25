@@ -1,5 +1,6 @@
 """Explicit audio replacement candidates and private, non-overwriting backups."""
 
+import hashlib
 import json
 import zipfile
 from pathlib import Path
@@ -226,3 +227,58 @@ def test_schema5_snapshot_rejects_changed_source_before_creating_backup(tmp_path
     with pytest.raises(ValueError, match="changed"):
         migration.apply(tmp_path / "backup.zip")
     assert not (tmp_path / "backup.zip").exists()
+
+
+def test_schema5_upgrade_uses_the_selected_plain_text_manuscript(tmp_path: Path):
+    from lixity.speech_migration import prepare_schema5_migration
+    from lixity.workspace import AmbiguousManuscriptError
+
+    project = tmp_path / "project"
+    project.mkdir()
+    config = project / "lixity.toml"
+    config.write_text('language = "de"\n')
+    original = config.read_bytes()
+    (project / "other-a.md").write_text("An alternate draft.\n")
+    (project / "other-b.md").write_text("Another alternate draft.\n")
+    selected = project / "selected.txt"
+    selected.write_bytes(b"The selected draft.\n")
+
+    with pytest.raises(AmbiguousManuscriptError):
+        prepare_schema5_migration(project)
+    migration = prepare_schema5_migration(project, source_input=selected)
+    alias = tmp_path / "project-alias"
+    alias.symlink_to(project, target_is_directory=True)
+    assert prepare_schema5_migration(project, source_input=alias / selected.name).snapshot == migration.snapshot
+    assert migration.public_dict()["creates_default_profile"] is True
+    assert config.read_bytes() == original
+
+    backup = tmp_path / "backup.zip"
+    assert migration.apply(backup)["applied"] is True
+    with zipfile.ZipFile(backup) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+        assert manifest["source_sha256"] == hashlib.sha256(selected.read_bytes()).hexdigest()
+        assert archive.read("lixity.toml") == original
+    assert load_project_config(project)["audio"]["schema_version"] == "lixity-audio-settings/5"
+
+
+def test_schema4_upgrade_rechecks_the_selected_source_at_apply(tmp_path: Path):
+    from lixity.speech_migration import prepare_schema4_migration
+
+    project = tmp_path / "project"
+    project.mkdir()
+    config = project / "lixity.toml"
+    config.write_text('language = "en"\n')
+    original = config.read_bytes()
+    (project / "manuscript.md").write_text("The discoverable draft.\n")
+    selected = project / "selected.txt"
+    selected.write_text("The selected draft.\n")
+    snapshot = prepare_schema4_migration(project)
+    migration = prepare_schema4_migration(project, source_input=selected)
+    assert snapshot.snapshot != migration.snapshot
+
+    selected.write_text("An edit to the selected draft.\n")
+    backup = tmp_path / "backup.zip"
+    with pytest.raises(ValueError, match="source changed"):
+        migration.apply(backup)
+    assert not backup.exists()
+    assert config.read_bytes() == original
