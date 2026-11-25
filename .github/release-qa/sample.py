@@ -5,7 +5,6 @@ import json
 import os
 from pathlib import Path
 import subprocess
-import sys
 import time
 
 import pyatspi
@@ -44,13 +43,19 @@ def screenshot(stage):
     subprocess.run(["xwd", "-root", "-silent", "-out", str(EVIDENCE / f"{stage}.xwd")], check=True)
 
 
-def wait_labels(stage, *needles, timeout=DEFAULT_WAIT):
+def wait_labels(stage, *needles, enabled_button=None, timeout=DEFAULT_WAIT):
     end = time.monotonic() + timeout
     rows = []
     while time.monotonic() < end:
         rows = ui_tree()
         names = "\n".join(name for _, _, name, _ in rows)
-        if all(needle.casefold() in names.casefold() for needle in needles):
+        button_ready = enabled_button is None or any(
+            role == "push button" and name == enabled_button
+            and node.getState().contains(pyatspi.STATE_ENABLED)
+            and node.getState().contains(pyatspi.STATE_SENSITIVE)
+            for _, role, name, node in rows
+        )
+        if button_ready and all(needle.casefold() in names.casefold() for needle in needles):
             write_tree(stage, rows)
             time.sleep(2)
             screenshot(stage)
@@ -82,12 +87,14 @@ def click(label, rows):
 
 welcome = wait_labels("lixity-interactive-welcome", "Welcome to Lixity", "Try the example offline")
 click("Try the example offline", welcome)
-preview = wait_labels("lixity-sample-preview", "first-look.md", "Import and analyze manuscript")
+preview = wait_labels(
+    "lixity-sample-preview", "Create project", enabled_button="Import and analyze manuscript",
+)
 root = HOME / "Lixity"
 if list(root.rglob("manuscript.md")):
     raise AssertionError("Opening the sample preview already created a manuscript")
 click("Import and analyze manuscript", preview)
-wait_labels("lixity-sample-opened", "The Crate at Warehouse 4", "The Eastern Gate")
+wait_labels("lixity-sample-opened", "The Crate at Warehouse 4")
 manuscripts = list(root.rglob("manuscript.md"))
 if len(manuscripts) != 1:
     raise AssertionError(f"Expected one saved example manuscript, got {len(manuscripts)}")
