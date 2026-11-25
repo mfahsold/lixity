@@ -1,68 +1,50 @@
-name: desktop Linux WebView QA
+name: desktop artifact upload rehearsal
 on:
   workflow_dispatch:
 permissions:
   contents: read
-  actions: read
 jobs:
-  linux-webview:
+  upload-contract:
     if: startsWith(github.ref_name, 'ci/linux-webview-')
     runs-on: ubuntu-22.04
-    timeout-minutes: 12
-    env:
-      SOURCE_RUN: '45487837921'
-      SOURCE_SHA: 0801e9f3ae52c3f05d2656feb65c8f8e00325055
-      SOURCE_ARTIFACT: desktop-installers-x86_64-unknown-linux-gnu
-      SOURCE_ID: '14965831657'
-      SOURCE_DIGEST: 9bb84f830e19d6aee8c244db28312f2bfa01e72200be6e77fb8bec53835c0473
-      QA_OUTPUT: ${{ github.workspace }}/linux-webview-evidence
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Download and verify the existing Linux installer
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
+      - name: Prepare synthetic upload fixtures
         run: |
-          mkdir -p "$QA_OUTPUT" "$RUNNER_TEMP/linux-installer"
-          run=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN")
-          jq -e --arg sha "$SOURCE_SHA" '.head_sha == $sha' <<< "$run" >/dev/null
-          artifact=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN/artifacts" \
-            | jq -ce --arg name "$SOURCE_ARTIFACT" '[.artifacts[] | select(.name == $name and .expired == false)] | if length == 1 then .[0] else error("Expected one Linux build artifact") end')
-          id=$(jq -er '.id' <<< "$artifact")
-          digest=$(jq -er '.digest | select(test("^sha256:[0-9a-f]{64}$")) | ltrimstr("sha256:")' <<< "$artifact")
-          test "$id" = "$SOURCE_ID"
-          test "$digest" = "$SOURCE_DIGEST"
-          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > "$RUNNER_TEMP/linux-installer.zip"
-          printf '%s  %s\n' "$digest" "$RUNNER_TEMP/linux-installer.zip" | sha256sum -c -
-          unzip -q "$RUNNER_TEMP/linux-installer.zip" -d "$RUNNER_TEMP/linux-installer"
-          jq -n --arg run "$SOURCE_RUN" --arg sha "$SOURCE_SHA" --argjson artifact "$artifact" \
-            '{run: $run, sourceSha: $sha, artifact: $artifact | {id, name, digest}}' > "$QA_OUTPUT/source.json"
-          cd "$RUNNER_TEMP/linux-installer"
-          sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt | tee "$QA_OUTPUT/installer-sha256.txt"
-      - name: Install the verified DEB and stock WebKitGTK control dependencies
-        shell: bash
-        run: |
-          test "$(uname -m)" = x86_64
-          sudo apt-get -o Acquire::Retries=3 update -qq
-          sudo apt-get -o Acquire::Retries=3 install -y --no-install-recommends \
-            "$RUNNER_TEMP"/linux-installer/*.deb xvfb xauth openbox x11-apps xdotool \
-            dbus-x11 at-spi2-core python3-gi python3-pyatspi gir1.2-webkit2-4.1 iproute2
-          dpkg-query -W lixity libwebkit2gtk-4.1-0 gir1.2-webkit2-4.1 | tee "$QA_OUTPUT/packages.txt"
-          /lib64/ld-linux-x86-64.so.2 --list /usr/bin/lixity-desktop > "$QA_OUTPUT/loader.txt"
-      - name: Compare stock WebKitGTK and Lixity with loopback-only networking
-        shell: bash
-        run: |
-          sudo unshare --net -- bash -euc '
-            ip link set lo up
-            exec runuser -u "$1" -- env QA_OUTPUT="$2" QA_SCRIPTS="$3" bash "$3/launch.sh"
-          ' qa "$(id -un)" "$QA_OUTPUT" "$GITHUB_WORKSPACE/.github/release-qa"
-      - name: Retain graphical evidence
-        if: always()
+          mkdir -p desktop/build/installers "$RUNNER_TEMP/stale"
+          printf 'verified installer fixture\n' > desktop/build/installers/fixture.txt
+          printf 'stale upload fixture\n' > "$RUNNER_TEMP/stale/fixture.txt"
+      - name: Exercise the ordinary upload
+        uses: ./.github/actions/upload-desktop-installers
+        with:
+          name: desktop-upload-clean-proof
+          retention-days: 3
+      - name: Seed a conflicting artifact name
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: linux-webview-evidence
-          path: ${{ env.QA_OUTPUT }}
-          if-no-files-found: warn
-          retention-days: 5
+          name: desktop-upload-retry-proof
+          path: ${{ runner.temp }}/stale/fixture.txt
+          if-no-files-found: error
+          retention-days: 3
+      - name: Exercise the upload retry on this runner
+        uses: ./.github/actions/upload-desktop-installers
+        with:
+          name: desktop-upload-retry-proof
+          retention-days: 3
+
+      - name: Move the synthetic payload away
+        run: mv desktop/build/installers "$RUNNER_TEMP/used-fixtures"
+      - name: Exercise two failed attempts
+        id: missing
+        continue-on-error: true
+        uses: ./.github/actions/upload-desktop-installers
+        with:
+          name: desktop-no-files-proof
+          retention-days: 3
+      - name: Assert that the composite surfaced the final error
+        env:
+          FINAL_OUTCOME: ${{ steps.missing.outcome }}
+        run: test "$FINAL_OUTCOME" = failure

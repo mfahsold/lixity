@@ -1,0 +1,32 @@
+name: Upload verified desktop installers
+description: Upload one platform's verified files with one retry on the same runner.
+inputs:
+  name:
+    description: Unique artifact name for this platform.
+    required: true
+  retention-days:
+    description: Days to keep the artifact.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Upload verified installers
+      id: upload
+      continue-on-error: true
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      with:
+        name: ${{ inputs.name }}
+        path: desktop/build/installers/*
+        if-no-files-found: error
+        retention-days: ${{ inputs.retention-days }}
+
+    - name: Retry upload of the same verified installers
+      if: steps.upload.outcome == 'failure'
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      with:
+        name: ${{ inputs.name }}
+        path: desktop/build/installers/*
+        if-no-files-found: error
+        retention-days: ${{ inputs.retention-days }}
+        # The first upload can finalize server-side before its response is lost.
+        overwrite: true
