@@ -22,8 +22,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   dispatch receipt, an office ledger, a captioned witness statement and two
   authored journeys. The reader plays two chapter recordings and reveals
   selected research as readers progress.
-- Lead the seven product pages with review in the manuscript and connect the
-  research card to the Warehouse 4 source exercise.
+- Introduce the workspace and its writing, analysis and research tools on all
+  seven product pages. Group the Warehouse 4 editorial examples below the
+  product overview and simplify the German first-look guide.
 - Store each prepared research response once in a static review export while
   preserving its exact token-bound routes.
 - Keep map numbers from blocking nearby features at narrow widths. Keep every

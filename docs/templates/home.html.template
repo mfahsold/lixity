@@ -59,9 +59,9 @@ $og_locales
 <aside id="language-suggestion" class="language-suggestion" aria-label="$language" hidden><p>$language_suggestion</p><a class="ctl primary" href="index.html"></a><button class="ctl" type="button">$language_stay</button></aside>
 <section class="home-hero" aria-labelledby="intro-title">
 <div class="home-intro">
-<div class="home-title"><p class="home-eyebrow">$eyebrow</p><h1 id="intro-title">$headline</h1></div>
+<h1 id="intro-title">$headline</h1>
 <div class="home-intro-copy"><p class="home-lead">$intro</p>
-<div class="hero-cta"><a class="ctl primary" href="guides/installation.html" hreflang="en" id="download-cta">$install_link <span aria-hidden="true">→</span></a> <a class="ctl" href="sandbox/index.html?lang=$sandbox_language" hreflang="$sandbox_language" id="sandbox-cta" aria-describedby="sandbox-note">$sandbox_cta <span aria-hidden="true">→</span></a> <a class="ctl" href="#product-tour-preview" id="examples">$discover <span aria-hidden="true">↓</span></a></div><p class="home-note" id="sandbox-note">$demo_note</p></div>
+<div class="hero-cta"><a class="ctl primary" href="guides/installation.html" hreflang="en" id="download-cta">$install_link <span aria-hidden="true">→</span></a> <a class="ctl" href="#product-tour-preview" id="examples">$discover <span aria-hidden="true">↓</span></a></div></div>
 <aside class="home-support" id="support" aria-labelledby="support-title">
 <img src="assets/mark.svg" width="40" height="40" alt=""/>
 <div class="support-copy"><h2 id="support-title">$funding_title</h2><p>$funding_summary</p></div>
@@ -69,7 +69,7 @@ $og_locales
 </aside></div>
 <figure id="product-tour-preview" tabindex="-1" class="product-preview product-tour" aria-label="$tour_title">
 <div class="tour-screen">
-<video id="product-tour" width="1440" height="900" poster="videos/product-tour.webp" preload="none" muted playsinline controls aria-label="$tour_title" aria-describedby="tour-note">
+<video id="product-tour" width="1440" height="900" poster="screenshots/dashboard-light.png" preload="none" muted playsinline controls aria-label="$tour_title" aria-describedby="tour-note">
 <source src="videos/product-tour.webm" type='video/webm; codecs="av01.0.08M.08"'/>
 <source src="videos/product-tour.mp4" type="video/mp4"/>
 <a href="demo/report.html" hreflang="en">$demo</a>
@@ -90,18 +90,23 @@ $tour_cues
 </figcaption>
 </figure>
 </section>
-<section class="home-section" id="features"><h2>$tasks_title</h2><div class="home-tasks">
-<article id="linguistic-analysis"><figure class="home-task-media"><a href="screenshots/dashboard-measurement-focus.png"><img src="screenshots/dashboard-measurement-focus.png" width="$measurement_focus_width" height="$measurement_focus_height" alt="$linguistics_alt" loading="lazy" decoding="async"/></a></figure><h3>$linguistics_title</h3><p>$linguistics_text</p><div class="home-task-links"><a href="$passage_guide_path" hreflang="$passage_guide_language">$passage_guide_link</a><a href="guides/metrics/${lang}.html" hreflang="$lang">$linguistics_link</a><a href="guides/manuscript-analysis-tools.html" lang="en" hreflang="en">Compare manuscript analysis tools (English)</a></div></article>
-<article id="writing"><figure class="home-task-media"><img src="screenshots/dashboard-reader-focus.png" width="$reader_focus_width" height="$reader_focus_height" alt="$read_alt" loading="lazy" decoding="async"/></figure><h3>$read_title</h3><p>$read_text</p><div class="home-task-links"><a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript" hreflang="en">$editor_link</a></div></article>
-<article id="research-workspace"><figure class="home-task-media"><img src="screenshots/dashboard-research-dossiers.png" width="$research_dossiers_width" height="$research_dossiers_height" alt="$research_alt" loading="lazy" decoding="async"/></figure><h3>$research_title</h3><p>$research_text</p><div class="home-task-links"><a href="$research_guide_path" hreflang="$passage_guide_language">$research_case_link</a><a href="guides/research-pdf.html" lang="en" hreflang="en">Research, dossiers and evidence (English)</a></div></article>
-<article id="reading-copies"><figure class="home-task-media"><img src="screenshots/dashboard-editorial.png" width="$editorial_width" height="$editorial_height" alt="$share_alt" loading="lazy" decoding="async"/></figure><h3>$share_title</h3><p>$share_text</p><div class="home-task-links"><a href="demo/warehouse-4-dossier.pdf" hreflang="en">$dossier_example</a><a href="demo/reader/index.html" hreflang="en">$reading_copy</a></div></article>
+<section class="home-section" id="features" aria-labelledby="features-title"><h2 id="features-title">$tasks_title</h2><div class="home-tasks">
+<article id="writing" class="home-feature"><h3>$read_title</h3><p>$read_text</p><div class="home-task-links"><a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript" hreflang="en">$editor_link</a></div></article>
+<article id="linguistic-analysis" class="home-feature"><h3>$linguistics_title</h3><p>$linguistics_text</p><div class="home-task-links"><a href="guides/metrics/${lang}.html" hreflang="$lang">$linguistics_link</a></div></article>
+<article id="research-workspace" class="home-feature"><h3>$research_title</h3><p>$research_text</p><div class="home-task-links"><a href="guides/research-pdf.html" hreflang="en">$research_guide_link</a></div></article>
+<article id="reading-copies" class="home-feature"><h3>$share_title</h3><p>$share_text</p><div class="home-task-links"><a href="demo/warehouse-4-dossier.pdf" hreflang="en">$dossier_example</a><a href="demo/reader/index.html" hreflang="en">$reading_copy</a></div></article>
 </div></section>
-<section class="home-principle" id="measurement-context"><span class="principle-mark" aria-hidden="true">“</span><div><h2>$principle</h2><p>$principle_text</p></div></section>
+<section class="home-section home-principle" aria-labelledby="principle-title"><div><h2 id="principle-title">$principle</h2><p>$principle_text</p></div></section>
 <section class="home-section" id="compare" aria-labelledby="product-questions-title">
 <h2 id="product-questions-title">$questions_title</h2><div class="home-tasks home-answers">
 <article><h3>$question_marks</h3><p>$answer_marks</p></article>
 <article><h3>$question_local</h3><p>$answer_local</p></article>
 <article><h3>$question_demo</h3><p>$answer_demo</p></article>
+</div></section>
+<section class="home-section" id="measurement-context" aria-labelledby="example-title">
+<div class="home-editorial">
+<div><h2 id="example-title">$example_title</h2><p class="home-example-finding">$example_finding</p><p id="sandbox-note">$demo_note</p></div>
+<div class="home-editorial-links"><a class="ctl" href="sandbox/index.html?lang=$sandbox_language" hreflang="$sandbox_language" id="sandbox-cta" aria-describedby="sandbox-note">$sandbox_cta <span aria-hidden="true">→</span></a><a href="$passage_guide_path" hreflang="$passage_guide_language">$passage_guide_link</a><a href="$research_guide_path" hreflang="$passage_guide_language">$research_case_link</a><a href="guides/manuscript-analysis-tools.html" hreflang="en">$compare_tools_link</a></div>
 </div></section>
 <section class="home-section home-start" id="installation"><div><h2>$start_title</h2><p>$start_text</p><a class="ctl primary" href="guides/installation.html" hreflang="en">$install_link</a></div><div class="install-release"><p>$scope</p><a href="https://github.com/mfahsold/lixity/releases/latest" lang="en">Latest published release</a> · <a href="https://github.com/mfahsold/lixity/blob/main/docs/releases/v$version.md" id="current-release" lang="en">v$version release notes</a></div></section>
 <section class="home-section" id="languages"><h2>$languages_title</h2><p>$languages_text</p><nav class="language-list" aria-label="$language">$language_links</nav><p class="section-note">$limits</p></section>

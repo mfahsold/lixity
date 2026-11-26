@@ -1434,7 +1434,8 @@ async function checkSandboxQuotationPairs(page) {
               await expect(page.locator('html')).toHaveAttribute('lang', 'de');
               await expect(page.locator('main')).toContainText('erfundenes englisches Hafenmanuskript');
               await expect(themeControl).toContainText('Darstellung:');
-              await expect(page.locator('a[hreflang=en]').first()).toHaveAttribute('href', 'first-look.html');
+              await expect(page.locator('a[hreflang=en][href="first-look.html"]')).toBeVisible();
+              await expect(page.locator('#eigenes-manuskript + p a').first()).toHaveAttribute('href', 'installation.html#desktop');
               if (javaScriptEnabled) {
                 const initialTheme = await page.locator('html').getAttribute('data-theme');
                 for (let index = 0; index < 3; index++) {
@@ -1516,7 +1517,7 @@ async function checkSandboxQuotationPairs(page) {
             await expect(page.locator('h1')).toHaveText(germanHeadline, {useInnerText: true});
             await page.goto(origin + '/lixity/' + route);
             const video = page.locator('.product-preview video');
-            await expect(video).toHaveAttribute('poster', 'videos/product-tour.webp');
+            await expect(video).toHaveAttribute('poster', 'screenshots/dashboard-light.png');
             await expect(video).toHaveAttribute('preload', 'none');
             assert.ok(await video.evaluate(el => Math.abs(el.clientWidth / el.clientHeight - 1.6) < .01));
             await expect(page.locator('#tour-transcript li')).toHaveCount(6);

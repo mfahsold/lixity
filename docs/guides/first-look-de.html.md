@@ -6,15 +6,17 @@ Aktualisiert am 25. November 2026
 
 <a id="frage"></a>
 
-## Eine Frage statt eines Zielwerts
+## Drei Fragen für den Einstieg
 
-Warum klingt dieses Kapitel anders als der Rest? Ist eine Wiederholung beabsichtigt? Auf welcher Quelle beruht dieses Detail? Für einen ersten Versuch genügt eine dieser Fragen.
+Die schreibgeschützte Demo zeigt ein erfundenes englisches Hafenmanuskript. Auch die Bedienelemente sind auf Englisch.
+
+- [Warum ist dieser Satz markiert?](#beleg)
+
+- [Auf welcher Quellenfassung beruht die Szene?](#recherche)
+
+- [Wie unterscheidet sich der Satzrhythmus zweier Kapitel?](#rhythmus)
 
 [Eine Frage in der Demo prüfen](../demo/report.html)
-
-Die schreibgeschützte Demo verwendet ein erfundenes englisches Hafenmanuskript und englische Bedienelemente. Diese Seite erklärt den Einstieg auf Deutsch; sie ist keine deutsche Fassung des Demo-Manuskripts. Kein Konto, keine Installation und kein Upload sind zum Ausprobieren nötig.
-
-Wähle für den Einstieg eine Frage. [Warum ist dieser Satz markiert?](#beleg) [Auf welcher Quellenfassung beruht die Szene?](#recherche) [Wie unterscheidet sich der Satzrhythmus zweier Kapitel?](#rhythmus)
 
 <a id="beleg"></a>
 
@@ -100,11 +102,11 @@ Unter **Chapter audio** kannst du die ersten beiden Kapitel mit einer synthetisc
 
 ## Mit einem eigenen Manuskript arbeiten
 
+Wähle in der [englischen Download-Anleitung](installation.html#desktop) die Desktop-Testversion für macOS, Windows oder Linux. Die Anleitung erklärt auch die [Einrichtung per Terminal](installation.html#install). Auf diesem Weg startest du die lokale Lixity-App im Browser mit `lixity service start --open`.
+
 Der Manuskriptimport unterstützt Markdown (`.md`, `.markdown`) und reinen Text (`.txt`). Der Dateiimport akzeptiert auch jeweils eine Word/DOCX-Datei. Exportiere Scrivener-Dokumente vorher in ein unterstütztes Dateiformat und prüfe die Importvorschau. PDFs lassen sich getrennt als Recherchequellen aufnehmen.
 
 Lixity ist kostenlos und Open Source; auch ein kommerzielles Buchprojekt benötigt keine zusätzliche Erlaubnis. Besondere Bedingungen für Softwareintegrationen erläutert die [Lizenzübersicht](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md).
-
-Die [englische Installationsanleitung](installation.html) zeigt die Einrichtung mit `uv` unter Windows, macOS und Linux. Danach öffnet `lixity service start --open` die lokale Anwendung im Browser.
 
 Wähle **Projekt öffnen**, um in einem vorhandenen Ordner weiterzuarbeiten. Mit **Manuskript untersuchen** prüfst du die Importvorschau für ein neues Projekt. Bestätige **Deutsch** als Analysesprache. Englisch ist die Voreinstellung. Falls der Browser einen anderen Arbeitsbereich öffnet, prüfe Adresse und Port in der [Anleitung zum lokalen Dienst](installation.html#restart).
 

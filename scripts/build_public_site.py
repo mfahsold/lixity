@@ -41,17 +41,8 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
     template = Template((base / 'docs/templates/home.html.template').read_text(encoding="utf-8"))
     footer = Template((base / 'docs/templates/home-footer.html.template').read_text(encoding="utf-8"))
     version = source_version(base)
-    image_dimensions = {}
-    for key, filename in {
-        'image': 'dashboard-light.png',
-        'reader_focus': 'dashboard-reader-focus.png',
-        'measurement_focus': 'dashboard-measurement-focus.png',
-        'research_dossiers': 'dashboard-research-dossiers.png',
-        'editorial': 'dashboard-editorial.png',
-    }.items():
-        width, height = struct.unpack('>II', (base / 'docs/screenshots' / filename).read_bytes()[16:24])
-        image_dimensions[key + '_width'] = str(width)
-        image_dimensions[key + '_height'] = str(height)
+    preview_image = base / 'docs/screenshots/dashboard-light.png'
+    image_width, image_height = struct.unpack('>II', preview_image.read_bytes()[16:24])
     results = {}
     for lang, content in dictionaries.items():
         if set(content) != set(dictionaries['en']):
@@ -71,7 +62,8 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
         fields['lang'] = lang
         fields['language_name'] = LANGUAGES[lang]
         fields['version'] = version
-        fields.update(image_dimensions)
+        fields['image_width'] = str(image_width)
+        fields['image_height'] = str(image_height)
         fields['canonical'] = page_url(lang)
         fields['home_path'] = './' if lang == 'en' else page_path(lang)
         fields['funding_url'] = FUNDING_DETAILS_PATH

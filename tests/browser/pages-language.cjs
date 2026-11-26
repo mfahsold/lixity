@@ -205,7 +205,12 @@ async function checkSupportContact(page) {
         if (homeWidths.includes(viewport)) {
           await page.goBack();
           const sandboxLanguage = language === 'de' ? 'de' : 'en';
-          const link = page.locator('#sandbox-cta');
+          await expect(page.locator('.home-intro :is(.home-example-finding, #sandbox-cta)')).toHaveCount(0);
+          await expect(page.locator('#measurement-context .home-example-finding')).toBeVisible();
+          const features = await page.locator('#features').boundingBox();
+          const measurement = await page.locator('#measurement-context').boundingBox();
+          assert.ok(measurement.y >= features.y + features.height, `Example follows the features in ${description}`);
+          const link = page.locator('#measurement-context #sandbox-cta');
           await expect(link).toHaveAttribute('hreflang', sandboxLanguage);
           await expect(page.locator('.tour-explore')).toHaveAttribute('hreflang', 'en');
           await link.click();

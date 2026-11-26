@@ -882,27 +882,11 @@ class TestPublicAnalyticsBoundary(unittest.TestCase):
 
 
 class TestPublicLanguages(unittest.TestCase):
-    def test_home_image_dimensions_follow_regenerated_screenshots_in_every_language(self):
+    def test_home_social_image_dimensions_follow_regenerated_screenshot_in_every_language(self):
         from unittest.mock import patch
 
         from scripts.build_public_site import LANGUAGES, ROOT, render_pages
 
-        class Images(HTMLParser):
-            def __init__(self):
-                super().__init__()
-                self.dimensions = {}
-
-            def handle_starttag(self, tag, attrs):
-                values = dict(attrs)
-                if tag == "img" and values.get("src", "").startswith("screenshots/"):
-                    self.dimensions[values["src"]] = (int(values["width"]), int(values["height"]))
-
-        expected = {
-            "dashboard-reader-focus.png": (191, 109),
-            "dashboard-measurement-focus.png": (173, 83),
-            "dashboard-research-dossiers.png": (157, 211),
-            "dashboard-editorial.png": (223, 71),
-        }
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             for relative in ("docs/templates/home.html.template", "docs/templates/home-footer.html.template",
@@ -917,16 +901,14 @@ class TestPublicLanguages(unittest.TestCase):
             shots = root / "docs/screenshots"
             shots.mkdir()
             # This generator reads PNG headers; decoding is covered by browser checks.
-            for name, dimensions in {"dashboard-light.png": (311, 127), **expected}.items():
-                (shots / name).write_bytes(b"\x89PNG\r\n\x1a\n" + bytes(8) + struct.pack(">II", *dimensions))
+            (shots / "dashboard-light.png").write_bytes(
+                b"\x89PNG\r\n\x1a\n" + bytes(8) + struct.pack(">II", 311, 127)
+            )
             with patch("scripts.build_public_site.ROOT", root):
                 pages = render_pages()
         self.assertEqual(len(pages), 7)
         for name, text in pages.items():
             with self.subTest(page=name):
-                images = Images()
-                images.feed(text)
-                self.assertEqual(images.dimensions, {"screenshots/" + key: value for key, value in expected.items()})
                 head = PageHead()
                 head.feed(text)
                 self.assertEqual(head.meta["og:image:width"], ["311"])
@@ -1004,8 +986,7 @@ class TestPublicLanguages(unittest.TestCase):
                 sandbox_language = "de" if language == "de" else "en"
                 self.assertIn(f'href="sandbox/index.html?lang={sandbox_language}" hreflang="{sandbox_language}"', text)
                 content = json.loads((ROOT / f"docs/locales/{language}.json").read_text(encoding="utf-8"))
-                for key in ("read_alt", "linguistics_alt", "research_alt", "share_alt"):
-                    self.assertIn(f'alt="{html.escape(content[key], quote=True)}"', text)
+                self.assertEqual(head.meta["og:image:alt"], [content["preview"]])
                 self.assertIn('href="guides/installation.html"', text)
 
     def test_missing_translation_fails_instead_of_falling_back(self):
