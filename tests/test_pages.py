@@ -269,6 +269,44 @@ class TestPagesWorkflow(unittest.TestCase):
         self.assertIn("if: inputs.release_tag != ''", source)
         self.assertIn("if: inputs.release_tag == '' || steps.guard.outputs.allow == 'true'", source)
 
+    def test_deployment_build_checks_reviewed_sha_before_configuring_pages(self):
+        source = (Path(__file__).resolve().parents[1] / ".github/workflows/pages.yml").read_text()
+        manual = source.split("  workflow_dispatch:\n", 1)[1].split("  workflow_call:\n", 1)[0]
+        self.assertRegex(manual, r"(?s)expected_sha:\n.*?required: true\n +type: string")
+        preflight = "Confirm the dispatch resolved to the reviewed Pages commit"
+        checkout = "Confirm the checked-out Pages source"
+        self.assertLess(source.index(preflight), source.index("actions/checkout@"))
+        self.assertLess(source.index("actions/checkout@"), source.index(checkout))
+        self.assertLess(source.index(checkout), source.index("actions/configure-pages@"))
+        self.assertIn("EXPECTED_SHA: ${{ inputs.source_ref || inputs.expected_sha }}", source)
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for command in ([GIT, "init", "-q"],
+                            [GIT, "-c", "user.name=Synthetic CI", "-c", "user.email=ci@example.test",
+                             "commit", "--allow-empty", "-qm", "Reviewed Pages source"]):
+                subprocess.run(command, cwd=root, check=True, capture_output=True)  # noqa: S603
+            reviewed = subprocess.check_output([GIT, "rev-parse", "HEAD"],  # noqa: S603
+                                               cwd=root, text=True).strip()
+            other = "0" * 40
+            for step, expected, dispatch, error in (
+                (preflight, reviewed, reviewed, ""),
+                (preflight, "", reviewed, "Provide the full reviewed Pages commit SHA"),
+                (preflight, reviewed[:7], reviewed, "Provide the full reviewed Pages commit SHA"),
+                (preflight, reviewed, other, "no longer points to the reviewed commit"),
+                (checkout, reviewed, other, ""),
+                (checkout, other, reviewed, "checked-out Pages source differs"),
+            ):
+                with self.subTest(step=step, expected=expected, dispatch=dispatch):
+                    result = subprocess.run(  # noqa: S603 - reviewed step, synthetic repository
+                        [BASH, "-e", "-c", pages_workflow_script(step)], cwd=root, timeout=10,
+                        env={**os.environ, "EXPECTED_SHA": expected, "GITHUB_SHA": dispatch},
+                        text=True, capture_output=True, check=False,
+                    )
+                    self.assertEqual(result.returncode, int(bool(error)), result.stdout + result.stderr)
+                    if error:
+                        self.assertIn(error, result.stdout)
+
     @unittest.skipUnless(shutil.which("jq"), "Workflow boundary requires the Pages runner's jq")
     def test_release_deployment_guard_keeps_newer_pages_and_allows_pending_release(self):
         live, proposed = "a" * 40, "b" * 40
@@ -877,7 +915,9 @@ class TestPagesStaging(unittest.TestCase):
                     self.assertNotIn(SITE + relative, sitemap)
                     continue  # Its canonical/refresh/fallback link have a dedicated contract above.
                 head = PageHead()
-                head.feed(page.read_text(encoding="utf-8"))
+                markup = page.read_text(encoding="utf-8")
+                self.assertNotRegex(markup.split("</head>", 1)[0], r"<meta\b[^>\n]*?/>\s*/>", relative)
+                head.feed(markup)
                 if relative in references:
                     canonical = CUSTOM_PAGES_BASE_URL + relative
                 else:
@@ -1044,6 +1084,9 @@ class TestPublicLanguages(unittest.TestCase):
         from scripts.build_public_site import LANGUAGES, ROOT, page_path, render_pages
 
         timing = json.loads((ROOT / "docs/videos/product-tour-timing.json").read_text())
+        sitemap = ET.parse(ROOT / "docs/sitemap.xml")  # noqa: S314
+        video_namespace = {"video": "http://www.google.com/schemas/sitemap-video/1.1"}
+        self.assertEqual(sitemap.findtext(".//video:duration", namespaces=video_namespace), str(timing["duration"]))
         media_attributes = {
             'src': ('product-tour.mp4', 'product-tour.webm', 'product-tour-portrait.mp4'),
             'poster': ('product-tour.webp',),
@@ -1076,6 +1119,7 @@ class TestPublicLanguages(unittest.TestCase):
                 for scene in timing["scenes"]:
                     self.assertIn(html.escape(content['tour_' + scene['id']], quote=True), text)
                 self.assertIn('href="demo/warehouse-4-dossier.pdf"', text)
+                self.assertIn('href="demo/reader/index.html#publication-audio-player" hreflang="en"', text)
 
     def test_analysis_links_open_the_guides_and_localized_methods(self):
         from scripts.build_public_site import LANGUAGES, ROOT, page_path, render_pages
@@ -1097,6 +1141,9 @@ class TestPublicLanguages(unittest.TestCase):
                     )
                     self.assertIn(f'id="{fragment}"', guide)
                 self.assertIn(f'href="guides/metrics/{language}.html" hreflang="{language}"', rendered)
+                receipt = "quittung" if language == "de" else "receipt"
+                self.assertIn(f'href="{guide_path}#{receipt}" hreflang="{guide_lang}"', rendered)
+                self.assertIn(f'id="{receipt}"', guide)
 
     def test_generated_languages_are_complete_and_reciprocal(self):
         from scripts.build_public_site import (

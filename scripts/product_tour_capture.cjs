@@ -10,6 +10,24 @@ const {startNativeServer} = require('../tests/browser/support/native-server.cjs'
 
 const ROOT = path.resolve(__dirname, '..');
 const MINIMUM_HOLD = 3;
+const ORIGINAL_SENTENCE = 'It was only when she looked at it again that she began to think that there might have been a reason for the space that he had left on the form.';
+const DRAFT_SENTENCE = 'Only then did she wonder why he had left the line blank.';
+const CLOSING_SENTENCE = 'The receiving line stayed blank.';
+
+function extractExhibitPage(pdf, directory) {
+  const plain = spawnSync('pdftotext', [pdf, '-'], {encoding: 'utf8'});
+  assert.equal(plain.status, 0, 'The tour needs pdftotext to verify the actual exhibit book export');
+  assert.match(plain.stdout, /Warehouse 4 exhibit book/i);
+  const selected = plain.stdout.split('\f').findIndex(text =>
+    text.includes('Office ledger') && text.includes('18:40') && text.includes('20:00'));
+  assert.ok(selected >= 0, 'The exported exhibit book must contain its ledger evidence');
+  const base = path.join(directory, 'product-tour-exhibit-page');
+  const page = String(selected + 1);
+  const image = spawnSync('pdftoppm', ['-f', page, '-l', page, '-r', '144', '-singlefile', '-png', pdf, base]);
+  assert.equal(image.status, 0, 'The verified export page must render with pdftoppm');
+  return {file: path.basename(base) + '.png', page: selected + 1,
+    sha256: createHash('sha256').update(fs.readFileSync(base + '.png')).digest('hex')};
+}
 
 async function startTourProject(directory) {
   return startNativeServer(`
@@ -74,13 +92,14 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
   assert.equal(plan.schema_version, 'lixity-product-tour-timing/2');
   assert.equal(plan.fps, 25);
   assert.equal(plan.scenes.at(-1).end, plan.duration);
-  assert.deepEqual(plan.scenes.map(scene => scene.id), ['read', 'passage', 'compare', 'chapters', 'dossier', 'pdf']);
+  assert.deepEqual(plan.captures.map(scene => scene.id), ['read', 'passage', 'compare', 'dossier', 'decision', 'pdf']);
   const directory = path.dirname(capture.videoTarget);
   const sidecar = capture.videoTarget.replace('.webm', '.json');
   // Fixed segment filenames may be replaced during this run. An old manifest
   // must never describe a mixture of old and partially recorded new footage.
   fs.rmSync(sidecar, {force: true});
   const segments = [];
+  let exhibitPage;
 
   const visible = async (page, locator, label) => {
     assert.ok(await locator.evaluate(node => {
@@ -97,8 +116,8 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
     window.scrollTo({top: scrollY + node.getBoundingClientRect().top - inset, behavior: 'instant'});
   });
 
-  for (const scene of plan.scenes) {
-    const duration = scene.end - scene.start;
+  for (const scene of plan.captures) {
+    const duration = scene.duration;
     const frames = duration * plan.fps;
     const context = await browser.newContext({viewport: {width: capture.width, height: capture.height},
       reducedMotion: 'reduce', colorScheme: scene.theme, deviceScaleFactor: 2,
@@ -134,18 +153,18 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
       const dossierSummary = page.locator(`#research-dossiers-list [data-research-detail=dossier][data-record-id="${dossier}"]`);
       const dossierCard = dossierSummary.locator('..');
 
-      if (scene.id === 'read') {
+      if (scene.id === 'read' || scene.id === 'decision') {
         await open();
-        await page.locator('#workbench-overview-open').click();
-        target = page.locator('[data-review-passage]');
-        const paragraph = page.locator('#' + await target.getAttribute('data-target'));
-        detail = page.locator('#reader-inspector .reader-passage-flag');
+        const prose = scene.id === 'read' ? ORIGINAL_SENTENCE : CLOSING_SENTENCE;
+        const paragraph = page.locator('.ptext').filter({hasText: prose});
+        detail = paragraph.locator('.ptext-inner > p');
+        assert.equal(await paragraph.count(), 1, 'The author’s passage must be unique');
+        // Move from the preceding paragraph into the real manuscript text.
+        await proseAtTop(paragraph.locator('xpath=preceding-sibling::*[contains(concat(" ", normalize-space(@class), " "), " ptext ")][1]'));
+        act = async () => proseAtTop(paragraph);
         verify = async () => {
-          await paragraph.waitFor({state: 'visible'});
-          await proseAtTop(paragraph);
-          await visible(page, paragraph.locator('.ptext-inner > p'), 'Review passage reached from the overview');
-          await detail.locator('.reader-tense-group').first().waitFor({state: 'visible'});
-          await visible(page, detail, 'Review suggestion evidence in the passage inspector');
+          assert.ok((await detail.innerText()).includes(prose));
+          await visible(page, detail, 'Selected manuscript passage');
         };
       } else if (scene.id === 'passage') {
         await open();
@@ -183,8 +202,8 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
       } else if (scene.id === 'compare') {
         const filename = path.join(project, 'warehouse-4', 'harbour-manuscript.md');
         const original = fs.readFileSync(filename, 'utf8');
-        const before = 'It was only when she looked at it again that she began to think that there might have been a reason for the space that he had left on the form.';
-        const after = 'Only then did she wonder why he had left the line blank.';
+        const before = ORIGINAL_SENTENCE;
+        const after = DRAFT_SENTENCE;
         const start = original.indexOf(before);
         assert.ok(start >= 0);
         await open();
@@ -215,24 +234,6 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
           assert.equal(fs.readFileSync(filename, 'utf8'), original);
         };
         detail = page.locator('#manuscript-comparison-chapters li').filter({hasText: 'The Blank Line'});
-      } else if (scene.id === 'chapters') {
-        await open();
-        await page.locator('#workbench-overview-open').click();
-        await page.locator('[data-analysis-workflow=compare]').click();
-        await page.locator('[data-analysis-section-target=style]').click();
-        await page.locator('#style-tab-heatmap').click();
-        target = page.locator('#heatmap-ch-3 td[data-layer="asl"]');
-        await target.scrollIntoViewIfNeeded();
-        verify = async () => {
-          assert.equal(await page.locator('#analysis-metric-context').isVisible(), true);
-          assert.equal(await page.locator('#metric-context-read').getAttribute('href'), '#ch-3');
-          assert.equal(await page.locator('#metric-context-values .metric-context-selected').getAttribute('data-metric-row'), 'asl');
-          assert.ok((await page.locator('#metric-context-value').innerText()).match(/\d/),
-            'The chapter cell must show its actual measured value');
-          await visible(page, page.locator('#metric-context-chapter'), 'Selected chapter');
-          await visible(page, page.locator('#metric-context-value'), 'Selected chapter measurement');
-        };
-        detail = page.locator('#analysis-metric-context');
       } else {
         await open();
         await page.locator('#tab-view-research').click();
@@ -260,9 +261,11 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
             await click(target);
             const download = await downloading;
             assert.ok(download.suggestedFilename().endsWith('-v' + revision + '.pdf'));
-            const bytes = fs.readFileSync(await download.path());
+            const pdf = await download.path();
+            const bytes = fs.readFileSync(pdf);
             assert.equal(bytes.subarray(0, 5).toString(), '%PDF-');
             assert.ok(bytes.subarray(-32).toString().includes('%%EOF'), 'Download must be a complete PDF');
+            exhibitPage = extractExhibitPage(pdf, directory);
           };
           verify = async () => {
             const status = dossierCard.locator('[data-dossier-pdf-status]');
@@ -274,7 +277,7 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
       }
 
       await settle();
-      await visible(page, target, scene.id + ' action');
+      if (target) await visible(page, target, scene.id + ' action');
       // This annotation follows actual mouse input; it never changes product state.
       await page.addStyleTag({content: '#walkthrough-cursor{width:18px!important;height:18px!important;margin:-9px!important;transition:opacity .2s,transform .08s}'});
       await page.evaluate(() => {
@@ -343,13 +346,14 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
       await settle();
       const actionEnd = (performance.now() - started) / 1000;
       assert.ok(actionEnd <= duration - MINIMUM_HOLD, scene.id + ' action overran its readable outcome hold');
-      const box = ['compare', 'pdf'].includes(scene.id) ? await detail.evaluate(node => {
+      const box = scene.id === 'pdf' ? await detail.evaluate(node => {
         const range = document.createRange();
         range.selectNodeContents(node);
         return range.getBoundingClientRect().toJSON();
       }) : await detail.boundingBox();
       assert.ok(box && box.width && box.height, 'The picture-in-picture needs a visible detail');
-      await page.screenshot({path: path.join(directory, 'product-tour-' + scene.id + '-outcome.png')});
+      const still = 'product-tour-' + scene.id + '-outcome.png';
+      const stillBytes = await page.screenshot({path: path.join(directory, still)});
       await page.waitForTimeout(Math.max(0, (duration + 1) * 1000 - (performance.now() - started)));
       assert.deepEqual(errors, [], 'Product-tour scene must be free of runtime errors');
       video = page.video();
@@ -361,6 +365,7 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
       const sha256 = createHash('sha256').update(fs.readFileSync(source)).digest('hex');
       const {x, y, width, height} = box;
       segments.push({id: scene.id, theme: scene.theme, file, sha256, startFrame, frames, detail: {x, y, width, height},
+        still, stillSha256: createHash('sha256').update(stillBytes).digest('hex'),
         actionStart: Number(actionStart.toFixed(3)),
         actionEnd: Number(actionEnd.toFixed(3)), outcomeHold: Number((duration - actionEnd).toFixed(3)), clicks});
       console.log('Product tour ' + scene.id + ': action ends ' + actionEnd.toFixed(2) + 's; readable hold ' + (duration - actionEnd).toFixed(2) + 's');
@@ -374,7 +379,8 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
   const pendingSidecar = sidecar + '.tmp-' + process.pid;
   try {
     fs.writeFileSync(pendingSidecar, JSON.stringify({
-      schema_version: 'lixity-product-tour-recording/2', fps: plan.fps, duration: plan.duration, segments,
+      schema_version: 'lixity-product-tour-recording/3', fps: plan.fps, duration: plan.duration, segments, exhibitPage,
+      originalSentence: ORIGINAL_SENTENCE, draftSentence: DRAFT_SENTENCE, closingSentence: CLOSING_SENTENCE,
     }, null, 2));
     fs.renameSync(pendingSidecar, sidecar);
   } finally {

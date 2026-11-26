@@ -20,6 +20,11 @@ from concurrent.futures import ThreadPoolExecutor
 from fractions import Fraction
 from pathlib import Path
 
+if __package__:
+    from .product_tour_edit import Edit, compose
+else:
+    from product_tour_edit import Edit, compose
+
 BASE_DIR = Path(__file__).resolve().parents[1]
 RAW_DIR = BASE_DIR / ".artifacts" / "screenshots" / "videos"
 OUT_DIR = BASE_DIR / "docs" / "videos"
@@ -134,7 +139,8 @@ def _tour_plan() -> dict:
     fps = plan["fps"]
     if not isinstance(fps, int) or fps <= 0 or len(scenes) != 6 or len({scene["id"] for scene in scenes}) != len(scenes):
         raise SystemExit("The product tour needs six ordered scenes and a positive integer fps")
-    if {scene["theme"] for scene in scenes} != {"light", "dark"}:
+    captures = plan["captures"]
+    if {shot["theme"] for shot in captures} != {"light", "dark"}:
         raise SystemExit("The product tour needs actual light and dark workspace shots")
     previous_end = 0
     for scene in scenes:
@@ -179,27 +185,32 @@ def _verify_export(path: Path, *, fps: int, frames: int, width: int, height: int
         raise SystemExit(f"{path.name} exceeds its {max_bytes:,} byte budget")
     print(f"{path.relative_to(BASE_DIR)} {path.stat().st_size:,} bytes")
 
-def _tour_recordings(plan: dict) -> list[tuple[dict, dict, Path]]:
+def _read_source(filename: str, digest: str, base: Path) -> Path:
+    if Path(filename).name != filename:
+        raise SystemExit("Tour segment filenames must stay in the raw recordings directory")
+    source = base / filename
+    if not source.is_file():
+        raise SystemExit(f"Missing video source: {source}")
+    if hashlib.sha256(source.read_bytes()).hexdigest() != digest:
+        raise SystemExit(f"{filename}: source hash mismatch; record the complete tour again")
+    return source
+
+
+def _tour_recordings(plan: dict) -> tuple[dict, list[tuple[dict, Path, Path]], Path]:
     recording = json.loads((RAW_DIR / "product-tour.json").read_text(encoding="utf-8"))
-    if (recording.get("schema_version") != "lixity-product-tour-recording/2" or
+    if (recording.get("schema_version") != "lixity-product-tour-recording/3" or
             recording.get("fps") != plan["fps"] or recording.get("duration") != plan["duration"]):
         raise SystemExit("Recording metadata does not match the product-tour timing plan")
     segments = recording.get("segments", [])
-    if [segment["id"] for segment in segments] != [scene["id"] for scene in plan["scenes"]]:
-        raise SystemExit("The recording needs one ordered segment per tour scene")
+    if [segment["id"] for segment in segments] != [scene["id"] for scene in plan["captures"]]:
+        raise SystemExit("The recording needs one ordered segment per planned camera shot")
     recordings = []
-    for scene, segment in zip(plan["scenes"], segments, strict=True):
+    for scene, segment in zip(plan["captures"], segments, strict=True):
         filename = segment["file"]
-        if Path(filename).name != filename:
-            raise SystemExit("Tour segment filenames must stay in the raw recordings directory")
-        source = RAW_DIR / filename
-        if not source.is_file():
-            raise SystemExit(f"Missing video: {source}")
-        if hashlib.sha256(source.read_bytes()).hexdigest() != segment.get("sha256"):
-            raise SystemExit(f"{filename}: source hash mismatch; record the complete tour again")
+        source = _read_source(filename, segment["sha256"], RAW_DIR)
         video, _ = _video_info(source)
         start = segment["startFrame"]
-        frames = (scene["end"] - scene["start"]) * plan["fps"]
+        frames = scene["duration"] * plan["fps"]
         if (not isinstance(start, int) or start < 0 or segment["frames"] != frames or
                 segment.get("theme") != scene["theme"] or (video["width"], video["height"]) != (1440, 900) or
                 Fraction(video["avg_frame_rate"]) != plan["fps"]):
@@ -207,104 +218,39 @@ def _tour_recordings(plan: dict) -> list[tuple[dict, dict, Path]]:
         if int(video["nb_read_frames"]) < start + frames:
             raise SystemExit(f"{filename} needs {start + frames} frames including its anchor; "
                              f"only {video['nb_read_frames']} were recorded")
-        if not 0 < segment["actionEnd"] <= scene["end"] - scene["start"] - 3:
+        if not 0 < segment["actionEnd"] <= scene["duration"] - 3:
             raise SystemExit(f"{filename} leaves too little time to read the outcome")
-        recordings.append((scene, segment, source))
-    return recordings
+        still = _read_source(segment["still"], segment["stillSha256"], RAW_DIR)
+        recordings.append((segment, source, still))
+    pdf = recording["exhibitPage"]
+    return recording, recordings, _read_source(pdf["file"], pdf["sha256"], RAW_DIR)
 
 
-def _drawtext(label: str, font: str, size: int, x: str, y: int) -> str:
-    label = label.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\u2019")
-    return (f"drawtext=text='{label}'{font}:expansion=none:"
-            f"fontsize={size}:fontcolor=0xf8fafc:x={x}:y={y}")
-
-
-def _detail_crop(box: dict) -> tuple[int, int, int, int]:
-    """Include the verified result with a margin on even video coordinates."""
-    x = max(0, int(box["x"] - 16) // 2 * 2)
-    y = max(0, int(box["y"] - 16) // 2 * 2)
-    right = min(1440, (int(box["x"] + box["width"] + 17) // 2 + 1) * 2)
-    bottom = min(900, (int(box["y"] + box["height"] + 17) // 2 + 1) * 2)
-    if right <= x or bottom <= y:
-        raise SystemExit("The picture-in-picture detail must be in the recorded viewport")
-    return x, y, right - x, bottom - y
-
-
-def _tour_layout(recordings: list[tuple[dict, dict, Path]], width: int,
-                 height: int, font: str) -> tuple[list[str], str]:
-    """Compose each shot from its own raw workspace and the verified result."""
-    portrait = height > width
-    logo_size = 78 if portrait else 54
-    logo_x, logo_y = (76, 92) if portrait else (62, 29)
-    panel_width = 944 if portrait else 1152
-    panel_y = 344 if portrait else 114
-    inset_width, inset_height = (876, 674) if portrait else (568, 496)
-    inputs: list[str] = []
-    filters = []
-    for index, (scene, segment, source) in enumerate(recordings):
-        inputs.extend(["-i", str(source)])
-        start = segment["startFrame"]
-        frames = segment["frames"]
-        x, y, crop_width, crop_height = _detail_crop(segment["detail"])
-        inset_x = "(main_w-overlay_w)/2" if portrait else (
-            "62" if x + crop_width / 2 > 720 else "main_w-overlay_w-62"
-        )
-        inset_y = "(2664-overlay_h)/2" if portrait else "837-overlay_h"
-        detail_at = segment["actionEnd"]
-        filters += [
-            f"[{index}:v]trim=start_frame={start}:end_frame={start + frames},"
-            f"setpts=PTS-STARTPTS,split[main{index}][detail{index}]",
-            f"[main{index}]scale={panel_width}:-2:flags=lanczos,setsar=1,"
-            f"pad={width}:{height}:(ow-iw)/2:{panel_y}:color=0x10192b[base{index}]",
-            f"[detail{index}]crop={crop_width}:{crop_height}:{x}:{y},"
-            f"scale={min(inset_width, crop_width * 2)}:{min(inset_height, crop_height * 2)}:"
-            "force_original_aspect_ratio=decrease:"
-            f"force_divisible_by=2:flags=lanczos,setsar=1,"
-            f"pad=iw+8:ih+8:4:4:color=0x8db9ff[inset{index}]",
-        ]
-        title = _drawtext(scene["title"], font, 65 if portrait else 48,
-                          str(logo_x) if portrait else "(w-tw)/2", 216 if portrait else 31)
-        composed = [
-            f"[base{index}][inset{index}]overlay=x={inset_x}:y={inset_y}:enable='gte(t,{detail_at:.3f})'",
-            title,
-        ]
-        if scene["id"] == "pdf":
-            composed.append(_drawtext("Try the demo at lixity.de", font, 47 if portrait else 29,
-                                      "(w-tw)/2" if portrait else "w-tw-62", 1730 if portrait else 44))
-        filters.append(",".join(composed) + f",format=yuv420p[s{index}]")
-    inputs.extend(["-i", str(BASE_DIR / "docs/assets/brand/icon-192.png")])
-    name = _drawtext("Lixity", font, 58 if portrait else 39,
-                     str(logo_x + logo_size + 14), logo_y + (10 if portrait else 8))
-    filters += [
-        "".join(f"[s{index}]" for index in range(len(recordings))) +
-        f"concat=n={len(recordings)}:v=1:a=0,{name}[branded]",
-        f"[{len(recordings)}:v]scale={logo_size}:{logo_size}:flags=lanczos[logo]",
-        f"[branded][logo]overlay=x={logo_x}:y={logo_y}[out]",
-    ]
-    return inputs, ";".join(filters)
+def _webm_codec(encoders: str) -> list[str]:
+    if "libsvtav1" in encoders:
+        return ["-c:v", "libsvtav1", "-preset", "9", "-crf", "34"]
+    if "libaom-av1" in encoders:
+        return ["-c:v", "libaom-av1", "-cpu-used", "7", "-crf", "34", "-b:v", "0", "-row-mt", "1"]
+    raise SystemExit("FFmpeg needs an AV1 encoder (libsvtav1 or libaom-av1) for the homepage WebM.")
 
 
 def convert_product_tour(selection: str | None = None) -> None:
-    """Export the branded minute from verified recordings in both orientations."""
+    """Encode the editable FilmCraft cut once per destination codec."""
     plan = _tour_plan()
-    recordings = _tour_recordings(plan)
+    recording, recordings, exhibit = _tour_recordings(plan)
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         raise SystemExit("ffmpeg is required to publish walkthrough videos.")
-    fonts = (
-        Path("/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf"),
-        Path("/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"),
-        Path("/System/Library/Fonts/Supplemental/Arial Bold.ttf"),
-    )
-    font = next((candidate for candidate in fonts if candidate.is_file()), None)
-    font_opt = f":fontfile='{font}'" if font else ""
+    cwebp = shutil.which("cwebp")
     h264 = ["-c:v", "libx264", "-preset", "slow", "-crf", "25", "-movflags", "+faststart"]
     layouts = []
     if selection in (None, "product-tour"):
+        encoders = subprocess.check_output([ffmpeg, "-hide_banner", "-encoders"], text=True)  # noqa: S603
+        if cwebp is None and "libwebp" not in encoders:
+            raise SystemExit("The landscape poster needs cwebp or FFmpeg with libwebp.")
         layouts.append((1440, 900, (
             ("product-tour.mp4", h264),
-            ("product-tour.webm", ["-c:v", "libaom-av1", "-cpu-used", "6", "-crf", "36",
-                                   "-b:v", "0", "-row-mt", "1"]),
+            ("product-tour.webm", _webm_codec(encoders)),
         )))
     if selection in (None, "product-tour", "portrait", "social"):
         layouts.append((1080, 1920, ((PORTRAIT_SOCIAL if selection == "social" else PORTRAIT_MASTER, h264),)))
@@ -315,26 +261,42 @@ def convert_product_tour(selection: str | None = None) -> None:
     fps = plan["fps"]
     frames = plan["duration"] * fps
     budgets = {name: limit for name, _, _, limit in SOCIAL_CLIPS}
-    with tempfile.TemporaryDirectory(prefix=".tour-", dir=OUT_DIR) as pending:
-        staging = Path(pending)
-        for width, height, exports in layouts:
-            inputs, filters = _tour_layout(recordings, width, height, font_opt)
+
+    def encode(width: int, height: int, exports: tuple, staging: Path) -> None:
+        review = BASE_DIR / ".artifacts" / "filmcraft" / "warehouse-4-tour"
+        review.mkdir(parents=True, exist_ok=True)
+        edit = Edit(review / f"warehouse-4-{width}x{height}.fcproj", width, height, fps)
+        compose(edit, BASE_DIR, plan, recording, recordings, exhibit)
+        with tempfile.TemporaryDirectory(prefix="frames-", dir=review) as temp:
+            sequence = edit.render(Path(temp), (2, 10, 18, 25, 34, 39, 49, 58))
             for name, codec in exports:
                 target = staging / name
-                run([ffmpeg, "-y", "-loglevel", "error", "-filter_complex_threads", "2", *inputs,
-                     "-filter_complex", filters, "-map", "[out]", "-an", "-map_metadata", "-1",
+                run([ffmpeg, "-y", "-loglevel", "error", "-framerate", str(fps), "-i", str(sequence),
+                     "-vf", "setsar=1", "-an", "-map_metadata", "-1",
                      "-frames:v", str(frames), "-r", str(fps), "-fps_mode", "cfr",
                      *codec, "-pix_fmt", "yuv420p", str(target)])
                 _verify_export(target, fps=fps, frames=frames, width=width, height=height,
                                max_bytes=budgets.get(name, 4_000_000))
-        if (staging / "product-tour.mp4").is_file():
-            run([ffmpeg, "-y", "-loglevel", "error", "-ss", "15", "-i", str(staging / "product-tour.mp4"),
-                 "-frames:v", "1", "-c:v", "libwebp", "-quality", "85", str(staging / "product-tour.webp")])
-        if (staging / PORTRAIT_MASTER).is_file():
-            run([ffmpeg, "-y", "-loglevel", "error", "-ss", "15", "-i", str(staging / PORTRAIT_MASTER),
-                 "-frames:v", "1", "-vf", "scale=540:960:flags=lanczos", str(staging / PORTRAIT_POSTER)])
-            if selection in (None, "product-tour"):
-                shutil.copyfile(staging / PORTRAIT_MASTER, staging / PORTRAIT_SOCIAL)
+            poster = sequence.with_name(sequence.name % (2 * fps))
+            if width == 1440:
+                target = staging / "product-tour.webp"
+                if cwebp:
+                    run([cwebp, "-quiet", "-q", "85", str(poster), "-o", str(target)])
+                else:
+                    run([ffmpeg, "-y", "-loglevel", "error", "-i", str(poster),
+                         "-frames:v", "1", "-c:v", "libwebp", "-quality", "85", str(target)])
+            if width == 1080 and selection != "social":
+                run([ffmpeg, "-y", "-loglevel", "error", "-i", str(poster),
+                     "-frames:v", "1", "-vf", "scale=540:960:flags=lanczos", str(staging / PORTRAIT_POSTER)])
+
+    with tempfile.TemporaryDirectory(prefix=".tour-", dir=OUT_DIR) as pending:
+        staging = Path(pending)
+        with ThreadPoolExecutor(max_workers=min(3, len(layouts))) as pool:
+            futures = [pool.submit(encode, width, height, exports, staging) for width, height, exports in layouts]
+            for future in futures:
+                future.result()
+        if selection in (None, "product-tour"):
+            shutil.copyfile(staging / PORTRAIT_MASTER, staging / PORTRAIT_SOCIAL)
         for target in staging.iterdir():
             target.replace(OUT_DIR / target.name)
 

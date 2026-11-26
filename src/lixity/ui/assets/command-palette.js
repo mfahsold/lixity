@@ -5,12 +5,16 @@
   var paletteDialog = null;
   var searchInput = null;
   var resultsList = null;
+  var emptyResults = null;
   var selectedIndex = 0;
   var activeCommands = [];
   var lastFocusedElement = null;
   var paletteShortcuts = "Control+K Meta+K Control+P Meta+P";
 
   var STANDALONE_DE = {
+    cmd_aria_label: "Befehlspalette",
+    cmd_empty: "Keine passenden Befehle gefunden.",
+    cmd_placeholder: "Befehl eingeben oder suchen...",
     cmd_cat_views: "Ansicht",
     cmd_cat_analysis: "Analyse",
     cmd_cat_research: "Recherche",
@@ -412,6 +416,10 @@
     input.className = "command-palette-input";
     input.type = "text";
     input.placeholder = cmdText("cmd_placeholder", "Type a command or search...");
+    input.setAttribute("role", "combobox");
+    input.setAttribute("aria-label", input.placeholder);
+    input.setAttribute("aria-autocomplete", "list");
+    input.setAttribute("aria-expanded", "false");
     input.autocomplete = "off";
     input.spellcheck = false;
 
@@ -428,6 +436,14 @@
     results.id = "command-palette-results";
     results.className = "command-palette-results";
     results.setAttribute("role", "listbox");
+    results.setAttribute("aria-label", dialog.getAttribute("aria-label"));
+    input.setAttribute("aria-controls", results.id);
+
+    var empty = document.createElement("div");
+    empty.className = "command-palette-empty";
+    empty.setAttribute("role", "status");
+    empty.hidden = true;
+    empty.textContent = cmdText("cmd_empty", "No matching commands found.");
 
     // Footer
     var footer = document.createElement("div");
@@ -442,6 +458,7 @@
 
     wrap.appendChild(header);
     wrap.appendChild(results);
+    wrap.appendChild(empty);
     wrap.appendChild(footer);
     dialog.appendChild(wrap);
     document.body.appendChild(dialog);
@@ -457,12 +474,12 @@
 
     input.addEventListener("keydown", function (e) {
       if (e.isComposing || e.defaultPrevented) return;
-      if (e.key === "ArrowDown") {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault();
-        setSelectedIndex((selectedIndex + 1) % Math.max(1, activeCommands.length));
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSelectedIndex((selectedIndex - 1 + activeCommands.length) % Math.max(1, activeCommands.length));
+        if (activeCommands.length) {
+          var step = e.key === "ArrowDown" ? 1 : -1;
+          setSelectedIndex((selectedIndex + step + activeCommands.length) % activeCommands.length);
+        }
       } else if (e.key === "Enter") {
         e.preventDefault();
         executeSelected();
@@ -472,20 +489,28 @@
       }
     });
 
-    return { dialog: dialog, input: input, results: results };
+    return { dialog: dialog, input: input, results: results, empty: empty };
   }
 
-  function setSelectedIndex(idx) {
+  function optionId(command) {
+    return "command-palette-option-" + encodeURIComponent(command.id);
+  }
+
+  function setSelectedIndex(idx, scroll = true) {
     selectedIndex = idx;
     var items = resultsList.querySelectorAll(".command-palette-item");
     items.forEach(function (item, i) {
       var isSel = i === selectedIndex;
       item.classList.toggle("selected", isSel);
       item.setAttribute("aria-selected", isSel ? "true" : "false");
-      if (isSel) {
-        item.scrollIntoView({ block: "nearest", behavior: "smooth" });
-      }
     });
+    var active = items[selectedIndex];
+    if (active) {
+      searchInput.setAttribute("aria-activedescendant", active.id);
+      if (scroll) active.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    } else {
+      searchInput.removeAttribute("aria-activedescendant");
+    }
   }
 
   function executeSelected() {
@@ -508,31 +533,26 @@
       return text.indexOf(query) !== -1;
     });
 
-    selectedIndex = 0;
+    var hasResults = activeCommands.length > 0;
+    resultsList.hidden = !hasResults;
+    emptyResults.hidden = hasResults;
+    searchInput.setAttribute("aria-expanded", String(hasResults));
     var components = window.LixityComponents;
     if (components && typeof components.html === "function" && typeof components.mount === "function") {
       var html = components.html;
-      if (activeCommands.length === 0) {
-        components.mount(
-          resultsList,
-          html`<li class="command-palette-empty">${cmdText("cmd_empty", "No matching commands found.")}</li>`
-        );
-        return;
-      }
       var nodes = [];
       var cat = null;
       activeCommands.forEach(function (cmd, idx) {
         if (cmd.category !== cat) {
           cat = cmd.category;
-          nodes.push(html`<li key=${"cat-" + cat} class="command-palette-category">${cat}</li>`);
+          nodes.push(html`<li key=${"cat-" + cat} class="command-palette-category" role="presentation">${cat}</li>`);
         }
-        var isSel = idx === 0;
         nodes.push(html`
           <li
             key=${cmd.id}
-            class=${"command-palette-item" + (isSel ? " selected" : "")}
+            id=${optionId(cmd)}
+            class="command-palette-item"
             role="option"
-            aria-selected=${isSel ? "true" : "false"}
             onClick=${function () { selectedIndex = idx; executeSelected(); }}
             onMouseMove=${function () { if (selectedIndex !== idx) setSelectedIndex(idx); }}
           >
@@ -546,18 +566,11 @@
         `);
       });
       components.mount(resultsList, nodes);
+      setSelectedIndex(hasResults ? 0 : -1, false);
       return;
     }
 
     resultsList.replaceChildren();
-
-    if (activeCommands.length === 0) {
-      var emptyLi = document.createElement("li");
-      emptyLi.className = "command-palette-empty";
-      emptyLi.textContent = cmdText("cmd_empty", "No matching commands found.");
-      resultsList.appendChild(emptyLi);
-      return;
-    }
 
     var currentCategory = null;
     activeCommands.forEach(function (cmd, idx) {
@@ -565,14 +578,15 @@
         currentCategory = cmd.category;
         var catHeader = document.createElement("li");
         catHeader.className = "command-palette-category";
+        catHeader.setAttribute("role", "presentation");
         catHeader.textContent = currentCategory;
         resultsList.appendChild(catHeader);
       }
 
       var li = document.createElement("li");
-      li.className = "command-palette-item" + (idx === 0 ? " selected" : "");
+      li.id = optionId(cmd);
+      li.className = "command-palette-item";
       li.setAttribute("role", "option");
-      li.setAttribute("aria-selected", idx === 0 ? "true" : "false");
 
       var iconSpan = document.createElement("span");
       iconSpan.className = "command-palette-item-icon";
@@ -615,6 +629,7 @@
 
       resultsList.appendChild(li);
     });
+    setSelectedIndex(hasResults ? 0 : -1, false);
   }
 
   function open() {
@@ -623,6 +638,7 @@
       paletteDialog = dom.dialog;
       searchInput = dom.input;
       resultsList = dom.results;
+      emptyResults = dom.empty;
     }
 
     lastFocusedElement = document.activeElement;
@@ -642,6 +658,8 @@
 
   function close() {
     if (!paletteDialog) return;
+    searchInput.setAttribute("aria-expanded", "false");
+    setSelectedIndex(-1, false);
     if (typeof paletteDialog.close === "function") {
       paletteDialog.close();
     } else {

@@ -2205,6 +2205,7 @@
   "speech_render_title": "Genera audio",
   "speech_reuse": "Riutilizza i segmenti di capitolo completati",
   "speech_reuse_help": "Riutilizza i segmenti di capitolo compatibili. Disattiva per rigenerarli. Le anteprime dei paragrafi sono sempre nuove.",
+  "speech_run_options": "Opzioni audio",
   "speech_runtime_hint": "La sintesi usa il motore e la destinazione scelti. Verifica il servizio nei profili vocali. Ascolta un’anteprima; i segmenti completati possono essere riutilizzati.",
   "speech_sample_custom": "Testo personalizzato",
   "speech_sample_full": "Passaggio standard (fonetico)",

@@ -559,7 +559,12 @@ function renderRecentProjects() {
   document.querySelectorAll("[data-recent-projects]").forEach(function(wrap) {
     var list = wrap.querySelector("[data-recent-project-list]");
     var status = wrap.querySelector("[data-recent-project-status]");
+    var losesFocus = !recents.length && wrap.contains(document.activeElement);
     wrap.hidden = !recents.length;
+    if (losesFocus) {
+      var openControl = document.getElementById(wrap.id === "open-project-recent" ? "open-proj-choose" : "hero-btn-open-project");
+      if (openControl) openControl.focus({preventScroll: true});
+    }
     if (!list) return;
     list.replaceChildren();
     if (status) status.hidden = true;

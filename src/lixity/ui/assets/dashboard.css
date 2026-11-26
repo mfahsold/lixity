@@ -40,7 +40,6 @@ gap: 1rem;
 & h4 { font-size: var(--text-section-title); font-weight: var(--weight-strong); margin: .75rem 0 .3rem; }
 & .research-revision-readonly {
 font-size: var(--text-control); line-height: var(--line-compact);
-& dt { font-size: var(--text-small); font-weight: var(--weight-semibold); color: var(--fg); }
 & strong { font-weight: var(--weight-semibold); }
 }
 }
@@ -831,9 +830,8 @@ mark.search-hit { background: rgba(255, 214, 0, 0.35); color: inherit; font-weig
 .research-passage-actions { margin-top: .5rem; }
 .empty-state-note { max-width: 60ch; margin: 0 auto 1.2rem; line-height: 1.5; }
 .recent-projects-panel { width: 100%; min-width: 0; max-width: 100%; margin-top: .6rem; padding-top: .6rem; border-top: 1px solid var(--line); }
-.recent-projects-header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .4rem; }
+.recent-projects-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .4rem; }
 .recent-projects-heading { font-size: var(--text-small); font-weight: var(--weight-semibold); color: var(--fg); margin: 0; }
-.recent-projects-clear { font-size: var(--text-micro); color: var(--muted); text-decoration: underline; cursor: pointer; background: 0; border: 0; padding: 0; &:hover { color: var(--flag); } }
 .recent-projects-list { list-style: none; margin: 0; padding: 0; max-height: min(28vh, 12rem); overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-raised); }
 .recent-project-item { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .4rem .6rem; transition: background-color .15s ease; & + .recent-project-item { border-top: 1px solid var(--line); } &:hover { background: var(--surface-hover); } }
 .recent-project-btn { display: flex; align-items: center; gap: .5rem; flex: 1; min-width: 0; background: 0; border: 0; padding: 0; margin: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; overflow: hidden; &:hover .recent-project-name { color: var(--accent); } }
@@ -1022,7 +1020,7 @@ border-radius: 0; text-align: left; overflow-wrap: anywhere;
 .research-revision-history-list { display: flex; flex-wrap: wrap; gap: .4rem; list-style: none; margin: 0; padding: 0; }
 .research-revision-history-list button[aria-current="true"] { border-color: var(--accent); color: var(--accent); }
 .research-revision-readonly { display: grid; grid-template-columns: minmax(7rem, 35%) minmax(0, 1fr); gap: .35rem .8rem; margin: .7rem 0; }
-.research-revision-readonly dt { font-weight: var(--weight-semibold); color: var(--muted); }
+:where(.research-revision-readonly) dt { font-weight: var(--weight-semibold); color: var(--muted); }
 .research-revision-readonly dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .research-revision-history-detail { overflow-wrap: anywhere; }
 .triage-controls { align-items: end; margin-block: var(--space-3); }

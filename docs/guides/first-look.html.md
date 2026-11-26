@@ -8,6 +8,20 @@ Updated 26 November 2026
 
 This walkthrough follows the generated demo. It uses the same reading website export available in **Project actions → Reading website**. Its manuscript, analysis and chosen Research are a fixed snapshot; importing and saving require a local project. See [how to make your own reading website](research-pdf.html#reading-website).
 
+<a id="receipt"></a>
+
+## The blank line in Warehouse 4
+
+In the [one-minute film](../#product-tour-preview), Mara has to decide what she can sign for. On her dispatch receipt, the cart number is 17 and the receiving line is blank. The same number appears in an earlier return entry.
+
+1. [Open Research in the read-only demo](../demo/report.html#research-manager). Under **Dossiers**, open **Warehouse 4 exhibit book** with **View entry**.
+
+2. In the exhibit book, inspect the **Dispatch receipt** and **Office ledger** sections. Mara copied 17 at 20:00. The ledger lists 17 as returned at 18:40. The receipt leaves the receiving signature blank.
+
+3. Return to **Manuscript** and read the end of **Morning Handover**. Mara signs the account of what she recorded herself. Her signature leaves the question of who received the delivery open.
+
+The records are fictional facsimiles. In a local project you can compare an edited draft and export its saved dossier. Below, the read-only demo lets you inspect the marked sentence and its exact count.
+
 <a id="example"></a>
 
 <a id="passage"></a>

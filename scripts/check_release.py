@@ -3,15 +3,18 @@
 import argparse
 import ast
 import hashlib
+import http.client
 import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import tarfile
 import tempfile
 import zipfile
+from collections.abc import Callable
 from email.parser import Parser
 from pathlib import Path
 
@@ -209,6 +212,19 @@ def verify_checksums(dist: Path, version: str) -> None:
             raise ValueError(f"checksum mismatch: {name}")
 
 
+def check_artifact_destination(dist: Path) -> None:
+    """Require an absent or fully managed artifact directory before replacing it."""
+    if dist.is_symlink():
+        raise ValueError("artifact output directory must not be a symlink")
+    existing = list(dist.iterdir()) if dist.exists() else []
+    if any(not path.is_file() or path.is_symlink()
+           or not (path.name == "SHA256SUMS"
+                   or (path.name.startswith("lixity-")
+                       and path.name.endswith((".whl", ".tar.gz"))))
+           for path in existing):
+        raise ValueError("artifact output directory contains unmanaged files")
+
+
 def promote_artifacts(root: Path, fresh: Path, dist: Path, tag: str | None) -> None:
     """Stage complete bytes locally, then replace with rollback on caught failures.
 
@@ -225,6 +241,7 @@ def promote_artifacts(root: Path, fresh: Path, dist: Path, tag: str | None) -> N
             shutil.copy2(path, candidate / path.name)
         version = validate(root, candidate, tag)
         verify_checksums(candidate, version)
+        check_artifact_destination(dist)
         try:
             if dist.exists():
                 dist.rename(previous)
@@ -253,15 +270,7 @@ def build(root: Path, dist: Path, tag: str | None = None, *, smoke_wheel: bool =
           install_report: Path | None = None) -> None:
     """Replace managed outputs only after candidate validation and requested smoke checks."""
     version = source_version(root, tag)
-    if dist.is_symlink():
-        raise ValueError("artifact output directory must not be a symlink")
-    old = list(dist.iterdir()) if dist.exists() else []
-    if any(not path.is_file() or path.is_symlink()
-           or not (path.name == "SHA256SUMS"
-                   or (path.name.startswith("lixity-")
-                       and path.name.endswith((".whl", ".tar.gz"))))
-           for path in old):
-        raise ValueError("artifact output directory contains unmanaged files")
+    check_artifact_destination(dist)
     if install_report is not None and (not smoke_wheel or install_report.resolve().is_relative_to(dist.resolve())):
         raise ValueError("install report requires a smoke check and an output path outside dist")
     with tempfile.TemporaryDirectory(prefix="lixity-build-") as directory:
@@ -272,25 +281,107 @@ def build(root: Path, dist: Path, tag: str | None = None, *, smoke_wheel: bool =
         )
         validate(root, fresh, tag)
         if smoke_wheel:
-            smoke(fresh, version, install_report=staged_report)
+            smoke(fresh, version, install_report=staged_report, root=root)
         write_checksums(fresh)
         promote_artifacts(root, fresh, dist, tag)
         if install_report is not None and staged_report is not None:
             shutil.copyfile(staged_report, install_report)
 
 
-def smoke(dist: Path, version: str, *, install_report: Path | None = None) -> None:
+def _loopback_get(port: int, path: str) -> tuple[int, str, str, bytes]:
+    """Read the installed service directly, without a proxy or external redirects."""
+    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+    try:
+        connection.request("GET", path)
+        with connection.getresponse() as response:
+            return (response.status, response.getheader("Location", ""),
+                    response.getheader("Content-Type", ""), response.read())
+    except (OSError, http.client.HTTPException) as exc:
+        raise ValueError("installed workspace could not be read over loopback") from exc
+    finally:
+        connection.close()
+
+
+def _smoke_workspace(cli: Path, work: Path, root: Path, version: str,
+                     run: Callable[[list[str], str], str]) -> None:
+    project = work / "warehouse-4"
+    project.mkdir()
+    sample = (root / "samples/first-look.md").read_bytes()
+    manuscript = project / "manuscript.md"
+    manuscript.write_bytes(sample)
+    (project / "lixity.toml").write_text(
+        'manuscript = "manuscript.md"\nlanguage = "en"\n', encoding="utf-8",
+    )
+    report = json.loads(run([str(cli), "analyze", "--project", str(project), "--json"],
+                            "Warehouse 4 project analysis"))
+    if (report["meta"]["version"] != version or report["meta"]["language"] != "en"
+            or report["metrics"]["clean_words"] <= 0 or report["metrics"]["total_sentences"] <= 0):
+        raise ValueError("installed analysis did not measure the Warehouse 4 manuscript")
+
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    options = ["--port", str(port), "--json"]
+    try:
+        run([str(cli), "service", "start", str(project), "--host", "127.0.0.1",
+             "--backend", "process", *options], "start workspace")
+        status = json.loads(run([str(cli), "service", "status", *options], "service status"))
+        if (status["schema_version"] != "lixity-service-status/1" or not status["ok"]
+                or status["state"] != "running" or status["running_version"] != version):
+            raise ValueError("installed service did not report the running release version")
+        diagnostics = json.loads(run([str(cli), "doctor", *options], "installation diagnostics"))
+        if (diagnostics["schema_version"] != "lixity-doctor/1" or not diagnostics["ok"]
+                or diagnostics["installation"]["distribution_version"] != version
+                or not Path(diagnostics["installation"]["module_path"]).resolve().is_relative_to(
+                    (work / "venv").resolve()
+                )):
+            raise ValueError("installed diagnostics disagree with the release installation")
+
+        code, workspace, _, _ = _loopback_get(port, "/")
+        if code != 303 or not re.fullmatch(r"/w/[0-9a-f]{32}/", workspace):
+            raise ValueError("installed service root did not redirect to a local workspace")
+        code, _, content_type, body = _loopback_get(port, workspace)
+        api = workspace + "api"
+        digest = hashlib.sha256(sample).hexdigest()
+        markers = (
+            f'data-api="{api}"', 'data-read-only="false"', 'data-has-manuscript="true"',
+            f'data-manuscript-source-sha256="{digest}"', "The Crate at Warehouse 4",
+            ".workspace-product-details {", "window.LixityWorkbench =",
+        )
+        if (code != 200 or not content_type.startswith("text/html")
+                or not all(marker.encode("utf-8") in body for marker in markers)):
+            raise ValueError("installed workspace did not render the sample and packaged UI assets")
+        code, _, content_type, body = _loopback_get(port, api)
+        if code != 200 or not content_type.startswith("application/json"):
+            raise ValueError("installed workspace did not expose its scoped API")
+        discovery = json.loads(body)
+        if (discovery["schema_version"] != "lixity-api-index/1" or not discovery["ok"]
+                or discovery["version"] != version or not discovery["project"]["manuscript_loaded"]
+                or discovery["project"]["language"] != "en"
+                or not discovery["capabilities"]["analysis"]):
+            raise ValueError("installed workspace API did not describe the loaded manuscript")
+    finally:
+        stop = json.loads(run([str(cli), "service", "stop", *options], "stop workspace"))
+        if not stop["ok"] or stop["state"] != "stopped":
+            raise ValueError("installed workspace service did not stop")
+    if manuscript.read_bytes() != sample:
+        raise ValueError("installed smoke changed the disposable manuscript")
+
+
+def smoke(dist: Path, version: str, *, install_report: Path | None = None,
+          root: Path | None = None) -> None:
     """Verify a wheel installation outside the checkout in a disposable venv."""
     wheel = next(dist.glob("*.whl")).resolve()
-    env = dict(os.environ)
-    env.pop("PYTHONPATH", None)
-    env.pop("PYTHONHOME", None)
+    env = {name: value for name, value in os.environ.items()
+           if name not in {"PYTHONPATH", "PYTHONHOME"} and not name.startswith("LIXITY_")}
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
     with tempfile.TemporaryDirectory(prefix="lixity-release-smoke-") as directory:
         work = Path(directory)
         env["LIXITY_SERVICE_STATE_DIR"] = str(work / "service-state")
         env["LIXITY_SERVICE_RUNTIME_DIR"] = str(work / "service-runtime")
         subprocess.run(  # noqa: S603 - fixed interpreter and venv module
-            [sys.executable, "-m", "venv", str(work / "venv")], check=True, env=env,
+            [sys.executable, "-m", "venv", str(work / "venv")], cwd=work, check=True, env=env,
         )
         executable = work / "venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
         cli = work / "venv" / ("Scripts/lixity.exe" if os.name == "nt" else "bin/lixity")
@@ -299,7 +390,7 @@ def smoke(dist: Path, version: str, *, install_report: Path | None = None) -> No
             try:
                 return subprocess.run(  # noqa: S603 - controlled venv interpreter, no shell
                     command, cwd=work, env=env, check=True,
-                    capture_output=True, text=True,
+                    capture_output=True, encoding="utf-8",
                 ).stdout
             except subprocess.CalledProcessError as exc:
                 detail = (exc.stderr or exc.stdout or "no diagnostic output").strip()[-4000:]
@@ -316,15 +407,7 @@ def smoke(dist: Path, version: str, *, install_report: Path | None = None) -> No
         about = json.loads(run([str(cli), "about", "--json"], "about metadata"))
         if about["meta"]["version"] != version:
             raise ValueError("installed about metadata differs from release version")
-        status = json.loads(run([str(cli), "service", "status", "--port", "59973", "--json"],
-                                "service status"))
-        if status["schema_version"] != "lixity-service-status/1" or not status["ok"]:
-            raise ValueError("installed service status did not return its inspection contract")
-        diagnostics = json.loads(run([str(cli), "doctor", "--port", "59973", "--json"],
-                                     "installation diagnostics"))
-        if (diagnostics["schema_version"] != "lixity-doctor/1" or not diagnostics["ok"]
-                or diagnostics["installation"]["distribution_version"] != version):
-            raise ValueError("installed diagnostics disagree with the release installation")
+        _smoke_workspace(cli, work, root or Path(__file__).resolve().parents[1], version, run)
 
         # Exercise package-data and license discovery from the installed wheel,
         # outside the source checkout, through all three publication formats.
@@ -396,7 +479,7 @@ def main() -> None:
         version = validate(root, dist, args.tag)
         verify_checksums(dist, version)
         if args.smoke and not args.build:
-            smoke(dist, version)
+            smoke(dist, version, root=root)
     except (ValueError, OSError, tarfile.TarError, zipfile.BadZipFile,
             subprocess.CalledProcessError) as exc:
         parser.exit(1, f"release check failed: {exc}\n")

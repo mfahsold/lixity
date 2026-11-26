@@ -1,10 +1,10 @@
 # Review a novel chapter without smoothing away its voice
 
-By [Matthias Fahsold](https://github.com/mfahsold) · Published 11 November 2026 · 5 minutes · [Deutsche Fassung](romankapitel-pruefen-de.html)
+By [Matthias Fahsold](https://github.com/mfahsold) · Published 11 November 2026 · Updated 26 November 2026 · 5 minutes · [Deutsche Fassung](romankapitel-pruefen-de.html)
 
 A chapter suddenly reads differently from the rest. Sentences get shorter, dialogue becomes denser, a few words keep returning. Is something wrong, or is the scene doing exactly what it needs to do?
 
-Lixity helps you investigate that question in the text. The local open-source workspace connects manuscripts, linguistic observations and research. A conspicuous number is a starting point: it should lead to a passage you can read and judge in context.
+In Lixity, a chapter comparison can take you back to the passage. Read the observation in context and open the dossier associated with the text if the question also involves research.
 
 <a id="one-question"></a>
 
@@ -56,8 +56,8 @@ Lixity runs as a local browser application. Built-in analysis works offline; opt
 
 The public demo contains six invented English harbour chapters with linked case notes. It is read-only and requires neither an account nor your manuscript. Try one small task: open a chapter comparison, read an explanation and return to its passage. Is it clearer what you want to examine?
 
-[Open the Lixity demo](../demo/report.html) [First look](../guides/first-look.html) [Methods and limits](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md)
+[Open the Lixity demo](../demo/report.html) [First look](../guides/first-look.html) [Methods and limits](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) [Compare analysis tools](../guides/manuscript-analysis-tools.html)
 
-Use **Write** in the local app to edit with undo, local autosave and draft recovery. The public demo is read-only. [Write a manuscript](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript)
+Open **Write** in a local project to compare a review draft with the saved version. Previewing the comparison keeps that version intact. As you edit the main draft, Lixity autosaves while the source on disk still matches the one you opened. [Write a manuscript](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript).
 
 [All guides](../#guides)[Articles](index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

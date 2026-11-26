@@ -32,6 +32,7 @@ from .components import (
     panel_label,
     select_control,
     status_banner,
+    ui_icon,
 )
 
 
@@ -227,7 +228,7 @@ def settings_form(
     project_save_hint = (f'<p class="ctl-note" id="settings-project-save-help">{translated("settings_project_save_hint")}</p>'
                          if author_setting_enabled else "")
     parts = [
-        f'<form id="settings-form" class="settings-form ctl-group" novalidate '
+        f'<form id="settings-form" class="settings-form ctl-group" aria-labelledby="settings-heading" novalidate '
         f'data-project-token="{esc(project_token)}" data-publication-initial="{initial_publication}" '
         f'data-publication-editable="{str(author_setting_enabled).lower()}" '
         f'data-title-initial="{esc(title)}" data-author-initial="{esc(project_author)}" '
@@ -290,7 +291,7 @@ def settings_form(
             else:
                 manuscript_html = translated("project_identity_value_unavailable")
             parts.extend([
-                f'<dt>{translated(title_key)}</dt><dd>',
+                f'<dt class="setting-term">{translated(title_key)}</dt><dd>',
                 f'<div>{translated("project_identity_saved")}: {esc(project_value) if project_value else translated("project_identity_not_set" if raw_status == "unavailable" else "project_identity_value_unavailable")}</div>',
                 f'<div>{translated("project_identity_manuscript")}: {manuscript_html}</div>',
             ])
@@ -475,7 +476,9 @@ def settings_form(
     parts.extend([
         '</div>',
         '<div class="settings-actions">',
-        f'<button type="button" class="ctl" id="settings-reset" title="{translated("reset_thresholds")}" data-help="{translated("settings_reset_thresholds_help")}">{translated("reset_thresholds")}</button>',
+        f'<button type="button" class="ctl" id="settings-reset" title="{translated("reset_thresholds")}" '
+        f'data-help="{translated("settings_reset_thresholds_help")}">'
+        f'{ui_icon("rotate-ccw", size=15)}<span>{translated("reset_thresholds")}</span></button>',
         '</div></details>',
         checkbox_field(
             '<input type="checkbox" id="set-save-analysis-defaults" '
@@ -498,7 +501,9 @@ def settings_form(
                                 editable=author_setting_enabled and bool(project_token),
                                 context_token=site_publication_context_token),
         '<div class="settings-actions">',
-        f'<button type="submit" class="ctl primary" data-action="settings" data-payload="settings" title="{translated("apply")}" data-help="{translated("settings_apply_hint")}">{translated("apply")}</button>',
+        f'<button type="submit" class="ctl primary" data-action="settings" data-payload="settings" '
+        f'title="{translated("apply")}" data-help="{translated("settings_apply_hint")}">'
+        f'{ui_icon("check", size=15)}<span>{translated("apply")}</span></button>',
         f'<span hidden id="settings-order-error">{translated("threshold_order")}</span>',
         '</div>',
         status_banner("settings-save-status"),

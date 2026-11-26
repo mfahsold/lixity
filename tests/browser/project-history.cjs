@@ -178,6 +178,14 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
       await page.locator('[data-open-path-kind=manuscript]').click();
       assert.equal(await page.locator('#open-proj-path').inputValue(), hostile);
       assert.equal(opens.length, before, 'Browsing only selects a path');
+      const switchToImport = page.locator('#link-switch-to-import');
+      assert.equal(await switchToImport.evaluate(button => getComputedStyle(button).textDecorationLine), 'none');
+      await switchToImport.press('Enter');
+      await page.waitForFunction(() => document.activeElement.id === 'import-dropzone');
+      assert.ok(await page.locator('#modal-project-create').isVisible());
+      assert.ok(await page.locator('#modal-project-open').isHidden());
+      await page.locator('#modal-project-create [data-close-modal]').first().click();
+      await page.locator('#hero-btn-open-project').click();
       await page.locator('#modal-project-open [data-close-modal]').first().click();
       const unchanged = await page.evaluate(key => localStorage.getItem(key), recentKey);
       await page.locator('#hero-btn-open-project').click();
@@ -205,9 +213,18 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
       assert.ok(saved.every(entry => typeof entry === 'string'), 'Only paths are stored');
       await page.reload();
       assert.equal(await page.locator('#welcome-project-recent-list [data-recent-project-path]').first().getAttribute('data-recent-project-path'), '/synthetic/accepted');
-      await page.locator('#welcome-project-recent [data-clear-recent-projects]').click();
+      const clearWelcome = page.locator('#welcome-project-recent [data-clear-recent-projects]');
+      assert.equal(await clearWelcome.evaluate(button => getComputedStyle(button).textDecorationLine), 'none');
+      await clearWelcome.press('Space');
+      await page.waitForFunction(() => document.activeElement.id === 'hero-btn-open-project');
       await page.reload();
       assert.ok(await page.locator('#welcome-project-recent').isHidden(), 'Clearing history survives reload');
+      await page.evaluate(key => localStorage.setItem(key, JSON.stringify(['/synthetic/accepted'])), recentKey);
+      await page.reload();
+      await page.locator('#hero-btn-open-project').click();
+      await page.locator('#open-project-recent [data-clear-recent-projects]').press('Enter');
+      await page.waitForFunction(() => document.activeElement.id === 'open-proj-choose');
+      assert.ok(await page.locator('#open-project-recent').isHidden());
       await context.close();
       for (const scenario of [{saved: '{broken'}, {saved: {path: '/not-an-array'}}, {blocked: true}]) {
         const check = await open(scenario);

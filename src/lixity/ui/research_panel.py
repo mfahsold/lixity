@@ -17,6 +17,7 @@ from .components import (
     status_banner,
     tag_input_with_suggestions,
     template_preset_bar,
+    ui_icon,
 )
 from .components import (
     form_field as shared_form_field,
@@ -63,22 +64,24 @@ def render_research_panel(
         f'<button type="button" class="ctl" id="research-revision-batch-review" data-requires-write hidden>{L("research_revision_batch_review")}</button>'
     )
     parts.append('<div class="row research-tools-entry" id="research-tools-entry">')
-    for tool, key, help_key in (
-        ("search", "research_tools_search", "research_tools_search_help"),
-        ("review", "research_tools_review", "research_tools_review_help"),
+    for tool, key, help_key, icon in (
+        ("search", "research_tools_search", "research_tools_search_help", "search"),
+        ("review", "research_tools_review", "research_tools_review_help", "check-circle"),
     ):
         parts.append(
             f'<button type="button" class="ctl" id="research-tab-{tool}" data-rtab="{tool}" '
             f'{"data-requires-live " if tool == "search" else ""}'
             f'title="{L(key)}" data-help="{L(help_key)}" '
-            f'aria-controls="rtab-{tool}" aria-expanded="false">{L(key)}</button>'
+            f'aria-controls="rtab-{tool}" aria-expanded="false">{ui_icon(icon, size=15)}<span>{L(key)}</span></button>'
         )
     parts.append('</div>')
     parts.append(
         '<section id="research-tool-host" class="research-tool-host" aria-labelledby="research-tool-title" hidden>'
         '<div class="row row-between research-tool-heading">'
         '<h3 id="research-tool-title" class="section-heading" tabindex="-1"></h3>'
-        f'<button type="button" class="ctl" id="research-tool-close" title="{L("research_tools_close")}" data-help="{L("research_tools_close_help")}">{L("research_tools_close")}</button>'
+        f'<button type="button" class="ctl" id="research-tool-close" title="{L("research_tools_close")}" '
+        f'data-help="{L("research_tools_close_help")}" aria-keyshortcuts="Escape">'
+        f'{ui_icon("arrow-left", size=15)}<span data-research-tool-close-label>{L("research_tools_close")}</span></button>'
         '</div></section>'
     )
     parts.append('<div class="research-navigation" id="research-navigation">')
@@ -128,13 +131,14 @@ def render_research_panel(
 
     parts.append(pane("sources"))
     parts.append(f'<h3 class="section-heading">{L("research_tab_sources")}</h3>')
-    parts.append(f'<button type="button" class="ctl mb-2" id="research-source-add" data-requires-write>{L("research_tools_source_add")}</button>')
+    parts.append('<button type="button" class="ctl mb-2" id="research-source-add" '
+                 f'aria-controls="r-local-import" data-requires-write>{L("research_tools_source_add")}</button>')
     parts.append(
         f'<p class="ctl-note">{L("site_research_hint" if read_only else "research_captures_hint")}</p>'
     )
     parts.append('<details class="settings-advanced" id="zotero-box" data-requires-write>')
     parts.append(f'<summary>{L("research_capture_zotero")}</summary><div class="ctl-group">')
-    parts.append(f'<p class="ctl-note">{L("zotero_intro")}</p>')
+    parts.append(f'<p class="ctl-note" id="r-zotero-intro">{L("zotero_intro")}</p>')
     parts.append('<div class="row">')
     parts.append(f'<label for="r-zotero-library">{L("zotero_library")}</label>')
     parts.append('<input class="ctl" id="r-zotero-library" value="users/0" placeholder="users/0"/>')
@@ -146,7 +150,8 @@ def render_research_panel(
     )
     parts.append('</div><div class="row">')
     parts.append(
-        f'<input class="ctl grow" id="r-zotero-query" aria-label="{L("zotero_browse")}" placeholder="{L("zotero_browse")}"/>'
+        f'<input class="ctl grow" type="search" id="r-zotero-query" aria-label="{L("research_search_query")}" '
+        f'aria-describedby="r-zotero-intro" placeholder="{L("research_search_query")}"/>'
     )
     parts.append(
         f'<button type="button" class="ctl primary" id="r-zotero-browse">{L("zotero_browse")}</button>'
@@ -223,14 +228,17 @@ def render_research_panel(
     parts.append("</div>")
 
     parts.append(pane("search"))
-    parts.append('<form class="ctl-group" id="research-search-form">')
+    parts.append(f'<form class="ctl-group" id="research-search-form" role="search" '
+                 f'aria-label="{L("research_tools_search")}">')
     parts.append(
-        f'<span class="ctl-label">{help_term(labels, "research_search", L("research_search_heading"))}</span>'
+        f'<label class="ctl-label" for="r-search-query" data-help="{L("help_research_search")}">'
+        f'{L("research_search_heading")}</label>'
+        f'<span class="sr-only" id="research-search-scope-help">{L("help_research_search")}</span>'
     )
     parts.append('<div class="row">')
     parts.append(
-        f'<input class="ctl" type="search" id="r-search-query" aria-label="{L("research_search_query")}" '
-        f'placeholder="{L("research_search_query")}" title="{L("research_search_query")}" '
+        f'<input class="ctl" type="search" id="r-search-query" aria-describedby="research-search-scope-help" '
+        f'placeholder="{L("research_search_query")}" '
         f'data-help="{L("research_search_query_help")}" aria-keyshortcuts="Enter"/>'
     )
     parts.append(
@@ -249,7 +257,8 @@ def render_research_panel(
     parts.append(
         f'<button type="submit" class="ctl primary" id="r-search-btn" '
         f'title="{L("research_search_action")}" data-help="{L("research_search_action_help")}" '
-        f'aria-keyshortcuts="Enter">{L("research_search_action")}</button>'
+        f'aria-controls="research-search-results" aria-keyshortcuts="Enter">'
+        f'{ui_icon("search", size=15)}<span>{L("research_search_action")}</span></button>'
     )
     parts.append("</div>")
     parts.append("</form>")
@@ -739,8 +748,9 @@ def render_research_panel(
     parts.append(f'<h3 class="section-heading">{L("research_editorial_heading")}</h3>')
     parts.append(f'<p class="ctl-note">{L("research_editorial_help")}</p>')
     parts.append(
-        f'<button type="button" class="ctl ctl-sm" id="r-review-refresh" '
-        f'title="{L("research_editorial_refresh")}" data-help="{L("research_review_refresh_help")}">{L("research_editorial_refresh")}</button>'
+        '<button type="button" class="ctl ctl-sm" id="r-review-refresh" aria-controls="research-editorial-review" '
+        f'title="{L("research_editorial_refresh")}" data-help="{L("research_review_refresh_help")}">'
+        f'{ui_icon("rotate-cw", size=15)}<span>{L("research_editorial_refresh")}</span></button>'
     )
     parts.append(f'<button type="button" class="ctl mb-2" id="research-review-all" hidden>{L("research_review_all")}</button>')
     parts.append('<div id="research-editorial-review" aria-live="polite"></div>')
@@ -832,8 +842,9 @@ def render_research_panel(
     parts.append(status_banner("r-term-status"))
     parts.append("</div></details>")
     parts.append(
-        f'<button type="button" class="ctl ctl-sm mb-2" id="r-terms-refresh" '
-        f'title="{L("research_editorial_refresh")}" data-help="{L("research_terms_refresh_help")}">{L("research_editorial_refresh")}</button>'
+        '<button type="button" class="ctl ctl-sm mb-2" id="r-terms-refresh" aria-controls="research-manuscript-terms" '
+        f'title="{L("research_editorial_refresh")}" data-help="{L("research_terms_refresh_help")}">'
+        f'{ui_icon("rotate-cw", size=15)}<span>{L("research_editorial_refresh")}</span></button>'
     )
     parts.append(
         '<div id="research-manuscript-terms" class="manuscript-link-review-list" aria-live="polite"></div>'

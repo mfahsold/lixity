@@ -2,7 +2,7 @@
 
 Lixity describes patterns in the manuscript you provide. Its style reference compares chapters with that manuscript's own baseline. A signal is a reason to inspect a passage in context; it is not an objective quality score or an instruction to rewrite it.
 
-Updated 20 November 2026
+Updated 26 November 2026
 
 <a id="start-with-a-question"></a>
 
@@ -79,12 +79,12 @@ The Scenes & style registers view measures scenes separately. Assign scene regis
 | Style reference | At least the configured measurable chapter count; default 2 | A technical floor, not proof of statistical reliability. Several substantive chapters are more informative. |
 | HD-D, MTLD, Maas a² | At least 100 tokens | Shorter inputs return unavailable results. Length robustness does not eliminate every sample effect. |
 | MATTR | A 50-token window | Compare results only with consistent tokenization and settings. |
-| Showing/telling ranking | At least three chapters with distinguishable balance scores | Otherwise the ranking lists are empty; numeric zero fallback scores do not establish artistic equivalence. |
+| Surface signals | At least three chapters with distinguishable balance scores | The comparison needs enough chapters with different cue counts to display an order. |
 | Readability | Language-specific formula and count heuristics | Formula estimates describe surface structure; they do not determine an individual reader's understanding. |
 
 A token floor is an implementation policy, not a quality threshold. Maas remains defined for repetition: 100 repetitions of one token give `maas_a2 = 0.5`. Guiraud `V/√N` still depends on length and corpus composition. Flesch-family values can fall outside 0–100; they estimate surface structure, not reader understanding.
 
-The showing/telling panel displays “–” with an explanation when there are fewer than three chapters or no comparative signals. Numeric fallback zeros remain in JSON for compatibility; they do not justify a ranking.
+**Surface signals** groups cues such as perception words, modal verbs and quoted text. The workspace explains an unavailable comparison. For the historical JSON keys and numeric fallbacks, see the [automation reference](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md).
 
 <a id="review"></a>
 
@@ -151,9 +151,9 @@ Two distinct comparable chapters receive z* scores, but in exact arithmetic thei
 
 <a id="fdr"></a>
 
-## Does FDR make a flagged passage objectively wrong?
+## What does a dot in the chapter comparison mean?
 
-No. Benjamini–Hochberg and Benjamini–Yekutieli require valid input probabilities to control false discoveries. Lixity's normal-tail probabilities have not been calibrated for comparisons against a baseline estimated from the same chapters. The configured q is therefore not a guarantee of the manuscript's false-alarm rate. A dot is a selection for review, not statistical confirmation or a judgment of prose quality.
+A dot marks an **uncalibrated selection** for review within this manuscript. Open the cell to read the chapter value and its reference in the same unit. The reference comes from the same chapters under review, so the configured Benjamini–Hochberg or Benjamini–Yekutieli threshold has no established false-alarm rate here. Read the passage to decide whether the difference matters.
 
 The style summary labels the share of feature comparisons within the threshold and shows its numerator and denominator. For example, 407 of 416 comparisons is about 98%; this is not a measurement of stylistic cohesion. Missing comparisons are excluded. When no comparison is available, the summary remains unknown.
 
@@ -191,6 +191,6 @@ Display label keys such as `feat_asl` are not API functions or result fields. Re
 
 The interface and language profiles cover English, German, French, Spanish, Italian, Portuguese and Dutch. English and German have the deepest linguistic heuristics. Complete translations of interface text do not establish equal linguistic accuracy. Mathematical identifiers stay language-neutral; quotations retain their original language.
 
-Read the [estimator definitions and scientific references](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md), [stability and limitations](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md), and [JSON contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md). For a first run, follow the [Warehouse 4 project walkthrough](first-look.html).
+Read the [estimator definitions and scientific references](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md), [stability and limitations](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md), and [JSON contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md). For a first run, follow the [Warehouse 4 project walkthrough](first-look.html). To see how this descriptive approach differs from other manuscript tools, read the [comparison guide](manuscript-analysis-tools.html).
 
 [All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

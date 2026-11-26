@@ -27,18 +27,30 @@ const textContrast = locator => locator.evaluate(element => {
 
 async function checkDesktopCapture(browser, width) {
   const page = await browser.newPage({viewport:{width,height:900}, reducedMotion:'reduce'});
-  const errors = [];
+  const errors = [], diagnostics = [];
   page.on('pageerror', error => errors.push(error.message));
   try {
-    await page.route('http://localhost:41739/**', route => route.request().method() === 'POST'
-      ? route.fulfill({json:{ok:false}})
-      : route.fulfill({contentType:'text/html',body:workspace}));
+    const api = '/w/' + '1'.repeat(32) + '/api';
+    const diagnosticUrl = 'http://localhost:41739' + api + '/audio-client-diagnostic';
+    await page.route('http://localhost:41739/**', route => {
+      const request = route.request();
+      if (request.url() === diagnosticUrl) {
+        diagnostics.push(request.postDataJSON());
+        return route.fulfill({status:204});
+      }
+      return request.method() === 'POST' ? route.fulfill({json:{ok:false}})
+        : route.fulfill({contentType:'text/html',body:workspace});
+    });
     await page.goto('http://localhost:41739/');
-    await page.evaluate(labels => { window.uiLabel = key => labels[key] || key; }, labels);
+    await page.evaluate(({labels, api}) => {
+      window.uiLabel = key => labels[key] || key;
+      document.body.dataset.readOnly = 'false';
+      document.body.dataset.api = api;
+    }, {labels, api});
     for (const file of ['design-tokens.css','components.css','teleprompter.css','speech-player.css']) {
       await page.addStyleTag({path:path.resolve('src/lixity/ui/assets',file)});
     }
-    for (const file of ['icons.js','audio-take.js','speech-player.js','desktop-bridge.js','teleprompter.js']) {
+    for (const file of ['icons.js','logging.js','audio-take.js','speech-player.js','desktop-bridge.js','teleprompter.js']) {
       await page.addScriptTag({path:path.resolve('src/lixity/ui/assets',file)});
     }
     await page.evaluate(async () => {
@@ -122,7 +134,7 @@ async function checkDesktopCapture(browser, width) {
 
     await record.click();
     await countIs('starts', 3);
-    await page.evaluate(() => nativeCapture.starts.at(-1).reject('A recording session is already running'));
+    await page.evaluate(() => nativeCapture.starts.at(-1).reject('PRIVATE_DESKTOP_RECORDING_ERROR'));
     await stateIs('failed');
     await recordEnabled();
     assert.equal(await page.evaluate(() => nativeCapture.cancels), 1, 'A rejected start never cancels another recording');
@@ -170,7 +182,7 @@ async function checkDesktopCapture(browser, width) {
     await countIs('stops', 4);
     await page.evaluate(() => {
       nativeCapture.returnedError = false;
-      nativeCapture.stops.at(-1).reject('Synthetic microphone driver failure');
+      nativeCapture.stops.at(-1).reject('PRIVATE_MICROPHONE_DRIVER_ERROR');
     });
     await stateIs('failed');
     assert.equal(await card.locator('audio').getAttribute('src'), preservedUrl, 'A stopped Rust capture consumes the driver error and preserves the take');
@@ -181,8 +193,16 @@ async function checkDesktopCapture(browser, width) {
     await stateIs('running');
     await page.evaluate(() => { nativeCapture.autoStop = true; });
     await countIs('stops', 5);
+    const lastDiagnostic = page.waitForResponse(response => response.url() === diagnosticUrl &&
+      response.request().postDataJSON().event === 'teleprompter_capture_ready');
     await page.evaluate(() => nativeCapture.resolveTake());
     await stateIs('ready');
+    assert.equal((await lastDiagnostic).status(), 204);
+    assert.deepEqual(diagnostics, [
+      {event:'teleprompter_capture_ready'}, {event:'teleprompter_capture_failed'},
+      {event:'teleprompter_capture_failed'}, {event:'teleprompter_capture_failed'},
+      {event:'teleprompter_capture_ready'},
+    ], 'Only completed captures and active failures are diagnosed. Context changes, cancellation and raw errors are excluded.');
     assert.equal(await state.innerText(), labels.teleprompter_take_ready);
     await card.locator('textarea').fill('A deliberate transcript.');
     await card.locator('input[type=checkbox]').check();
@@ -206,8 +226,9 @@ async function checkDesktopCapture(browser, width) {
   const artifacts = fs.mkdtempSync('/tmp/lixity-teleprompter-take-');
   try {
     for (const width of [1440,320]) {
-      const page=await browser.newPage({viewport:{width,height:900},reducedMotion:'reduce'}), errors=[];
+      const page=await browser.newPage({viewport:{width,height:900},reducedMotion:'reduce'}), errors=[], diagnostics=[];
       page.on('pageerror',error=>errors.push(error.message));
+      page.on('request',request=>{if(request.url().endsWith('/audio-client-diagnostic')) diagnostics.push(request.url());});
       await page.route('http://localhost:41739/**',route=>route.fulfill({contentType:'text/html',body:workspace}));
       await page.goto('http://localhost:41739/');
       const theme = width === 1440 ? 'light' : 'dark';
@@ -238,7 +259,7 @@ async function checkDesktopCapture(browser, width) {
         document.addEventListener('lixity:open-speech-studio',event=>{window.handedTake=event.detail;});
       });
       for(const file of ['design-tokens.css','components.css','teleprompter.css','speech-player.css'])await page.addStyleTag({content:fs.readFileSync('src/lixity/ui/assets/'+file,'utf8')});
-      for(const file of ['icons.js','audio-take.js','speech-player.js','teleprompter.js'])await page.addScriptTag({path:path.resolve('src/lixity/ui/assets',file)});
+      for(const file of ['icons.js','logging.js','audio-take.js','speech-player.js','teleprompter.js'])await page.addScriptTag({path:path.resolve('src/lixity/ui/assets',file)});
       const record=page.locator('.teleprompter-btn-record'),state=page.locator('#teleprompter-record-status'),card=page.locator('.teleprompter-take-card');
       try {
         await page.locator('#reader-teleprompter').click();
@@ -338,6 +359,7 @@ async function checkDesktopCapture(browser, width) {
         await page.evaluate(()=>{LixityTeleprompter.close();testCapture.resolveModule();});
         await page.waitForFunction(before=>testCapture.stops===before.stops+1&&testCapture.portsClosed===before.ports+1,beforeModule);
         assert.equal(await record.evaluate(el=>el.classList.contains('is-active')),false);assert.deepEqual(errors,[]);
+        assert.deepEqual(diagnostics,[],'A static player never submits recording diagnostics');
       } finally {await page.close();}
     }
     for (const width of [1440,320]) await checkDesktopCapture(browser, width);

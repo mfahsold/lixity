@@ -27,7 +27,7 @@ workers and integrations.
 | Review and save character, scene or place notes | [Manuscript dossiers](#research-in-context), [Dossier proposal rules](research/USAGE.md#manuscript-driven-dossier-drafts) |
 | Leave an explicit note in the manuscript | [Work markers](#work-markers-editor-visible) |
 | Inspect files and project settings | [Project structure](#inspect-project-structure), [Saved project settings](#saved-project-settings) |
-| Record or listen | [Audio manual](AUDIO.md#author-voice-recording-and-listening) |
+| Record a take, audition a passage or keep a chapter recording | [Audio workflow](AUDIO.md#getting-started) |
 | Edit the delivery of a passage while reading | [Passage direction beside the manuscript](AUDIO.md#passage-direction) |
 | Prepare a recipient's copy | [Manuscript PDF](#download-a-manuscript-pdf), [Dossier PDF](#download-a-dossier-pdf), [Reading website](#export-a-reading-website), [Preflight](#check-a-reading-website-before-exporting) |
 | Recover an unavailable source or missing control | [Source freshness](#source-availability-and-saved-analysis), [Troubleshooting](#troubleshooting) |
@@ -35,7 +35,7 @@ workers and integrations.
 ## Before you begin
 
 Open the desktop app from your application launcher, or use
-`lixity service start --open` for the local browser app. Choose **Open Project**
+[`lixity service start --open`](INSTALLATION.md#cli-current-release) for the local browser app. Choose **Open Project**
 to reconnect an existing project, or confirm an import preview to create a
 copy at the selected destination. The manuscript stays in its project folder.
 [First session and offline example](ONBOARDING.md#choose-your-starting-point)
@@ -48,6 +48,7 @@ published atomically. These import ceilings do not increase the separate local
 manuscript editing limits.
 
 <a id="write-a-manuscript-unreleased"></a>
+<a id="write-a-manuscript"></a>
 
 ## Write a manuscript
 
@@ -289,7 +290,7 @@ Across the application, controls use six distinct interaction patterns:
   sticky-header clearance, preserves focus without unintended viewport jumps,
   and highlights the arrival target (including the owning passage for search
   hits) in a reduced-motion-safe style.
-- **Dialogs** (project create/open, `Listen and direct` audio studio, `Teleprompter`,
+- **Dialogs** (project create/open, project audio settings, `Teleprompter`,
   command palette `Ctrl+K` / `Ctrl+P`, version comparison,
   dossier image viewer): modal overlays. They require an explicit close (`Escape`
   or close button) and keep the underlying buffer, selection and undo history intact.
@@ -327,7 +328,8 @@ Alternative and power-user paths that reach the same features (all legitimate, p
 | Feature-rank projection & scenes | `Compare chapters` → `Style` → projection, or `Explore patterns` → scenes | Command palette `Open Style Space Comparison` / `Open Scenes & Registers`, `Stil` tabs (`Heatmap` / `Bänder` / `Projektion der Merkmalsränge`), 3D canvas point click |
 | Passage values & evidence | Paragraph `…` button → `Paragraph details` → `Explain this passage` | Click paragraph with `Analysis Off`, click paragraph comparison badge, keyboard `Shift+F10` / right-click context menu, `?` guide actions |
 | Research & quotation linking | `Research for this passage` in inspector or `Dossiers` | Select prose text → floating selection toolbar (`Link quotation`), inspector backlink card `Historical Evidence / Dossier`, command palette `Open Research Search` / `Create New Research Dossier` / `Open Chronology & Timeline` |
-| Spoken review & teleprompter | `Listen and direct` or `Teleprompter` in toolbar | Keyboard shortcut `P` in reader, select prose text → `Read selection`, inspector backlink card `Vocal Directions & Teleprompter`, command palette |
+| Spoken review | In `Manuscript`, open `Listen and direct` for a passage preview or switch to `Chapter audio` to render or keep the chapter. [Audio workflow](AUDIO.md#getting-started) | Open a paragraph menu and choose `Passage direction`. |
+| Rehearse aloud | In `Manuscript`, open `Teleprompter` to read with cues and record your microphone. [Teleprompter](AUDIO.md#manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images) | Press `P` in the reader. |
 | Project settings & PDF export | `Project` tab → settings form; sidebar `Project actions` → `Manuscript PDF` | Command palette `Switch to Project Settings` / `Export Manuscript as PDF`, URL hash `#view-project` |
 | Writing | `Write` in the manuscript toolbar, then `Close writing` in the editor toolbar | `Undo`, `Redo`, `Find / replace` (`Ctrl/Cmd+F`), `Versions` for comparison, download and recovery, and `Dossier alongside`. |
 
@@ -585,7 +587,8 @@ keys from the corresponding view or control.
 | Focus manuscript search | `/` or `Cmd/Ctrl+F` in the manuscript reader |
 | Navigate search results | `Enter`, `Shift+Enter` or `Escape` in the search field |
 | Clear a research list filter | `Escape` in the source or dossier filter field |
-| Open the speech tools | `P` for Teleprompter or `D` for Listen and direct in the manuscript reader |
+| Open Teleprompter | `P` in the manuscript reader |
+| Toggle marked speech highlighting | `D` when the Direct Speech Mode control is visible in the reader |
 | Open the command palette | `Cmd/Ctrl+K` or `Cmd/Ctrl+P` in the workspace. In Markdown text, `Cmd/Ctrl+K` inserts a link. |
 | Format in the writing editor | `Cmd/Ctrl+B` for bold or `Cmd/Ctrl+I` for italics |
 | Import a manuscript in the desktop app | `Cmd/Ctrl+Shift+I` from the native File menu |
@@ -652,6 +655,7 @@ changes its layout. Images use the shared zoom viewer, maps use Leaflet pan/zoom
 and style-space retains its own rotation and zoom controls.
 
 <a id="research-in-context-unreleased"></a>
+<a id="research-in-context"></a>
 
 ## Research in context
 
@@ -1120,14 +1124,9 @@ in the [automation contract](AGENTS.md).
 ## Inspect project structure
 
 Open **Project** to see the selected manuscript, matching research workspace and
-existing outputs. **Outputs** groups eligible files directly under `exports/`;
+existing outputs. **Outputs** groups eligible files directly under `exports/`.
 **Check again** repeats the read-only metadata inspection without rebuilding
-analysis. **Project → Settings → Audio and services** groups recording, voice
-profiles, microphone settings and the service queue. In **Manuscript**, **Listen
-and direct** opens passage controls. They appear in a side panel when there is
-room and beneath the paragraph on narrower screens. **Chapter audio** holds
-rendering, playback and recording management for the selected chapter.
-[Audio workflow](AUDIO.md#getting-started)
+analysis.
 
 **Available** means filesystem metadata is accessible, not that an output is
 fresh or the archive is valid. Existing outputs state **Source and generation
@@ -1142,8 +1141,12 @@ a running service, its bounded scanning limits and exit codes. Use
 
 ## Saved project settings
 
-Use **Project → Settings** for metadata, publication profiles, audio/services and
-project-specific configuration. **Apply** commits the submitted settings; restoring
+UI path for the same fields defined in [USAGE configuration](USAGE.md#configuration-corpusconfig).
+Isolation rules live in [architecture](ARCHITECTURE.md#configuration-and-multiple-projects).
+
+Use **Project → Settings** for metadata, publication profiles and project-specific
+configuration. **Audio and services** is where you prepare the project's author
+voice, voice profiles and microphone. **Apply** commits the submitted settings. Restoring
 defaults changes the form until you apply it. Title, author and publication/register
 settings persist in the selected root. Analysis language and thresholds remain
 session choices unless **Save analysis defaults for this project** is selected.
@@ -1246,6 +1249,7 @@ extracted source text require `--include-source-files` together with
 to redistribute a source.
 
 <a id="include-existing-chapter-recordings-unreleased"></a>
+<a id="include-existing-chapter-recordings"></a>
 
 ### Include existing chapter recordings
 
@@ -1433,6 +1437,10 @@ presentation. This is request-time validation, not an automatic file/configurati
 watcher; an unavailable source is not presented as a newly validated analysis.
 
 ## Troubleshooting
+
+This section owns reading, review, project-control and sharing failures in the local app.
+For install/service failures see [installation troubleshooting](INSTALLATION.md#troubleshooting);
+for command/config failures see [CLI troubleshooting](USAGE.md#troubleshooting).
 
 | What you see | Next action |
 | --- | --- |

@@ -49,7 +49,12 @@ print(json.dumps({'url':f'http://127.0.0.1:{server.server_port}', 'provider':f'h
 server.serve_forever()
 `, folder);
       const page = await browser.newPage({viewport: {width, height: 960}});
-      const errors = []; page.on('pageerror', error => errors.push(error.message));
+      const errors = [], clientEvents = [];
+      page.on('pageerror', error => errors.push(error.message));
+      const clientRoute = server.fixture.url + '/api/audio-client-diagnostic';
+      page.on('request', request => { if (request.url() === clientRoute) clientEvents.push(request.postDataJSON()); });
+      const clientEvent = event => page.waitForResponse(response => response.url() === clientRoute &&
+        response.request().postDataJSON().event === event);
       const before = fs.readFileSync(server.fixture.source);
       try {
         await page.goto(server.fixture.url);
@@ -66,6 +71,8 @@ server.serve_forever()
           'The project shortcut opens chapter output beside the manuscript');
         assert.equal(await page.locator('#settings-form #settings-speech-output').count(), 0,
           'Audio actions are separate from applying project settings');
+        assert.equal(await page.locator('.speech-export-section').evaluate(section => section.open), false);
+        await page.locator('.speech-export-section > summary').click();
         assert.equal(await page.locator('.speech-export-section [data-speech-action=direction_plan]').isVisible(), true);
         assert.equal(await page.evaluate(() => Boolean(document.querySelector('.speech-render-section')
           .compareDocumentPosition(document.querySelector('.speech-export-section')) & Node.DOCUMENT_POSITION_FOLLOWING)), true,
@@ -120,6 +127,7 @@ server.serve_forever()
         const compared = JSON.parse(fs.readFileSync(await (await comparedDownload).path(), 'utf8'));
         assert.equal(compared.alignment.status, 'compared');
         assert.deepEqual(compared.alignment.missing_words.map(row => row.text), ['blue']);
+        await page.locator('.speech-run-options > summary').click();
         await page.locator('#speech-ignore-direction').check();
         await page.locator('#speech-reuse').uncheck();
         await page.locator('#speech-tab-direction').click();
@@ -169,8 +177,22 @@ server.serve_forever()
         await page.waitForFunction(() => document.querySelector('#speech-engine')?.value === 'openai-compatible');
         assert.equal(await page.locator('#speech-target').isVisible(), false,
           'One available execution target does not require a choice');
+        const previewResponse = page.waitForResponse(response => response.url() === server.fixture.url + '/api/speech-render');
         await page.locator('[data-speech-action=preview]').click();
+        const diagnosticId = (await previewResponse).headers()['x-lixity-diagnostic-id'];
+        assert.match(diagnosticId, /^[a-f0-9]{16}$/);
         await page.waitForFunction(() => !document.querySelector('#speech-audio-player')?.hidden);
+        const played = clientEvent('generated_audio_playing');
+        await page.locator('.speech-playback').getByRole('button', {name: 'Play', exact: true}).click();
+        assert.equal((await played).status(), 204);
+        const failed = clientEvent('generated_audio_failed');
+        await page.locator('#speech-audio-player').evaluate(audio => {
+          Object.defineProperty(audio, 'error', {value: {message: 'PRIVATE_MEDIA_ERROR'}});
+          audio.dispatchEvent(new Event('error'));
+          audio.dispatchEvent(new Event('error'));
+          audio.dispatchEvent(new Event('playing'));
+        });
+        assert.equal((await failed).status(), 204);
         const requests = JSON.parse(fs.readFileSync(server.fixture.requests));
         assert.ok(requests.length > 0); assert.equal(requests[0].model, 'synthetic-model');
         assert.equal(requests[0].voice, 'synthetic-voice');
@@ -193,10 +215,15 @@ server.serve_forever()
         await page.waitForFunction(() => document.querySelector('#speech-engine')?.value === 'openai-compatible');
         assert.equal(await page.locator('[data-speech-action=preview]').isVisible(), false);
         assert.equal(await page.locator('[data-speech-action=chapter_render]').isVisible(), false);
+        await page.locator('.speech-export-section > summary').click();
         await page.locator('[data-speech-action=direction_plan]').click();
         await page.waitForSelector('[data-speech-action=export_json]');
         assert.equal(JSON.parse(fs.readFileSync(server.fixture.requests)).length, chapterRequests.length);
         assert.deepEqual(fs.readFileSync(server.fixture.source), before);
+        assert.deepEqual(clientEvents, [
+          {event: 'generated_audio_playing', diagnostic_id: diagnosticId},
+          {event: 'generated_audio_failed', diagnostic_id: diagnosticId},
+        ], 'Generated playback reports each outcome once, with only the submit diagnostic ID');
         assert.deepEqual(errors, []);
       } finally { await page.close(); await server.close(); }
     }
@@ -254,6 +281,7 @@ server.serve_forever()
       await page.waitForFunction(() => !document.querySelector('#modal-speech')?.open);
       await page.locator('#tab-view-project').click();
       await page.locator('#settings-speech-output').click();
+      await page.locator('.speech-export-section > summary').click();
       await page.locator('[data-speech-action=direction_plan]').click();
       await page.waitForSelector('[data-speech-action=export_json]');
       assert.match(await page.locator('.speech-plan').textContent(), /De rivier stroomt/);

@@ -8,6 +8,7 @@ const assert = require('node:assert/strict');
 const {stagePages} = require('./support/staged-pages.cjs');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-home-tour-'));
 const root = stagePages();
+const sceneStarts = [0, 5, 14, 27, 42, 52];
 (async () => {
   const browser = await launchChromium();
   try {
@@ -44,8 +45,8 @@ const root = stagePages();
       assert.equal(await page.locator('#intro-title').evaluate(node => getComputedStyle(node).hyphens), 'auto');
       const video = page.locator('#product-tour');
       assert.deepEqual(await page.locator('#tour-transcript li').evaluateAll(nodes =>
-        nodes.map(node => Number(node.dataset.start))), [0, 10, 20, 30, 40, 50],
-      'Caption boundaries must match the six ten-second scenes');
+        nodes.map(node => Number(node.dataset.start))), sceneStarts,
+      'Caption boundaries must match the six cuts');
       await video.scrollIntoViewIfNeeded();
       await page.waitForTimeout(700);
       assert.ok(await video.evaluate(v => v.paused && v.currentTime === 0), 'Reduced motion never autoplays');
@@ -65,22 +66,21 @@ const root = stagePages();
       await page.locator('.product-tour').screenshot({path: path.join(artifacts, `tour-${width}.png`)});
       const caption = await page.locator('.tour-caption').boundingBox();
       const frame = await video.boundingBox();
-      assert.ok(caption.x >= frame.x && caption.x + caption.width <= frame.x + frame.width + 1);
-      if (width === 390) {
-        const enlarged = await page.locator('.tour-screen').evaluate(screen => {
-          const root = document.documentElement;
-          const previous = root.style.fontSize;
-          root.style.fontSize = '200%';
-          try {
-            const frame = screen.querySelector('video').getBoundingClientRect();
-            const caption = screen.querySelector('.tour-caption').getBoundingClientRect();
-            return caption.top >= frame.bottom - 1 && caption.bottom <= screen.getBoundingClientRect().bottom + 1;
-          } finally {
-            root.style.fontSize = previous;
-          }
-        });
-        assert.ok(enlarged, 'At 200% text size the complete caption fits below the video on mobile');
-      }
+      assert.ok(caption.x >= frame.x && caption.x + caption.width <= frame.x + frame.width + 1 &&
+        caption.y >= frame.y + frame.height - 1, 'The caption leaves the entire picture visible');
+      const enlarged = await page.locator('.tour-screen').evaluate(screen => {
+        const root = document.documentElement;
+        const previous = root.style.fontSize;
+        root.style.fontSize = '200%';
+        try {
+          const frame = screen.querySelector('video').getBoundingClientRect();
+          const caption = screen.querySelector('.tour-caption').getBoundingClientRect();
+          return caption.top >= frame.bottom - 1 && caption.bottom <= screen.getBoundingClientRect().bottom + 1;
+        } finally {
+          root.style.fontSize = previous;
+        }
+      });
+      assert.ok(enlarged, 'At 200% text size the complete caption fits below the video');
       await button.click();
       await page.locator('#impressum').scrollIntoViewIfNeeded();
       await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);
@@ -155,7 +155,7 @@ const root = stagePages();
           'The complete six-scene tour must decode to 60 seconds');
         const cues = await page.locator('#tour-transcript li').evaluateAll(nodes =>
           nodes.map(node => ({start: Number(node.dataset.start), text: node.textContent})));
-        assert.deepEqual(cues.map(cue => cue.start), [0, 10, 20, 30, 40, 50]);
+        assert.deepEqual(cues.map(cue => cue.start), sceneStarts);
         for (const cue of cues) {
           await video.evaluate((v, start) => { v.currentTime = start + .12; }, cue.start);
           await expect.poll(() => video.evaluate(v => v.seeking)).toBe(false);

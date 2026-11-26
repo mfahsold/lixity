@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Manuscript analysis tools compared: Lixity</title>
+<title>Compare manuscript analysis tools | Lixity</title>
 <meta name="description" content="Compare tools for sentence review, drafting, scene structure, collaborative editing and research. Try the same passage and see how each tool supports revision."/>
 <link rel="canonical" href="https://lixity.de/guides/manuscript-analysis-tools.html"/>
 <link rel="stylesheet" href="../assets/site.css"/>
 <script src="../assets/site.js" defer></script>
 <meta property="og:type" content="article"/>
-<meta property="og:title" content="Manuscript analysis tools compared: Lixity"/>
+<meta property="og:title" content="Compare manuscript analysis tools"/>
 <meta property="og:description" content="Compare tools for sentence review, drafting, scene structure, collaborative editing and research. Try the same passage and see how each tool supports revision."/>
 <meta property="og:url" content="https://lixity.de/guides/manuscript-analysis-tools.html"/>
 <meta property="og:site_name" content="Lixity"/>
@@ -20,7 +20,7 @@
 <meta property="og:image:height" content="1240"/>
 <meta property="og:image:alt" content="Chapter comparison map showing differences from the manuscript&#x27;s own style"/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="Manuscript analysis tools compared: Lixity"/>
+<meta name="twitter:title" content="Compare manuscript analysis tools"/>
 <meta name="twitter:description" content="Compare tools for sentence review, drafting, scene structure, collaborative editing and research. Try the same passage and see how each tool supports revision."/>
 <meta name="twitter:image" content="https://lixity.de/screenshots/dashboard-heatmap.png"/>
 <meta name="twitter:image:alt" content="Chapter comparison map showing differences from the manuscript&#x27;s own style"/>
@@ -31,7 +31,7 @@
 {
   "@context": "https://schema.org",
   "@type": "TechArticle",
-  "headline": "Manuscript analysis tools compared: Lixity",
+  "headline": "Compare manuscript analysis tools",
   "description": "Compare tools for sentence review, drafting, scene structure, collaborative editing and research. Try the same passage and see how each tool supports revision.",
   "url": "https://lixity.de/guides/manuscript-analysis-tools.html",
   "inLanguage": "en",
@@ -67,7 +67,7 @@
       "name": "Is Lixity an alternative to Grammarly or ProWritingAid?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Grammarly and ProWritingAid offer sentence-level suggestions. ProWritingAid also offers feedback on chapters and whole manuscripts. Lixity focuses on locally measured language patterns, the passages behind them and comparisons between saved drafts under the same settings."
+        "text": "Use Grammarly or ProWritingAid for sentence-level suggestions. ProWritingAid also offers feedback on chapters and whole manuscripts. Use Lixity to inspect measured patterns in context and compare versions of a passage under the same settings."
       }
     },
     {
@@ -75,7 +75,7 @@
       "name": "Does my manuscript leave my computer when I use Lixity?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Built-in analysis, dashboard generation and PDF export run locally without cloud calls or an account. Optional integrations and separately configured workers have their own setup and data handling."
+        "text": "Built-in analysis, dashboard generation and PDF export run on your computer without an account. Optional integrations handle data according to the services you configure. A speech provider receives the text for the audio you ask it to generate."
       }
     },
     {
@@ -91,15 +91,15 @@
       "name": "Which languages does Lixity support?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "German and English have the deepest linguistic resources; French, Spanish, Italian, Portuguese and Dutch have localized interfaces and analysis resources with narrower coverage. Mathematical identifiers stay language-neutral."
+        "text": "The interface is available in German, English, French, Spanish, Italian, Portuguese and Dutch. Analysis coverage depends on the language. German and English have the most extensive profiles."
       }
     },
     {
       "@type": "Question",
-      "name": "Does Lixity use AI to write or judge my text?",
+      "name": "How does Lixity analyze my text?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "No. Lixity computes deterministic statistics from your text and documents their limits. It generates no prose and produces no quality score; the author judges the text."
+        "text": "Built-in analysis computes deterministic measurements for features such as sentence length and repeated phrases. Open the passage behind a result and decide whether to revise it."
       }
     }
   ]
@@ -142,7 +142,7 @@
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">Compare tools</span></li></ol></nav>
 <h1>Which manuscript analysis tool fits your work?</h1>
-<p>Start with the decision you want to make. Finding a repeated phrase, revising a scene and sharing a draft with an editor each call for a different workflow. Use these examples to decide what to try with your own text.</p>
+<p>Pick a passage and decide what you want to learn about it. You might look for a repeated phrase, reconsider the order of a scene or prepare a draft for an editor. Try the same passage in the tools that support that task.</p>
 <p class="updated">Updated <time datetime="2026-11-26">26 November 2026</time></p>
 
 <h2 id="families">Choose a tool by task</h2>
@@ -158,49 +158,48 @@
 <tr><td>Review story structure</td><td><a href="https://fictionary.co/writers-software/">Fictionary</a></td><td>Tag a scene, inspect the arc across scenes and check the editorial notes.</td></tr>
 <tr><td>Collaborate or keep Markdown notes</td><td><a href="https://help.ellipsus.com/support/solutions/articles/205000067329">Ellipsus</a>, <a href="https://obsidian.md/help/data-storage">Obsidian</a></td><td>Use Ellipsus to review a shared draft and comments. Use Obsidian to link and read notes stored as local files.</td></tr>
 <tr><td>Explore a collection or run a study</td><td><a href="https://www.laurenceanthony.net/software/antconc/">AntConc</a>, <a href="https://docs.voyant-tools.org/docs/tutorial-local.html">Voyant</a>, <a href="https://cran.r-project.org/package=stylo">stylo</a></td><td>Inspect a concordance or reproduce a measurement across a collection. Voyant also offers a local server.</td></tr>
-<tr><td>Review a passage and keep the reasoning with your project</td><td><a href="#lixity">Lixity</a></td><td>Follow counted text, decide on a revision, open an exact source citation and share the selected reading copy.</td></tr>
+<tr><td>Review a passage beside its sources</td><td><a href="#lixity">Lixity</a></td><td>Read the words behind a measurement, revisit a saved quotation and compare an edit with the previous version.</td></tr>
 </tbody>
 </table>
 </div>
 
-<h2 id="checkers">Choose a grammar or style checker if…</h2>
-<p>…you want suggested corrections, clarity feedback or a broader editorial report. AutoCrit and ProWritingAid document whole-manuscript reports and passage-level findings. Papyrus combines in-text style and readability analysis with book-writing tools. Its chapter statistics compare chapters with the document average and link back to the manuscript. Check the edition and its operating requirements. ProWritingAid, for example, documents internet access as a requirement. <a href="https://help.autocrit.com/en/collections/2339242-interpreting-autocrit-results">AutoCrit reports</a> · <a href="https://help.prowritingaid.com/article/99-what-do-i-need-to-use-prowritingaid">ProWritingAid requirements</a> · <a href="https://support.papyrusauthor.com/wiki/style-statistics/">Papyrus chapter statistics</a></p>
+<h2 id="checkers">Grammar and style review</h2>
+<p>Use a checker for suggested corrections or feedback on clarity. AutoCrit and ProWritingAid offer reports that cover a manuscript and point to individual passages. Papyrus combines style and readability analysis with book-writing tools. Its chapter chart compares each chapter with the document average and links back to the text. Check the edition you plan to use. ProWritingAid, for example, requires internet access. <a href="https://help.autocrit.com/en/collections/2339242-interpreting-autocrit-results">AutoCrit reports</a> · <a href="https://help.prowritingaid.com/article/99-what-do-i-need-to-use-prowritingaid">ProWritingAid requirements</a> · <a href="https://support.papyrusauthor.com/wiki/style-statistics/">Papyrus chapter statistics</a></p>
 
-<h2 id="corpus">Choose a corpus or concordance tool if…</h2>
-<p>…your question is about collections of texts rather than one manuscript: word frequencies, collocations, keywords or parallel passages. <a href="https://www.laurenceanthony.net/software/antconc/">AntConc</a> and <a href="https://voyant-tools.org/">Voyant Tools</a> offer corpus exploration. Check the individual tool for the reading, project and citation workflow you need; the category alone does not establish those limits.</p>
+<h2 id="corpus">Explore a collection of texts</h2>
+<p>Use a corpus tool to compare word frequencies, recurring combinations or passages across a collection. <a href="https://www.laurenceanthony.net/software/antconc/">AntConc</a> and <a href="https://voyant-tools.org/">Voyant Tools</a> let you examine words in context. Try a small collection first and see how you can return to the source passage.</p>
 
-<h2 id="stylometry">Choose a stylometry or NLP package if…</h2>
-<p>…you are comfortable in a shell or notebook and need reproducible numbers for a study: authorship attribution, vocabulary measures or syntactic annotations. The R package <a href="https://cran.r-project.org/package=stylo">stylo</a>, <a href="https://spacy.io/">spaCy</a>, <a href="https://www.nltk.org/">NLTK</a> and statistical helpers such as textstat provide building blocks. A manuscript-reading and editorial workflow may require additional integration.</p>
+<h2 id="stylometry">Run a study from a shell or notebook</h2>
+<p>Use a statistical or language-processing package for work such as authorship attribution, vocabulary measurement or syntactic annotation. The R package <a href="https://cran.r-project.org/package=stylo">stylo</a>, <a href="https://spacy.io/">spaCy</a> and <a href="https://www.nltk.org/">NLTK</a> provide different building blocks. Run a small test with a known input, record the settings and check whether you can reproduce the result.</p>
 
-<h2 id="story">Choose a story or structure tool if…</h2>
-<p>…your next decision is about plot, scenes or character arcs. Fictionary visualizes scene-level story elements. Scrivener combines chapter and scene organization with snapshots and section comparison. If you already draft in another app, export a chapter as Word, Markdown or plain text to review a copy in Lixity. <a href="https://fictionary.co/writers-software/">Fictionary</a> · <a href="https://www.literatureandlatte.com/scrivener/overview">Scrivener</a> · <a href="installation.html#first-dashboard">Import a manuscript</a></p>
+<h2 id="story">Plan scenes and review structure</h2>
+<p>Fictionary organizes story elements by scene. Scrivener lets you arrange chapters and scenes and compare a section with an earlier snapshot. If you already draft in another app, export a chapter as <code>.docx</code>, Markdown or plain text to review a copy in Lixity. <a href="https://fictionary.co/writers-software/">Fictionary</a> · <a href="https://www.literatureandlatte.com/scrivener/overview">Scrivener</a> · <a href="installation.html#first-dashboard">Import a manuscript</a></p>
 
-<h2 id="assistants">Or combine Lixity with an AI writing or editing assistant if…</h2>
-<p>…you want suggestions, rewrites or developmental feedback. Review the chosen service’s current features, costs and data-handling terms before supplying a manuscript. An assistant’s response depends on its model, instructions and the context you provide; read and assess its proposals yourself.</p>
-<p>Lixity’s built-in analysis computes documented statistics from your manuscript without generating prose or a quality score. Chapter comparisons help you choose where to read; paragraph disclosures provide local text, measurements and source lines. You can use those observations when reviewing an assistant’s suggestions.</p>
+<h2 id="assistants">Review suggestions from an AI assistant</h2>
+<p>Before sharing a manuscript with an assistant, check the service’s features, costs and data-handling terms. Read any proposed change in context. Lixity’s chapter comparisons can help you find a passage to revisit. Open the paragraph’s measurements and line references to see what changed in the text.</p>
 
-<h2 id="lixity">Choose Lixity if…</h2>
-<p>…you want to follow a difference back to the words that produced it. Inspect a measurement such as sentence length, quoted words or a repeated phrase. Compare chapters against the manuscript's own reference, or compare a draft and its saved revision using the same settings. Treat the measurement as a prompt for reading. <a href="interpretation.html">Methods and limits</a></p>
-<p>Keep the background beside the passage when it affects your decision. Open a dossier or the exact retained source revision behind a saved link. In <strong>Story rehearsal</strong>, write a beat such as a delayed answer or a revelation and try a different order for your cards. Save the cards when you want to keep the experiment. Share a dossier PDF or a reading copy with the chapters and notes you select. Built-in analysis runs on your computer without a Lixity account. German and English have the deepest language profiles. <a href="research-pdf.html">Research and exports</a> · <a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#compare-scene-evidence-and-rehearse-an-intent">Story rehearsal</a></p>
-<p>Explore <a href="../demo/report.html"><em>The Crate at Warehouse 4</em></a>, one read-only project with manuscript analysis, research and PDF layouts, using the <a href="first-look.html">first-look walkthrough</a>. No installation is needed. The separate <a href="../blog/effi-briest-case-study.html">Fontane case study</a> examines a public-domain novel; it is not another product demo.</p>
+<h2 id="lixity">Follow a result back to the manuscript</h2>
+<p>In Lixity, open the words behind a measurement such as sentence length, quoted words or a repeated phrase. Compare chapters using the same manuscript as a reference, or compare an edit with the saved version under the same settings. Use what you notice to decide where to read next. <a href="interpretation.html">Methods and limits</a></p>
+<p>When the background matters, open the dossier beside the passage and revisit the retained source revision behind a saved quotation. Then choose what to share in a dossier PDF or a reading copy. In <strong>Story rehearsal</strong>, you can also write a beat such as a delayed answer and try a different order for your cards. <a href="research-pdf.html">Research and exports</a> · <a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#compare-scene-evidence-and-rehearse-an-intent">Story rehearsal</a></p>
+<p>Start with <a href="first-look.html#receipt">the blank signature in Warehouse 4</a>. The walkthrough takes you from a sentence about the receipt into the linked research. You can inspect the same material in the <a href="../demo/report.html">read-only demo</a> without installing Lixity. For an example on a public-domain novel, read the <a href="../blog/effi-briest-case-study.html">Fontane case study</a>.</p>
 
 <h2 id="limits">Where Lixity does not fit</h2>
 <ul>
-<li><strong>Grammar and spelling correction:</strong> Lixity does not fix sentences or suggest phrasing; use a checker for that.</li>
-<li><strong>Plot and character development:</strong> supplied scene groups and literal character names support inspection, not automatic plot advice, inferred character arcs or a developmental edit.</li>
-<li><strong>Fact checking:</strong> a retained quotation records what a source says; it does not verify a historical claim.</li>
-<li><strong>Collaborative editing:</strong> the workspace is single-user and local by design.</li>
-<li><strong>Publishing production:</strong> fixed-layout PDFs and reading websites provide review and reading copies, not EPUB production or print preflight.</li>
+<li><strong>Grammar and spelling correction.</strong> Use a checker for suggested corrections or wording.</li>
+<li><strong>Plot and character development.</strong> Lixity helps you inspect scenes and named characters you define. Use developmental editing for advice on their arcs.</li>
+<li><strong>Fact checking.</strong> A retained quotation records what its source says. Verify the claim against the evidence yourself.</li>
+<li><strong>Collaborative editing.</strong> Lixity is a local, single-user workspace. Use a shared editor for simultaneous writing.</li>
+<li><strong>Publishing production.</strong> Lixity exports PDFs and reading websites for review. Use production tools for EPUB or print preflight.</li>
 </ul>
 
 <h2 id="faq">Frequently asked questions</h2>
-<details><summary>Is Lixity an alternative to Grammarly or ProWritingAid?</summary><p>Grammarly and ProWritingAid offer sentence-level suggestions. ProWritingAid also offers feedback on chapters and whole manuscripts. Lixity focuses on locally measured language patterns, the passages behind them and comparisons between saved drafts under the same settings.</p></details>
-<details><summary>Does my manuscript leave my computer when I use Lixity?</summary><p>Built-in analysis, dashboard generation and PDF export run locally without cloud calls or an account. Optional integrations and separately configured workers have their own setup and data handling.</p></details>
+<details><summary>Is Lixity an alternative to Grammarly or ProWritingAid?</summary><p>Use Grammarly or ProWritingAid for sentence-level suggestions. ProWritingAid also offers feedback on chapters and whole manuscripts. Use Lixity to inspect measured patterns in context and compare versions of a passage under the same settings.</p></details>
+<details><summary>Does my manuscript leave my computer when I use Lixity?</summary><p>Built-in analysis, dashboard generation and PDF export run on your computer without an account. Optional integrations handle data according to the services you configure. A speech provider receives the text for the audio you ask it to generate.</p></details>
 <details><summary>Is Lixity free?</summary><p>Yes. Lixity is open source under the AGPL-3.0-or-later, so private, research and commercial writing (including self-publishing) needs no extra permission. A separate written commercial license is available for closed-source integrations.</p></details>
-<details><summary>Which languages does Lixity support?</summary><p>German and English have the deepest linguistic resources; French, Spanish, Italian, Portuguese and Dutch have localized interfaces and analysis resources with narrower coverage. Mathematical identifiers stay language-neutral.</p></details>
-<details><summary>Does Lixity use AI to write or judge my text?</summary><p>No. Lixity computes deterministic statistics from your text and documents their limits. It generates no prose and produces no quality score; the author judges the text.</p></details>
+<details><summary>Which languages does Lixity support?</summary><p>The interface is available in German, English, French, Spanish, Italian, Portuguese and Dutch. Analysis coverage depends on the language. German and English have the most extensive profiles.</p></details>
+<details><summary>How does Lixity analyze my text?</summary><p>Built-in analysis computes deterministic measurements for features such as sentence length and repeated phrases. Open the passage behind a result and decide whether to revise it.</p></details>
 
-<p>The links document the workflows cited here. Check the current edition, platform support and data handling when evaluating a tool. Try the same passage in the tools that look relevant and compare how easily you can find the evidence and return to your draft.</p>
+<p>Use the linked documentation to check platform support and how the tool handles your files. When you try your passage, see how easily you can return to the draft from a result.</p>
 
 <footer class="site-footer"><nav aria-label="Project resources"><a href="../#guides">All guides</a><a href="../blog/index.html">Articles</a><a href="https://github.com/mfahsold/lixity">Source code</a><a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">License</a><a href="../#website-measurement">Website measurement</a><a href="../#impressum">Legal notice</a></nav></footer>
 </main>

@@ -1,5 +1,8 @@
 # Quickstart
 
+Short entry; behavior and limits live in [Onboarding](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md)
+and the [workspace manual](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md).
+
 ## 1. Download and install Lixity
 
 Choose the desktop download for your computer and follow its setup steps.
@@ -33,3 +36,13 @@ marked passage. Return to the text and choose **Write** when you are ready.
 **Research** holds sources, claims and dossiers. **Project** holds settings and
 project structure. Find the actions in the
 [workspace manual](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md).
+
+## 5. Verify the installed build
+
+```sh
+lixity --version
+lixity doctor --json
+```
+
+Compare the reported version with [the latest release](https://github.com/mfahsold/lixity/releases/latest).
+If the commands differ, check the [installation manual](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service) before continuing.

@@ -452,9 +452,15 @@ function selectStyleTab(tab) {
   window.dispatchEvent(new Event("resize"));
 }
 
-function syncTabStops(container, selector) {
+function availableTabs(tabs) {
+  return tabs.filter(function(tab) { return !tab.disabled && !tab.hidden && tab.getAttribute("aria-disabled") !== "true"; });
+}
+
+function syncTabStops(container, selector, preferred) {
   var tabs = Array.from(container.querySelectorAll(selector));
-  var active = tabs.find(function(tab) { return tab.getAttribute("aria-selected") === "true"; }) || tabs[0];
+  var enabled = availableTabs(tabs);
+  var active = enabled.includes(preferred) ? preferred :
+    enabled.find(function(tab) { return tab.getAttribute("aria-selected") === "true"; }) || enabled[0];
   tabs.forEach(function(tab) { tab.tabIndex = tab === active ? 0 : -1; });
 }
 
@@ -463,13 +469,19 @@ function initKeyboardTabs(container, selector, manual) {
   container.dataset.keyboardTabs = "true";
   syncTabStops(container, selector);
   new MutationObserver(function() { syncTabStops(container, selector); }).observe(container,
-    {subtree: true, attributes: true, attributeFilter: ["aria-selected"]});
+    {subtree: true, attributes: true, attributeFilter: ["aria-selected", "aria-disabled", "disabled", "hidden"]});
   container.addEventListener("click", function() {
     queueMicrotask(function() { syncTabStops(container, selector); });
   });
+  if (manual) container.addEventListener("focusout", function(event) {
+    var next = event.relatedTarget;
+    if (!(next instanceof Element) || !container.contains(next) || !next.matches(selector)) {
+      syncTabStops(container, selector);
+    }
+  });
   container.addEventListener("keydown", function(event) {
     if (event.defaultPrevented) return;
-    var tabs = Array.from(container.querySelectorAll(selector)).filter(function(tab) { return !tab.disabled; });
+    var tabs = availableTabs(Array.from(container.querySelectorAll(selector)));
     var index = tabs.indexOf(event.target);
     if (index < 0) return;
     var vertical = container.getAttribute("aria-orientation") === "vertical";
@@ -481,6 +493,7 @@ function initKeyboardTabs(container, selector, manual) {
     event.preventDefault();
     var next = tabs[index];
     if (manual) {
+      syncTabStops(container, selector, next);
       next.focus();
       return;
     }

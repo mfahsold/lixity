@@ -10,7 +10,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from secrets import token_hex
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from .log import (
     get_logger,
@@ -32,6 +32,8 @@ MAX_AUDIO_BYTES = 200 * 1024 * 1024
 MAX_RETAINED_JOBS = 4
 MAX_PENDING_JOBS = 3
 JOB_TTL_SECONDS = 1800
+SpeechStaleReason = Literal["context", "workspace_closed", "settings_changed", "direction_changed",
+                            "reference_changed", "source_changed", "workspace_refreshed", "context_unavailable"]
 
 
 def prepare_speech_source(
@@ -108,6 +110,12 @@ class _Job:
     finished: float | None = None
     cancel: threading.Event = field(default_factory=threading.Event)
     retain: Callable[[Path, Callable[[], bool]], None] | None = field(default=None, repr=False)
+    stale_reason: Callable[[], SpeechStaleReason | None] | None = field(default=None, repr=False)
+
+    def invalid_reason(self) -> SpeechStaleReason | None:
+        if self.stale_reason is not None:
+            return self.stale_reason()
+        return None if self.valid() else "context"
 
 
 class SpeechJobs:
@@ -159,6 +167,7 @@ class SpeechJobs:
         plan: list[SpeechSegment] | None = None,
         references: Mapping[str, SpeechReference] | None = None,
         retain: Callable[[Path, Callable[[], bool]], None] | None = None,
+        stale_reason: Callable[[], SpeechStaleReason | None] | None = None,
     ) -> dict[str, Any]:
         profile = AudioProfile.model_validate(profile.model_dump())
         self.cancel_stale()
@@ -176,6 +185,7 @@ class SpeechJobs:
                 token_hex(16), context_key, dict(context), storage, valid,
                 diagnostic_id=speech_diagnostic_id() or new_speech_diagnostic_id(),
                 cache_dir=cache_dir, fresh_audio=fresh_audio, target=target,
+                stale_reason=stale_reason,
             )
             job.plan = [SpeechSegment(p.text, AudioProfile.model_validate(p.profile.model_dump()), p.pause_before, p.pause_after, dict(p.anchor) if p.anchor else None) for p in plan] if plan is not None else None
             job.references = dict(references or {})
@@ -204,6 +214,8 @@ class SpeechJobs:
     def _run_scoped(self, job: _Job, source: Path, profile: AudioProfile) -> None:
         output = Path(job.storage.name) / "reading.wav"
         category = "none"
+        invalid_reason: SpeechStaleReason | None = None
+        retained = False
         terminal_state = "error"
         terminal_message = ""
 
@@ -238,11 +250,12 @@ class SpeechJobs:
             self._render(source, output, **options)
             if not output.is_file() or not 44 < output.stat().st_size <= MAX_AUDIO_BYTES:
                 raise ValueError("Generated audio is missing or exceeds the download limit")
-            current = job.valid()
-            if current and not job.cancel.is_set() and job.context.get("mode") == "chapter" and job.retain is not None:
+            invalid_reason = job.invalid_reason()
+            if invalid_reason is None and not job.cancel.is_set() and job.context.get("mode") == "chapter" and job.retain is not None:
                 job.retain(output, lambda: not job.cancel.is_set() and job.valid())
-                current = job.valid()
-            terminal_state = "cancelled" if job.cancel.is_set() else "ready" if current else "stale"
+                retained = True
+                invalid_reason = job.invalid_reason()
+            terminal_state = "cancelled" if job.cancel.is_set() else "ready" if invalid_reason is None else "stale"
         except SpeechCancelled:
             category = "cancelled"
             terminal_state = "cancelled"
@@ -272,6 +285,7 @@ class SpeechJobs:
                     category = "cleanup"
                 job.finished = time.monotonic()
                 log_event(self._log, "audio_job", stage="finished", status=job.state, category=category,
+                          retained=retained, reason=invalid_reason,
                           duration_ms=int((job.finished - job.created) * 1000))
 
     def _find(self, identifier: str, context_key: str) -> _Job:
@@ -313,20 +327,21 @@ class SpeechJobs:
         with self._lock:
             candidates = list(self._jobs.values())
         for job in candidates:
-            if not job.valid():
+            reason = job.invalid_reason()
+            if reason is not None:
                 with self._lock:
                     was_cancelled = job.cancel.is_set()
                     job.cancel.set()
                     self._condition.notify_all()
                     if not was_cancelled:
-                        log_event(self._log, "audio_job", id=job.diagnostic_id, stage="stale_requested")
+                        log_event(self._log, "audio_job", id=job.diagnostic_id, stage="stale_requested", reason=reason)
                     if job.state not in ("pending", "running"):
                         was_stale = job.state == "stale"
                         job.state = "stale"
                         self._cleanup(job)
                         if not was_stale:
                             log_event(self._log, "audio_job", id=job.diagnostic_id, stage="invalidated",
-                                      status=job.state, reason="context")
+                                      status=job.state, reason=reason)
 
     def audio(self, identifier: str, context_key: str) -> bytes:
         with self._lock:

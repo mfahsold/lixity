@@ -1,5 +1,8 @@
 # Stability & known limitations
 
+> Version line: this documentation describes source **v0.9.3** on the pre-1.0 **0.x** line.
+> Historical 1.x/3.x tags predate the numbering reset; a larger number does not mean a newer release.
+
 Use this page to judge what a result can support. Formula details live in
 [METHODS.md](METHODS.md); machine-readable thresholds and availability policies
 come from `lixity about --json`. This page keeps interpretation and integration
@@ -432,6 +435,7 @@ lost content above about 8 kHz with a reference lacking those frequencies.
 See the [voice-reference methods](METHODS.md#12-voice-reference-signal-diagnostics-audio-reference-inspect).
 
 <a id="chapter-audio-comparison-limits-unreleased"></a>
+<a id="chapter-audio-comparison-limits"></a>
 
 ### Chapter audio comparison limits
 
@@ -770,6 +774,9 @@ Historical fixes and release-specific evidence remain in [CHANGELOG](https://git
 [release notes](https://github.com/mfahsold/lixity/tree/main/docs/releases) and the
 [archived register and verification snapshot](https://github.com/mfahsold/lixity/blob/123b198db2b3d276b4bba71664e4e6b989377247/docs/STABILITY.md#2-stability-register).
 
+> Last reviewed against source v0.9.3. Re-check pinned-commit links and the table below
+> when methods change or with each minor release; a pinned snapshot is evidence, not a live status.
+
 | Surface | Remaining boundary | Maintained reference |
 | :--- | :--- | :--- |
 | Numerical reproducibility | Floating-point last bits can differ across interpreters/platforms. | [Methods](METHODS.md) |
@@ -803,6 +810,7 @@ do not imply equal sentence lengths or narrative speed. No sentences means
 no measured rhythm, even though the current CV field uses a zero sentinel.
 
 <a id="revision-time-series-and-sparse-history-unreleased"></a>
+<a id="revision-time-series-and-sparse-history"></a>
 
 ## Revision time-series and sparse history
 
@@ -814,6 +822,7 @@ and returned as `null` rather than `0.0`. Single-revision manuscripts report
 `has_baseline: false` with `deltas: null` until a second revision is saved.
 
 <a id="dramaturgical-heuristics--genre-corridors-unreleased"></a>
+<a id="dramaturgical-heuristics--genre-corridors"></a>
 
 ## Dramaturgical heuristics & genre corridors
 

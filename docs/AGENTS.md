@@ -1,5 +1,8 @@
 # AGENTS.md – Lixity interface for AI agents and automation
 
+> Version line: this documentation describes source **v0.9.3** on the pre-1.0 **0.x** line.
+> Historical 1.x/3.x tags predate the numbering reset; product, JSON-response and archive schema numbers are independent.
+
 > [!NOTE]
 > This document specifies the external automation interface, HTTP endpoints, and JSON contracts for AI agents and tools that use Lixity.
 > For guidelines on contributing to or developing the Lixity codebase itself, see the repository root [`AGENTS.md`](https://github.com/mfahsold/lixity/blob/main/AGENTS.md) and [`CONTRIBUTING.md`](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
@@ -27,6 +30,7 @@ parsers. Research subcommands with manuscript input may carry
 explicit manuscript setting resolves. The flag form remains accepted.
 
 <a id="native-manuscript-editing-unreleased"></a>
+<a id="native-manuscript-editing"></a>
 
 ## Native manuscript editing
 
@@ -86,6 +90,7 @@ body paragraph number for `drawing` and `footnote`. These positions identify
 the Word source, before conversion to Markdown.
 
 <a id="project-backups-unreleased"></a>
+<a id="project-backups"></a>
 
 ## Project backups
 
@@ -2167,6 +2172,7 @@ access fails with a migration requirement. Portable exports remain canonical
 `.json` transport and restore converts staging before publication.
 
 <a id="external-audio-exchange-and-inspection-unreleased"></a>
+<a id="external-audio-exchange-and-inspection"></a>
 
 ## External audio exchange and inspection
 

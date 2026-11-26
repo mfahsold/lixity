@@ -27,12 +27,27 @@
 }
 
 /* Audio sections have one owner; author styles must respect native hidden state. */
+.speech-icon-label { display: inline-flex; align-items: center; gap: var(--space-2); min-inline-size: 0; max-inline-size: 100%; text-align: start; }
+.speech-icon-label > .lixity-icon { flex: none; }
+.speech-icon-label > span { min-inline-size: 0; overflow-wrap: anywhere; }
+.speech-project-actions { flex-wrap: wrap; }
+.speech-project-actions > .ctl { min-inline-size: 0; max-inline-size: 100%; white-space: normal; }
 #modal-speech .modal-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .25rem; flex: none; }
 #modal-speech .speech-reader-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#modal-speech .modal-tab-btn > .speech-icon-label { justify-content: center; }
 #modal-speech .speech-profile-summary { justify-content: space-between; overflow-wrap: anywhere; }
 #modal-speech .speech-direction-selection { align-items: center; }
 #modal-speech .speech-direction-selection > .ctl-note { flex: 1 1 9rem; overflow-wrap: anywhere; }
+#modal-speech .speech-render-section { gap: var(--space-2); }
 #modal-speech .speech-render-section > progress { width: 100%; }
+#modal-speech .speech-render-section > .ctl-note { margin: 0; }
+#modal-speech .speech-render-section > .ctl-note:empty { display: none; }
+#modal-speech .speech-render-actions { margin: 0; }
+#modal-speech .speech-render-actions > .ctl { min-inline-size: 0; max-inline-size: 100%; white-space: normal; }
+#modal-speech .speech-render-actions > .primary { min-block-size: 2.75rem; }
+#modal-speech :is(.speech-run-options, .speech-chapter-recording, .speech-export-section, .speech-audit-section) { min-inline-size: 0; }
+#modal-speech .speech-run-options > .form-checkbox { margin-block: var(--space-2); }
+#modal-speech .speech-run-options > .setting-field { margin-block-start: var(--space-2); }
 #modal-speech .speech-profile-picker {
   display: flex;
   flex-wrap: wrap;
@@ -88,7 +103,7 @@
 #modal-speech .segmented-buttons { display: flex; flex-wrap: wrap; gap: .3rem; }
 #modal-speech .seg-btn { padding: .35rem .6rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); cursor: pointer; }
 #modal-speech .seg-btn.active { border-color: var(--accent); background: var(--accent-light); }
-#modal-speech .speech-playback { margin-top: var(--space-3); }
+#modal-speech .speech-playback { margin-top: var(--space-2); }
 #modal-speech .speech-stale-list { max-height: 13rem; overflow: auto; padding: 0; list-style: none; display: grid; gap: .5rem; }
 #modal-speech .speech-stale-list li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding-block: .5rem; border-bottom: 1px solid var(--line); }
 #modal-speech .speech-stale-list span { flex: 1 1 12rem; overflow-wrap: anywhere; }
@@ -98,6 +113,7 @@
 #speech-microphone-current { overflow-wrap: anywhere; }
 @media (max-width: 540px) {
   #modal-speech .modal-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #modal-speech .modal-tab-btn > .speech-icon-label { gap: var(--space-1); }
   #modal-speech .speech-profile-footer { align-items: stretch; }
   #modal-speech .speech-profile-footer > .ctl { flex: 1 1 0; }
   #modal-speech .settings-grid { grid-template-columns: minmax(0, 1fr); }

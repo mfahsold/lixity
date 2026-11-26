@@ -1,10 +1,10 @@
 # Ein Romankapitel prüfen, ohne seine Stimme glattzubügeln
 
-Von [Matthias Fahsold](https://github.com/mfahsold) · Veröffentlicht am 11. November 2026 · 5 Minuten · [English version](review-a-chapter.html)
+Von [Matthias Fahsold](https://github.com/mfahsold) · Veröffentlicht am 11. November 2026 · Aktualisiert am 26. November 2026 · 5 Minuten · [English version](review-a-chapter.html)
 
 Ein Kapitel liest sich plötzlich anders als der Rest. Die Sätze werden kürzer, die Dialoge dichter, einzelne Wörter tauchen immer wieder auf. Ist das ein Problem – oder genau die Wirkung, die diese Szene braucht?
 
-Lixity hilft, dieser Frage am Text nachzugehen. Der lokale Open-Source-Arbeitsraum verbindet Manuskript, sprachliche Beobachtungen und Recherche. Eine auffällige Zahl ist dabei ein Ausgangspunkt: Sie soll zu einer Stelle führen, die sich lesen und beurteilen lässt.
+In Lixity kannst du vom Kapitelvergleich direkt zur betreffenden Textstelle zurückkehren. Dort liest du die Beobachtung im Zusammenhang und kannst das zugehörige Dossier öffnen.
 
 <a id="frage"></a>
 
@@ -58,6 +58,6 @@ Die öffentliche Demo enthält sechs erfundene englische Hafenkapitel und verkn�
 
 [Die Lixity-Demo öffnen](../demo/report.html) [Deutschsprachiger Einstieg](../guides/first-look-de.html) [Methoden und Grenzen](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md)
 
-Über **Schreiben** kannst du in der lokalen App Text bearbeiten, Änderungen rückgängig machen und Entwürfe wiederherstellen. Lixity speichert automatisch in der Projektdatei. Die öffentliche Demo ist schreibgeschützt. [Zur Schreibanleitung (Englisch)](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript)
+Öffne **Schreiben** in einem lokalen Projekt, um einen Entwurf mit der gespeicherten Fassung zu vergleichen. Die Vorschau des Vergleichs lässt diese Fassung bestehen. Beim Bearbeiten speichert Lixity automatisch, sofern sich der Ausgangstext auf der Festplatte in der Zwischenzeit nicht geändert hat. [Zur Schreibanleitung (Englisch)](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript)
 
 [Alle Leitfäden](../index-de.html#guides)[Artikel](index.html)[Quellcode](https://github.com/mfahsold/lixity)[Lizenz](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website-Messung](../index-de.html#website-measurement)[Impressum](../index-de.html#impressum)

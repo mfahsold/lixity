@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import errno
 import json
 import logging
 import math
@@ -58,6 +59,20 @@ def reference_format() -> dict[str, int]:
 
 def _valid_render_id(value: object) -> str | None:
     return value if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{16}", value) else None
+
+
+def _connection_failure_category(error: OSError) -> str:
+    """Classify transport exceptions without retaining their text or destination."""
+    reason = error.reason if isinstance(error, urllib.error.URLError) else error
+    code = reason.errno if isinstance(reason, OSError) else None
+    # Socket failures can retain Winsock codes instead of their POSIX mappings.
+    if isinstance(reason, ConnectionRefusedError) or code in (errno.ECONNREFUSED, 10061):
+        return "connection_refused"
+    if isinstance(reason, TimeoutError) or code in (errno.ETIMEDOUT, 10060):
+        return "timeout"
+    if code in (errno.ENETDOWN, errno.ENETUNREACH, errno.EHOSTUNREACH, 10050, 10051, 10065):
+        return "unreachable"
+    return "connection_error"
 
 
 def worker_health(target: str, *, engine: str = "qwen3", opener: Any = None,
@@ -138,6 +153,13 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
     render_id = _valid_render_id(diagnostic_id if diagnostic_id is not None else speech_diagnostic_id())
     if render_id is not None:
         headers[_RENDER_ID_HEADER] = render_id
+
+    def transport_failed(category: str, http_status: int | None = None) -> None:
+        status = http_status if type(http_status) is int and 100 <= http_status <= 599 else None
+        log_event(get_logger("speech.transport"), "speech_transport", logging.WARNING,
+                  id=render_id, engine=profile.engine, target=target, category=category,
+                  http_status=status)
+
     request = urllib.request.Request(endpoints[target], data=payload,  # noqa: S310 - fixed loopback allowlist
                                      headers=headers)
     # Ignore proxy environment variables, even for localhost.
@@ -145,9 +167,12 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
     try:
         with client.open(request, timeout=SYNTHESIS_TIMEOUT_SECONDS) as response:
             if response.status != 200:
+                transport_failed("http_error", response.status)
                 raise RuntimeError(f"{worker_name} worker rejected the synthesis request")
-            if (response.headers.get("X-Lixity-Model") != model_id or
+            model_mismatch = response.headers.get("X-Lixity-Model") != model_id
+            if (model_mismatch or
                     response.headers.get("X-Lixity-Voice") != profile.voice):
+                transport_failed("model_mismatch" if model_mismatch else "voice_mismatch", 200)
                 raise ValueError(f"{worker_name} worker model or voice mismatch")
             if response.headers.get_content_type() != "audio/wav":
                 raise ValueError(f"{worker_name} worker returned an unexpected audio format")
@@ -158,8 +183,10 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
         actual_model = exc.headers.get("X-Lixity-Model") if exc.headers else None
         exc.close()
         if actual_model is not None and actual_model != model_id:
+            transport_failed("model_mismatch", exc.code)
             model_kind = "Qwen model" if worker_name == "Qwen" else "model"
             raise RuntimeError(f"{worker_name} worker ({target}) is running a different {model_kind}; select the matching worker variant") from exc
+        transport_failed("http_error", exc.code)
         if exc.code == 400:
             raise RuntimeError(f"{worker_name} worker ({target}) rejected the synthesis request (HTTP 400); check the selected profile and model") from exc
         if exc.code == 500:
@@ -167,7 +194,8 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
         if exc.code == 503:
             raise RuntimeError(f"{worker_name} worker ({target}) is busy (HTTP 503); retry after the current request finishes") from exc
         raise RuntimeError(f"{worker_name} worker ({target}) is unavailable or failed") from exc
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+    except OSError as exc:
+        transport_failed(_connection_failure_category(exc))
         raise RuntimeError(f"{worker_name} worker ({target}) is unavailable or failed") from exc
     if not isinstance(data, bytes):
         raise ValueError("Qwen worker returned invalid audio bytes")

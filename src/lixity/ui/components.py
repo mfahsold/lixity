@@ -131,7 +131,7 @@ def close_button(
     return (
         f'<button type="button" class="{esc(css_class, quote=True)}"{id_attr}{attrs} '
         f'aria-label="{esc_label}" title="{esc_label}"{help_attr} '
-        'aria-keyshortcuts="Escape">✕</button>'
+        f'aria-keyshortcuts="Escape">{ui_icon("x")}</button>'
     )
 
 

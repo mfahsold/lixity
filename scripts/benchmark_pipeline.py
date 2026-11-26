@@ -35,6 +35,7 @@ from lixity.showing import showing_report
 from lixity.style_fingerprint import FingerprintThresholds
 
 DEFAULT_CORPUS = (
+    ("samples/first-look.md", "en"),
     ("samples/pride-and-prejudice.md", "en"),
     ("samples/effi-briest.md", "de"),
 )
@@ -166,6 +167,7 @@ def benchmark_text(label: str, text: str, language: str, iterations: int) -> dic
     return {
         "file": label,
         "language": language,
+        "source_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
         "chars": len(text),
         "words": word_count,
         "median_ms": {name: round(statistics.median(vals), 2) for name, vals in timings.items()},
@@ -189,6 +191,7 @@ def benchmark_workspace(label: str, text: str, language: str, iterations: int) -
         timings["total"].append((finished - start) * 1000)
     return {
         "file": label, "language": language, "chars": len(text), "words": analysis.metrics.raw_words,
+        "source_sha256": hashlib.sha256(text.encode("utf-8")).hexdigest(),
         "median_ms": {name: round(statistics.median(values), 2) for name, values in timings.items()},
         "digests": {"workspace": _digest((analysis.metrics.model_dump(), analysis.paragraphs,
                                           analysis.chapters, analysis.evidence, reports))},
@@ -240,6 +243,8 @@ def main() -> int:
     payload = {
         "python": platform.python_version(),
         "machine": platform.machine(),
+        "platform": platform.system(),
+        "mode": "workspace" if args.workspace else "stages",
         "peak_rss_mb": peak_rss,
         "iterations": iters,
         "results": results,

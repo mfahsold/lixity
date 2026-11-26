@@ -67,11 +67,10 @@ $og_locales
 <h1 id="intro-title">$headline</h1>
 <div class="home-intro-copy"><p class="home-lead">$intro</p>
 <div class="hero-cta"><a class="ctl primary" href="guides/installation.html#desktop" hreflang="en" id="download-cta">$install_link</a> <a class="ctl" href="sandbox/index.html?lang=$sandbox_language" hreflang="$sandbox_language" id="try-passage">$sandbox_cta</a> <a class="ctl" href="#product-tour-preview" id="examples">$discover <span aria-hidden="true">↓</span></a></div></div>
-<aside class="home-support" id="support" aria-labelledby="support-title">
-<img src="assets/mark.svg" width="40" height="40" alt=""/>
-<div class="support-copy"><h2 id="support-title">$funding_title</h2><p>$funding_summary</p></div>
-<a class="ctl" id="support-cta" href="$funding_url" hreflang="en">$funding <span aria-hidden="true">→</span></a>
-</aside></div>
+</div>
+</section>
+<section class="home-section home-film" aria-labelledby="film-title">
+<div class="film-intro"><p class="film-project">$film_project</p><h2 id="film-title">$film_title</h2><p>$film_context</p><a href="$research_guide_path" hreflang="$passage_guide_language">$research_case_link</a></div>
 <figure id="product-tour-preview" tabindex="-1" class="product-preview product-tour" aria-label="$tour_title">
 <div class="tour-screen">
 <video id="product-tour" width="1440" height="900" poster="$tour_landscape_poster" data-portrait-poster="$tour_portrait_poster" preload="none" muted playsinline controls aria-label="$tour_title" aria-describedby="tour-note">
@@ -80,7 +79,7 @@ $og_locales
 <source src="$tour_landscape_mp4" type="video/mp4"/>
 <a href="demo/report.html" hreflang="en">$demo</a>
 </video>
-<div class="tour-caption" aria-hidden="true" hidden><span>$tour_read</span></div>
+<p class="tour-caption" aria-hidden="true" hidden><span>$tour_receipt</span></p>
 </div>
 <figcaption>
 <div class="tour-actions"><button type="button" class="ctl tour-toggle" data-play="$tour_play" data-pause="$tour_pause" hidden>$tour_play</button><a class="ctl tour-explore" href="demo/report.html" hreflang="en">$demo <span aria-hidden="true">→</span></a><p id="tour-note">$tour_note</p></div>
@@ -101,6 +100,7 @@ $tour_cues
 <article id="linguistic-analysis" class="home-feature"><h3>$linguistics_title</h3><p>$linguistics_text</p><div class="home-task-links"><a href="$rhythm_guide_path" hreflang="$passage_guide_language">$rhythm_guide_link</a><a href="guides/metrics/${lang}.html" hreflang="$lang">$linguistics_link</a></div></article>
 <article id="research-workspace" class="home-feature"><h3>$research_title</h3><p>$research_text</p><div class="home-task-links"><a href="guides/research-pdf.html" hreflang="en">$research_guide_link</a></div></article>
 <article id="reading-copies" class="home-feature"><h3>$share_title</h3><p>$share_text</p><div class="home-task-links"><a href="demo/warehouse-4-dossier.pdf" hreflang="en">$dossier_example</a><a href="demo/reader/index.html" hreflang="en">$reading_copy</a></div></article>
+<article id="audio" class="home-feature home-feature-wide"><h3>$audio_title</h3><p>$audio_text</p><div class="home-task-links"><a href="demo/reader/index.html#publication-audio-player" hreflang="en">$audio_example_link</a><a href="https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#getting-started" hreflang="en">$audio_guide_link</a></div></article>
 </div></section>
 <section class="home-section home-principle" aria-labelledby="principle-title"><div><h2 id="principle-title">$principle</h2><p>$principle_text</p></div></section>
 <section class="home-section" id="compare" aria-labelledby="product-questions-title">
@@ -112,11 +112,16 @@ $tour_cues
 <section class="home-section" id="measurement-context" aria-labelledby="example-title">
 <div class="home-editorial">
 <div><h2 id="example-title">$example_title</h2><p class="home-example-finding">$example_finding</p><p id="sandbox-note">$demo_note</p></div>
-<div class="home-editorial-links"><a class="ctl" href="sandbox/index.html?lang=$sandbox_language" hreflang="$sandbox_language" id="sandbox-cta" aria-describedby="sandbox-note">$sandbox_cta <span aria-hidden="true">→</span></a><a href="$passage_guide_path" hreflang="$passage_guide_language">$passage_guide_link</a><a href="$research_guide_path" hreflang="$passage_guide_language">$research_case_link</a><a href="guides/manuscript-analysis-tools.html" hreflang="en">$compare_tools_link</a></div>
+<div class="home-editorial-links"><a class="ctl" href="sandbox/index.html?lang=$sandbox_language" hreflang="$sandbox_language" id="sandbox-cta" aria-describedby="sandbox-note">$sandbox_cta <span aria-hidden="true">→</span></a><a href="$passage_guide_path" hreflang="$passage_guide_language">$passage_guide_link</a><a href="guides/manuscript-analysis-tools.html" hreflang="en">$compare_tools_link</a></div>
 </div></section>
 <section class="home-section home-start" id="installation"><div><h2>$start_title</h2><p>$start_text</p><a class="ctl primary" href="guides/installation.html#desktop" hreflang="en">$install_link</a> <a class="ctl" href="guides/installation.html#install" hreflang="en">$install_browser_link</a></div><div class="install-release"><p>$scope</p><a href="https://github.com/mfahsold/lixity/releases/latest" lang="en">Latest published release</a> · <a href="https://github.com/mfahsold/lixity/blob/main/docs/releases/v$version.md" id="current-release" lang="en">v$version release notes</a></div></section>
 <section class="home-section" id="languages"><h2>$languages_title</h2><p>$languages_text</p><nav class="language-list" aria-label="$language">$language_links</nav><p class="section-note">$limits</p></section>
 <section class="home-section home-resources" id="guides"><div><h2>$docs</h2><p lang="en">Technical guides, methods and automation contracts are maintained in English.</p><nav class="resource-links" lang="en" aria-label="English documentation"><a href="guides/first-look.html">First session</a><a href="guides/first-look-de.html" lang="de" hreflang="de">Einstieg auf Deutsch</a><a href="guides/interpretation.html">Understand the measurements</a><a href="guides/research-pdf.html">Sources and reading copies</a><a href="https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md">Audio and teleprompter</a><a href="https://github.com/mfahsold/lixity/blob/main/docs/README.md">All documentation</a><a href="blog/index.html">Articles</a><a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md" id="cli-api">CLI and API</a><a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md" id="methods">Methods and limits</a></nav></div><div id="feedback"><h2>$feedback_title</h2><p>$feedback_text</p><a href="mailto:mfahsold@googlemail.com?subject=Lixity%20feedback">$feedback_link</a></div></section>
+<aside class="home-section" id="support" aria-labelledby="support-title"><div class="home-support">
+<img src="assets/mark.svg" width="40" height="40" alt=""/>
+<div class="support-copy"><h2 id="support-title">$funding_title</h2><p>$funding_summary</p></div>
+<a class="ctl" id="support-cta" href="$funding_url" hreflang="en">$funding <span aria-hidden="true">→</span></a>
+</div></aside>
 </main>
 <footer class="home-footer"><div class="footer-top"><a class="brand" href="$home_path">Lixity</a><span>© 2026 Matthias Fahsold</span><a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md" lang="en">AGPL-3.0-or-later · Open source</a><a href="https://github.com/mfahsold/lixity">$source</a><a href="$funding_url" hreflang="en">$funding</a><a rel="me" href="https://mastodon.social/@lixity">Mastodon</a><a rel="me" href="https://bsky.app/profile/lixity.bsky.social">Bluesky</a></div>
 <p lang="en">Free for private and commercial writing, including self-publishing your book. A separate commercial license is available for integrations that cannot meet the AGPL. <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">License details</a>.</p>

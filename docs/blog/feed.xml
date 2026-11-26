@@ -18,6 +18,24 @@
     <summary xml:lang="en" type="text">Explore chapter differences in Lixity's 3D style space with per-axis spread context, inspect refined quotation and tense heuristics, and export speech direction as JSON or SSML.</summary>
   </entry>
   <entry>
+    <id>https://lixity.de/blog/romankapitel-pruefen-de.html</id>
+    <title xml:lang="de">Ein Romankapitel prüfen, ohne seine Stimme glattzubügeln: Lixity Blog</title>
+    <link rel="alternate" type="text/html" href="https://lixity.de/blog/romankapitel-pruefen-de.html"/>
+    <published>2026-11-11T00:00:00Z</published>
+    <updated>2026-11-26T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="de" type="text">Ein Kapitel liest sich anders als der Rest: Wie man eine konkrete Frage wählt, Beobachtungen mit dem Umfeld vergleicht, Recherche liest und eine begrenzte Überarbeitungsrunde abschließt.</summary>
+  </entry>
+  <entry>
+    <id>https://lixity.de/blog/review-a-chapter.html</id>
+    <title xml:lang="en">Review a novel chapter without smoothing away its voice: Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://lixity.de/blog/review-a-chapter.html"/>
+    <published>2026-11-11T00:00:00Z</published>
+    <updated>2026-11-26T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">A chapter reads differently from the rest: choose one concrete question, compare an observation with its surroundings, read the research and finish a bounded revision round.</summary>
+  </entry>
+  <entry>
     <id>https://lixity.de/blog/lixity-093-one-passage-revision.html</id>
     <title xml:lang="en">A board moved. Should Mara turn in the same sentence?: Lixity blog</title>
     <link rel="alternate" type="text/html" href="https://lixity.de/blog/lixity-093-one-passage-revision.html"/>
@@ -36,6 +54,24 @@
     <summary xml:lang="en" type="text">Move one sentence in the Warehouse 4 opening and see when the clue reaches the reader. Try both versions side by side in Lixity 0.9.3.</summary>
   </entry>
   <entry>
+    <id>https://lixity.de/blog/literary-quality-and-editorial-metrics.html</id>
+    <title xml:lang="en">What makes a novel read well? Literary research, editorial craft and manuscript data: Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://lixity.de/blog/literary-quality-and-editorial-metrics.html"/>
+    <published>2026-11-02T00:00:00Z</published>
+    <updated>2026-11-26T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">Read what literary research says about reader judgments, then see what Lixity counts in two passages from Effi Briest and Pride and Prejudice.</summary>
+  </entry>
+  <entry>
+    <id>https://lixity.de/blog/leseguete-und-lektoratsmetriken-de.html</id>
+    <title xml:lang="de">Was macht einen Roman sprachlich stark? Literaturforschung, Lektorat und Manuskriptdaten: Lixity Blog</title>
+    <link rel="alternate" type="text/html" href="https://lixity.de/blog/leseguete-und-lektoratsmetriken-de.html"/>
+    <published>2026-11-02T00:00:00Z</published>
+    <updated>2026-11-26T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="de" type="text">Was Lesestudien untersuchen und was Lixity in Effi Briest und Pride and Prejudice zählt. Zwei Romane zeigen, wie man mit einem Messwert zur Textstelle zurückkehrt.</summary>
+  </entry>
+  <entry>
     <id>https://lixity.de/blog/revision-aware-workspace.html</id>
     <title xml:lang="en">Adding a manuscript editor changes more than the text box: Lixity blog</title>
     <link rel="alternate" type="text/html" href="https://lixity.de/blog/revision-aware-workspace.html"/>
@@ -43,24 +79,6 @@
     <updated>2026-11-20T00:00:00Z</updated>
     <author><name>Matthias Fahsold</name></author>
     <summary xml:lang="en" type="text">Why a revision-aware writing workspace needs explicit sessions, conditional saves, analysis bound to the saved text and separate recovery, backup and research records.</summary>
-  </entry>
-  <entry>
-    <id>https://lixity.de/blog/romankapitel-pruefen-de.html</id>
-    <title xml:lang="de">Ein Romankapitel prüfen, ohne seine Stimme glattzubügeln: Lixity Blog</title>
-    <link rel="alternate" type="text/html" href="https://lixity.de/blog/romankapitel-pruefen-de.html"/>
-    <published>2026-11-11T00:00:00Z</published>
-    <updated>2026-11-11T00:00:00Z</updated>
-    <author><name>Matthias Fahsold</name></author>
-    <summary xml:lang="de" type="text">Ein Kapitel liest sich anders als der Rest: Wie man eine konkrete Frage wählt, Beobachtungen mit dem Umfeld vergleicht, Recherche liest und eine begrenzte Überarbeitungsrunde abschließt.</summary>
-  </entry>
-  <entry>
-    <id>https://lixity.de/blog/review-a-chapter.html</id>
-    <title xml:lang="en">Review a novel chapter without smoothing away its voice: Lixity blog</title>
-    <link rel="alternate" type="text/html" href="https://lixity.de/blog/review-a-chapter.html"/>
-    <published>2026-11-11T00:00:00Z</published>
-    <updated>2026-11-11T00:00:00Z</updated>
-    <author><name>Matthias Fahsold</name></author>
-    <summary xml:lang="en" type="text">A chapter reads differently from the rest: choose one concrete question, compare an observation with its surroundings, read the research and finish a bounded revision round.</summary>
   </entry>
   <entry>
     <id>https://lixity.de/blog/whats-new-lixity.html</id>
@@ -88,24 +106,6 @@
     <updated>2026-11-02T00:00:00Z</updated>
     <author><name>Matthias Fahsold</name></author>
     <summary xml:lang="en" type="text">Read a manuscript, inspect one passage and keep research beside the text: a concrete tour of Lixity’s manuscript workbench and its coverage limits.</summary>
-  </entry>
-  <entry>
-    <id>https://lixity.de/blog/literary-quality-and-editorial-metrics.html</id>
-    <title xml:lang="en">What makes a novel read well? Literary research, editorial craft and manuscript data: Lixity blog</title>
-    <link rel="alternate" type="text/html" href="https://lixity.de/blog/literary-quality-and-editorial-metrics.html"/>
-    <published>2026-11-02T00:00:00Z</published>
-    <updated>2026-11-02T00:00:00Z</updated>
-    <author><name>Matthias Fahsold</name></author>
-    <summary xml:lang="en" type="text">What large-scale empirical studies of novels and editorial practice reveal about voice contrast, sentence cohesion, pacing and vocabulary, demonstrated with Lixity measurements on public-domain classics.</summary>
-  </entry>
-  <entry>
-    <id>https://lixity.de/blog/leseguete-und-lektoratsmetriken-de.html</id>
-    <title xml:lang="de">Was macht einen Roman sprachlich stark? Literaturforschung, Lektorat und Manuskriptdaten: Lixity Blog</title>
-    <link rel="alternate" type="text/html" href="https://lixity.de/blog/leseguete-und-lektoratsmetriken-de.html"/>
-    <published>2026-11-02T00:00:00Z</published>
-    <updated>2026-11-02T00:00:00Z</updated>
-    <author><name>Matthias Fahsold</name></author>
-    <summary xml:lang="de" type="text">Was empirische Studien aus Literaturwissenschaft und Lektoratspraxis über Stimmkontrast, Satzkohäsion, Pacing und Wortschatz zeigen – überprüft mit Lixity an Effi Briest und Pride and Prejudice.</summary>
   </entry>
   <entry>
     <id>https://lixity.de/blog/local-word-echoes.html</id>

@@ -20,7 +20,7 @@ MEDIA_TOOLS = FFMPEG and FFPROBE
 def test_all_homepage_transcripts_follow_the_full_minute_tour() -> None:
     for name, page in render_pages().items():
         starts = [int(value) for value in re.findall(r'<li data-start="(\d+)">', page)]
-        assert starts == [0, 10, 20, 30, 40, 50], name
+        assert starts == [0, 5, 14, 27, 42, 52], name
         title = re.search(r'<video[^>]+aria-label="([^"]+)"', page)
         assert title and "60" in title.group(1), name
 
@@ -39,11 +39,11 @@ def short_tour_recording(
     )
     plan = make_videos._tour_plan()
     timing = {
-        "schema_version": "lixity-product-tour-recording/2", "fps": plan["fps"], "duration": plan["duration"],
+        "schema_version": "lixity-product-tour-recording/3", "fps": plan["fps"], "duration": plan["duration"],
         "segments": [{"id": scene["id"], "theme": scene["theme"], "file": source.name, "startFrame": 2,
-                      "frames": (scene["end"] - scene["start"]) * plan["fps"],
+                      "frames": scene["duration"] * plan["fps"],
                       "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}
-                     for scene in plan["scenes"]],
+                     for scene in plan["captures"]],
     }
     source.with_suffix(".json").write_text(json.dumps(timing), encoding="utf-8")
     monkeypatch.setattr(make_videos, "RAW_DIR", raw)
@@ -103,6 +103,7 @@ def test_published_video_has_complete_constant_frame_timing_and_geometry(
     media = json.loads(result.stdout)
     assert len(media["streams"]) == 1, "The tour must remain silent"
     video = media["streams"][0]
+    assert video["codec_name"] == ("av1" if filename.endswith(".webm") else "h264")
     assert (video["width"], video["height"]) == (width, height)
     assert video["sample_aspect_ratio"] == "1:1"
     assert video["avg_frame_rate"] == "25/1"

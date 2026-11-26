@@ -1,7 +1,6 @@
 # Audio direction and listening
 
-Use the [audio manual](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md) to choose a
-workflow and check its prerequisites. Recording, local synthesis and explicitly
+Short entry; workflows and prerequisites live in the [audio manual](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md). Recording, local synthesis and explicitly
 configured remote rendering have different requirements and data boundaries.
 
 | I want to… | Guide |

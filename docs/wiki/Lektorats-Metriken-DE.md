@@ -1,5 +1,7 @@
 # Lektoratsmetriken verstehen
 
+Kurzeinstieg; verbindlich sind [Metrikreferenz DE](https://lixity.de/guides/metrics/de.html), [METHODS](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) und [STABILITY](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md).
+
 Die [deutsche Metrikreferenz](https://lixity.de/guides/metrics/de.html)
 erklärt, was Lixity zählt, wie eine Auffälligkeit zustande kommt und welche Frage
 du dir beim Lesen der markierten Passage stellen kannst.

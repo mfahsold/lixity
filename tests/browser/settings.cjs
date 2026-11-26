@@ -562,7 +562,9 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-target').isDisabled(),false);
       assert.equal(await page.locator('#speech-runtime-hint').isVisible(),true);
       assert.ok((await page.locator('#speech-runtime-hint').textContent()).includes(labels.speech_runtime_hint));
-      assert.equal(await page.locator('#speech-target').isVisible(),true, 'Execution target is visible beside playback controls');
+      assert.equal(await page.locator('#speech-target').isVisible(),false, 'Execution target starts in collapsed audio options');
+      await page.locator('.speech-run-options > summary').click();
+      assert.equal(await page.locator('#speech-target').isVisible(),true, 'Audio options expose a choice of execution targets');
       assert.equal(await page.locator('#speech-target').inputValue(),'local','Worker inspection does not change the render target');
       await page.waitForFunction(()=>document.querySelector('#speech-direction_text')?.value.includes('bird'));
       assert.equal(await page.locator('#speech-direction_text').getAttribute('readonly'),'');
@@ -592,6 +594,7 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-direction_instructions').inputValue(), draftInstructions);
       await page.locator('#speech-direction_text').evaluate(el=>el.setSelectionRange(2,6));
       await page.locator('[data-speech-action=direction_selection]').click();
+      await page.locator('.speech-export-section > summary').click();
       await page.locator('#speech-export_scope').selectOption('preview');
       await page.locator('#speech-ignore-direction').check();
       const withoutDirection=page.waitForRequest(request=>request.url().endsWith('/api/speech-plan'));
@@ -629,6 +632,7 @@ server.serve_forever()
         await extra.locator('[data-speech-action=chapter_render]').click();
         assert.equal(await extra.locator('#speech-status').textContent(),labels.speech_direction_save_first,
           'Opening Output keeps the draft without using it for a chapter render');
+        await extra.locator('.speech-run-options > summary').click();
         await extra.locator('#speech-ignore-direction').check();
         const chapterRequest=extra.waitForRequest(request=>request.url().endsWith('/api/speech-render'));
         await extra.locator('[data-speech-action=chapter_render]').click();
@@ -1018,6 +1022,7 @@ server.serve_forever()
     await savedPage.locator('#settings-speech-output').click();
     await savedPage.waitForFunction(()=>document.querySelector('#speech-profile')?.value);
     assert.equal(await savedPage.locator('#speech-target').inputValue(),'local','Execution target is not restored from saved audio settings');
+    await savedPage.locator('.speech-run-options > summary').click();
     await savedPage.locator('#speech-ignore-direction').check();
     const baseStart=savedPage.waitForRequest(request=>request.url().endsWith('/api/speech-render'));
     await savedPage.locator('[data-speech-action=chapter_render]').click();

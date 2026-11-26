@@ -364,9 +364,12 @@
       var parts = jumpBarParts.get(bar);
       if (!parts) {
         var info = el("span", { attrs: { role: "status" } });
-        var previous = el("button", { type: "button", className: "ctl ctl-sm", text: "←" });
-        var next = el("button", { type: "button", className: "ctl ctl-sm", text: "→" });
-        var close = el("button", { type: "button", className: "ctl ctl-sm" });
+        var previous = el("button", { type: "button", className: "ctl ctl-sm ctl-icon" });
+        var next = el("button", { type: "button", className: "ctl ctl-sm ctl-icon" });
+        var close = el("button", { type: "button", className: "ctl ctl-sm ctl-icon" });
+        previous.append(window.LixityIcons?.create("arrow-left") || "←");
+        next.append(window.LixityIcons?.create("arrow-right") || "→");
+        close.append(window.LixityIcons?.create("x") || "✕");
         parts = { info: info, previous: previous, next: next, close: close };
         jumpBarParts.set(bar, parts);
         bar.replaceChildren(info, el("div", "passage-jump-actions", previous, next, close));
@@ -375,8 +378,7 @@
       if (parts.info.textContent !== config.label) parts.info.textContent = config.label || "";
       parts.previous.setAttribute("aria-label", config.prevLabel || _uiLabel("evidence_previous"));
       parts.next.setAttribute("aria-label", config.nextLabel || _uiLabel("evidence_next"));
-      parts.close.setAttribute("aria-label", config.closeLabel || config.closeText || _uiLabel("evidence_close"));
-      parts.close.textContent = config.closeText || "✕";
+      parts.close.setAttribute("aria-label", config.closeLabel || _uiLabel("evidence_close"));
       parts.previous.onclick = config.onPrev || null;
       parts.next.onclick = config.onNext || null;
       parts.previous.disabled = Boolean(config.previousDisabled);

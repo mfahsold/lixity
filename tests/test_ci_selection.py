@@ -154,7 +154,10 @@ class TestBrowserSuiteSelection(unittest.TestCase):
             ("src/lixity/terms.py", ("research", "sharing"), {"research-tools.cjs", "read-only-site.cjs"}),
             ("src/lixity/dossier_draft_settings.py", ("research", "project"), {"dossier-workflows.cjs", "settings.cjs"}),
             ("scripts/build_examples.py", ("docs", "sharing"), {"docs.cjs", "read-only-site.cjs"}),
-            ("scripts/example_project.py", ("docs", "sharing"), {"docs.cjs", "reader-publication.cjs"}),
+            ("scripts/example_project.py", ("docs", "sharing", "research"),
+             {"docs.cjs", "reader-publication.cjs", "warehouse-author.cjs"}),
+            ("samples/first-look.md", ("docs", "sharing", "analysis", "research"),
+             {"warehouse-author.cjs", "analysis-workflow.cjs", "docs.cjs"}),
             ("scripts/example_publications.py", ("docs", "sharing"), {"docs.cjs", "reader-publication.cjs"}),
         ):
             with self.subTest(path=path):

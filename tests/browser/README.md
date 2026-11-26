@@ -31,6 +31,11 @@ The shared browser launchers mute desktop audio output in both Chromium and
 Firefox. Media timing and analyser data remain available to synthetic playback
 tests; the test browsers do not change the user's browser or system volume.
 
+On managed macOS, run Chromium through the approved local runner. Launching
+the same browser from a restricted shell can abort in `HIServices` application
+registration before it loads a page. Repeat the suite through the approved
+runner before diagnosing a Lixity regression.
+
 ### Optional Firefox on macOS
 
 Install Firefox with the same Playwright package used for the Chromium checks.
@@ -134,8 +139,9 @@ the synthetic stream used for deterministic lifecycle tests.
 `audio-recording-diagnostics.cjs` checks inline recording states and failed-start
 console diagnostics with debug logging disabled, distinguishing audio-context
 initialization from microphone permission failures. Synthetic failures include
-private-text sentinels to verify that logs omit error messages and user content.
-It never requests a physical microphone; test browsers remain muted.
+private-text sentinels to verify that the scoped client diagnostics and logs
+omit error messages and user content. It never requests a physical microphone;
+test browsers remain muted.
 
 `audio-studio.cjs` checks distinct audio tabs, keyboard navigation, contextual help,
 permission refusal and retry, synthetic Web Audio recording, completed-take
@@ -158,6 +164,12 @@ make browser-changed  # only the suites affected by modified git paths
 make browser-full     # every suite, run before a release (3 workers)
 # or: python3 scripts/run_browser_suites.py --area research --jobs 3
 ```
+
+`warehouse-author.cjs` exercises the complete, disposable Warehouse 4 example
+via the real local server. It follows the passage explanation, compares an
+unsaved revision, saves and reopens it, then follows a retained research link
+to its pinned version. Run it with `--only warehouse-author` or as part of the
+[release rehearsal](../../CONTRIBUTING.md#rehearse-a-release-and-review-the-results).
 
 `--list` prints the suite names, `--group fast|full` selects the everyday core
 surfaces or everything, `--area NAME` runs one surface (`docs`, `research`,

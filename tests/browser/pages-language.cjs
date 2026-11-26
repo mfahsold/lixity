@@ -180,9 +180,7 @@ async function checkSupportContact(page) {
         await expect(support).toHaveAttribute('href', 'guides/support.html');
         const buttonBox = await support.boundingBox();
         const videoBox = await page.locator('#product-tour-preview').boundingBox();
-        assert.ok(buttonBox.y + buttonBox.height <= videoBox.y, `Support precedes the tour in ${description}`);
-        assert.ok(buttonBox.y + buttonBox.height <= (width < 480 ? 2 * height : height),
-          `Support within the opening content in ${description}`);
+        assert.ok(buttonBox.y >= videoBox.y + videoBox.height, `Support follows the product tour in ${description}`);
         if (hasTouch) assert.ok(buttonBox.height >= 44, `Support touch target in ${description}`);
         await expect(page.locator('.home-footer a[href="guides/support.html"]')).toHaveCount(1);
         if (width === 390 || width === 768) {
@@ -198,7 +196,26 @@ async function checkSupportContact(page) {
           await page.locator('.language-picker summary').click();
           await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
         }
+        const filmGuide = page.locator('.film-intro a');
         await page.locator('#examples').press('Tab');
+        await expect(filmGuide).toBeFocused();
+        const caseGuide = language === 'de' ? 'guides/first-look-de.html#quittung' : 'guides/first-look.html#receipt';
+        await expect(filmGuide).toHaveAttribute('href', caseGuide);
+        if (homeWidths.includes(viewport)) {
+          await filmGuide.press('Enter');
+          await expect(page).toHaveURL(`${origin}/lixity/${caseGuide}`);
+          await expect(page.locator(`h2#${caseGuide.split('#')[1]}`)).toBeVisible();
+          await page.goBack();
+          const audio = page.locator('#audio a[href="demo/reader/index.html#publication-audio-player"]');
+          await expect(audio).toHaveAttribute('hreflang', 'en');
+          if (reviewLocale && width === 390) {
+            await audio.click();
+            await expect(page.locator('#publication-audio-player')).toBeVisible();
+            assert.equal(await page.locator('#publication-audio-player').evaluate(player => player.paused), true);
+            await page.goBack();
+          }
+        }
+        await support.focus();
         await expect(support).toBeFocused();
         await support.press('Enter');
         await checkSupportContact(page);

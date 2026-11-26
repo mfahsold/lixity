@@ -96,7 +96,8 @@ pinned witness quotation from the fictional archive.
   [reading copy](warehouse-4-book.pdf), [submission sheets](warehouse-4-sheet.pdf),
   [analysis report](warehouse-4-report.pdf) and [plain A4 document](warehouse-4-document.pdf).
 - [Mara’s dossier PDF](warehouse-4-dossier.pdf) with the saved character review
-  and pinned source quotation shown in the product tour.
+  and pinned source quotation. The homepage tour opens the exhibit book and
+  exports its dispatch-receipt dossier.
 
 The author-workspace demo supports exploring manuscript analysis, retained
 research, a dossier alongside the manuscript, prepared PDF downloads and a

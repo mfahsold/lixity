@@ -2,6 +2,11 @@
 name: pages
 on:
   workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Full commit SHA reviewed for the Pages deployment
+        required: true
+        type: string
   workflow_call:
     inputs:
       source_ref:
@@ -26,10 +31,32 @@ jobs:
       artifact_name: ${{ steps.metadata.outputs.artifact_name }}
       pages_base_url: ${{ steps.pages.outputs.base_url }}
     steps:
+      - name: Confirm the dispatch resolved to the reviewed Pages commit
+        if: inputs.release_tag == ''
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        run: |
+          if [[ ! "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Provide the full reviewed Pages commit SHA."
+            exit 1
+          fi
+          if [[ "$GITHUB_SHA" != "$EXPECTED_SHA" ]]; then
+            echo "::error::The selected Pages ref no longer points to the reviewed commit."
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
           ref: ${{ inputs.source_ref || github.sha }}
+      - name: Confirm the checked-out Pages source
+        env:
+          EXPECTED_SHA: ${{ inputs.source_ref || inputs.expected_sha }}
+        run: |
+          source="$(git rev-parse --verify HEAD)"
+          if [[ "$source" != "$EXPECTED_SHA" ]]; then
+            echo "::error::The checked-out Pages source differs from the reviewed commit."
+            exit 1
+          fi
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
         id: pages
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7

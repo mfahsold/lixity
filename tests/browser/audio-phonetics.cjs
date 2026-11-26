@@ -127,10 +127,16 @@ server.serve_forever()
         assert.equal(await duration.inputValue(),'1.25');
         assert.equal(await page.locator('#speech-phonemes').inputValue(),'Vogel=ˈfoːɡəl');
         await page.locator('#speech-tab-reader').click();
-        const beforeRender = writes.length;
+        const diagnostic = page.waitForResponse(response => response.url().endsWith('/api/audio-client-diagnostic'));
+        const beforeRender = writes.filter(row=>row.url.endsWith('/api/speech-render')).length;
         await page.locator('[data-speech-action=preview]').click();
-        assert.equal(writes.length,beforeRender,'Unsupported free-text profile direction is rejected before synthesis');
+        const blocked = await diagnostic;
+        assert.equal(blocked.status(),204);
+        assert.deepEqual(blocked.request().postDataJSON(),{event:'render_blocked_direction'});
+        assert.equal(writes.filter(row=>row.url.endsWith('/api/speech-render')).length,beforeRender,
+          'Unsupported free-text profile direction is rejected before synthesis');
         assert.match(await page.locator('#speech-status').textContent(),/Planexport/);
+        await page.locator('.speech-export-section > summary').click();
         await page.locator('[data-speech-action=direction_plan]').click();
         await page.waitForSelector('[data-speech-action=export_json]');
         const profileDownload = page.waitForEvent('download');
@@ -169,6 +175,7 @@ server.serve_forever()
         await page.locator('#speech-direction-prosody-pitch_variance_scale').fill('1.9');
         await page.locator('[data-speech-action=direction_discard]').click();
         assert.equal(await page.locator('#speech-direction-prosody-pitch_variance_scale').inputValue(),'1.4','Discard restores saved structured direction');
+        await page.locator('.speech-export-section > summary').click();
         await page.locator('#speech-export_scope').selectOption('chapter');
         await page.locator('[data-speech-action=direction_plan]').click();
         await page.waitForSelector('[data-speech-action=export_json]');

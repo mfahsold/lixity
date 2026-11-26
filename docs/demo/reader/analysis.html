@@ -422,8 +422,9 @@ input[type="file"].ctl { max-width: 100%; }
   font-size: var(--text-small);
   line-height: var(--line-body);
 }
-/* One field label recipe for settings, modals and research forms. */
-.setting-field label, .form-label { display: block; font-size: var(--text-small); font-weight: var(--weight-semibold); line-height: var(--line-compact); color: var(--fg); margin-bottom: .35rem; letter-spacing: normal; text-transform: none; }
+/* Editable and read-only fields use the same label typography. */
+.setting-field label, .form-label, .setting-term { display: block; font-size: var(--text-control); font-weight: var(--weight-semibold); line-height: var(--line-control); color: var(--fg); letter-spacing: normal; text-transform: none; }
+.setting-field label, .form-label { margin-bottom: var(--space-1); }
 .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--space-4) var(--space-5); min-width: 0; align-items: start; }
 .setting-field, .form-group { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
 :is(.ctl-group, .setting-field, .form-group, .row) > .ctl-note { margin: 0; }
@@ -463,6 +464,7 @@ input.ctl-code { font-family: var(--font-mono); }
 /* Editable fields use a distinct boundary. Labeled actions share a quieter
 tinted surface, with a clearer accent when hovered or focused. */
 :is(button, a).ctl { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); vertical-align: middle; text-align: center; white-space: normal; overflow-wrap: anywhere; text-decoration: none; border-color: var(--line); background: var(--surface-alt); }
+:is(button, a, summary):is(.ctl, [role="tab"]) > .lixity-icon { flex: none; }
 button.ctl.ctl-icon { flex: none; min-inline-size: var(--control-block-size); padding-inline: 0; }
 button.ctl-link { background: none; border: none; cursor: pointer; padding: 0; }
 button.ctl.ctl-link { color: var(--accent); text-decoration: underline; }
@@ -582,11 +584,19 @@ tablists on one recipe, with an inset focus ring inside the scrollport. */
 .style-tabs, .research-tabs.row, .modal-tabs { display: flex; flex-wrap: nowrap; gap: var(--space-1); min-width: 0; overflow-x: auto; scrollbar-width: thin; border-bottom: 1px solid var(--line); padding: var(--space-1); margin: 0; scroll-padding-inline: var(--space-1); }
 .modal-tabs { flex: none; gap: var(--space-2); padding: var(--space-2) var(--space-4); }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"] { flex: 0 0 auto; min-block-size: var(--control-size); padding: var(--space-2) var(--space-3); border: 1px solid transparent; border-bottom: 2px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--muted); font-size: var(--text-control); line-height: var(--line-control); font-weight: var(--weight-semibold); white-space: nowrap; cursor: pointer; transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+:is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:has(> .lixity-icon) { display: inline-flex; align-items: center; gap: var(--space-2); }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:hover { background: var(--surface-raised); color: var(--fg); border-color: var(--line); }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[aria-selected="true"] { border-color: var(--line); border-bottom-color: var(--accent); background: var(--accent-light); color: var(--accent); }
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"]:focus-visible { outline-offset: -3px; }
 @media (pointer: coarse) {
 :is(.style-tabs, .research-tabs, .modal-tabs) > button[role="tab"] { min-inline-size: var(--control-touch-size); min-block-size: var(--control-touch-size); }
+}
+@media (forced-colors: active) {
+  :is(.style-tabs, .research-tabs, .modal-tabs) > button[aria-selected="true"] {
+    border-color: ButtonText;
+    border-block-end-color: Highlight;
+  }
+  :is(.ctl, [role="tab"]):focus-visible { outline-color: Highlight; }
 }
 /* --- Native Modals & Template Cards ----------------------------------- */
 audio.media-player { width: 100%; max-width: 100%; }
@@ -600,7 +610,7 @@ dialog.lixity-modal { position: fixed; inset: 0; margin: auto; border: 1px solid
 dialog.lixity-modal::backdrop { background: var(--modal-backdrop); }
 .modal-card { background: transparent; border: 0; border-radius: 0; overflow: hidden; display: flex; flex-direction: column; min-width: 0; max-height: min(calc(90dvh - 2px), calc(44rem - 2px)); }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); flex: none; gap: var(--space-3); border-bottom: 1px solid var(--line); background: var(--surface); }
-.modal-header :is(h2, h3) { margin: 0; font-size: var(--text-section-title); font-weight: var(--weight-strong); color: var(--fg); letter-spacing: -.01em; overflow-wrap: anywhere; }
+.modal-header :is(h2, h3) { margin: 0; font-size: var(--text-subhead); line-height: var(--line-heading); font-weight: var(--weight-strong); color: var(--fg); letter-spacing: -.01em; overflow-wrap: anywhere; }
 button:is(.modal-close, .ctl-dismiss) {
   box-sizing: border-box;
   inline-size: var(--control-size);
@@ -737,6 +747,7 @@ button:is(.modal-close, .ctl-dismiss):focus-visible { border-radius: var(--radiu
 summary.ctl { font-family: var(--font); font-size: var(--text-control); line-height: var(--line-control); }
 /* --- Icons & Motion ---------------------------------------------------- */
 .lixity-icon { display: inline-block; vertical-align: middle; flex-shrink: 0; stroke-width: 1.75; }
+.lixity-icon[aria-hidden="true"] { pointer-events: none; }
 .lixity-icon-slot { display: inline-flex; align-items: center; justify-content: center; flex: none; vertical-align: middle; line-height: 1; }
 
 /* Related passages share one navigation layout in the sticky manuscript toolbar. */
@@ -1155,7 +1166,6 @@ gap: 1rem;
 & h4 { font-size: var(--text-section-title); font-weight: var(--weight-strong); margin: .75rem 0 .3rem; }
 & .research-revision-readonly {
 font-size: var(--text-control); line-height: var(--line-compact);
-& dt { font-size: var(--text-small); font-weight: var(--weight-semibold); color: var(--fg); }
 & strong { font-weight: var(--weight-semibold); }
 }
 }
@@ -1946,9 +1956,8 @@ mark.search-hit { background: rgba(255, 214, 0, 0.35); color: inherit; font-weig
 .research-passage-actions { margin-top: .5rem; }
 .empty-state-note { max-width: 60ch; margin: 0 auto 1.2rem; line-height: 1.5; }
 .recent-projects-panel { width: 100%; min-width: 0; max-width: 100%; margin-top: .6rem; padding-top: .6rem; border-top: 1px solid var(--line); }
-.recent-projects-header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .4rem; }
+.recent-projects-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .4rem; }
 .recent-projects-heading { font-size: var(--text-small); font-weight: var(--weight-semibold); color: var(--fg); margin: 0; }
-.recent-projects-clear { font-size: var(--text-micro); color: var(--muted); text-decoration: underline; cursor: pointer; background: 0; border: 0; padding: 0; &:hover { color: var(--flag); } }
 .recent-projects-list { list-style: none; margin: 0; padding: 0; max-height: min(28vh, 12rem); overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface-raised); }
 .recent-project-item { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .4rem .6rem; transition: background-color .15s ease; & + .recent-project-item { border-top: 1px solid var(--line); } &:hover { background: var(--surface-hover); } }
 .recent-project-btn { display: flex; align-items: center; gap: .5rem; flex: 1; min-width: 0; background: 0; border: 0; padding: 0; margin: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; overflow: hidden; &:hover .recent-project-name { color: var(--accent); } }
@@ -2137,7 +2146,7 @@ border-radius: 0; text-align: left; overflow-wrap: anywhere;
 .research-revision-history-list { display: flex; flex-wrap: wrap; gap: .4rem; list-style: none; margin: 0; padding: 0; }
 .research-revision-history-list button[aria-current="true"] { border-color: var(--accent); color: var(--accent); }
 .research-revision-readonly { display: grid; grid-template-columns: minmax(7rem, 35%) minmax(0, 1fr); gap: .35rem .8rem; margin: .7rem 0; }
-.research-revision-readonly dt { font-weight: var(--weight-semibold); color: var(--muted); }
+:where(.research-revision-readonly) dt { font-weight: var(--weight-semibold); color: var(--muted); }
 .research-revision-readonly dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .research-revision-history-detail { overflow-wrap: anywhere; }
 .triage-controls { align-items: end; margin-block: var(--space-3); }

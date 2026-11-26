@@ -33,6 +33,7 @@ server.serve_forever()
       try {
         await page.goto(server.fixture.url);
         await page.evaluate(()=>document.dispatchEvent(new CustomEvent('lixity:open-speech-studio',{detail:{mode:'output'}})));
+        await page.locator('.speech-chapter-recording > summary').click();
         await page.locator('#speech-chapter_audio_file').waitFor({state:'visible'});
         await page.waitForFunction(()=>!document.querySelector('[data-speech-action=chapter_audio_import]').disabled);
         await page.locator('#speech-chapter').selectOption('2');

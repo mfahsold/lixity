@@ -111,6 +111,14 @@ For a review state, describe the operation or current evidence, for example
 **Erneut prüfen / Review again** after a source change. A state change says
 which source was reviewed. It establishes no new interpretation.
 
+### Quality verdict wording (canonical)
+
+Use one canonical form so the 20+ occurrences stay comparable.
+EN: **not a quality verdict, score, ranking or recommendation about literary quality**.
+DE: **kein literarisches Qualitätsurteil, keine Wertung, kein Ranking und keine Empfehlung**.
+Historical variants (`not a quality score/grade/rating`, `keine Qualitätsbewertung`)
+mean the same rule; prefer the canonical form for new copy and converge on touch.
+
 ### Resource boundaries and editorial style
 
 Each resolved key has one authoritative definition. Analysis measurement names

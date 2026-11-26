@@ -6,6 +6,7 @@
   if (!manager || !host) return;
   var title = document.getElementById("research-tool-title");
   var closeButton = document.getElementById("research-tool-close");
+  var closeLabel = closeButton.querySelector("[data-research-tool-close-label]");
   var comparisonResults = document.getElementById("research-grounding-results");
   var active = "", origin = null, comparison = null, comparisonReturn = null, serial = 0;
   var reviewFilter = null;
@@ -69,7 +70,11 @@
       button.setAttribute("aria-expanded", String(selected)); button.classList.toggle("active", selected);
     });
     title.textContent = uiLabel(active === "search" ? "research_tools_search" : active === "review" ? "research_tools_review" : "research_source_compare_action");
-    closeButton.textContent = uiLabel(active === "grounding" ? "research_source_compare_back" : "research_tools_close");
+    var returnsToSource = active === "grounding";
+    var returnText = uiLabel(returnsToSource ? "research_source_compare_back" : "research_tools_close");
+    closeLabel.textContent = returnText;
+    closeButton.title = returnText;
+    closeButton.dataset.help = returnsToSource ? returnText : uiLabel("research_tools_close_help");
     host.dataset.tool = active;
   }
   function close(restoreFocus) {

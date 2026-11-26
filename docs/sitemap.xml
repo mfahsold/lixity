@@ -4,7 +4,7 @@
         xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
   <url>
     <loc>https://lixity.de/</loc>
-    <lastmod>2026-11-23</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <image:image>
       <image:loc>https://lixity.de/screenshots/dashboard-light.png</image:loc>
       <image:title>Lixity continuous manuscript reader with chapter navigation and contextual tools</image:title>
@@ -27,11 +27,11 @@
     </image:image>
     <video:video>
       <video:thumbnail_loc>https://lixity.de/videos/product-tour.webp</video:thumbnail_loc>
-      <video:title>Lixity in 48 seconds: reading, measuring and reporting one chapter</video:title>
-      <video:description>Six eight-second scenes: open an analysis suggestion, see the exact counted words, compare an unsaved draft, read a chapter measurement, open a saved dossier and download its PDF.</video:description>
+      <video:title>The blank line: a 60-second Lixity product film</video:title>
+      <video:description>Follow Mara's unsigned receipt from a marked sentence and draft comparison to two fictional records, an author's decision and the saved dossier PDF.</video:description>
       <video:content_loc>https://lixity.de/videos/product-tour.mp4</video:content_loc>
-      <video:duration>48</video:duration>
-      <video:publication_date>2026-11-24</video:publication_date>
+      <video:duration>60</video:duration>
+      <video:publication_date>2026-11-26</video:publication_date>
     </video:video>
   </url>
   <url>
@@ -88,7 +88,7 @@
   </url>
   <url>
     <loc>https://lixity.de/guides/interpretation.html</loc>
-    <lastmod>2026-11-20</lastmod>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://lixity.de/guides/manuscript-analysis-tools.html</loc>
@@ -96,7 +96,7 @@
   </url>
   <url>
     <loc>https://lixity.de/guides/research-pdf.html</loc>
-    <lastmod>2026-11-23</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <image:image>
       <image:loc>https://lixity.de/screenshots/dashboard-research-timeline.png</image:loc>
       <image:title>Claims timeline with a shared axis, placed period badges and a placement hint</image:title>
@@ -120,11 +120,11 @@
   </url>
   <url>
     <loc>https://lixity.de/blog/romankapitel-pruefen-de.html</loc>
-    <lastmod>2026-11-20</lastmod>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://lixity.de/blog/review-a-chapter.html</loc>
-    <lastmod>2026-11-20</lastmod>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://lixity.de/blog/revision-aware-workspace.html</loc>
@@ -132,11 +132,11 @@
   </url>
   <url>
     <loc>https://lixity.de/blog/literary-quality-and-editorial-metrics.html</loc>
-    <lastmod>2026-11-02</lastmod>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://lixity.de/blog/leseguete-und-lektoratsmetriken-de.html</loc>
-    <lastmod>2026-11-02</lastmod>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://lixity.de/blog/speech-direction-and-style-space.html</loc>
@@ -182,10 +182,10 @@
     <loc>https://lixity.de/blog/effi-briest-case-study.html</loc>
     <lastmod>2026-11-05</lastmod>
   </url>
-  <url><loc>https://lixity.de/index-de.html</loc><lastmod>2026-11-20</lastmod></url>
-  <url><loc>https://lixity.de/index-fr.html</loc><lastmod>2026-11-20</lastmod></url>
-  <url><loc>https://lixity.de/index-es.html</loc><lastmod>2026-11-20</lastmod></url>
-  <url><loc>https://lixity.de/index-it.html</loc><lastmod>2026-11-20</lastmod></url>
-  <url><loc>https://lixity.de/index-pt.html</loc><lastmod>2026-11-20</lastmod></url>
-  <url><loc>https://lixity.de/index-nl.html</loc><lastmod>2026-11-20</lastmod></url>
+  <url><loc>https://lixity.de/index-de.html</loc><lastmod>2026-11-26</lastmod></url>
+  <url><loc>https://lixity.de/index-fr.html</loc><lastmod>2026-11-26</lastmod></url>
+  <url><loc>https://lixity.de/index-es.html</loc><lastmod>2026-11-26</lastmod></url>
+  <url><loc>https://lixity.de/index-it.html</loc><lastmod>2026-11-26</lastmod></url>
+  <url><loc>https://lixity.de/index-pt.html</loc><lastmod>2026-11-26</lastmod></url>
+  <url><loc>https://lixity.de/index-nl.html</loc><lastmod>2026-11-26</lastmod></url>
 </urlset>

@@ -1,35 +1,30 @@
 # Audio, author voice and passage direction
 
-Use audio to listen through a manuscript, review pronunciation and pacing, record
-your own voice, or prepare a direction plan for another service. This manual owns
-the audio workflow in both the local browser app and the CLI. The
-[documentation map](README.md), [browser workspace manual](WORKSPACE.md) and
-[CLI reference](USAGE.md) cover the surrounding project workflow. See the
-[speech setup options](INSTALLATION.md#find-your-setup-task) for separately
-installed workers and the optional Apple Silicon runtime.
+Use audio to record your own voice, listen to a passage or produce a chapter
+recording. This manual covers the desktop app, local browser app and CLI.
+Read the [workspace manual](WORKSPACE.md) for project work and the
+[CLI reference](USAGE.md) for commands. The [installation manual](INSTALLATION.md#find-your-setup-task)
+covers separately installed workers and the optional Apple Silicon runtime.
 
 The published v0.9.3 includes recording, passage direction, the teleprompter,
 and the ZONOS3, IMS-Toucan and OpenAI-compatible adapters described below.
-This manual follows the checkout. The shared IPA and alternate-spelling lexicon,
-reorganized audio panels and reviewed upgrade that keeps a profile draft open
-are unreleased. In v0.9.3, use profile spelling replacements or the IMS-Toucan
-profile's IPA dictionary. Audio settings, direction, timeline and transcript
-schemas have independent versions. Check your installation with
-`lixity --version` and the relevant command's `--help`.
+This manual follows the checkout. The updated audio layout, shared IPA and
+alternate-spelling lexicon, upgrade that keeps a profile draft open, and
+expanded audio diagnostics are unreleased. In v0.9.3, use profile spelling
+replacements or the IMS-Toucan profile's IPA dictionary. Audio settings,
+direction, timeline and transcript schemas have independent versions. Check
+your installation with `lixity --version` and the relevant command's `--help`.
 
-| I want to… | Start here | CLI route |
+| I want to… | Open in the workspace | Commands and details |
 | --- | --- | --- |
-| Hear a short passage or chapter | [Getting started](#getting-started) | `read-aloud` |
-| Record, import or clone my own voice | [Author voice](#author-voice-recording-and-listening) and [ZONOS3 reference](#use-a-reference-with-zonos3) | `audio-reference`, `read-aloud` |
-| Set the recording level | [Microphone and calibration](#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record) | `audio-microphone`, `audio-calibrate` |
-| Read and record with cues | [Teleprompter](#manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images) | Browser workflow |
-| Correct spoken names or use IPA | [Project pronunciations](#project-pronunciations) and [Toucan phonetics](#ims-toucan-phonetics-and-structured-direction) | Project audio settings |
-| Shape delivery for a passage | [Passage direction](#passage-direction) | `audio-direction` |
-| Export direction without synthesis | [JSON/SSML and providers](#audio-export-and-external-providers) | `audio-export-plan` |
-| Inspect a recording against a plan | [Audio inspection](#inspect-and-compare-externally-generated-audio) | `audio-inspect`, `audio-verify`, `audio-import-transcript` |
-| Prepare transcript evidence from one recording | [MLX-Audio on Apple Silicon](#mlx-audio-on-apple-silicon) | `audio-transcribe` |
-| Keep chapter audio for a reader export | [Chapter recording import](#retain-or-import-chapter-audio) | `audio-import` |
-| Check a worker or change settings format | [Audio status](#audio-status) and [schema upgrades](#audio-settings-upgrades-and-recovery) | `audio-status`, `audio-migrate` |
+| Record a voice or import a take | **Project → Settings → Audio and services → Record author's voice** | `audio-reference` · [Record and review](#author-voice-recording-and-listening) |
+| Choose the narrator or edit pronunciation | **Project → Settings → Audio and services → Voice profiles** | [Voice profiles](#voice-profiles) · [Project pronunciations](#project-pronunciations) |
+| Choose an input or check its level | **Project → Settings → Audio and services → Microphone and levels** | `audio-microphone`, `audio-calibrate` · [Microphone and calibration](#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record) |
+| Hear a paragraph or shape its delivery | **Manuscript → Listen and direct → Listen & direct** | `read-aloud`, `audio-direction` · [Passage direction](#passage-direction) |
+| Render, import or review a chapter recording | **Manuscript → Listen and direct → Chapter audio** | `read-aloud`, `audio-import` · [Chapter recordings](#retain-or-import-chapter-audio) |
+| Rehearse aloud with cues and record my microphone | **Manuscript → Teleprompter** | [Teleprompter](#manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images) |
+| Export a plan or compare an external recording | **Export direction** or **Inspect external recording** in the manuscript audio panels | `audio-export-plan`, `audio-inspect`, `audio-verify` · [Plan export](#audio-export-and-external-providers) · [Recording inspection](#inspect-and-compare-externally-generated-audio) |
+| Check a service or review an audio settings upgrade | **Services & audio queue** or **Voice profiles** in project settings | `audio-status`, `audio-migrate` · [Audio status](#audio-status) · [Settings upgrades](#audio-settings-upgrades-and-recovery) |
 
 Use `lixity read-aloud --help` or `lixity audio-reference --help` for installed
 examples and action-specific options. Merely reading help never captures or
@@ -37,21 +32,30 @@ synthesizes audio.
 
 ## Getting started
 
-1. Open the intended project and manuscript in the
-   [local workspace](WORKSPACE.md). Audio profiles and saved references belong to
-   that explicit project. For command-line work, use `--project ./novel`.
-2. Open **Project → Settings → Audio and services → Voice profiles**. Choose the
-   model, language, voice or reference recording and select **Save profiles**.
-   For your own voice, first [record or import a reference](#author-voice-recording-and-listening).
-3. In the manuscript, open **Listen and direct** from the headphones control.
-   Choose a passage and use **Export direction → Preview export** to inspect
-   the effective words, delivery and pauses. Only project audio settings are
-   required for a plan. Keep exported plans private when they contain manuscript
-   text or directions.
-4. Set up the selected runtime or explicit provider for synthesis. Check **Speech
-   service** in **Voice profiles** or use `lixity audio-status`. Audition a
-   **Preview paragraph** before you choose **Chapter audio → Render chapter**.
-   [Chapter recordings and downloads](#retain-or-import-chapter-audio)
+1. Open a writable project. To narrate in your own voice, first [record or import
+   a reference](#author-voice-recording-and-listening). In **Voice profiles**,
+   choose the model, language and voice or reference, then select **Save profiles**.
+2. In the manuscript, open **Listen and direct** with the headphones control.
+   Choose a passage. Use **Export direction → Preview export** to check what the
+   plan carries. For generated sound, configure the selected runtime or provider
+   and choose **Preview paragraph**. Listen to the result before saving direction
+   or rendering a chapter. [Speech setup](INSTALLATION.md#find-your-setup-task)
+3. Switch to **Chapter audio**, choose the chapter and select **Render chapter**.
+   Listen and download the WAV from the player. Open **Chapter recording** to
+   check whether the project has a recording ready for reader export. [Chapter recordings](#retain-or-import-chapter-audio)
+
+### Which recording to use
+
+- A **paragraph preview** is temporary. Download the WAV during the current job
+  if you want to keep a copy.
+- A **saved voice reference** pairs a short recording with its reviewed
+  transcript. A compatible voice profile can use it to synthesize new speech.
+  The Teleprompter records from your microphone and leaves the take for review
+  or download. Use **Author's voice** to save a reviewed excerpt as a reference.
+- A **retained chapter recording** is a complete WAV for one chapter and manuscript
+  revision. A successful chapter render or an explicit chapter WAV import
+  retains it. A [reader export](WORKSPACE.md#include-existing-chapter-recordings)
+  can include it when the manuscript and chapter still match.
 
 ### Choose a synthesis route
 
@@ -388,18 +392,13 @@ audio settings: keep a backup and use a current version to render or edit them.
 
 ## Author voice recording and listening
 
-| Where to work | Controls and scope |
-| --- | --- |
-| **Project → Settings → Audio and services → Voice profiles** | Choose a profile and edit its voice, model, delivery and pronunciation. A project with one profile displays its name. Models group by the input they use. Open **Speech service** for worker diagnostics. The inspection target applies to this check. |
-| **Author's voice** | Read a sample or custom text, record or import a take, review it, and explicitly save it as a project voice reference. The project recording limit is available beside the recording controls. |
-| **Microphone and levels** (tab **Mic & levels**) | Inspect the recording inputs and run a level check. Desktop capture uses the chosen input during the current project session. Browser recording uses the browser's input and site permission. Available mixer controls apply to the server computer. |
-| **Manuscript → Listen and direct → Listen & direct** | Select the passage, check which words the direction covers, then edit, audition or export a plan. The panel shows the saved narrator and links to **Voice profiles**. |
-| **Manuscript → Listen and direct → Chapter audio** | Render the selected chapter and manage its recording. Use **Export direction** for a plan and **Inspect external recording** for a recording check. Each has its own text scope. |
+Open **Project → Settings → Audio and services → Record author's voice** to
+open the **Author's voice** tab. Use **Mic & levels** to check the input and
+**Voice profiles** to assign the saved recording to a narrator.
+[Microphone setup](#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record)
 
-To use your own voice:
-
-1. In **Project → Settings → Audio and services**, choose **Record author's
-   voice**. Record a short passage or [import a reviewed take](#experimental-reference-voices).
+1. Choose a reading text and select **Start recording**, or import a take for
+   review. The capture limit appears beside the recording controls.
 2. Listen to the take and correct the transcript to the words you actually
    spoke. Confirm **I checked that this transcript matches the recording**,
    then choose **Save as author voice for this book**.
@@ -408,21 +407,10 @@ To use your own voice:
    structured delivery. For ZONOS3 set **Voice preset** to **Project voice
    reference**. Choose the saved take in **Reference recording** and select
    **Save profiles**.
-4. Check **Speech service**, then choose **Preview paragraph** in the manuscript
-   and listen for omitted or repeated words, pronunciation, and voice
-   continuity. Set [project pronunciations](#project-pronunciations) or
-   [passage direction](#passage-direction) as needed, and audition again before
-   rendering a chapter.
-
-The manuscript audio tabs share the current selection and playback. Save or
-discard a direction draft before you render the chapter. Reopening the panel
-starts a new run with saved defaults.
-
-**Delete chapter recording** applies to the exact recording shown for the
-selected chapter. It affects audio available to future exports. Existing
-exports and the WAV originally chosen for import retain their copies.
-**Discard recording** clears the current take and transcript from a recording
-panel. Exported copies remain available for reimport.
+4. Check **Speech service** in the profile. In the manuscript, choose
+   **Preview paragraph** and listen for omitted or repeated words, pronunciation
+   and continuity. Adjust the [pronunciation](#project-pronunciations) or
+   [direction](#passage-direction) and audition the passage again if needed.
 
 Help on the controls explains their scope and limits. The shared compact player
 shows elapsed and total time, play/pause, seeking, mute and volume. Its live
@@ -435,10 +423,10 @@ recorder stop at the project's recording limit. The timer shows elapsed time and
 the limit. Press Enter or Space with the record button focused to start or stop.
 Saving requires at least one second. Editing the transcript clears its
 confirmation. Saving and activating are separate outcomes. If activation fails,
-read the result before retrying. A saved recording can be selected in a
-compatible profile.
-A successful activation refreshes the project view; reload if the UI reports
-that the saved settings could not be refreshed.
+select the saved recording in a compatible profile and save the profile. If
+activation succeeds and the view reports a refresh error, reload to see the new
+assignment. **Discard recording** clears the current take and its transcript.
+Exported copies remain available for reimport.
 
 In **Author's voice → Choose from recordings**, select **Delete recording** and
 confirm to remove an unused recording from the project. When any saved profile
@@ -476,8 +464,9 @@ The state beside the recording button reports requests, active recording and
 failures. Failed starts also write a `[Lixity:error]` diagnostic to the browser
 console, even with debug logging disabled. It identifies the failed stage and
 browser capabilities without recording audio, transcripts or device identifiers.
-Microphone access happens in the browser; a failed permission request does not
-reach the server and therefore does not appear in the service log.
+The updated local workspace also reports a bounded outcome to the
+[service log](INSTALLATION.md#logs). Capture, review and saving a reference
+produce separate events.
 
 To import a studio recording, choose its PCM WAV and optionally its exported
 **Take metadata (JSON, optional)**, then **Load take for review**. The sidecar
@@ -762,9 +751,9 @@ it does not automatically tune the microphone or certify recording quality:
 
 ## Manuscript teleprompter: direction cues, phonetics and dossier context
 
-The teleprompter combines the manuscript reading view, saved
-direction, pronunciation cues and linked research context. It can be used
-without synthesizing speech:
+The teleprompter shows the manuscript, saved direction, pronunciation cues
+and linked research context as you read aloud. Recording here captures your
+microphone. You can rehearse and save a portable take without a speech model.
 
 1. **Opening the Teleprompter:**
    In the manuscript reader view, click the **Teleprompter** button in the reader controls
@@ -867,6 +856,7 @@ profile; current planning rejects that mismatch before rendering. Cache entries
 can still be evicted while a render is in progress.
 
 <a id="experimental-coqui-and-openvoice-audio-unreleased"></a>
+<a id="experimental-coqui-and-openvoice-audio"></a>
 
 ## Experimental Coqui and OpenVoice audio
 
@@ -929,6 +919,7 @@ before using it through [reference inspection](#experimental-reference-voices). 
 are not readable by older Lixity versions.
 
 <a id="retained-f5-tts-profiles-unreleased"></a>
+<a id="retained-f5-tts-profiles"></a>
 
 ## Retained F5-TTS profiles
 
@@ -950,6 +941,7 @@ configured external provider is another option. Neither preserves an F5 voice by
 assumption; audition the new profile before using it for a full export.
 
 <a id="ims-toucan-phonetics-and-structured-direction-unreleased"></a>
+<a id="ims-toucan-phonetics-and-structured-direction"></a>
 
 ## IMS-Toucan phonetics and structured direction
 
@@ -1112,9 +1104,10 @@ renders; an existing WAV is not changed automatically.
    for chapter playback, retention or comparison. Profile defaults are saved
    separately in **Voice profiles**.
 
-The current render target, export scope, comparison scope and cache reuse
-choice apply to the current operation. The chapter panel can explicitly omit
-saved passage direction for one run.
+**Audio options** holds advanced choices for the current render, including the
+execution target where available and whether to ignore saved passage direction.
+The chapter panel also controls segment reuse. Export and recording comparison
+have their own text scopes. Reopening the panel loads the saved defaults.
 
 **Services & audio queue** in Project settings reports the actual model identity advertised by each available
 local or Jetson worker; an unknown identity is shown as unknown. The dialog also
@@ -1200,6 +1193,7 @@ Cache reuse keys include the effective text/profile instructions; edited directi
 cannot accidentally reuse audio synthesized with different instructions.
 
 <a id="audio-export-and-external-providers-unreleased"></a>
+<a id="audio-export-and-external-providers"></a>
 
 ## Audio export and external providers
 
@@ -1372,6 +1366,7 @@ certify transcription fidelity, and its process does not become a source-writing
 or manuscript-editing step automatically.
 
 <a id="inspect-and-compare-externally-generated-audio-unreleased"></a>
+<a id="inspect-and-compare-externally-generated-audio"></a>
 
 ## Inspect and compare externally generated audio
 
@@ -1430,12 +1425,15 @@ full audit JSON for download; it does not create a saved chapter recording. See 
 [Stability](STABILITY.md) for thresholds and interpretation.
 
 <a id="retain-or-import-chapter-audio-unreleased"></a>
+<a id="retain-or-import-chapter-audio"></a>
 
 ## Retain or import chapter audio
 
 A complete chapter recording can accompany the same chapter in a
-[reader export](WORKSPACE.md#include-existing-chapter-recordings). It is separate from a 1–60 second voice
-reference and from a teleprompter take's optional transcript metadata.
+[reader export](WORKSPACE.md#include-existing-chapter-recordings). To generate
+one, open **Chapter audio**, select the chapter and choose **Render chapter**.
+The player appears when the result is ready. Listen through the chapter and
+download its WAV for an external review if needed.
 
 In **Chapter audio**, select the intended chapter, open **Chapter recording**,
 choose **Completed chapter WAV** and select **Import chapter WAV**. The browser
@@ -1444,9 +1442,10 @@ artifact was saved. Import replaces this chapter's previous recording and binds
 it to the exact full manuscript revision; it does not check whether the recording
 speaks that chapter or infer word/paragraph timing.
 
-**Discard file selection** clears a WAV chosen for import. To remove the
-recording already saved for the selected chapter, choose **Delete chapter
-recording** and confirm.
+**Discard file selection** clears a WAV chosen for import. **Delete chapter
+recording** removes the saved recording shown for the selected chapter from
+the project after confirmation. Existing exports and the original imported
+file keep their copies.
 
 For larger recordings or scripts, use the CLI with an explicit project, chapter
 and the full `source_sha256` from `audio-direction inspect`:
@@ -1559,6 +1558,9 @@ settings requires a compatible prior application version.
 
 ## Troubleshooting and limits
 
+This section owns recording, voice-profile, direction and synthesis failures.
+For install/service failures see [installation troubleshooting](INSTALLATION.md#troubleshooting).
+
 Body paragraphs, quoted blocks and list prose use the shared Markdown text
 projection. Link labels are read; destinations, images, code, footnote definitions
 and YAML metadata are omitted. Long paragraphs use bounded sentence/word segments
@@ -1609,12 +1611,8 @@ different lifetimes.
 ### Match an audio failure to a log entry
 
 Open the browser's Network inspector, reproduce the problem and read
-`X-Lixity-Diagnostic-Id` on the failed audio POST response. Search the local
-service log for that value. `audio_operation` reports the route, status and
-dispatch time through response headers. Render and worker events use the same
-ID for that render. Set `LIXITY_LOG_FORMAT=json` for structured Python output
-or `LIXITY_SPEECH_LOG_LEVEL=DEBUG` for segment diagnostics during a local run.
-Microphone failures that occur before a request appear in the client console
-with the failing stage and error class. Review unrelated log lines before
-sharing a local log. [Logging and test diagnostics](ARCHITECTURE.md#logging)
+`X-Lixity-Diagnostic-Id` on the audio POST response. For a render that later
+fails, start with the request that submitted it. Browser microphone failures
+before a request appear in the browser console. See [service logs and audio
+diagnostics](INSTALLATION.md#logs) for the log location and event meanings.
 

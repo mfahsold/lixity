@@ -45,6 +45,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "analysis-navigation.cjs",
         "analysis-overview.cjs",
         "analysis-workflow.cjs",
+        "warehouse-author.cjs",
         "layout.cjs",
         "reader-toolbar.cjs",
         "workbench.cjs",
@@ -95,6 +96,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "visual-consistency.cjs",
     ),
     "analysis": (
+        "warehouse-author.cjs",
         "manuscript-editor.cjs",
         "editor-features.cjs",
         "editor-navigation.cjs",
@@ -174,6 +176,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "visual-consistency.cjs",
     ),
     "research": (
+        "warehouse-author.cjs",
         "dossier-document.cjs",
         "read-only-site-data.cjs",
         "reader-publication.cjs",
@@ -219,7 +222,8 @@ PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("docs/*", ("docs",)),
     ("scripts/stage_pages.py", ("docs",)),
     ("scripts/build_examples.py", ("docs", "sharing")),
-    ("scripts/example_project.py", ("docs", "sharing")),
+    ("scripts/example_project.py", ("docs", "sharing", "research")),
+    ("samples/first-look.md", ("docs", "sharing", "analysis", "research")),
     ("scripts/example_publications.py", ("docs", "sharing")),
     ("src/lixity/site_*.py", ("sharing",)),
     ("src/lixity/server/routes_site.py", ("sharing",)),

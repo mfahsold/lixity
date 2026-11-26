@@ -17,7 +17,7 @@
 <meta property="og:image:secure_url" content="https://lixity.de/screenshots/dashboard-research-dossiers.png"/>
 <meta property="og:image:type" content="image/png"/>
 <meta property="og:image:width" content="2368"/>
-<meta property="og:image:height" content="2150"/>
+<meta property="og:image:height" content="2148"/>
 <meta property="og:image:alt" content="Research dossiers with linked passages and saved source versions"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity research: sources, citations and PDF export"/>
@@ -45,14 +45,14 @@
     "name": "Lixity",
     "url": "https://lixity.de/"
   },
-  "dateModified": "2026-11-23",
+  "dateModified": "2026-11-26",
   "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
   "mainEntityOfPage": "https://lixity.de/guides/research-pdf.html",
   "image": {
     "@type": "ImageObject",
     "url": "https://lixity.de/screenshots/dashboard-research-dossiers.png",
     "width": 2368,
-    "height": 2150,
+    "height": 2148,
     "caption": "Research dossiers with linked passages and saved source versions"
   }
 }
@@ -111,7 +111,7 @@
 <h1>Connect research to your manuscript</h1>
 <p>Collect sources, read and annotate in Zotero. Use Lixity's research workspace to connect selected evidence with claims, authorial decisions and exact manuscript quotations. A capture preserves the source version you used; it does not establish that a claim is true.</p>
 <p>This walkthrough introduces the author workflow. The <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#find-a-task">research manual</a> owns the detailed procedures and compatibility rules; <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md#design-history">design history</a> is separate from implemented commands.</p>
-<p class="updated">Updated <time datetime="2026-11-23">23 November 2026</time></p>
+<p class="updated">Updated <time datetime="2026-11-26">26 November 2026</time></p>
 <div class="notice-box"><strong>Before importing:</strong> Choose the intended project and confirm that you may keep the source bytes. Text PDFs need Poppler; image-only scans need local Tesseract or a configured OCR worker. See <a href="installation.html#install">installation</a> and <a href="#ocr">PDF requirements</a>.</div>
 
 <nav class="guide-toc" aria-label="On this page"><strong>On this page</strong><ul><li><a href="#import">Retain a local source</a></li><li><a href="#zotero">Capture from Zotero</a></li><li><a href="#places-and-routes">Visual references and places</a></li><li><a href="#search">Find a record</a></li><li><a href="#keyword-citation">Cite a source paragraph</a></li><li><a href="#manuscript-claims">Connect a manuscript quote</a></li><li><a href="#dossiers-and-decisions">Edit dossiers and review decisions</a></li><li><a href="#dossier-export">Download a dossier PDF</a></li><li><a href="#claim-chronology">Claim chronology</a></li><li><a href="#grounding">Cross-corpus grounding &amp; exports</a></li><li><a href="#ocr">PDF and OCR setup</a></li><li><a href="#backup">Back up and restore</a></li><li><a href="#cli-workflow">CLI walkthrough</a></li><li><a href="#manuscript-export">Manuscript PDFs &amp; editorial copies</a></li><li><a href="#reading-website">Reading versions, dossiers &amp; analysis</a></li><li><a href="#publication">Print imprint &amp; ISBNs</a></li></ul></nav>
@@ -177,7 +177,7 @@ lixity research cite --project ./sample-project --query "reading room" \
 <p>In <strong>Review</strong>, open <strong>Read decision with dossier</strong> to compare the named versions. <strong>Mark as applied</strong> records your assessment for those exact versions; it does not update old pins or inspect prose. A later revision may need another review. The manual covers <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#resolve-conflicting-drafts">concurrent drafts</a> and <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#review-decisions-and-save-related-revisions-together">saving related changes together</a>.</p>
 
 <h2 id="dossier-export">Download a dossier PDF</h2>
-<p>In the current development workspace, open a saved dossier and select <strong>Download PDF</strong>. Check the version shown beside the button. You can download that version from the dossier, beside the manuscript, or after opening it from the dossier’s history.</p>
+<p>In the development workspace, open a saved dossier and check the version beside <strong>Download PDF</strong>. You can download the displayed version from the dossier, from beside the manuscript, or after opening an earlier revision in the dossier’s history. <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#download-a-dossier-as-pdf">Dossier PDF reference</a>.</p>
 <p>The A4 copy includes saved notes, chapter tables, place and route descriptions, and source quotations pinned to that version. Repeated copies of the same generated report appear once. Use the PDF reader’s bookmarks to jump between sections. Review and save the manuscript analysis to include current passages in your next download.</p>
 <p>Open <a href="../demo/warehouse-4-dossier.pdf">Mara’s saved dossier in PDF</a> to see the chapter distribution, manuscript passages and a pinned source quote from the fictional Warehouse 4 project.</p>
 <p>For the whole draft, use the <a href="#manuscript-export">manuscript PDF layouts</a>. For a browser-based reading copy with selected background, use the <a href="#reading-website">reading website export</a>.</p>
@@ -293,7 +293,7 @@ lixity research audit --project ./novel-research</code></pre>
 </details>
 
 <h2 id="manuscript-export">Export manuscript and editorial PDFs</h2>
-<p>Open <strong>Project actions → PDF export</strong> or run <code>lixity pdf</code>. Choose a layout for drafting, editing or a reading copy. Check font coverage and the recipient’s requirements before sending a PDF for production.</p>
+<p>Author walkthrough; normative PDF behavior lives in the <a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#download-a-manuscript-pdf">workspace manual</a>. Open <strong>Project actions → PDF export</strong> or run <code>lixity pdf</code>. Choose a layout for drafting, editing or a reading copy. Check font coverage and the recipient’s requirements before sending a PDF for production.</p>
 <div class="feature-table-wrapper">
 <table class="editorial-table">
   <thead>
@@ -341,7 +341,7 @@ lixity pdf manuscript.md --layout book -o print-a5.pdf</code></pre>
 <p>Override system-discovered fonts via <code>LIXITY_PDF_FONT_SERIF</code>, <code>LIXITY_PDF_FONT_SANS</code>, or <code>LIXITY_PDF_FONT_MONO</code> when needed. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md">browser workspace manual</a> and <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#lixity-pdf">PDF command reference</a> for full options and limits.</p>
 
 <h2 id="reading-website">Export reading versions with curated dossiers &amp; selective analysis</h2>
-<p>Use <strong>Project actions → Reading website</strong> or <code>POST /api/site-export</code> to prepare a standalone offline website as a ZIP. Choose <strong>Check export</strong> to inspect the selected content and package size before using <strong>Download ZIP</strong>. The corresponding preflight endpoint is <code>/api/site-preflight</code>.</p>
+<p>Author walkthrough; normative website scope lives in the <a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#export-a-reading-website">workspace manual</a>. Use <strong>Project actions → Reading website</strong> or <code>POST /api/site-export</code> to prepare a standalone offline website as a ZIP. Choose <strong>Check export</strong> to inspect the selected content and package size before using <strong>Download ZIP</strong>. The corresponding preflight endpoint is <code>/api/site-preflight</code>.</p>
 <div class="feature-table-wrapper">
 <table class="editorial-table">
   <thead>

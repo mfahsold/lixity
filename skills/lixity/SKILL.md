@@ -5,6 +5,11 @@ description: Use Lixity to inspect manuscript evidence, compare drafts, review d
 
 # Lixity
 
+New to Lixity? Start with the [product direction](https://github.com/mfahsold/lixity/blob/main/docs/PRODUCT.md#start-in-two-minutes),
+the [documentation map](https://github.com/mfahsold/lixity/blob/main/docs/README.md#find-a-task) and the
+[read-only demo](https://lixity.de/demo/report.html). The sections below are the
+task routes once a project or question is selected.
+
 Use this skill to work with Lixity's public interfaces. For source changes, follow the [repository guidance](https://github.com/mfahsold/lixity/blob/main/AGENTS.md).
 
 Keep private projects, source material, credentials and derived outputs outside public checkouts. Use synthetic material in public examples. Check the contents and metadata of prepared exports against the requested sharing scope before sending or publishing them. [Operating boundaries](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md#operating-boundaries)

@@ -62,7 +62,8 @@ such as [Effi Briest](examples/effi-briest.html) or
 ## Use the interactive workspace
 
 Open the installed desktop app from your applications menu. If you installed
-through the CLI, start the browser workspace with this command.
+through the CLI, start the browser workspace with this command
+(canonical install in [CLI: current release](INSTALLATION.md#cli-current-release)).
 
 ```sh
 lixity service start --open

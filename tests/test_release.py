@@ -3,12 +3,15 @@
 import hashlib
 import importlib.util
 import io
+import json
 import shutil
 import subprocess
 import sys
 import tarfile
 import zipfile
+from contextlib import nullcontext
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -345,10 +348,30 @@ def test_invalid_fresh_build_preserves_existing_artifacts(
     assert {path.name for path in dist.iterdir()} == {"lixity-old.whl"}
 
 
+def test_build_preserves_unmanaged_output_created_during_build(
+        release_script, release_tree, monkeypatch):
+    root, dist, files = release_tree
+    (dist / "lixity-old.whl").write_bytes(b"previous approved wheel")
+    late_file = dist / "notes.txt"
+
+    def isolated_build(command, **kwargs):
+        fresh = Path(command[-1])
+        fresh.mkdir()
+        write_artifacts((root, fresh, files))
+        late_file.write_bytes(b"new unmanaged file")
+
+    monkeypatch.setattr(release_script.subprocess, "run", isolated_build)
+    with pytest.raises(ValueError, match="unmanaged files"):
+        release_script.build(root, dist)
+    assert {path.name: path.read_bytes() for path in dist.iterdir()} == {
+        "lixity-old.whl": b"previous approved wheel", "notes.txt": b"new unmanaged file",
+    }
+
+
 @pytest.mark.parametrize("failure_stage", ["smoke", "copy", "copy interrupt", "promotion", "interrupt"])
 def test_failed_candidate_preserves_previous_artifacts(
         release_script, release_tree, monkeypatch, failure_stage):
-    root, dist, files = release_tree
+    source_root, dist, files = release_tree
     (dist / "lixity-old.whl").write_bytes(b"previous approved wheel")
     (dist / "SHA256SUMS").write_bytes(b"previous approved hashes")
     before = {path.name: path.read_bytes() for path in dist.iterdir()}
@@ -356,11 +379,12 @@ def test_failed_candidate_preserves_previous_artifacts(
     def isolated_build(command, **kwargs):
         fresh = Path(command[-1])
         fresh.mkdir()
-        write_artifacts((root, fresh, files))
+        write_artifacts((source_root, fresh, files))
 
-    def failed_smoke(candidate, version, *, install_report):
+    def failed_smoke(candidate, version, *, install_report, root):
         assert candidate != dist
         assert version == "0.3.0"
+        assert root == source_root
         assert {path.name: path.read_bytes() for path in dist.iterdir()} == before
         raise ValueError("injected smoke failure")
 
@@ -385,7 +409,7 @@ def test_failed_candidate_preserves_previous_artifacts(
 
     monkeypatch.setattr(release_script.subprocess, "run", isolated_build)
     monkeypatch.setattr(release_script, "smoke", failed_smoke if failure_stage == "smoke"
-                        else lambda candidate, version, *, install_report: None)
+                        else lambda candidate, version, *, install_report, root: None)
     if failure_stage in {"copy", "copy interrupt"}:
         monkeypatch.setattr(release_script.shutil, "copy2", failed_copy)
     elif failure_stage in {"promotion", "interrupt"}:
@@ -393,13 +417,13 @@ def test_failed_candidate_preserves_previous_artifacts(
     expected = (KeyboardInterrupt if failure_stage in {"interrupt", "copy interrupt"}
                 else (ValueError, OSError))
     with pytest.raises(expected, match="injected"):
-        release_script.build(root, dist, "v0.3.0", smoke_wheel=True)
+        release_script.build(source_root, dist, "v0.3.0", smoke_wheel=True)
     assert {path.name: path.read_bytes() for path in dist.iterdir()} == before
 
 
 def test_build_cli_smokes_candidate_before_replacing_output(
         release_script, release_tree, monkeypatch, tmp_path):
-    root, dist, files = release_tree
+    source_root, dist, files = release_tree
     report = tmp_path / "install-report.json"
     stale = dist / "lixity-old.whl"
     stale.write_bytes(b"old approved bytes")
@@ -407,10 +431,11 @@ def test_build_cli_smokes_candidate_before_replacing_output(
     def isolated_build(command, **kwargs):
         fresh = Path(command[-1])
         fresh.mkdir()
-        write_artifacts((root, fresh, files))
+        write_artifacts((source_root, fresh, files))
 
-    def inspect_smoke(candidate, version, *, install_report):
+    def inspect_smoke(candidate, version, *, install_report, root):
         assert candidate != dist
+        assert root == source_root
         assert stale.read_bytes() == b"old approved bytes"
         assert version == release_script.validate(root, candidate, "v0.3.0")
         assert not report.exists()
@@ -418,7 +443,7 @@ def test_build_cli_smokes_candidate_before_replacing_output(
 
     monkeypatch.setattr(release_script.subprocess, "run", isolated_build)
     monkeypatch.setattr(release_script, "smoke", inspect_smoke)
-    monkeypatch.setattr(release_script, "__file__", str(root / "scripts/check_release.py"))
+    monkeypatch.setattr(release_script, "__file__", str(source_root / "scripts/check_release.py"))
     monkeypatch.setattr(sys, "argv", [str(SCRIPT), "--build", "--smoke", "--dist", str(dist),
                                       "--install-report", str(report)])
     release_script.main()
@@ -478,6 +503,48 @@ def test_installed_smoke_failure_reports_captured_stderr_without_changing_artifa
     assert "install wheel" in error
     assert "17" in error
     assert {path.name: path.read_bytes() for path in dist.iterdir()} == before
+
+
+def test_installed_workspace_stops_after_invalid_root_redirect(release_script, tmp_path, monkeypatch):
+    source = tmp_path / "checkout"
+    (source / "samples").mkdir(parents=True)
+    sample = b"# A synthetic sample\n\nHere is a sample sentence.\n"
+    (source / "samples/first-look.md").write_bytes(sample)
+    project = tmp_path / "warehouse-4"
+    called = []
+
+    def run(command, label):
+        called.append(command[1:3])
+        if command[1] == "analyze":
+            assert command[2:] == ["--project", str(project), "--json"]
+            assert (project / "manuscript.md").read_bytes() == sample
+            return json.dumps({"meta": {"version": "0.3.0", "language": "en"}, "metrics": {
+                "clean_words": 100, "total_sentences": 5,
+            }})
+        if command[1:3] == ["service", "status"]:
+            return json.dumps({"schema_version": "lixity-service-status/1", "ok": True,
+                               "state": "running", "running_version": "0.3.0"})
+        if command[1] == "doctor":
+            return json.dumps({"schema_version": "lixity-doctor/1", "ok": True, "installation": {
+                "distribution_version": "0.3.0", "module_path": str(tmp_path / "venv/module.py"),
+            }})
+        if command[1:3] == ["service", "stop"]:
+            return json.dumps({"ok": True, "state": "stopped"})
+        return ""
+
+    def serve_redirect(port, path):
+        assert (port, path) == (54321, "/")
+        return 303, "https://example.invalid/w/abc/", "text/plain", b""
+
+    probe = SimpleNamespace(bind=lambda address: None, getsockname=lambda: ("127.0.0.1", 54321))
+    monkeypatch.setattr(release_script, "socket", SimpleNamespace(socket=lambda: nullcontext(probe)))
+    monkeypatch.setattr(release_script, "_loopback_get", serve_redirect)
+
+    with pytest.raises(ValueError, match="did not redirect to a local workspace"):
+        release_script._smoke_workspace(tmp_path / "lixity", tmp_path, source, "0.3.0", run)
+
+    assert called == [["analyze", "--project"], ["service", "start"], ["service", "status"],
+                      ["doctor", "--port"], ["service", "stop"]]
 
 
 def test_every_ui_asset_file_is_covered_by_package_data() -> None:

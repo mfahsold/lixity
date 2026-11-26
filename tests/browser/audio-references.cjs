@@ -119,6 +119,7 @@ server.serve_forever()
           assert.equal(await reference.inputValue(),fixture.second);
           await page.locator('#speech-tab-reader').click();
         } else await page.locator('#speech-tab-reader').click();
+        await page.locator('.speech-export-section > summary').click();
         await page.locator('[data-speech-action=direction_plan]').click();
         await page.waitForFunction(() => !document.querySelector('.speech-plan').hidden);
         assert.match(await page.locator('.speech-plan').textContent(),/A synthetic evening ends/);

@@ -9,11 +9,30 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Refilm the homepage and shareable product tours as one 60-second Warehouse 4
-  walkthrough. Alternate light and dark workspace shots, keep the Lixity mark
-  and name visible, and enlarge the verified result of each action. Follow the
-  blank receipt from manuscript evidence and an unsaved revision to the exhibit
-  book and its PDF. Fingerprint the player media, posters and download links.
+- Route onboarding, configuration, export, troubleshooting and interpretation
+  to their maintained manuals. Keep existing bookmarks valid, synchronize the
+  source version across the references and use the wiki as a short entry to
+  the manuals. Record the v0.9.3 review scope and distinguish current research
+  behavior from proposals.
+
+- Correlate local audio diagnostics from the desktop launch to render, native
+  worker, playback and reference saving. Record why audio becomes stale and
+  whether generated chapter audio was retained.
+- Put recording, paragraph previews and chapter rendering first in Audio.
+  Group audio options and supporting actions in labeled disclosures. Align
+  workspace icons, form typography, focus and keyboard navigation across
+  dialogs, settings and research.
+- Add a local release rehearsal with the editable Warehouse 4 author journey,
+  public-domain reference checks, corpus comparison and isolated wheel smoke.
+  Retain source, fixture, result and artifact identities for the next
+  development pass. Pin manual Pages builds to the reviewed commit.
+- Recut the 60-second Warehouse 4 film around the unsigned receipt. Use
+  editable FilmCraft titles, separately framed portrait and landscape views,
+  and the actual exhibit-book PDF. Synchronize the poster, the product-site
+  captions in all seven languages and the downloadable videos with that cut.
+- Clarify the paths from the website to the first exercise, the read-only
+  example and the desktop download. Update the English and German guides and
+  articles, verify research references and align terminology with the app.
 - Create new Unix desktop service directories with private permissions so
   the local browser service can read its status when started after Desktop.
 - Add a full-inventory Pages verification mode for website and asset rollouts.

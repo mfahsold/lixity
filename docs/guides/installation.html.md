@@ -2,7 +2,7 @@
 
 # Install Lixity and open your manuscript
 
-The desktop app includes its runtime and opens from your applications menu. The published local browser app and CLI use Python. Built-in analysis runs on your computer in both editions.
+Choose a desktop preview for your computer or install the published browser app and CLI from PyPI. The desktop app includes its runtime. Built-in manuscript analysis runs on your computer with either installation.
 
 Updated 26 November 2026
 
@@ -60,7 +60,7 @@ Select the downloaded installer
 
 [Preview release desktop-preview-v0.9.3](https://github.com/mfahsold/lixity/releases/tag/desktop-preview-v0.9.3) · [Check SHA-256 sums](https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/SHA256SUMS-desktop.txt) · [Source commit](https://github.com/mfahsold/lixity/commit/b3bfee6f83498c10d6fcb8eb3702f278ba761e48) · [Published browser app and CLI](#install).
 
-The desktop app includes Python. After installation, open Lixity from your application menu. For a Linux AppImage, keep the executable file and open it again from the same location.
+Choose a download that matches your operating system and processor. Verify the installer before opening it.
 
 <a id="macos-setup"></a>
 
@@ -68,11 +68,11 @@ The desktop app includes Python. After installation, open Lixity from your appli
 
 Desktop builds require macOS 12 or later.
 
-1. In the Apple menu, open **About This Mac**. Match an Apple chip to the Apple Silicon DMG, or an Intel processor to the Intel DMG.
+1. Open **About This Mac** from the Apple menu. Choose the Apple silicon DMG if you see an Apple chip, or the Intel DMG if you see an Intel processor.
 
-2. If your DMG came in a ZIP, extract it first. Verify the downloaded DMG, open it in Finder and drag **Lixity.app** onto **Applications**. Preview disk images include a **Start Here** guide.
+2. If you downloaded a ZIP archive, extract the DMG first. Verify the DMG, open it in Finder and drag **Lixity.app** into **Applications**. The preview disk image has a **Start Here** guide.
 
-3. After the copy completes, eject the disk image and open **Applications → Lixity**. Open the app there again for later sessions.
+3. When the copy is complete, eject the disk image and open **Lixity** from **Applications**.
 
 Test builds use ad hoc signing. If macOS shows a security alert, check its wording and follow the [macOS installation and security guidance](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg).
 
@@ -82,7 +82,7 @@ Test builds use ad hoc signing. If macOS shows a security alert, check its wordi
 
 1. Check **Settings → System → About → System type**. The current desktop builds target x64 PCs.
 
-2. If the installer came in a ZIP, extract it first. Verify and open the downloaded setup `.exe` to install for your account. The MSI is available in English and German for deployment testing. GitHub Actions ZIPs include **Start Here - Windows.html**.
+2. If you downloaded a ZIP archive, extract the installer first. Verify the setup `.exe` and open it to install for your account. Use the English or German MSI for deployment testing. GitHub Actions ZIPs include **Start Here - Windows.html**.
 
 3. Open **Lixity** from the Start menu. On systems missing WebView2, setup needs internet access to get the Microsoft runtime.
 
@@ -106,23 +106,23 @@ Compare your installer with the checksum for its filename. Use the linked SHA-25
 
 ### First launch
 
-1. To try the workflow with a sample, choose **Try the example offline** and preview the bundled English manuscript. Check the destination and choose **Import and analyze manuscript** to create an editable local copy. New projects use `~/Lixity` by default.
+1. Choose **Try the example offline** to preview the bundled Warehouse 4 manuscript in English. Confirm the destination and choose **Import and analyze manuscript** to create an editable copy. The default project directory is `~/Lixity`.
 
-2. In **Manuscript**, read a paragraph and [inspect one counted passage](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#read-and-explore). Return to the text. You can then choose **Write** or keep reading.
+2. In **Manuscript**, open a marked sentence to see what Lixity counted. Return to the passage to keep reading, or choose **Write** to try an edit. [Follow a marked passage in the public demo](first-look.html#passage)
 
 3. When you are ready to work on your own text, choose **Open a project folder**, **Import a manuscript**, or **Start writing**. The import preview shows the new destination and analysis language before you confirm.
 
-For a test build, use a separate account or test machine. If startup fails, the error dialog can open the log folder. After the app opens, use **Tools → Open Logs Folder**. See the [platform log locations](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#find-the-desktop-logs) if no window opens.
+If startup fails, the error dialog can open the log folder. After the app opens, choose **Tools → Open Logs Folder**. You can also find it at the [log location for your operating system](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#find-the-desktop-logs).
 
-This source guide describes **v0.9.3**. Its changes are listed in the source [release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.3.md). The browser and CLI installation uses the package published on [PyPI](https://pypi.org/project/lixity/). Check `lixity --version` and [Latest on GitHub](https://github.com/mfahsold/lixity/releases/latest) for the published version. Historical 1.x and 3.x tags predate the version reset.
+This source guide describes **v0.9.3**. See the [release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.3.md) for the changes in that version. The browser app and CLI below install from [PyPI](https://pypi.org/project/lixity/). Use `lixity --version` to check your installation and [Latest on GitHub](https://github.com/mfahsold/lixity/releases/latest) to find the published release. Historical 1.x and 3.x tags predate the version reset.
 
 **Published local browser app and CLI (no GitHub account required)**
 
 <a id="requirements"></a>
 
-## What does the published browser app need?
+## Install with a Python environment
 
-Working in a terminal-only environment with Python 3.10 or later? Install the published package in an isolated environment. Use the [CLI quick start](https://lixity.de/USAGE.md#quick-start) for file and project examples.
+If you already have Python 3.10 or later, you can install Lixity in a virtual environment. For direct analysis commands, see the [CLI quick start](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#quick-start).
 
 ```
 python -m venv .venv
@@ -132,11 +132,13 @@ lixity --version
 lixity doctor
 ```
 
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/). It supplies managed Python 3.12 and installs Lixity from [PyPI](https://pypi.org/project/lixity/). You can also find the current wheel and its checksums on [GitHub Releases](https://github.com/mfahsold/lixity/releases/latest). Installation needs an internet connection. Analysis runs offline afterward. PDF import has [additional requirements](research-pdf.html#ocr).
+Both the virtual environment and uv setup download the published package. After installation, built-in analysis runs offline. The release wheel and checksums are available on [GitHub Releases](https://github.com/mfahsold/lixity/releases/latest). See the [requirements for PDF import](research-pdf.html#ocr) if you work with scanned sources.
 
 Lixity is open source under AGPL-3.0-or-later. You can write and self-publish with it. A separate commercial license is available for closed-source integrations. [Licensing guide](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)
 
-## Install the published browser app
+## Install with uv
+
+Use [uv](https://docs.astral.sh/uv/getting-started/installation/) to install Lixity as a command-line tool with managed Python 3.12.
 
 **uv is not installed yet**
 
@@ -170,7 +172,7 @@ To run `lixity` directly in later terminals, run `uv tool update-shell` once and
 
 ## Start the workspace
 
-The default browser address is `http://127.0.0.1:8765/`. A fresh start opens an empty workspace unless you supply a project path or set `LIXITY_DIR`. If Lixity is already running on that port, `start --open` opens the existing workspace.
+The default browser address is `http://127.0.0.1:8765/`. Starting without a project path or `LIXITY_DIR` opens an empty workspace. If Lixity is already running on that port, `start --open` opens the existing workspace.
 
 1. Choose **Open a project folder** to continue in an existing folder. To copy a manuscript into a new project, choose **Import a manuscript** and review the import preview. Confirm the analysis language.
 
@@ -212,9 +214,9 @@ Open `warehouse-4.html` in your browser. This generates an analysis report from 
 
 <a id="audio"></a>
 
-## Optional audio export and speech providers
+## Optional speech and audio tools
 
-**Audio workflow:** timeline JSON and SSML export need no synthesis engine. Explicit OpenAI-compatible providers use a configured endpoint, model and voice; authentication can reference an environment variable. Imported WAV/FLAC/MP3 inspection stays local, with FFmpeg required for compressed or non-PCM input. Text comparison additionally needs an audio-hash-bound timed transcript. Existing audio settings require a reviewed, backed-up schema upgrade before saving an external profile. See the [audio setup and commands](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#audio-export-and-external-providers-unreleased).
+Use the teleprompter to rehearse a passage, or export its timing and delivery cues as JSON or SSML. To generate speech, configure a local engine or a compatible service, then listen to a short passage before rendering a chapter. The configured service receives the spoken text. The audio manual covers author voice recordings, model setup and the external provider configuration. [Get started with audio](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#getting-started)
 
 <a id="zotero"></a>
 
@@ -286,7 +288,7 @@ This example opens `http://127.0.0.1:9000/`. Any service on port 8765 keeps runn
 
 ### Update a desktop build
 
-In Lixity, choose **Help → Check for Updates** to review published desktop availability for your system. Quit Lixity before replacing a test build, then open the replacement and check that your project opens. Keep the earlier installer if you are testing an upgrade.
+In Lixity, choose **Help → Check for Updates** to check for a published desktop update for your system. Before replacing a preview, save your work, finish any audio jobs and close Lixity. Verify the replacement installer, then check that your project opens in the new build. Keep the previous installer for rollback.
 
 - **macOS.** Open the new DMG and replace **Lixity** in **Applications**.
 

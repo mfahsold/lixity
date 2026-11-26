@@ -281,6 +281,20 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
         await page.mouse.move(0, 0);
         await page.evaluate(() => document.activeElement.blur());
         await page.locator(selector).screenshot({path: `/tmp/lixity-layout-${width}-${selector.slice(1)}.png`});
+        if (selector === '#markers' && (width === 1440 || width === 320)) {
+          const marker = page.locator('#markers tbody tr').first();
+          assert.equal(await marker.getAttribute('role'), null, 'Markers retain native table rows');
+          assert.equal(await marker.getByRole('button').count(), 2);
+          const resolve = marker.locator('button[data-marker-resolve]');
+          const jump = marker.locator('button[data-line]');
+          assert.match(await jump.textContent(), /\S+ \d+$/);
+          await resolve.press('Enter');
+          await marker.locator('[data-marker-resolve-feedback].ok').waitFor();
+          assert.equal(await page.locator('#markers').isVisible(), true, 'Resolving a marker does not also jump');
+          await jump.press('Space');
+          // This fixture's marker comment sits on line 3 before the paragraph on line 4.
+          await page.waitForFunction(() => document.activeElement.id === 'ch-1');
+        }
       }
       await page.close();
     }

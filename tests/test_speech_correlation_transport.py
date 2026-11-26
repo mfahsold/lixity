@@ -1,4 +1,5 @@
 """Synthetic checks for worker correlation and its privacy boundary."""
+import errno
 import io
 import json
 import re
@@ -13,6 +14,8 @@ import pytest
 from lixity import log, speech_qwen
 from lixity.speech import generate_silence_wav
 from lixity.speech_profiles import QWEN_MODEL, AudioProfile
+from lixity.speech_references import save_reference
+from lixity.speech_worker import synthesize_native
 
 
 @pytest.fixture
@@ -51,6 +54,81 @@ def test_client_sends_correlation_only_with_render_scope():
     assert [r.get_header("X-lixity-render-id") for r in requests] == [None, "0123456789abcdef", None]
     # The existing strict worker accepts exactly these fields.
     assert all(set(json.loads(r.data)) == {"model", "input", "voice", "language", "instructions", "response_format"} for r in requests)
+
+
+@pytest.mark.parametrize("engine, error, category", [
+    ("coqui-reference", urllib.error.URLError(ConnectionRefusedError(errno.ECONNREFUSED, "PRIVATE_EXCEPTION")),
+     "connection_refused"),
+    ("qwen3-base", urllib.error.URLError(OSError(10061, "PRIVATE_EXCEPTION")), "connection_refused"),
+    ("qwen3-base", TimeoutError("PRIVATE_EXCEPTION"), "timeout"),
+    ("coqui-reference", urllib.error.URLError(OSError(errno.EHOSTUNREACH, "PRIVATE_EXCEPTION")),
+     "unreachable"),
+    ("qwen3-base", urllib.error.URLError("PRIVATE_EXCEPTION"), "connection_error"),
+])
+def test_native_reference_transport_classifies_connection_errors(
+        recorded, tmp_path, engine, error, category):
+    log.configure(stream=recorded, level="INFO", force=True, json_format=True)
+    reference = save_reference(tmp_path, generate_silence_wav(1), "PRIVATE_TRANSCRIPT")
+    profile = AudioProfile(engine=engine, voice="reference", language="de", reference_id=reference.id)
+
+    def open_request(request, timeout):
+        assert request.get_header("X-lixity-render-id") == "0123456789abcdef"
+        assert json.loads(request.data)["reference_text"] == "PRIVATE_TRANSCRIPT"
+        raise error
+
+    with log.speech_diagnostic_scope("0123456789abcdef"), pytest.raises(RuntimeError, match="unavailable or failed") as failure:
+        synthesize_native("PRIVATE_MANUSCRIPT", profile, reference=reference,
+                          opener=SimpleNamespace(open=open_request),
+                          endpoints={"local": "http://127.0.0.1:8769/PRIVATE_ENDPOINT"})
+    event = json.loads(recorded.getvalue())
+    assert (event["event"], event["level"], event["id"], event["engine"], event["target"],
+            event["category"]) == ("speech_transport", "WARNING", "0123456789abcdef", engine,
+                                    "local", category)
+    assert "http_status" not in event
+    assert "PRIVATE_" not in recorded.getvalue() + str(failure.value)
+    assert reference.id not in recorded.getvalue()
+
+
+@pytest.mark.parametrize("status, header, category, raises, message", [
+    (503, None, "http_error", RuntimeError, "busy"),
+    (400, "X-Lixity-Model", "model_mismatch", RuntimeError, "different Qwen model"),
+    (200, "X-Lixity-Model", "model_mismatch", ValueError, "model or voice mismatch"),
+    (200, "X-Lixity-Voice", "voice_mismatch", ValueError, "model or voice mismatch"),
+])
+def test_native_transport_logs_http_status_and_identity_mismatch_without_response_data(
+        recorded, status, header, category, raises, message):
+    log.configure(stream=recorded, level="INFO", force=True, json_format=True)
+    headers = Message()
+    headers["Content-Type"] = "audio/wav"
+    headers["X-Lixity-Model"] = QWEN_MODEL
+    headers["X-Lixity-Voice"] = "Ryan"
+    if header is not None:
+        headers.replace_header(header, "PRIVATE_RESPONSE_HEADER")
+
+    class Response(io.BytesIO):
+        pass
+
+    response = Response(b"PRIVATE_RESPONSE_BODY")
+    response.headers = headers
+    response.status = status
+
+    def open_request(request, timeout):
+        if status != 200:
+            raise urllib.error.HTTPError(request.full_url, status, "PRIVATE_REASON", headers, response)
+        return response
+
+    profile = AudioProfile(engine="qwen3", voice="Ryan", language="en", instructions="PRIVATE_DIRECTION")
+    with pytest.raises(raises, match=message) as failure:
+        synthesize_native("PRIVATE_MANUSCRIPT", profile, target="jetson",
+                          opener=SimpleNamespace(open=open_request), diagnostic_id="fedcba9876543210")
+    assert response.closed
+    event = json.loads(recorded.getvalue())
+    assert (event["event"], event["level"], event["id"], event["engine"], event["target"],
+            event["category"], event["http_status"]) == (
+                "speech_transport", "WARNING", "fedcba9876543210", "qwen3", "jetson", category, status,
+            )
+    assert all(secret not in recorded.getvalue() + str(failure.value)
+               for secret in ("PRIVATE_", QWEN_MODEL, "Ryan", "127.0.0.1", "8770"))
 
 
 @pytest.mark.parametrize("header, expected", [

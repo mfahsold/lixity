@@ -18,6 +18,18 @@ print(json.dumps({locale:render_dashboard([], [], controls=True, title='Syntheti
     for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl')}))
 `, {root});
 
+async function assertNamedAction(control, context) {
+  await expect(control).toBeVisible();
+  await expect(control).toHaveAccessibleName(/\S/);
+  await expect(control.locator('svg[aria-hidden="true"]')).toHaveCount(1);
+  assert.ok(await control.evaluate(button => {
+    const box = button.getBoundingClientRect();
+    const label = button.querySelector('span').getBoundingClientRect();
+    return button.scrollWidth <= button.clientWidth + 1 && button.scrollHeight <= button.clientHeight + 1
+      && label.width > 0 && box.left >= -1 && box.right <= innerWidth + 1;
+  }), `${context}: the visible label and icon fit the control and viewport`);
+}
+
 async function assertDesktopGeometry(page, context) {
   const geometry = await page.evaluate(() => {
     const selectors = ['#research-tabs [role=tab]', '#research-tools-entry > button', '.research-claim-toolbar button'];
@@ -46,6 +58,10 @@ async function assertDesktopGeometry(page, context) {
 
 async function assertPaneRibbon(page, context, width, verifyCompactTooltip) {
   await page.locator('[data-view=project]').click();
+  const settings = page.locator('#settings-form');
+  await expect(settings).toHaveRole('form');
+  await expect(settings).toHaveAccessibleName(/\S/);
+  await assertNamedAction(settings.locator('[type=submit][data-action=settings]'), `${context} apply settings`);
   const ribbon = page.locator('#view-pane-project .pane-ribbon');
   await expect(ribbon).toBeVisible();
   const shortMobileViewport = width === 320 && page.viewportSize().height === 480;
@@ -169,6 +185,7 @@ async function assertPaneRibbon(page, context, width, verifyCompactTooltip) {
       }
       for (const key of ['search', 'review']) {
         const trigger = page.locator(`[data-rtab=${key}]`);
+        await assertNamedAction(trigger, `${locale}/${width} open ${key}`);
         await expect(trigger).toHaveAttribute('aria-controls', 'rtab-'+key);
         assert.equal(await trigger.getAttribute('role'), null, 'Shared utilities are buttons outside the content tablist');
         assert.equal(await page.locator(`#research-tabs [data-rtab=${key}]`).count(), 0);
@@ -183,10 +200,21 @@ async function assertPaneRibbon(page, context, width, verifyCompactTooltip) {
           });
           await expect(page.locator('#rtab-review > .research-pane-navigation')).toBeVisible();
           await expect(page.locator('#rtab-review > .research-pane-navigation button')).toHaveCount(4);
+          await assertNamedAction(page.locator('#r-review-refresh'), `${locale}/${width} refresh review`);
+        } else {
+          const search = page.getByRole('search');
+          await expect(search).toHaveAccessibleName(/\S/);
+          const label = search.locator('label[for=r-search-query]');
+          await expect(search.getByRole('searchbox')).toHaveAccessibleName((await label.textContent()).trim());
+          await label.click();
+          await expect(search.getByRole('searchbox')).toBeFocused();
+          await assertNamedAction(search.locator('#r-search-btn'), `${locale}/${width} run search`);
         }
         await expect(page.locator('#rtab-dossiers')).toBeVisible();
         await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('aria-selected', 'true');
-        await page.locator('#research-tool-close').click();
+        const close = page.locator('#research-tool-close');
+        await assertNamedAction(close, `${locale}/${width} return to research`);
+        await close.press('Enter');
         await expect(page.locator('#research-tool-host')).toBeHidden();
         await expect(trigger).toBeFocused();
       }
@@ -209,6 +237,19 @@ async function assertPaneRibbon(page, context, width, verifyCompactTooltip) {
       await page.keyboard.press('Enter');
       await expect(page.locator('#rtab-sources')).toBeVisible();
       await expect(page.locator('.research-tab-pane:visible')).toHaveCount(1);
+      if (colorScheme === 'light' && ['en', 'de'].includes(locale)) {
+        const sourceTab = page.locator('#research-tab-sources');
+        const backToSource = await sourceTab.evaluate(tab => {
+          window.LixityResearchTools.open('grounding', tab);
+          return uiLabel('research_source_compare_back');
+        });
+        const back = page.locator('#research-tool-close');
+        await expect(back).toHaveAccessibleName(backToSource);
+        await expect(back).toHaveAttribute('data-help', backToSource);
+        await assertNamedAction(back, `${locale}/${width} return to source`);
+        await back.press('Enter');
+        await expect(sourceTab).toBeFocused();
+      }
       if (width === 320) {
         const previous = page.locator('#research-navigation-previous');
         const next = page.locator('#research-navigation-next');
@@ -249,6 +290,9 @@ async function assertPaneRibbon(page, context, width, verifyCompactTooltip) {
         await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
         for (const enlargedWidth of [390, 320]) {
           await page.setViewportSize({width:enlargedWidth, height:900});
+          for (const tool of ['search', 'review']) {
+            await assertNamedAction(page.locator(`[data-rtab=${tool}]`), `${locale}/${enlargedWidth} enlarged ${tool}`);
+          }
           for (const tab of await tabs.all()) {
             await tab.focus();
             const fits = await tab.evaluate(button => {

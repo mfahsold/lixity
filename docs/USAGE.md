@@ -1193,6 +1193,10 @@ manuscript-write workflow and [automation contracts](AGENTS.md) for marker APIs.
 
 ## Understanding the metrics
 
+Field reference for command output. Canonical interpretation lives in the
+[interpretation guide](guides/interpretation.html) and [METHODS](METHODS.md);
+limits live in [STABILITY](STABILITY.md). This table defines names, not reading advice.
+
 Compare scenes or narrative voices using comparable language, passage length,
 chapter boundaries and discourse mode. Inspect the prose alongside the values:
 a dialogue scene and an expository scene may deliberately differ. Neither
@@ -1342,6 +1346,10 @@ automatically. `FileUtils.atomic_write_if_changed(path, text)` provides atomic,
 idempotent output writes.
 
 ## Configuration (`CorpusConfig`)
+
+This section owns field definitions, file locations and precedence.
+For multi-project isolation see [architecture](ARCHITECTURE.md#configuration-and-multiple-projects);
+for the UI path see [saved project settings](WORKSPACE.md#saved-project-settings).
 
 Legacy CLI commands with an explicit manuscript path load settings relative to
 that manuscript; otherwise workspace discovery starts in the current directory.
@@ -1751,6 +1759,10 @@ broader background. These references do not validate a particular agreement.
 
 ## Troubleshooting
 
+This section owns CLI command, configuration and project-selection failures.
+For install/service failures see [installation troubleshooting](INSTALLATION.md#troubleshooting);
+for reading/review failures see [workspace troubleshooting](WORKSPACE.md#troubleshooting).
+
 | Symptom | Check and next action |
 | :--- | :--- |
 | `lixity: command not found` | Follow [PATH setup](INSTALLATION.md#cli-current-release). For a checkout, use `.venv/bin/lixity`; for a tool install, confirm `uv tool list`, run `uv tool update-shell` and open a new terminal. |
@@ -1804,6 +1816,7 @@ See [Download a manuscript PDF](WORKSPACE.md#download-a-manuscript-pdf).
 See [Export a reading website](WORKSPACE.md#export-a-reading-website).
 
 <a id="include-existing-chapter-recordings-unreleased"></a>
+<a id="include-existing-chapter-recordings"></a>
 
 #### Include existing chapter recordings
 
@@ -1869,18 +1882,22 @@ See [Style-space navigation](WORKSPACE.md#style-space-navigation).
 
 ## Audio commands and workflows
 
-The [audio manual](AUDIO.md#getting-started) covers recording, voice profiles,
-direction, synthesis and playback. See [Project pronunciations](AUDIO.md#project-pronunciations)
+The [audio manual](AUDIO.md#getting-started) owns recording, voice profiles,
+direction, synthesis and playback. The headings below preserve earlier bookmarks;
+behavior is defined in the linked audio sections, not here.
+See [Project pronunciations](AUDIO.md#project-pronunciations)
 for the saved dictionary and engine-specific routes, and
 [Audio status](AUDIO.md#audio-status) for runtime checks before rendering.
 
 <a id="audio-export-and-external-providers-unreleased"></a>
+<a id="audio-export-and-external-providers"></a>
 
 ### Audio export and external providers
 
 See [Audio export and external providers](AUDIO.md#audio-export-and-external-providers-unreleased).
 
 <a id="inspect-and-compare-externally-generated-audio-unreleased"></a>
+<a id="inspect-and-compare-externally-generated-audio"></a>
 
 ### Inspect and compare externally generated audio
 
@@ -1903,6 +1920,7 @@ See [Author voice recording and listening](AUDIO.md#author-voice-recording-and-l
 See [Experimental Qwen VoiceDesign](AUDIO.md#experimental-qwen-voicedesign).
 
 <a id="experimental-coqui-and-openvoice-audio-unreleased"></a>
+<a id="experimental-coqui-and-openvoice-audio"></a>
 
 ### Experimental Coqui and OpenVoice audio
 
@@ -1925,12 +1943,14 @@ See [Manuscript Teleprompter: Direction cues, phonetics, and synchronized dossie
 See [Audio and video playback](AUDIO.md#audio-and-video-playback).
 
 <a id="retained-f5-tts-profiles-unreleased"></a>
+<a id="retained-f5-tts-profiles"></a>
 
 ### Retained F5-TTS profiles
 
 See [Retained F5-TTS profiles](AUDIO.md#retained-f5-tts-profiles-unreleased).
 
 <a id="ims-toucan-phonetics-and-structured-direction-unreleased"></a>
+<a id="ims-toucan-phonetics-and-structured-direction"></a>
 
 ### IMS-Toucan phonetics and structured direction
 
@@ -1960,6 +1980,7 @@ GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later) – see [`LI
 Commercial licensing on request: mfahsold@googlemail.com.
 
 <a id="verified-project-backup-unreleased"></a>
+<a id="verified-project-backup"></a>
 
 ## Verified project backup
 

@@ -72,15 +72,39 @@ const { launchChromium, modShortcut } = require('../../scripts/browser_tools.cjs
   // 4. Check initial results count
   const initialItemsCount = await page.locator('.command-palette-item').count();
   assert.ok(initialItemsCount >= 10, 'Command palette contains at least 10 commands');
+  const search = page.getByRole('combobox', { name: 'Befehl eingeben oder suchen...' });
+  const listbox = page.getByRole('listbox', { name: 'Befehlspalette' });
+  const options = listbox.getByRole('option');
+  async function assertActiveOption(index) {
+    const activeOption = options.nth(index);
+    const id = await activeOption.getAttribute('id');
+    assert.ok(id, 'Every active option has an ID');
+    assert.equal(await search.getAttribute('aria-activedescendant'), id);
+    assert.equal(await activeOption.getAttribute('aria-selected'), 'true');
+    assert.equal(await listbox.getByRole('option', { selected: true }).count(), 1);
+    assert.equal(await search.evaluate(el => el === document.activeElement), true);
+    return id;
+  }
+  assert.equal(await search.getAttribute('aria-controls'), await listbox.getAttribute('id'));
+  assert.equal(await search.getAttribute('aria-autocomplete'), 'list');
+  assert.equal(await search.getAttribute('aria-expanded'), 'true');
+  await assertActiveOption(0);
+  await search.press('ArrowDown');
+  await assertActiveOption(1);
+  await search.press('ArrowUp');
+  await assertActiveOption(0);
 
   // 5. Test search filter
   await page.fill('#command-palette-search', 'asl');
   const filteredCount = await page.locator('.command-palette-item').count();
   assert.ok(filteredCount >= 1 && filteredCount < initialItemsCount, 'Search filters command list');
+  await assertActiveOption(0);
 
   // 6. Test Escape key closes palette
   await page.keyboard.press('Escape');
   assert.equal(await page.locator('#command-palette-dialog').isVisible(), false, 'Escape closes dialog');
+  assert.equal(await page.locator('#command-palette-search').getAttribute('aria-expanded'), 'false');
+  assert.equal(await page.locator('#command-palette-search').getAttribute('aria-activedescendant'), null);
 
   // 7. Test Mod+P shortcut opens palette
   await page.keyboard.press(modShortcut('p'));
@@ -104,7 +128,12 @@ const { launchChromium, modShortcut } = require('../../scripts/browser_tools.cjs
   await page.keyboard.press(modShortcut('k'));
   await page.fill('#command-palette-search', 'Unavailable fixture metric');
   assert.equal(await page.locator('.command-palette-item').count(), 0, 'Disabled options have no commands');
+  assert.equal(await search.getAttribute('aria-activedescendant'), null);
+  assert.equal(await search.getAttribute('aria-expanded'), 'false');
+  assert.equal(await listbox.count(), 0);
+  assert.equal(await page.getByRole('status').textContent(), 'Keine passenden Befehle gefunden.');
   await page.fill('#command-palette-search', 'Second fixture chapter');
+  const chapterOptionId = await assertActiveOption(0);
   await page.keyboard.press('Enter');
   assert.equal(await page.locator('#reader-chapter').inputValue(), 'ch-2', 'The chapter command selects the real chapter option');
 
@@ -143,6 +172,11 @@ const { launchChromium, modShortcut } = require('../../scripts/browser_tools.cjs
   assert.equal(await page.locator('#command-palette-dialog').isVisible(), false, 'Modified browser or editor chords remain independent');
   await page.keyboard.press(modShortcut('p'));
   assert.equal(await page.locator('#command-palette-dialog').isVisible(), true, 'Mod+P remains available from Markdown');
+
+  // Render the same option through the native DOM path.
+  await page.evaluate(() => { window.LixityComponents.mount = undefined; });
+  await search.fill('Second fixture chapter');
+  assert.equal(await assertActiveOption(0), chapterOptionId, 'Option IDs survive changing render paths');
 
   await browser.close();
   console.log('Command palette browser checks passed successfully.');

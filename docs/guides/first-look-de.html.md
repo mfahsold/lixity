@@ -1,8 +1,22 @@
-# Eine Frage, ein Dossier, zurück zur Szene.
+# Erster Einblick in Lixity
 
 Mit Lixity liest du dein Manuskript, vergleichst Sprachmuster und findest die Quellen zu einem Szenendetail wieder. Die lokale Browser-App verbindet Textstellen, Recherche und eigene Entscheidungen. Ihre Sprachhinweise sind Heuristiken zur Prüfung; sie bewerten weder literarische Qualität noch die Wahrheit einer Aussage.
 
 Aktualisiert am 26. November 2026
+
+<a id="quittung"></a>
+
+## Die leere Zeile in Warehouse 4
+
+Im [einminütigen Film](../index-de.html#product-tour-preview) muss Mara entscheiden, was sie mit ihrer Unterschrift bestätigen kann. Auf ihrem Versandbeleg steht die Nummer 17, die Empfangszeile ist leer. Dieselbe Nummer taucht in einem früheren Rückgabeeintrag auf.
+
+1. [Öffne die Recherche in der englischen, schreibgeschützten Demo](../demo/report.html#research-manager). Wähle unter **Dossiers** beim **Warehouse 4 exhibit book** die Aktion **View entry**.
+
+2. Prüfe im Dossier die Abschnitte **Dispatch receipt** und **Office ledger**. Um 20:00 Uhr schreibt Mara die Nummer 17 ab. Im Register steht dieselbe Nummer bei einer Rückgabe um 18:40 Uhr. Auf der Quittung fehlt die Empfangsunterschrift.
+
+3. Kehre über **Manuscript** zum Text zurück und lies den Schluss von **Morning Handover**. Mara unterschreibt den Bericht über ihre eigenen Aufzeichnungen. Wer die Lieferung entgegengenommen hat, bleibt offen.
+
+Die Belege sind fiktiv. In einem lokalen Projekt kannst du einen geänderten Entwurf vergleichen und ein gespeichertes Dossier exportieren. In der Demo kannst du als Nächstes prüfen, warum der Satz markiert ist.
 
 <a id="frage"></a>
 

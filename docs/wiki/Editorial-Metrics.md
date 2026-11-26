@@ -1,5 +1,7 @@
 # Understanding editorial metrics
 
+Short entry; behavior and limits live in the [interpretation guide](https://lixity.de/guides/interpretation.html), [METHODS](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and [STABILITY](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md).
+
 Start with a passage you want to review. Check what was counted, which text
 forms the comparison baseline, and what the unit means. Then read the
 highlighted wording in context.

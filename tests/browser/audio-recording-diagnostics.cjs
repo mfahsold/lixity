@@ -11,6 +11,7 @@ import json, os, sys
 from pathlib import Path
 from http.server import ThreadingHTTPServer
 from lixity.server import LixityServerHandler
+from lixity.server.workspaces import WorkspaceRegistry
 import lixity.speech_record as record
 import lixity.speech_status as speech_status
 record.get_microphone_status=lambda: {'devices':[], 'current_gain':None, 'gain_info':None}
@@ -24,18 +25,31 @@ LixityServerHandler.source_input=str(source)
 LixityServerHandler.exports_dir=str(root/'exports')
 LixityServerHandler.refresh()
 server=ThreadingHTTPServer(('127.0.0.1',0),LixityServerHandler)
+server.workspaces=WorkspaceRegistry(LixityServerHandler)
 print(json.dumps({'url':f'http://127.0.0.1:{server.server_port}'}),flush=True)
 server.serve_forever()
 `,artifacts);
   const browser=await (process.argv.includes('--firefox') ? launchFirefox() : launchChromium());
   try {
     for(const viewport of [{width:1440,height:900},{width:320,height:900},{width:1830,height:705}]) {
-      const page=await browser.newPage({viewport}),consoleErrors=[],pageErrors=[];
+      const page=await browser.newPage({viewport}),consoleErrors=[],pageErrors=[],clientEvents=[];
+      let clientRoute;
       page.on('console',message=>{if(message.type()==='error'&&message.text().includes('Lixity')&&message.text().includes('error'))consoleErrors.push(message.text());});
       page.on('pageerror',error=>pageErrors.push(error.message));
+      page.on('request',request=>{
+        if(request.url()===clientRoute) clientEvents.push(request.postDataJSON());
+      });
+      const expectClientEvent=async (response,event)=>{
+        const result=await response;
+        assert.equal(result.status(),204);
+        assert.deepEqual(result.request().postDataJSON(),{event});
+      };
+      const nextClientEvent=()=>page.waitForResponse(response=>response.url()===clientRoute);
       try {
         await page.addInitScript(()=>localStorage.setItem('lixity_debug','0'));
         await page.goto(server.fixture.url);
+        clientRoute=new URL('api/audio-client-diagnostic',page.url()).href;
+        assert.match(new URL(clientRoute).pathname,/^\/w\/[0-9a-f]{32}\/api\/audio-client-diagnostic$/);
         await page.locator('#tab-view-project').click();
         await page.locator('#btn-project-record-voice').click();
         await page.waitForFunction(()=>!document.querySelector('.voice-rec-btn')?.disabled);
@@ -73,8 +87,10 @@ server.serve_forever()
           assert.equal(bounds.scrollY,bounds.departure,'Showing recording feedback never scrolls the underlying document');
         }
         await button.evaluate(node=>node.addEventListener('pointerdown',()=>{window.recordingScrollY=scrollY;},{once:true}));
+        const firstDiagnostic=nextClientEvent();
         await button.click();
         await page.waitForFunction(()=>document.querySelector('#modal-speech [role=status]').textContent===uiLabel('speech_mic_permission'));
+        await expectClientEvent(firstDiagnostic,'recording_start_failed');
         const first=await page.evaluate(()=>diagnostics);
         assert.equal(first.length,1,'A handled permission failure is logged even when debug is off');
         assert.equal(first[0][1].stage,'microphone_request');
@@ -104,8 +120,10 @@ server.serve_forever()
         assert.equal(await detail.isVisible(),false,'A retry clears the preceding error details');
         assert.equal(await button.isDisabled(),true);
         await visibleFeedback();
+        const rejectedDiagnostic=nextClientEvent();
         await page.evaluate(()=>rejectCapture(new DOMException('PRIVATE_ERROR_TRANSCRIPT_21','PRIVATE_ERROR_DEVICE_NAME_99')));
         await page.waitForFunction(()=>document.querySelector('.voice-record-state').dataset.state==='failed');
+        await expectClientEvent(rejectedDiagnostic,'recording_start_failed');
         assert.equal(await page.evaluate(()=>diagnostics.length),2);
         assert.equal(await page.evaluate(()=>diagnostics.at(-1)[1].error_name),'UnknownError',
           'Unexpected exception names cannot copy private data into diagnostics');
@@ -113,8 +131,10 @@ server.serve_forever()
         await page.evaluate(()=>{
           AudioContext.prototype.resume=async()=>{throw new DOMException('PRIVATE_ERROR_CONTEXT_22','NotAllowedError');};
         });
+        const contextDiagnostic=nextClientEvent();
         await button.click();
         await page.waitForFunction(()=>document.querySelector('#modal-speech [role=status]').textContent===uiLabel('speech_mic_failed'));
+        await expectClientEvent(contextDiagnostic,'recording_start_failed');
         const contextFailure=await page.evaluate(()=>diagnostics.at(-1));
         assert.equal(contextFailure[1].stage,'audio_context_resume');
         assert.equal(contextFailure[1].error_name,'NotAllowedError');
@@ -127,8 +147,10 @@ server.serve_forever()
           Object.defineProperty(document,'featurePolicy',{configurable:true,value:undefined});
           Object.defineProperty(document,'permissionsPolicy',{configurable:true,value:undefined});
         });
+        const preflightDiagnostic=nextClientEvent();
         await button.click();
         await page.waitForFunction(()=>document.querySelector('#modal-speech [role=status]').textContent===uiLabel('speech_mic_unavailable'));
+        await expectClientEvent(preflightDiagnostic,'recording_preflight_failed');
         const unavailable=await page.evaluate(()=>diagnostics.at(-1));
         assert.equal(unavailable[1].stage,'preflight');
         assert.equal(unavailable[1].media_devices_available,false);
@@ -162,6 +184,10 @@ server.serve_forever()
         assert.equal(await detail.isVisible(),false);
         assert.equal(await button.getAttribute('aria-describedby'),'speech-record-limit',
           'The recording limit remains described after stale error feedback is cleared');
+        assert.deepEqual(clientEvents,[
+          {event:'recording_start_failed'}, {event:'recording_start_failed'},
+          {event:'recording_start_failed'}, {event:'recording_preflight_failed'},
+        ],'Only active failures are reported and the client envelope contains no private details');
         assert.deepEqual(pageErrors,[]);
       } finally {await page.close();}
     }

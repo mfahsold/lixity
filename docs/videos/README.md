@@ -17,8 +17,11 @@ The MP4, GIF and poster use those same frames.
 
 Regenerate all reviewed recordings with `make videos`. Install the pinned
 Playwright browser tools with `make browser-tools`. For the full encoding
-pass, put `ffprobe` and FFmpeg with `libx264`, `libaom-av1`, `libwebp` and
-`drawtext` on PATH.
+pass, put `ffprobe` and FFmpeg with `libx264` and an AV1 encoder (`libsvtav1`
+or `libaom-av1`) on PATH. The WebP poster needs `cwebp` or `libwebp` in FFmpeg.
+The product tour also uses FilmCraft
+CLI 0.20.1 or newer, Georgia Regular, Inter SemiBold and Poppler (`pdftotext`
+and `pdftoppm`).
 
 1. `scripts/make_screenshots.py --video` records the scripted flows and writes
    WebM files to `.artifacts/screenshots/videos/`.
@@ -31,45 +34,47 @@ contains only the approved fictional project before committing it.
 
 ## Homepage product tour
 
-`product-tour.webm` (AV1), `product-tour.mp4` (H.264 fallback), and
-`product-tour-portrait.mp4` (H.264) show the same 60-second tour in the
-fictional Warehouse 4 workspace. Each of the six scenes lasts ten seconds.
+**The Blank Line** follows an unsigned receipt through the fictional Warehouse 4
+manuscript. `product-tour.webm` (AV1), `product-tour.mp4` (H.264 fallback), and
+`product-tour-portrait.mp4` (H.264) share the same 60-second cut.
 
-| Time | Task shown |
+| Time | Story and evidence |
 | --- | --- |
-| 0–10 s | Open a suggestion and read the manuscript passage |
-| 10–20 s | See which 22 of the receipt sentence's 31 words count as function words |
-| 20–30 s | Compare a shorter unsaved draft of the same sentence with the original under the same settings |
-| 30–40 s | Inspect a chapter's sentence-length rhythm in the matrix |
-| 40–50 s | Open the Warehouse 4 exhibit book and see the receipt with its blank receiving line |
-| 50–60 s | Download the saved exhibit book version and confirm the PDF |
+| 0–5 s | A close view of the dispatch receipt shows the missing signature |
+| 5–14 s | Read the original passage in the dark workspace |
+| 14–27 s | Open the real explanation for 22 of 31 counted words and compare the shorter unsaved draft under the same settings |
+| 27–42 s | Open the exhibit book, read the 18:40 return and compare it with the 20:00 dispatch |
+| 42–52 s | Return to the final manuscript line and cut back to the blank receiving field |
+| 52–60 s | Download the saved exhibit book and see the corresponding page from the actual PDF |
 
-The recorder uses the English fixture in a disposable local workspace. The
-comparison leaves the original manuscript untouched. The last scene checks that
-the download contains a complete PDF from the saved exhibit book version.
+The recorder uses an English fixture in a disposable workspace. It verifies
+22 highlighted words and the unchanged manuscript after comparison. The
+export recording checks the saved revision in the filename, verifies the PDF
+and renders the page that contains the two ledger entries. The two dated
+facsimiles are authored assets for the fictional case.
 
-The scenes alternate dark and light, starting in dark mode. Each scene shows the
-Lixity icon and name and a short English title. Layouts use geometry recorded
-from the app to enlarge the result in each format. The paced pointer is a
-recording annotation.
+Georgia sets the opening and closing titles and the manuscript quotations.
+Inter sets brand, labels and counts. A consistent left gutter gives the eye a
+reference after each cut.
+Dark ink frames the manuscript, lilac frames measured details and paper frames
+source evidence. The opening title and final demo link use eight-frame fades.
+The other changes use direct cuts, including the return to the same signature
+line. Phone and landscape frames have independent compositions. Short live
+workspace actions lead into held details or typed excerpts with space to read.
+[FilmCraft graphics](https://github.com/storytold/filmcraft/blob/main/docs/graphics.md) · [Match cuts](https://www.adobe.com/creativecloud/video/post-production/cuts-in-film/match-cut.html)
 
-The homepage prefers the 9:16 source in portrait viewports and offers the two
-landscape formats as fallbacks. Playback starts once
-when at least half the video is visible, unless reduced motion or data saving
-is requested. An explicit pause is respected. Leaving the viewport or hiding
-the tab pauses playback. Native controls and a localized play/pause button stay
-available. Without JavaScript, the landscape poster and native playback controls
-remain.
+The homepage prefers the portrait source in portrait viewports and offers the
+landscape formats as fallbacks. It starts playback only when at least half of
+the player is visible and respects reduced motion, data saving and explicit
+pause. Leaving the viewport or hiding the tab pauses playback. Native controls,
+localized play/pause controls and a readable transcript remain available.
 A failed video offers the interactive demo instead.
 
-Captions are rendered at page resolution from the six localized transcript
-items in each homepage. Each complete sentence stays visible for its scene and
-seeking updates the caption. All seven homepage languages supply captions and
-playback controls. The complete transcript remains readable without playback or
-JavaScript.
+The six beats in `product-tour-timing.json` set cue boundaries for the seven
+localized captions. Captions render at page resolution and update on seeking.
+The short on-frame labels follow the English demonstration. The film is silent.
 
-To record the tour again and rebuild the website and social formats, run the
-following commands.
+### Rebuild and review
 
 ```sh
 .venv/bin/python scripts/make_screenshots.py --video --only product-tour
@@ -77,57 +82,40 @@ following commands.
 make docs-sync
 ```
 
-The recorder checks that actions fit the six scenes. The encoder composes the
-formats from the raw frames and capture geometry. Both website landscape codecs
-use the same 1440×900 layout. The portrait layout is 1080×1920 for the website
-and social channels. The horizontal social layout is 1600×900. Every version
-contains 1,500 frames at 25 fps and no audio. The encoder takes the landscape
-WebP and 540×960 portrait PNG posters at about 15 seconds. The size limit is
-4 MB per video, with a 3.5 MB limit for the horizontal social file. Inspect UI
-text, framing, pointer motion and caption alignment before accepting an export.
+The browser records six actions and stores their decoded frame anchors, crop
+geometry, and source fingerprints. The encoder validates that material before
+`scripts/product_tour_edit.py` assembles the three FilmCraft projects. They keep
+backgrounds on V1, original clips and stills on V2/V3, editable labels on V4 and
+the logo on V5. Each canvas gets six beat markers and an end marker. FilmCraft
+exports lossless PNG sequences. FFmpeg encodes each destination from those
+frames and checks timing and geometry before replacing the public assets.
 
-The homepage uses both encoded posters. `make docs-sync` adds a content
-fingerprint to the player sources, posters and download links. The underlying
-media paths remain stable for existing links.
+Both website landscape codecs share the 1440×900 sequence. The website and
+social portrait MP4s share the 1080×1920 sequence. The horizontal social frame
+is 1600×900. Every file has 1,500 frames at 25 fps, square pixels and a single
+picture stream. Every file has a 4 MB budget, with 3.5 MB for horizontal social.
+The landscape WebP and 540×960 portrait posters come from the opening scene at
+two seconds. `make docs-sync` fingerprints the player sources, posters and
+download links while keeping their base filenames stable.
+
+Editable local projects and 360-pixel review frames live under
+`.artifacts/filmcraft/warehouse-4-tour/`. Use the program monitor to confirm
+that the opening receipt, explanations, before/after text, ledger and PDF can
+be read. Verify that the brand stays within the left gutter and social overlays
+or page captions leave the final link clear. Check the intended destination on
+a phone because controls differ by placement.
+[FilmCraft CLI guide](https://github.com/storytold/filmcraft/blob/main/docs/agents.md) · [Portrait placement overlays](https://support.google.com/google-ads/answer/9128498?hl=en-1-2)
+
+```sh
+filmcraft-cli --project .artifacts/filmcraft/warehouse-4-tour/warehouse-4-1080x1920.fcproj inspect sequence
+filmcraft-cli --project .artifacts/filmcraft/warehouse-4-tour/warehouse-4-1080x1920.fcproj render --seconds 39 --scale 0.333333 --out /tmp/warehouse-4-ledger.png
+```
 
 ## Social video downloads
 
 `social-hook-16x9.mp4` and `social-hook-9x16.mp4` both contain the full tour.
-Their filenames keep existing links valid. The full build encodes one portrait
-master and copies the website MP4 byte for byte to the social filename.
-
-After capture, regenerate just the social formats from the raw frames with the
-following command. Use the full tour build to publish matching portrait files.
-
-```sh
-.venv/bin/python scripts/make_videos.py --only social
-```
-
-Review scene titles and results at each intended display size.
+Their filenames keep existing links valid. The full build copies the website
+portrait MP4 byte for byte to the portrait social filename. To rebuild only the
+social destinations, run `.venv/bin/python scripts/make_videos.py --only social`.
 The [reviewed asset handoff](../screenshots/README.md#maintain-the-one-package)
 packages both formats with stills, text alternatives and byte hashes.
-
-## Portrait master and FilmCraft workflow
-
-FilmCraft CLI is available for editable cuts and layout experiments with the
-synthetic recordings. Keep working projects and previews in the ignored
-`.artifacts/filmcraft/` directory. Generate the published files with the encoder
-above so the frame, size and staging checks run as part of the docs workflow.
-[FilmCraft CLI guide](https://github.com/storytold/filmcraft/blob/main/docs/agents.md)
-
-For a headless review, assemble and inspect the project with the CLI.
-
-```sh
-filmcraft-cli --save-as .artifacts/filmcraft/lixity-product-tour-v2/lixity-tour-v2.fcproj run setup.jsonl
-filmcraft-cli --project <proj> inspect sequence   # assembled clip, marker order, fps
-filmcraft-cli --project <proj> import <media>     # RAW bin only, synthetic source
-filmcraft-cli --project <proj> render --seconds 15 --out /tmp/beat.png
-filmcraft-cli --project <proj> exec markers.exportCsv '{"path":"review.csv"}'
-filmcraft-cli --project <proj> exec file.exportMedia '{"path":"preview.mp4","format":"h264","range":"custom","startSeconds":0,"endSeconds":2,"wait":true,"audio":false}'
-```
-
-Check rendered frames at 5, 15, 25, 35, 45 and 55 seconds. Check the CSV for
-seven markers per sequence, including the six caption keys and the end marker.
-FilmCraft probe exports must report `offlineMedia==[]` and `warnings==[]`.
-Check the final frame count, geometry, square pixels, constant frame rate,
-single video stream and byte limits before staging the tour in `docs/videos/`.

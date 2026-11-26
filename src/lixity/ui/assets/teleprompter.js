@@ -685,8 +685,8 @@
   var desktopRecording = null;
   var desktopLimitHint = "";
 
-  function matchesCaptureContext() {
-    return JSON.stringify(captureContext) === JSON.stringify(selectedContext());
+  function matchesCaptureContext(bound = captureContext) {
+    return JSON.stringify(bound) === JSON.stringify(selectedContext());
   }
 
   function captureContextError() {
@@ -770,11 +770,12 @@
   }
   function captureFailed(error) {
     discardCapture();
-    if (error && error.name === "ContextChangedError") {
+    if (error?.name === "ContextChangedError" || !matchesCaptureContext()) {
       recordingState("failed", "teleprompter_take_context"); return;
     }
     var denied = error && ["NotAllowedError", "PermissionDeniedError", "SecurityError"].includes(error.name);
     recordingState("failed", denied ? "teleprompter_take_denied" : "teleprompter_take_failed");
+    window.LixityLog?.audioClient?.("teleprompter_capture_failed");
   }
   async function startAudioCapture() {
     pcmRecordedChunks = []; pcmTotalSamples = 0; ++takeSequence; captureContext = selectedContext();
@@ -893,15 +894,23 @@
     try {
       var value = await pending;
       if (sequence !== takeSequence) return;
-      if (JSON.stringify(context) !== JSON.stringify(selectedContext()) ||
+      if (!matchesCaptureContext(context) ||
           (!captured && (modal.hidden || view !== contextSequence))) {
         if (!modal.hidden) recordingState("failed", "teleprompter_take_context");
         return;
       }
       renderTake(value, context);
       recordingState("ready", limit ? "teleprompter_take_limit" : "teleprompter_take_ready");
+      if (captured) window.LixityLog?.audioClient?.("teleprompter_capture_ready");
     } catch (_) {
-      if (sequence === takeSequence) recordingState("failed", captured ? "teleprompter_take_failed" : "teleprompter_take_import_failed");
+      if (sequence === takeSequence) {
+        if (captured && !matchesCaptureContext(context)) {
+          if (!modal.hidden) recordingState("failed", "teleprompter_take_context");
+        } else {
+          recordingState("failed", captured ? "teleprompter_take_failed" : "teleprompter_take_import_failed");
+          if (captured) window.LixityLog?.audioClient?.("teleprompter_capture_failed");
+        }
+      }
     } finally {
       if (sequence === takeSequence) {
         recordBtn.disabled = takeImportBtn.disabled = false;

@@ -1,5 +1,7 @@
 # Lixity kennenlernen
 
+Kurzeinstieg; Details stehen in [ONBOARDING](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md) und [Workspace](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md).
+
 Wähle den Desktop-Download für deinen Rechner und folge den Schritten für dein
 Betriebssystem. Öffne danach Lixity und wähle **Beispiel offline ausprobieren**.
 [Download und Einrichtung (Englisch)](https://lixity.de/guides/installation.html#desktop)

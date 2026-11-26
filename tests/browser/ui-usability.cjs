@@ -105,6 +105,12 @@ server.serve_forever()
     await expect(page.locator('#rtab-dossiers')).toBeVisible();
     await page.locator('[data-rtab=dossiers]').focus();await page.keyboard.press('ArrowRight');
     await expect(page.locator('[data-rtab=claims]')).toBeFocused();
+    await expect(page.locator('[data-rtab=claims]')).toHaveAttribute('tabindex','0');
+    await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('tabindex','-1');
+    await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('aria-selected','true');
+    await page.keyboard.press('Tab');
+    await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('tabindex','0');
+    await page.locator('[data-rtab=dossiers]').focus();await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');
     await expect(page.locator('#rtab-claims')).toBeVisible();
     await page.locator('[data-rtab=sources]').click();

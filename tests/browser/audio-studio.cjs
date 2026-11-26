@@ -61,8 +61,8 @@ server.serve_forever()
   const axe = resolveAxe();
   if (!axe) console.log('axe-core unavailable; full audio dialog accessibility audit not run');
   try {
-    for (const width of [2560, 1440, 900, 320]) {
-      const page = await browser.newPage({viewport: {width, height: 900}});
+    for (const width of [2560, 1440, 900, 390, 320]) {
+      const page = await browser.newPage({viewport: {width, height: 900}, colorScheme: [2560, 320].includes(width) ? 'dark' : 'light'});
       page.setDefaultTimeout(15000);
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
@@ -111,6 +111,7 @@ server.serve_forever()
         assert.equal(await page.locator('#speech-microphone-section').isVisible(), false,
           'Hardware settings belong only to the microphone tab');
         const tabs = page.locator('#modal-speech [role=tab]:visible');
+        assert.equal(await tabs.locator('svg[aria-hidden=true]').count(),3,'The three project tabs pair visible labels with decoration');
         assert.equal(await tabs.count(), 3);
         assert.equal(await page.locator('#speech-tab-reader').isVisible(), true);
         assert.equal(await page.locator('#speech-tab-reader').getAttribute('role'), null,
@@ -214,6 +215,11 @@ server.serve_forever()
           text.compareDocumentPosition(document.getElementById('speech-target')) & Node.DOCUMENT_POSITION_FOLLOWING
         )), true, 'The manuscript passage comes before optional render settings');
         assert.equal(await page.locator('[data-speech-action=preview]').evaluate(button => button.classList.contains('primary')), true);
+        assert.equal(await page.locator('.speech-render-section').evaluate(render =>
+          render.nextElementSibling?.classList.contains('speech-playback') &&
+          render.nextElementSibling.nextElementSibling?.classList.contains('speech-direction-section')),true,
+          'The listening action and its player precede the passage editing section');
+        assert.equal(await page.locator('.speech-export-section').evaluate(section=>section.open),false);
         await assertPauseBounds(['direction_before', 'direction_after'], false);
         assert.equal(await page.locator('#speech-direction_after').inputValue(), '',
           'A blank direction override inherits the profile pause');
@@ -227,10 +233,15 @@ server.serve_forever()
         await directionTab.focus();
         await page.keyboard.press('End');
         assert.equal(await outputTab.getAttribute('aria-selected'), 'true');
-        assert.equal(await page.locator('#speech-chapter_audio_file').isVisible(), true);
+        assert.equal(await page.locator('#speech-chapter_audio_file').isVisible(), false);
         assert.equal(await page.locator('#speech-direction_text').isVisible(), false);
         assert.equal(await scrollPanel.evaluate(element => element.scrollTop), 0,
           'Switching audio tabs starts the new section at its heading');
+        const recording = page.locator('.speech-chapter-recording > summary');
+        await recording.focus();
+        await page.keyboard.press('Enter');
+        assert.equal(await page.locator('#speech-chapter_audio_file').isVisible(), true,
+          'The keyboard opens import independently of the primary chapter render');
         await auditDialog('output');
         await directionTab.click();
         await page.locator('#speech-edit-project-voice').click();
@@ -247,6 +258,7 @@ server.serve_forever()
         assert.equal(await page.locator('.author-voice-studio').isVisible(), false);
         const refreshMicrophones = page.locator('[data-speech-action=microphone_refresh]');
         assert.equal(await refreshMicrophones.isVisible(), true);
+        assert.equal(await page.locator('[data-speech-action=microphone_calibrate].primary svg[aria-hidden=true]').count(),1);
         assert.ok(await refreshMicrophones.evaluate(control => {
           const button = control.getBoundingClientRect();
           const section = control.closest('#speech-microphone-section').getBoundingClientRect();
@@ -257,6 +269,19 @@ server.serve_forever()
         await microphoneTab.focus();
         await page.keyboard.press('Home');
         assert.equal(await tabs.nth(0).getAttribute('aria-selected'), 'true');
+        if (width <= 390) {
+          await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+          assert.equal(await tabs.evaluateAll(items => items.every(item => {
+            const bounds = item.getBoundingClientRect();
+            return bounds.left >= 0 && bounds.right <= innerWidth && item.scrollWidth <= item.clientWidth;
+          })), true, 'Zoomed project tabs retain all visible label text within the viewport');
+          await tabs.nth(0).focus();
+          await page.keyboard.press('End');
+          assert.equal(await microphoneTab.getAttribute('aria-selected'), 'true');
+          await page.keyboard.press('Home');
+          assert.equal(await tabs.nth(0).getAttribute('aria-selected'), 'true');
+          await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+        }
         assert.ok((await page.locator('.voice-rec-btn').getAttribute('data-help'))?.length > 20,
           'Recording has contextual guidance');
         await page.locator('.voice-rec-btn').focus();

@@ -1,5 +1,7 @@
 # Keyboard shortcuts and navigation
 
+Short entry; behavior lives in the [workspace manual](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#keyboard-touch-and-focus-reading) and [ONBOARDING](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#read-and-explore).
+
 Open **Reading settings → Keyboard shortcuts** to see the options available in
 your installation. Shortcuts depend on where focus is and which dialog, editor or
 reading tool is open.

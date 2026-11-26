@@ -141,6 +141,7 @@ class LixityServerHandler(
         "speech-direction": "_handle_speech_direction",
         "speech-cancel": "_handle_speech_cancel",
         "audio-microphone": "_handle_audio_microphone_post",
+        "audio-client-diagnostic": "_handle_audio_client_diagnostic",
         "audio-take-trim": "_handle_audio_take_trim",
         "nda-draft": "_handle_nda_draft",
         "manuscript-pdf": "_handle_manuscript_pdf",
@@ -511,7 +512,8 @@ class LixityServerHandler(
             self._dispatch_post(action)
 
     def _dispatch_post(self, action: str) -> None:
-        maximum = (138 * 1024**2 if action == "audio-audit"
+        maximum = (512 if action == "audio-client-diagnostic"
+                   else 138 * 1024**2 if action == "audio-audit"
                    else MAX_TRIM_REQUEST_BYTES if action == "audio-take-trim"
                    else MAX_MEDIA_PAYLOAD_BYTES if action in {"research-media-ingest", "research-dossier-media", "speech-audio-import"}
                    else MAX_IMAGE_PAYLOAD_BYTES if action in {"research-image-ingest", "research-dossier-image"}

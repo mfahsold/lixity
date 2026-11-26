@@ -1,5 +1,8 @@
 # Mathematical methods
 
+> Version line: this documentation describes source **v0.9.3** on the pre-1.0 **0.x** line.
+> Historical 1.x/3.x tags predate the numbering reset; a larger number does not mean a newer release.
+
 Definitions, defaults and implementation limits of Lixity's measurements for
 manuscript revision and exploratory linguistic text analysis. Start with the
 [linguistic workflow](USAGE.md#linguistic-text-analysis) to preserve inputs,
@@ -342,6 +345,7 @@ complete-null boundary below; naive chapter-label permutation preserves
 unordered outlier scores) mark the boundary for future inferential calibration.
 
 <a id="decision-legend-and-small-chapter-sets-unreleased"></a>
+<a id="decision-legend-and-small-chapter-sets"></a>
 
 ### Decision legend and small chapter sets
 
@@ -1084,6 +1088,7 @@ a quality score and say nothing about transcript accuracy or voice identity.
   with a note.
 
 <a id="13-chapter-audio-audit-unreleased"></a>
+<a id="13-chapter-audio-audit"></a>
 
 ## 13. Chapter audio audit
 
@@ -1334,6 +1339,7 @@ they do not estimate literary quality or a reader's experienced immersion.
   current numeric CV sentinel is zero and must not be read as measured regularity.
 
 <a id="revision-time-series-and-session-deltas-unreleased"></a>
+<a id="revision-time-series-and-session-deltas"></a>
 
 ## Revision time-series and session deltas
 
@@ -1360,6 +1366,7 @@ they do not estimate literary quality or a reader's experienced immersion.
   timeline remains available as recorded and gaps remain visible.
 
 <a id="dramaturgical--structural-heuristics-unreleased"></a>
+<a id="dramaturgical--structural-heuristics"></a>
 
 ## Dramaturgical & structural heuristics
 

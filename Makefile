@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate rc-verify release-check release-prepare release-verify release-tools-ready screenshots videos examples brand-assets media clean-caches clean docs-check docs-generated-check docs-sync pages-deploy pages-verify run start serve stop restart status doctor
+.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate rc-verify release-check release-rehearsal release-prepare release-verify release-tools-ready screenshots videos examples brand-assets media clean-caches clean docs-check docs-generated-check docs-sync pages-deploy pages-verify run start serve stop restart status doctor
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -71,8 +71,13 @@ build: ## Build fresh source-verified sdist + wheel and checksums into dist/
 release-check: ## Validate the tag first, then test once, check generated docs, audit and verify artifacts
 	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to match the source version"; exit 1)
 	$(VPY) scripts/check_release.py --source-only --require-release-notes --tag "$(RELEASE_TAG)"
-	$(MAKE) check docs-generated-check audit
-	$(VPY) scripts/check_release.py --build --smoke --tag "$(RELEASE_TAG)" --dist "$(RELEASE_DIST)"
+	@commit=$$(git rev-parse --verify HEAD) && \
+		$(MAKE) check docs-generated-check audit && \
+		$(VPY) scripts/run_release_rehearsal.py --expected-commit "$$commit" \
+		--tag "$(RELEASE_TAG)" --dist "$(RELEASE_DIST)" --jobs "$(BROWSER_JOBS)"
+
+release-rehearsal: ## Run author journeys, compare corpus measurements and smoke-install a candidate locally
+	$(VPY) scripts/run_release_rehearsal.py --jobs "$(BROWSER_JOBS)" $(REHEARSAL_ARGS)
 
 release-tools-ready:
 	@$(SCRIPT_PYTHON) -c 'import sys; sys.version_info >= (3, 10) or sys.exit("Release tooling requires Python 3.10 or newer. Set PYTHON to a supported interpreter or VENV to its environment.")'
@@ -133,7 +138,10 @@ docs-sync: ## Synchronize documentation version references to match __version__
 	PYTHONPATH=src $(SCRIPT_PYTHON) scripts/sync_docs.py --all
 
 pages-deploy: docs-generated-check ## Trigger the GitHub Pages deployment workflow on main
-	env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run pages.yml --ref main
+	@git diff --quiet HEAD -- || { echo "Pages deployment requires the reviewed files to be committed." >&2; exit 1; }
+	@commit=$$(git rev-parse --verify HEAD) && \
+		env -u GH_TOKEN -u GITHUB_TOKEN -u GIT_ASKPASS -u SSH_ASKPASS gh workflow run pages.yml --ref main \
+		--raw-field expected_sha="$$commit"
 
 pages-verify: ## Verify that live Pages matches the checked-out commit and staged content
 	@commit=$$(git rev-parse --verify HEAD) && \

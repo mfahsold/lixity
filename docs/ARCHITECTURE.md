@@ -7,6 +7,14 @@ manuals. [Automation](AGENTS.md) owns request and result contracts. The
 [research documentation map](research/README.md) separates implemented archive
 behavior from unimplemented proposals.
 
+### How to read this document
+
+- Builders: start with [Layers](#layers), then [Desktop host boundary](#desktop-host-boundary).
+- Integrators: start with [Configuration and multiple projects](#configuration-and-multiple-projects),
+  then [Presentation and trust boundaries](#presentation-and-trust-boundaries).
+- UI contributors: start with [Presentation and trust boundaries](#presentation-and-trust-boundaries),
+  then [Shared document orientation](#shared-document-orientation-and-metric-presentation).
+
 `lixity.research` owns explicit-project captures, immutable snapshots, citations,
 authored records and a rebuildable SQLite/FTS5 index. It does not import into
 `lixity.pipeline`. Source analysis may use the shared engine and UI, but research
@@ -542,6 +550,10 @@ not supply accounts, encryption, copy prevention or a restorable backup. See
 [the sharing workflow](WORKSPACE.md#export-a-reading-website).
 
 ## Configuration and multiple projects
+
+This section owns isolation and multi-project selection. Field definitions live in
+[USAGE configuration](USAGE.md#configuration-corpusconfig); the UI path lives in
+[saved project settings](WORKSPACE.md#saved-project-settings).
 
 `project_structure.inspect_project`
 owns one metadata-only read model for the native Project overview, `lixity

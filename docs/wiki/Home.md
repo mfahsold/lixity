@@ -1,7 +1,8 @@
 # Lixity documentation
 
 Lixity brings manuscript revision, linguistic analysis and a research archive
-into one local workspace. Use the [documentation map](https://github.com/mfahsold/lixity/blob/main/docs/README.md)
+into one local workspace. This wiki holds short entries only; the maintained
+manuals own behavior, limits and contracts. Use the [documentation map](https://github.com/mfahsold/lixity/blob/main/docs/README.md)
 to find the maintained manual for your task.
 
 | I want to… | Start here |

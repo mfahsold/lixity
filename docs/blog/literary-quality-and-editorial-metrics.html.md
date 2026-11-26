@@ -1,24 +1,24 @@
 # What makes a novel read well? Literary research, editorial craft and manuscript data
 
-Published 2 November 2026 · 10 minutes · [Deutsche Fassung](leseguete-und-lektoratsmetriken-de.html)
+Published 2 November 2026 · Updated 26 November 2026 · 10 minutes · [Deutsche Fassung](leseguete-und-lektoratsmetriken-de.html)
 
 When an author and an editor sit down with a 350-page manuscript, they rarely argue about a single Flesch readability number. Developmental and line editors ask structural and rhythmic questions instead: *Do the characters sound distinct from the narrator, or does every dialogue turn read like an essay? Where does a chapter's tempo stall because four sentences in a row open with the same pronoun? When a chapter shifts into a long letter or an internal reckoning, is that shift deliberate?*
 
-Over the past decade, empirical literary studies, cognitive reading research and publishing scholarship have investigated how these craft questions relate to perceived literary quality and reader engagement. None of those studies justify reducing a novel to a single score. What they do show is which observable text signals are worth inspecting during revision, and why a manuscript must be compared against its own baseline rather than a generic rulebook.
+Literary and reading research can suggest which features to inspect. To track a change during revision, start with passages in the same manuscript and compare them under the same settings. The study of readers’ judgments is a separate question.
 
 <a id="research"></a>
 
 ## 1. What empirical studies of novels and editing actually found
 
-Four research traditions inform how Lixity structures its manuscript overview:
+These four examples connect editing practice and empirical research to questions you can ask of a manuscript.
 
-- **Developmental vs. line editing (Ginna, 2017; Greenberg, 2018).** Editorial practice separates macro-work (scene economy, chapter pacing, character presence, perspective) from paragraph-level line craft (tense continuity, sentence-to-sentence cohesion, unintentional phrase echoes, and rhythm monotony). Most writing tools stop at sentence-level grammar or a single readability formula; authors and editors need a map that connects chapter-level shifts directly back to the exact paragraph in the manuscript.
+- **Developmental and line editing.** One pass asks what a scene does in the book. Another asks whether a tense change or a repeated phrase works in a particular paragraph. A chapter comparison can give you a place to start the second pass.
 
-- **The complexity vs. pace trade-off (*The Riddle of Literary Quality*, Koolen, van Dalen-Oskam & van Cranenburgh, 2020).** In the Dutch National Reader Survey (401 novels rated by more than 13,800 readers), high literary prestige correlated with higher lexical diversity (such as MTLD and HD-D) and longer, more varied syntactic structures, whereas fast-moving genre fiction relied on tighter local sentence-to-sentence cohesion and brisk dialogue cadence. A single “good writing” score is therefore a category error: a literary novel and a thriller optimize different dimensions.
+- **Readers judge books in context.** The Dutch National Reader Survey gathered responses from nearly 14,000 readers about a corpus of 401 novels. The researchers examined how judgments of literariness relate to factors including genre and the reader’s profile. [Koolen, van Dalen-Oskam, van Cranenburgh and Nagelhout (2020)](https://doi.org/10.1016/j.poetic.2020.101439).
 
-- **Pacing cadence and thematic focus (Archer & Jockers, 2016; Boyd, Blackburn & Pennebaker, 2020).** Large-scale corpus studies of commercial and literary fiction highlight regular alternation between conversational immediacy and reflective narration, alongside clear transitions between scene-setting exposition and active conflict.
+- **Narrative language changes over a story.** In a corpus of about 40,000 traditional narratives, Boyd and colleagues measured several word categories associated with setting the scene, moving the plot forward and cognitive tension. These are patterns across texts. Lixity's sentence-length comparison answers a narrower question about a chapter or passage. [Boyd, Blackburn and Pennebaker (2020)](https://doi.org/10.1126/sciadv.aba2196).
 
-- **Local referential cohesion and voice separation (Graesser et al., 2004; Burrows, 2002).** Psycholinguistic work on reading flow (Coh-Metrix) shows that readers perceive prose as cohesive when adjacent sentences share topical content words, and perceive dialogue as natural when spoken turns differ in length and cadence from surrounding narrative description.
+- **Cohesion has several dimensions.** Coh-Metrix measures links at several levels of language and discourse. Lixity's local overlap measure asks whether adjacent sentences in a paragraph share an eligible word. Reread those sentences to see what the recurrence does. [Graesser, McNamara, Louwerse and Cai (2004)](https://doi.org/10.3758/BF03195564).
 
 <a id="classic-data"></a>
 
@@ -52,7 +52,7 @@ An `ASL Δ` near zero means the two measured averages are close. If a draft's di
 
 ## 3. Separating chapter-level counts from editorial readings
 
-Corpus averages only set the stage. Individual chapters become useful during revision when you separate **what Lixity counted (L0/L1)** from **the reader's editorial interpretation after returning to the text (L3/L4)**, matching the evidence ladder in [STABILITY.md](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md).
+Start with what Lixity counted, then return to the chapter to interpret it. Claims about how a wider audience experiences the passage require reader-response evidence. [Evidence levels and limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md).
 
 ### Case A: *Pride and Prejudice* (banter, summary prose, and Darcy's letter)
 
@@ -92,7 +92,7 @@ To make these signals practical during daily revision, Lixity organizes the **An
 
 1. **Immediate passage check (*Flagged passages* & *Work markers*).** Start with paragraphs that exhibit severe tense friction or open editorial notes, and record whether a passage was kept on purpose, revised, or deferred.
 
-2. **Dramaturgy, tempo & registers (*Pacing & scenes*, *Scenes & style registers*).** Inspect chapter ASL, closing hooks (0–3 heuristic), within-paragraph adjacent sentence overlap (`sentence_overlap_pct`), and runs of 3+ identical sentence openings (`repeated_start_runs`), then compare intentional registers (letters, diaries, flashbacks) against their own targets.
+2. **Rhythm and registers (*Pacing & scenes*, *Scenes & style registers*).** Check average sentence length, rule-based closing cues and runs of repeated sentence openings. Compare a letter or flashback with the ranges you assigned to its register.
 
 3. **Voice, dialogue & sentence craft (*Quoted passages*, *Sentence lengths*, *Signal-group comparison*).** Check whether spoken turns have a distinct cadence from narration (`dialogue_asl`, `narration_asl`, `asl_contrast`), inspect short rapid turns (≤ 12 words) versus monologue blocks (≥ 80 words). Then review perception filters, modal verbs, passive cues and noun endings.
 
@@ -120,6 +120,8 @@ Every measurement in Lixity is a deterministic rule over surface text, documente
 - **Repeated sentence openings can be deliberate art.** A run of three or more sentences starting with the same word (`repeated_start_runs`) marks a passage for human inspection; only the author or editor can decide whether it is rhetorical anaphora or unintended monotony.
 
 - **No score is a verdict.** Neither voice contrast, nor lexical diversity, nor cohesion predicts commercial sales or literary merit on its own. They exist to point your eye to the exact chapter and paragraph where your manuscript's voice or rhythm shifts.
+
+If you are weighing these signals against other kinds of manuscript software, the [comparison of manuscript analysis tools](../guides/manuscript-analysis-tools.html) explains what a local, descriptive approach does and does not cover.
 
 **Explore the live reports:**
 

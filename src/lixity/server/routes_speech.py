@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import re
 import threading
 import warnings
 from collections.abc import Callable
@@ -15,6 +16,7 @@ from urllib.parse import parse_qs, urlparse
 
 from ..config import load_project_config, read_explicit_project_config
 from ..io import FileUtils
+from ..log import get_logger, log_event
 from ..markdown_parser import split_chapters
 from ..pipeline import document_paragraph_texts, resolve_document_config
 from ..speech import MAX_SEGMENT_CHARS
@@ -42,7 +44,7 @@ from ..speech_direction import (
     saved_directions,
 )
 from ..speech_export import ssml_export, timeline_json
-from ..speech_jobs import SpeechJobs, prepare_speech_source
+from ..speech_jobs import SpeechJobs, SpeechStaleReason, prepare_speech_source
 from ..speech_profiles import (
     DEFAULT_PARAGRAPH_PAUSE,
     DEFAULT_SCENE_PAUSE,
@@ -68,8 +70,32 @@ class _SpeechStale(ValueError):
     pass
 
 
+_AUDIO_CLIENT_EVENTS = frozenset({
+    "render_blocked_context", "render_blocked_profile", "render_blocked_direction",
+    "render_submit_failed", "render_poll_failed", "render_error_shown",
+    "generated_audio_playing", "generated_audio_failed",
+    "recording_preflight_failed", "recording_start_failed", "recording_capture_failed",
+    "recording_finish_failed", "author_recording_ready", "reference_save_failed",
+    "teleprompter_capture_ready", "teleprompter_capture_failed",
+})
+
+
 class SpeechRoutesMixin(ResponseMixin):
     _speech_manager_lock = threading.Lock()
+
+    def _handle_audio_client_diagnostic(self, payload: dict[str, Any]) -> None:
+        """Retain enumerated observations from the same-origin audio interface."""
+        event = payload.get("event")
+        correlation = payload.get("diagnostic_id")
+        if (payload.keys() - {"event", "diagnostic_id"}
+                or not isinstance(event, str) or event not in _AUDIO_CLIENT_EVENTS
+                or ("diagnostic_id" in payload and (
+                    not isinstance(correlation, str) or re.fullmatch(r"[0-9a-f]{16}", correlation) is None
+                ))):
+            self._json({"ok": False, "message": "Invalid audio diagnostic event"}, 400)
+            return
+        log_event(get_logger("server"), "audio_client", id=correlation, observation=event)
+        self._send(204, b"", "text/plain")
 
     def _handle_audio_take_trim(self, payload: dict[str, Any]) -> None:
         """Return a verified audio excerpt for review without writing to the project."""
@@ -584,31 +610,30 @@ class SpeechRoutesMixin(ResponseMixin):
                 registry = getattr(self.server, "workspaces", None)
                 generation = handler._speech_generation
 
-                def valid() -> bool:
+                def stale_reason() -> SpeechStaleReason | None:
                     try:
                         if registry is not None and not registry.contains(handler):
-                            return False
+                            return "workspace_closed"
                         with handler._workspace_lock:
-                            if handler._speech_generation != generation:
-                                return False
-                            if (
-                                project_settings_token(
-                                    handler.get_author_project_root(), handler.source_input
-                                )
-                                != binding["project_token"]
-                                or not handler.source_input
-                            ):
-                                return False
                             root = handler.get_author_project_root()
-                            if (root is None or direction_snapshot(root) != view["direction_sha256"]
-                                    or not references_unchanged(root, references)):
-                                return False
-                            return bool(
-                                FileUtils.read_source_snapshot(handler.source_input)[1]
-                                == binding["source_sha256"]
-                            )
+                            if root is None or not handler.source_input:
+                                return "workspace_closed"
+                            if project_settings_token(root, handler.source_input) != binding["project_token"]:
+                                return "settings_changed"
+                            if direction_snapshot(root) != view["direction_sha256"]:
+                                return "direction_changed"
+                            if not references_unchanged(root, references):
+                                return "reference_changed"
+                            if FileUtils.read_source_snapshot(handler.source_input)[1] != binding["source_sha256"]:
+                                return "source_changed"
+                            if handler._speech_generation != generation:
+                                return "workspace_refreshed"
+                            return None
                     except (OSError, ValueError):
-                        return False
+                        return "context_unavailable"
+
+                def valid() -> bool:
+                    return stale_reason() is None
 
                 cache_dir = project_audio_cache(root) if root is not None and payload["mode"] == "chapter" else None
 
@@ -626,6 +651,7 @@ class SpeechRoutesMixin(ResponseMixin):
                                                fresh_audio=payload.get("fresh_audio", False),
                                                target=payload.get("target", "local"), plan=plan,
                                                retain=retain if payload["mode"] == "chapter" else None,
+                                               stale_reason=stale_reason,
                                                **reference_options)
             self._json({"ok": True, "job": job}, 202)
         except (OSError, TypeError, ValueError, RuntimeError, UserWarning) as exc:
@@ -762,6 +788,8 @@ class SpeechRoutesMixin(ResponseMixin):
                 # Publication already succeeded. A failed view rebuild must
                 # not tell callers that the reference was left inactive.
                 refresh_warning = "Recording activated; the dashboard could not refresh. Reload to view the saved settings."
+        log_event(get_logger("server"), "audio_reference_saved", activation=activation["state"],
+                  dashboard_reload_required=bool(refresh_warning))
         self._json({
             "ok": True,
             "activation": activation,
@@ -870,6 +898,7 @@ class SpeechRoutesMixin(ResponseMixin):
                 self._json({"ok": False, "message": f"Recording failed: {exc}"}, 400)
                 return
 
+            log_event(get_logger("server"), "audio_reference_saved", activation="not_requested")
             self._json({
                 "ok": True,
                 "reference": {

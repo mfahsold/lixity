@@ -4,7 +4,7 @@ Collect sources, read and annotate in Zotero. Use Lixity's research workspace to
 
 This walkthrough introduces the author workflow. The [research manual](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#find-a-task) owns the detailed procedures and compatibility rules; [design history](https://github.com/mfahsold/lixity/blob/main/docs/research/README.md#design-history) is separate from implemented commands.
 
-Updated 23 November 2026
+Updated 26 November 2026
 
 **Before importing:**
 
@@ -146,7 +146,7 @@ In **Review**, open **Read decision with dossier** to compare the named versions
 
 ## Download a dossier PDF
 
-In the current development workspace, open a saved dossier and select **Download PDF**. Check the version shown beside the button. You can download that version from the dossier, beside the manuscript, or after opening it from the dossier’s history.
+In the development workspace, open a saved dossier and check the version beside **Download PDF**. You can download the displayed version from the dossier, from beside the manuscript, or after opening an earlier revision in the dossier’s history. [Dossier PDF reference](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#download-a-dossier-as-pdf).
 
 The A4 copy includes saved notes, chapter tables, place and route descriptions, and source quotations pinned to that version. Repeated copies of the same generated report appear once. Use the PDF reader’s bookmarks to jump between sections. Review and save the manuscript analysis to include current passages in your next download.
 
@@ -327,7 +327,7 @@ For the managed app instead, use `lixity service start --open` and **Open Projec
 
 ## Export manuscript and editorial PDFs
 
-Open **Project actions → PDF export** or run `lixity pdf`. Choose a layout for drafting, editing or a reading copy. Check font coverage and the recipient’s requirements before sending a PDF for production.
+Author walkthrough; normative PDF behavior lives in the [workspace manual](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#download-a-manuscript-pdf). Open **Project actions → PDF export** or run `lixity pdf`. Choose a layout for drafting, editing or a reading copy. Check font coverage and the recipient’s requirements before sending a PDF for production.
 
 | Layout (`--layout`) | Page & Margins | Typography & Grid | Editorial / Print Features |
 | --- | --- | --- | --- |
@@ -351,7 +351,7 @@ Override system-discovered fonts via `LIXITY_PDF_FONT_SERIF`, `LIXITY_PDF_FONT_S
 
 ## Export reading versions with curated dossiers & selective analysis
 
-Use **Project actions → Reading website** or `POST /api/site-export` to prepare a standalone offline website as a ZIP. Choose **Check export** to inspect the selected content and package size before using **Download ZIP**. The corresponding preflight endpoint is `/api/site-preflight`.
+Author walkthrough; normative website scope lives in the [workspace manual](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#export-a-reading-website). Use **Project actions → Reading website** or `POST /api/site-export` to prepare a standalone offline website as a ZIP. Choose **Check export** to inspect the selected content and package size before using **Download ZIP**. The corresponding preflight endpoint is `/api/site-preflight`.
 
 | Copy type | Manuscript scope | Dossiers and research | Analysis and audio |
 | --- | --- | --- | --- |

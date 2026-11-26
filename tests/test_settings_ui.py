@@ -41,7 +41,7 @@ class TestSettingsUi(unittest.TestCase):
         self.assertIn("nicht garantiert", WORKSPACE_LABELS["de"]["speech_direction_hint"])
         self.assertIn("Deutsch sprechen", WORKSPACE_LABELS["de"]["speech_model_preset_hint"])
         self.assertIn("Muttersprache", WORKSPACE_LABELS["de"]["speech_model_preset_hint"])
-        self.assertIn("beschäftigt sein", WORKSPACE_LABELS["de"]["speech_worker_match"])
+        self.assertIn("beschäftigt", WORKSPACE_LABELS["de"]["speech_worker_match"])
 
     def test_analysis_language_control_names_its_manuscript_scope(self):
         rendered = settings_markup()
@@ -112,7 +112,7 @@ class TestSettingsUi(unittest.TestCase):
             with self.subTest(status=status):
                 checks = {"title": {"status": status, "value": None}}
                 rendered = settings_markup(identity_check=checks)
-                title = rendered.split('<dt>Title</dt><dd>', 1)[1].split('</dd>', 1)[0]
+                title = re.split(r'<dt\b[^>]*>Title</dt><dd>', rendered, maxsplit=1)[1].split('</dd>', 1)[0]
                 self.assertIn("Manuscript value: " + diagnosis, title)
                 self.assertNotIn("Not automatically found", title)
 
@@ -120,7 +120,7 @@ class TestSettingsUi(unittest.TestCase):
         checks = manuscript_identity_check("## One\n\nA bird crosses the garden.\n",
                                            "Synthetic project", ["Synthetic Writer"])
         rendered = settings_markup(project_author="", identity_check=checks)
-        author = rendered.split('<dt>Author name</dt><dd>', 1)[1].split('</dd>', 1)[0]
+        author = re.split(r'<dt\b[^>]*>Author name</dt><dd>', rendered, maxsplit=1)[1].split('</dd>', 1)[0]
         self.assertIn("Project setting: Not available for comparison", author)
         self.assertIn("Manuscript value: Not available for comparison", author)
         self.assertNotIn("Not entered", author)

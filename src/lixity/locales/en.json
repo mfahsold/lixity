@@ -2205,6 +2205,7 @@
   "speech_render_title": "Generate audio",
   "speech_reuse": "Reuse completed chapter segments",
   "speech_reuse_help": "Reuse compatible completed chapter segments. Disable to regenerate them. Paragraph previews are always generated afresh.",
+  "speech_run_options": "Audio options",
   "speech_runtime_hint": "Rendering uses the selected engine and execution target. Check service readiness in Voice profiles. Preview first; finished chapter segments can be reused.",
   "speech_sample_custom": "Custom text",
   "speech_sample_full": "Standard passage (phonetic)",

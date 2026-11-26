@@ -68,9 +68,9 @@ struct BootstrapPayload<'a> {
     parent_pid: u32,
 }
 
-fn stop_child(child: &mut Child) {
+fn stop_child(child: &mut Child) -> bool {
     let _ = child.kill();
-    let _ = child.wait();
+    child.wait().is_ok()
 }
 
 fn read_ready_envelope(stdout: impl Read) -> Result<ReadyEnvelope, String> {
@@ -228,28 +228,42 @@ fn create_sidecar_log_dir(dir: &Path) -> std::io::Result<()> {
 }
 
 fn sidecar_log_path() -> Option<PathBuf> {
-    let dir = sidecar_log_dir()?;
-    let log_path = dir.join("desktop-sidecar.log");
-    if let Ok(meta) = fs::metadata(&log_path) {
-        if meta.len() > MAX_LOG_BYTES {
-            let rotated = dir.join("desktop-sidecar.log.1");
-            let _ = fs::rename(&log_path, rotated);
-        }
+    Some(sidecar_log_dir()?.join("desktop-sidecar.log"))
+}
+
+fn rotate_sidecar_log(path: &Path) {
+    if fs::metadata(path).is_ok_and(|meta| meta.len() > MAX_LOG_BYTES) {
+        let _ = fs::rename(path, path.with_extension("log.1"));
     }
-    Some(log_path)
+}
+
+fn open_sidecar_log(path: &Path) -> std::io::Result<fs::File> {
+    let mut options = OpenOptions::new();
+    options.create(true).append(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+
+        options.mode(0o600);
+    }
+    options.open(path)
 }
 
 /// Append a host diagnostic line to `desktop-sidecar.log` (never records manuscript data).
 pub fn log_desktop_event(level: &str, message: &str) {
-    let Some(log_path) = sidecar_log_path() else {
-        return;
-    };
+    if let Some(path) = sidecar_log_path() {
+        append_desktop_event(&path, level, message);
+    }
+}
+
+fn append_desktop_event(path: &Path, level: &str, message: &str) {
     let ts = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs())
         .unwrap_or(0);
-    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
-        let _ = writeln!(file, "[{ts}] [{level}] {message}");
+    if let Ok(mut file) = open_sidecar_log(path) {
+        let line = format!("[{ts}] [{level}] {message}\n");
+        let _ = file.write_all(line.as_bytes());
     }
 }
 
@@ -264,9 +278,24 @@ fn open_sidecar_stderr() -> Stdio {
     let Some(log_path) = sidecar_log_path() else {
         return Stdio::inherit();
     };
-    match OpenOptions::new().create(true).append(true).open(&log_path) {
+    // Host events must leave the pathname attached to the child's open stderr.
+    rotate_sidecar_log(&log_path);
+    match open_sidecar_log(&log_path) {
         Ok(file) => Stdio::from(file),
         Err(_) => Stdio::inherit(),
+    }
+}
+
+fn engine_version_for_log(version: &str) -> &str {
+    if version.len() <= 32
+        && version.split('.').count() == 3
+        && version
+            .split('.')
+            .all(|part| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit()))
+    {
+        version
+    } else {
+        "unknown"
     }
 }
 
@@ -411,6 +440,19 @@ impl PythonSidecar {
         };
         let ready = bootstrap_or_stop(&mut child, &payload, STARTUP_TIMEOUT)
             .map_err(|_| StartupFailure::RuntimeReadiness)?;
+        let revision = option_env!("LIXITY_DESKTOP_BUILD_REVISION")
+            .filter(|sha| sha.len() == 40 && sha.bytes().all(|byte| byte.is_ascii_hexdigit()))
+            .unwrap_or("unknown");
+        log_desktop_event(
+            "INFO",
+            &format!(
+                "event=desktop_engine_ready host_pid={} engine_pid={} app_version={} engine_version={} source_revision={revision}",
+                payload.parent_pid,
+                child.id(),
+                env!("CARGO_PKG_VERSION"),
+                engine_version_for_log(&ready.version),
+            ),
+        );
 
         Ok(Self {
             port: ready.port,
@@ -509,7 +551,19 @@ impl PythonSidecar {
     pub fn shutdown(&self) {
         if let Ok(mut guard) = self.child.lock() {
             if let Some(mut child) = guard.take() {
-                stop_child(&mut child);
+                let (level, event) = if stop_child(&mut child) {
+                    ("INFO", "desktop_engine_stopped")
+                } else {
+                    ("WARN", "desktop_engine_wait_failed")
+                };
+                log_desktop_event(
+                    level,
+                    &format!(
+                        "event={event} host_pid={} engine_pid={}",
+                        std::process::id(),
+                        child.id(),
+                    ),
+                );
             }
         }
     }
@@ -588,7 +642,61 @@ mod tests {
 
         fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
         create_sidecar_log_dir(&dir).unwrap();
-        assert_eq!(fs::metadata(&dir).unwrap().permissions().mode() & 0o777, 0o755);
+        assert_eq!(
+            fs::metadata(&dir).unwrap().permissions().mode() & 0o777,
+            0o755
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn creates_private_sidecar_log_files_and_preserves_existing_mode() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let fixture = RuntimeFixture(std::env::temp_dir().join(random_token_hex()));
+        create_sidecar_log_dir(&fixture.0).unwrap();
+        let path = fixture.0.join("desktop-sidecar.log");
+        drop(open_sidecar_log(&path).unwrap());
+        assert_eq!(fs::metadata(&path).unwrap().permissions().mode() & 0o077, 0);
+
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+        drop(open_sidecar_log(&path).unwrap());
+        assert_eq!(
+            fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+            0o644
+        );
+    }
+
+    #[test]
+    fn appends_host_events_to_the_active_log_and_rotates_before_a_new_child() {
+        let fixture = RuntimeFixture(std::env::temp_dir().join(random_token_hex()));
+        create_sidecar_log_dir(&fixture.0).unwrap();
+        let path = fixture.0.join("desktop-sidecar.log");
+        let previous = fixture.0.join("desktop-sidecar.log.1");
+        let mut child_stderr = open_sidecar_log(&path).unwrap();
+        child_stderr.set_len(MAX_LOG_BYTES + 1).unwrap();
+        append_desktop_event(&path, "INFO", "event=fixture_host_ready");
+        child_stderr.write_all(b"fixture child output\n").unwrap();
+        assert!(!previous.exists());
+        let current = fs::read(&path).unwrap();
+        assert!(current.ends_with(b"event=fixture_host_ready\nfixture child output\n"));
+
+        drop(child_stderr);
+        rotate_sidecar_log(&path);
+        assert!(!path.exists());
+        assert_eq!(fs::read(&previous).unwrap(), current);
+        append_desktop_event(&path, "INFO", "event=fixture_next_launch");
+        assert!(fs::read(&path)
+            .unwrap()
+            .ends_with(b"event=fixture_next_launch\n"));
+    }
+
+    #[test]
+    fn limits_sidecar_log_versions_to_a_numeric_release_version() {
+        assert_eq!(engine_version_for_log("0.9.3"), "0.9.3");
+        for version in ["", "0..3", "0.9.3\nuntrusted output", "0.9.3.4"] {
+            assert_eq!(engine_version_for_log(version), "unknown");
+        }
     }
 
     #[test]

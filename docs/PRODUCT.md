@@ -1,5 +1,20 @@
 # Product direction and capability boundaries
 
+> Version line: this documentation describes source **v0.9.3** on the pre-1.0 **0.x** line.
+> Historical 1.x/3.x tags predate the numbering reset; a larger number does not mean a newer release.
+
+## Start in two minutes
+
+1. Try without installing: open the [browser exercise](sandbox/index.html) or the
+   [read-only demo](demo/report.html), then follow one marked passage in the
+   [three-minute first look](guides/first-look.html#passage).
+2. Install for your system: [desktop downloads](guides/installation.html#desktop)
+   or the [published CLI and browser app](INSTALLATION.md#cli-current-release).
+3. Open your first manuscript: [first session](ONBOARDING.md) → [compare two
+   chapters](guides/first-look.html#contrast) → [explain a result](guides/interpretation.html).
+
+If you only read one more page after this, make it the [documentation map](README.md#find-a-task).
+
 ## The promise
 
 Lixity helps writers and editors see how language changes across a manuscript.
@@ -33,7 +48,8 @@ Full formulas live in [Methods](METHODS.md); empirical bounds and known failure 
 | Decide whether to revise a passage | Compare the draft with the saved text in **Write** under the same settings. Check which version was saved and how to recover earlier text. [Writing and recovery](WORKSPACE.md#write-a-manuscript) |
 | Revisit the research behind a scene | Open **Research for this passage** and follow a quotation or dossier to its retained version. [Dossiers beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript) |
 | Try a different reveal order | Write an intended beat in **Story rehearsal** and try another order for the cards. Review a card again after the associated text changes. [Story rehearsal](WORKSPACE.md#compare-scene-evidence-and-rehearse-an-intent) |
-| Hear how a passage reads | Rehearse in the **Teleprompter** and record a short take. With a configured speech service, preview the same passage in the chosen voice and listen for the intended delivery before rendering a chapter. [Audio workflow](AUDIO.md#getting-started) |
+| Rehearse in your own voice | Open **Teleprompter**, read with the passage cues and record a microphone take. Listen to it and review the transcript before using an excerpt as a voice reference. [Teleprompter](AUDIO.md#manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images) |
+| Hear a passage in the selected narrator's voice | Set the project's voice profile, then use **Listen and direct → Preview paragraph**. Adjust pronunciation or delivery and compare by ear. Use **Chapter audio** when you are ready to render, review and keep a chapter for a reader copy. [Audio workflow](AUDIO.md#getting-started) |
 | Share the material a reader needs | Prepare a manuscript PDF, a saved dossier PDF or a reading website with the chapters and background you select. Check the prepared copy before sharing. [Reading website](WORKSPACE.md#export-a-reading-website) |
 
 The [Warehouse 4 demo](demo/report.html) is a fixed example for close reading.
@@ -84,7 +100,7 @@ iPadOS ports. [Project funding and payment status](guides/support.html)
 | Chapter comparison | Ask a writer or editor to explain a difference between two chapters, find the contributing text and return to the reading position. Repeat when the comparison is unavailable and check whether they can still find measured passages. Record where they needed help. [Analysis marks and limits](guides/interpretation.html#analysis-marks) |
 | Desktop distribution | Verify the exact candidate files and their hashes. Exercise a fresh installation, first launch, upgrade and rollback on each supported system. Open the sample in the installed app. [Installer qualification](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#review-and-publish-one-candidate) |
 | Revision and research | Ask an author or editor to make a recoverable change and open a dossier with a pinned source. Check the saved result after reopening, including interruption, conflict or restore when relevant. [Writing and recovery](WORKSPACE.md#write-a-manuscript) |
-| Audio | Capture and replay a short take, including microphone permission and selection. Check the pronunciation route and preview the same passage with the selected engine. Record the runtime, model and saved direction for synthesis checks. Inspect word accuracy, voice consistency and audible joins when listening to a chapter. [Author voice](AUDIO.md#author-voice-recording-and-listening) · [Audio methods](METHODS.md) |
+| Audio | Ask the author to replay a microphone take, save a reviewed voice reference and audition a generated paragraph after editing a pronunciation. Ask which of those recordings will be available in a reader export, then check the retained chapter against the manuscript revision. Record runtime and model for synthesis checks. Listen for omitted or repeated words, voice changes and audible joins. [Audio workflow](AUDIO.md#getting-started) · [Audio methods](METHODS.md) |
 | Large projects | Time readiness, readable text, the first evidence jump and return on the same input. Measure archive validation separately from index queries. Keep evidence, saved project data and recovery in the checks when changing implementation. [Desktop and large-project priorities](RUST_EVALUATION_RFC.md#desktop-and-large-project-priorities) |
 
 Keep observation records free of private manuscript text and search terms. Use

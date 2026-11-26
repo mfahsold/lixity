@@ -797,7 +797,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 f'        <h3 id="welcome-project-recent-heading" class="recent-projects-heading">{L("recent_projects_heading")}</h3>'
             )
             parts.append(
-                f'        <button type="button" class="ctl-link recent-projects-clear" data-clear-recent-projects>{L("clear_recent_projects")}</button>'
+                f'        <button type="button" class="ctl ctl-sm" data-clear-recent-projects>{L("clear_recent_projects")}</button>'
             )
             parts.append(
                 '      </div>'
@@ -863,7 +863,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 f'<button type="button" class="file-dropzone dropzone-compact" id="manuscript-dropzone" aria-label="{L("wizard_drop_aria")}" aria-describedby="manuscript-drop-hint manuscript-file-name">'
             )
             parts.append(
-                f'<strong>{L("dropzone_drop_here")} <span class="ctl-link">{L("dropzone_browse")}</span></strong>'
+                f'<strong>{L("dropzone_drop_here")} {L("dropzone_browse")}</strong>'
             )
             parts.append(
                 f'<span class="ctl-note" id="manuscript-drop-hint">{L("dropzone_hint")}</span>'

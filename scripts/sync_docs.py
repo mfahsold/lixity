@@ -51,6 +51,10 @@ def check_or_sync_files(
         r"The documentation source version is \*\*v\d+\.\d+\.\d+\*\*",
         f"The documentation source version is **v{version}**",
     )
+    version_line_pin = (
+        r"this documentation describes source \*\*v\d+\.\d+\.\d+\*\*",
+        f"this documentation describes source **v{version}**",
+    )
     # Rules: (file_path, list of (pattern, replacement))
     rules: list[tuple[Path, list[tuple[str, str]]]] = [
         (
@@ -94,6 +98,26 @@ def check_or_sync_files(
                 (r"`v\d+\.\d+\.\d+` is the release pin",
                  f"`v{version}` is the release pin"),
             ],
+        ),
+        (
+            base / "docs" / "PRODUCT.md",
+            [version_line_pin],
+        ),
+        (
+            base / "docs" / "METHODS.md",
+            [version_line_pin],
+        ),
+        (
+            base / "docs" / "STABILITY.md",
+            [version_line_pin],
+        ),
+        (
+            base / "docs" / "AGENTS.md",
+            [version_line_pin],
+        ),
+        (
+            base / "docs" / "ARCHITECTURE.md",
+            [version_line_pin],
         ),
         (
             base / "docs" / "llms.txt",
@@ -192,7 +216,7 @@ def current_doc_files(root: Path | None = None) -> list[Path]:
 # Historical wording such as "since v1.20.0" remains valid.
 CURRENT_CLAIMS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("Markdown documentation source version",
-     re.compile(r"(?:The documentation source version is|this source documentation describes the prepared) \*\*v(\d+\.\d+\.\d+)\*\*")),
+     re.compile(r"(?:The documentation source version is|this source documentation describes the prepared|this documentation describes source) \*\*v(\d+\.\d+\.\d+)\*\*")),
     ("HTML documentation source version",
      re.compile(r'This source guide describes <strong>v(\d+\.\d+\.\d+)(?: development)?</strong>')),
     ("documentation source version",

@@ -45,6 +45,17 @@
     },
     warn: function (...args) { write('warn', args); },
     error: function (...args) { write('error', args); },
+    audioClient: function (event, correlation) {
+      var workspace = document.body?.dataset;
+      if (workspace?.readOnly !== 'false' || workspace.speechCapable !== 'true' ||
+          !/^\/(?:w\/[a-f0-9]{32}\/)?api$/.test(workspace.api || '') || !/^https?:$/.test(location.protocol)) return;
+      var payload = {event: event};
+      if (typeof correlation === 'string' && /^[a-f0-9]{16}$/.test(correlation)) payload.diagnostic_id = correlation;
+      void fetch(workspace.api + '/audio-client-diagnostic', {
+        method: 'POST', mode: 'same-origin', credentials: 'same-origin', redirect: 'error', referrerPolicy: 'no-referrer', keepalive: true,
+        headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+      }).catch(function () {});
+    },
     event: function (name, fields) {
       if (!isDebug) return;
       var parts = ['event=' + name];

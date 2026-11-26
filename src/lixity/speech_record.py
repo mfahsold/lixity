@@ -282,6 +282,7 @@ def record_audio(
                 raise ValueError("Gain is outside the selected input's ALSA range")
             control = info["control"]
         if not set_alsa_gain(gain, card=card, control=control):
+            log_event(_log, "capture_failed", logging.WARNING, reason="gain_failed")
             raise RuntimeError("Could not set the recording input gain")
 
     if countdown > 0:
@@ -344,7 +345,10 @@ def record_audio(
                 return wav.getvalue()
 
     if dev != DEFAULT_DEVICE:
+        log_event(_log, "capture_failed", logging.WARNING, reason="selected_input_failed")
         raise RuntimeError("Could not record from the selected ALSA input. Check that it is connected and available")
+    log_event(_log, "capture_failed", logging.WARNING,
+              reason="capture_tool_failed" if any((arecord, ffmpeg, pw_record)) else "capture_tools_missing")
     raise RuntimeError("No working audio capture tool found (install arecord, ffmpeg or pw-record)")
 
 

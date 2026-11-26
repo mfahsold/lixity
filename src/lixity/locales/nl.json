@@ -2205,6 +2205,7 @@
   "speech_render_title": "Audio genereren",
   "speech_reuse": "Voltooide hoofdstuksegmenten hergebruiken",
   "speech_reuse_help": "Hergebruik passende voltooide hoofdstuksegmenten. Schakel uit om ze opnieuw te maken. Alineavoorbeelden worden altijd nieuw gegenereerd.",
+  "speech_run_options": "Audio-opties",
   "speech_runtime_hint": "Synthese gebruikt de gekozen engine en bestemming. Controleer de dienst bij Stemprofielen. Beluister een voorbeeld; voltooide segmenten kunnen worden hergebruikt.",
   "speech_sample_custom": "Eigen tekst",
   "speech_sample_full": "Standaardpassage (fonetisch)",

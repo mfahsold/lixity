@@ -1,6 +1,6 @@
 # Was macht einen Roman sprachlich stark? Literaturforschung, Lektorat und Manuskriptdaten
 
-Veröffentlicht am 2. November 2026 · 10 Minuten · [English version](literary-quality-and-editorial-metrics.html)
+Veröffentlicht am 2. November 2026 · Aktualisiert am 26. November 2026 · 10 Minuten · [English version](literary-quality-and-editorial-metrics.html)
 
 Wenn Autorinnen, Autoren und Lektorat gemeinsam an einem Romanmanuskript arbeiten, dreht sich das Gespräch fast nie um einen einzelnen Lesbarkeitswert wie den Flesch-Index. Im Lektorat zählen konkrete handwerkliche Fragen: *Sprechen die Figuren in einem eigenen Rhythmus, oder klingen ihre Dialoge genauso gebaut wie der Erzähltext? Warum wirkt ein Kapitel plötzlich schleppend, obwohl die Sätze kurz sind? Wo beginnen drei oder vier Sätze hintereinander unbemerkt mit demselben Wort? Und wo darf ein Briefkapitel bewusst aus dem Stilrahmen fallen?*
 
@@ -12,11 +12,11 @@ Empirische Studien aus der Literaturwissenschaft (Computational Literary Studies
 
 - **Makro-Lektorat vs. Satz-Lektorat (Ginna, 2017; Greenberg, 2018).** Gute Lektoratsarbeit verbindet den Blick aus der Vogelperspektive (Kapiteltempo, Szenen-Ökonomie, Perspektivverteilung, Stimmkontrast) mit der Arbeit am einzelnen Absatz (Tempusbrüche, Wort-Echos, Satzübergänge). Ein Werkzeug hilft Schreibenden vor allem dann, wenn jede Kapitel-Kennzahl direkt zur betreffenden Textstelle zurückführt.
 
-- **Das Komplexitäts-Paradox (*The Riddle of Literary Quality*, Koolen, van Dalen-Oskam & van Cranenburgh, 2020).** In der großen niederländischen Leserstudie (401 Romane, über 13.800 Bewertungen) hing hohe literarische Wertschätzung eng mit größerer Wortschatzvielfalt (MTLD, HD-D) und komplexerem Satzbau zusammen, während Spannungsliteratur stärker auf unmittelbaren Szenenpuls und enge lokale Satzverknüpfung setzte. Einen einzigen „Qualitäts-Score“ kann es deshalb nicht geben: Ein literarischer Gesellschaftsroman und ein Krimi folgen unterschiedlichen rhythmischen Spielregeln.
+- **Leserurteile hängen vom Kontext ab.** Die niederländische Lesestudie erhob Urteile von knapp 14.000 Leserinnen und Lesern zu einem Korpus von 401 Romanen. Das Forschungsteam untersuchte unter anderem, wie das Genre und das Profil der Lesenden mit der Einschätzung zusammenhängen, ob ein Werk literarisch ist. [Koolen, van Dalen-Oskam, van Cranenburgh und Nagelhout (2020)](https://doi.org/10.1016/j.poetic.2020.101439).
 
-- **Dialog-Distinktivität (Burrows, 2002; Muzny et al., 2017).** In überzeugend gebauten Romanen unterscheidet sich die wörtliche Rede messbar vom umgebenden Erzähltext – insbesondere durch kürzere Sätze, elliptische Einwürfe und einen eigenen Schlagabtausch-Rhythmus.
+- **Erzähltexte verändern sich im Verlauf.** Boyd und sein Team untersuchten in rund 40.000 herkömmlichen Erzähltexten Wortgruppen für den Aufbau der Situation, das Fortschreiten der Handlung und gedankliche Anspannung. Solche Muster beschreiben ein Korpus. Der Satzlängenvergleich in Lixity geht einer engeren Frage im einzelnen Kapitel nach. [Boyd, Blackburn und Pennebaker (2020)](https://doi.org/10.1126/sciadv.aba2196).
 
-- **Lokale Satz-zu-Satz-Kohäsion (Coh-Metrix, Graesser, McNamara & Kintsch, 2004).** Ob ein Absatz flüssig trägt oder gedanklich springt, zeigt sich oft daran, ob aufeinanderfolgende Sätze Inhaltswörter wiederaufnehmen (Wortbrücke) oder ob gleichförmige Satzanfänge den Lesefluss mechanisch bremsen.
+- **Textzusammenhang entsteht auf mehreren Ebenen.** Coh-Metrix erfasst verschiedene sprachliche Bezüge. In Lixity zeigt die Wortüberlappung, wie häufig zwei aufeinanderfolgende Sätze in einem Absatz mindestens ein Inhaltswort teilen. Beim Lesen lässt sich prüfen, ob die Wiederaufnahme Orientierung gibt oder auffällig klingt. [Graesser, McNamara, Louwerse und Cai (2004)](https://doi.org/10.3758/BF03195564).
 
 <a id="klassiker-daten"></a>
 
@@ -65,7 +65,7 @@ In *Pride and Prejudice* fällt derselbe Unterschied zwischen Zählung und Lekt�
 
 <a id="workflow"></a>
 
-## 4. Vom Befund zur Überarbeitung: Die neue Lektorats-Reihenfolge in Lixity
+## 4. Vom Befund zur Überarbeitung
 
 Damit Autorinnen, Autoren und Lektorat ohne Umwege arbeiten können, sind die Sektionen der Analyse-Übersicht in Lixity nach dem tatsächlichen Überarbeitungs-Ablauf geordnet:
 

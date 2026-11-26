@@ -97,9 +97,15 @@ server.serve_forever()
           await page.locator('.voice-rec-btn').scrollIntoViewIfNeeded();
           await page.locator('#modal-speech').screenshot({path: path.join(artifacts, 'running-320.png')});
         }
+        const takeDiagnostic = page.waitForResponse(response =>
+          response.url() === new URL('api/audio-client-diagnostic', workspace).href);
         await page.locator('.voice-rec-btn').click();
         assert.equal(await page.locator('.voice-save-btn').isEnabled(), false,
           'A captured reading prompt remains a draft until the spoken transcript is confirmed');
+        const capture = await takeDiagnostic;
+        assert.equal(capture.status(), 204);
+        assert.deepEqual(capture.request().postDataJSON(), {event:'author_recording_ready'},
+          'Only the fact that an unsaved local recording is ready is reported');
         await page.waitForFunction(()=>document.querySelector('.voice-take-stats').textContent.includes('24000 Hz'));
         assert.match(await page.locator('.voice-take-stats').textContent(), /24000 Hz/);
         assert.equal(await page.locator('#speech-take_confirmed').isChecked(),false);

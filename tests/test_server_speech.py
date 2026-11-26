@@ -51,6 +51,33 @@ def context(source, handler):
     }
 
 
+def test_client_audio_diagnostic_accepts_only_bounded_same_origin_observations(speech_server, monkeypatch):
+    port, _source, _handler, _observed = speech_server
+    events = []
+    monkeypatch.setattr("lixity.server.routes_speech.log_event",
+                        lambda _logger, event, **fields: events.append((event, fields)))
+    route = "/api/audio-client-diagnostic"
+    payload = {"event": "generated_audio_playing", "diagnostic_id": "4a8c3c184bb125be"}
+    response = send(port, route, payload=payload)
+    assert response.status == 204
+    assert response.body == b""
+    assert send(port, route, payload={"event": "recording_capture_failed"}).status == 204
+    for invalid in (
+        {"event": ["SYNTHETIC_TRANSCRIPT"]},
+        {"event": "SYNTHETIC_TRANSCRIPT"},
+        {**payload, "diagnostic_id": "SYNTHETIC_TOKEN"},
+        {**payload, "diagnostic_id": None},
+        {**payload, "message": "SYNTHETIC_PRIVATE_ERROR"},
+    ):
+        assert send(port, route, payload=invalid).status == 400
+    assert send(port, route, payload={**payload, "message": "x" * 512}).status == 413
+    assert send(port, route, payload=payload, headers={"Origin": "https://invalid.example"}).status == 403
+    assert events == [
+        ("audio_client", {"id": payload["diagnostic_id"], "observation": "generated_audio_playing"}),
+        ("audio_client", {"id": None, "observation": "recording_capture_failed"}),
+    ]
+
+
 def test_soundcraft_excerpt_is_bound_exact_and_ephemeral(speech_server, monkeypatch):
     import base64
     import io
@@ -467,7 +494,7 @@ def test_voice_reference_delete_rechecks_context_before_unlinking(speech_server,
 
 
 @pytest.mark.parametrize("duration", [1, 60])
-def test_recording_save_reports_incompatible_activation_without_switching_engine(speech_server, duration):
+def test_recording_save_reports_incompatible_activation_without_switching_engine(speech_server, duration, monkeypatch):
     import base64
 
     from lixity.speech_references import load_reference
@@ -476,6 +503,9 @@ def test_recording_save_reports_incompatible_activation_without_switching_engine
     settings_path = source.parent / "lixity.toml"
     before = settings_path.read_bytes() if settings_path.exists() else None
     recording = generate_silence_wav(duration)
+    events = []
+    monkeypatch.setattr("lixity.server.routes_speech.log_event",
+                        lambda _logger, event, **fields: events.append((event, fields)))
     response = send(port, "/api/audio-microphone", payload={
         "action": "save_reference", "profile_id": "narrator", "transcript": "Synthetic reference.",
         "audio": base64.b64encode(recording).decode(),
@@ -487,6 +517,7 @@ def test_recording_save_reports_incompatible_activation_without_switching_engine
     assert data["activation"]["state"] == "failed"
     assert data["activation"]["message"]
     assert (settings_path.read_bytes() if settings_path.exists() else None) == before
+    assert events == [("audio_reference_saved", {"activation": "failed", "dashboard_reload_required": False})]
 
 
 @pytest.mark.parametrize("changed_file", ["manuscript.md", "lixity.toml"])
@@ -738,6 +769,8 @@ def test_observed_source_change_cancels_old_job_even_if_bytes_return(speech_serv
     original = source.read_bytes()
     release = threading.Event()
     entered = threading.Event()
+    events = []
+    monkeypatch.setattr(jobs, "log_event", lambda _logger, event, *args, **fields: events.append((event, fields)))
 
     def render(source, output, **kwargs):
         entered.set()
@@ -755,6 +788,8 @@ def test_observed_source_change_cancels_old_job_even_if_bytes_return(speech_serv
         source.write_text(source.read_text() + "Changed.\n")
         cancelled = send(port, "/api/speech-cancel", payload={**bound, "id": identifier})
         assert cancelled.status == 409
+        assert any(event == "audio_job" and fields.get("stage") == "stale_requested"
+                   and fields.get("reason") == "source_changed" for event, fields in events)
         source.write_bytes(original)
         release.set()
         query = urlencode({**bound, "id": identifier})

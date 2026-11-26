@@ -166,9 +166,12 @@ not open, check the folder for your platform.
 | Windows | `%LOCALAPPDATA%\lixity\service` |
 | Linux | `$XDG_STATE_HOME/lixity/service` or `~/.local/state/lixity/service` |
 
-The desktop engine writes diagnostics to `desktop-sidecar.log`. A quiet
-session can leave this file empty. The separately installed browser service uses
-[its own per-port log](#logs). Review log details before sharing.
+The desktop engine writes diagnostics to `desktop-sidecar.log`. Look for
+`desktop_engine_ready` to identify the engine process, app build and versions,
+then read the audio events from that session. The previous log can be in
+`desktop-sidecar.log.1` after rotation at engine start. The separately
+installed browser service uses [its own per-port log](#logs). Review log
+details before sharing.
 
 ## Find your setup task
 
@@ -386,6 +389,7 @@ for all readers and writers. Installing Lixity does not download an OCR model.
 </details>
 
 <a id="external-speech-providers-and-local-audio-inspection-unreleased"></a>
+<a id="external-speech-providers-and-local-audio-inspection"></a>
 
 ### Speech synthesis setup
 
@@ -464,6 +468,7 @@ word fidelity and timbre. The [MLX-Audio workflow](AUDIO.md#mlx-audio-on-apple-s
 covers fixed voices, render examples and transcription.
 
 <a id="native-audio-model-lifecycle-unreleased"></a>
+<a id="native-audio-model-lifecycle"></a>
 
 ### Native audio model lifecycle
 
@@ -605,6 +610,7 @@ available shared memory must be checked on the actual device; 8 GB does not
 guarantee that every input fits.
 
 <a id="experimental-coqui-and-openvoice-audio-unreleased"></a>
+<a id="experimental-coqui-and-openvoice-audio"></a>
 
 ### Experimental Coqui and OpenVoice audio
 
@@ -1027,6 +1033,22 @@ instruction text, reference audio, project paths or raw exception messages.
 The events describe the requested engine, not the model weight bytes or hardware
 that produced a cached segment. Existing WAV files acquire no retroactive log.
 
+On newer builds, native worker failures add `speech_transport` with the fixed
+engine, target, failure category and HTTP status where available. Match its
+diagnostic ID to `audio_job` or `render_end`. A ready preview is temporary.
+`audio_job` reports whether a chapter render was retained and gives a reason
+when the job no longer matches its workspace. `audio_reference_saved`
+identifies a stored recording separately from activation and view refresh.
+`capture_failed` distinguishes missing capture tools from failed attempts.
+
+The audio tools report allowlisted `audio_client` observations for blocked
+render requests, microphone capture, save failures and generated playback.
+A recording ready for review is still a draft. `audio_reference_saved`
+confirms that the project has a saved reference.
+`generated_audio_playing` means playback began in the browser. When the render
+request supplied a diagnostic ID, playback uses that same ID. These observations
+contain no text, reference identities, URLs, device names or raw errors.
+
 The managed application captures its own stderr in `service-PORT.log`. A separate
 CLI or speech-worker process writes to its own stderr and is not automatically
 merged into that file. To retain a CLI run, deliberately redirect stderr to a
@@ -1246,6 +1268,11 @@ Pages tree using the existing
 External links and public-site analytics remain separate from offline reading.
 
 ## Troubleshooting
+
+This section owns install, service lifecycle and environment failures.
+For command/config failures see [USAGE troubleshooting](USAGE.md#troubleshooting);
+for reading/review failures see [workspace troubleshooting](WORKSPACE.md#troubleshooting);
+for recording/synthesis failures see [audio limits](AUDIO.md#troubleshooting-and-limits).
 
 | Symptom | Action |
 | --- | --- |

@@ -173,6 +173,53 @@ memory for the run in MiB on macOS and Linux. The JSON uses `null` when memory
 usage is unavailable. For workload design, archive benchmarks and regression
 assertions, follow [Investigating performance](#investigating-performance).
 
+#### Rehearse a release and review the results
+
+Run `make release-rehearsal` locally with the [browser tools](tests/browser/README.md)
+installed. The browser run connects the following author-facing checks.
+
+| Behavior | Reviewed input and expected result |
+| --- | --- |
+| Read, revise and reopen an editable project | Warehouse 4 opens in a real loopback workspace. The explanation marks 22 of 31 words, the draft comparison leaves the file alone, explicit save survives reload, and the earlier pinned claim is still reachable. |
+| Trace a measurement across surfaces | Seven manually annotated public-domain excerpts agree across the CLI, dashboard and server. The hand annotations cover counting and evidence boundaries. |
+| Open the first-run product tour | The staged Pages site plays the actual responsive videos with localized captions and a working fallback. |
+| Smoke-install the fresh wheel | An isolated environment opens the installed CLI and local browser entry point and exports a project. The build keeps verified distributions and checksums together. |
+
+The same run measures analysis and supplementary reports on Warehouse 4,
+*Effi Briest* and *Pride and Prejudice*. It writes an incremental
+`results.json` with source commit, working-tree state, fixture digests and
+step outcomes under a new ignored `.artifacts/release-rehearsal/run-*`
+directory. Browser diagnostics, corpus digests and medians, and distribution
+checksums belong to that run. Use `make release-rehearsal REHEARSAL_ARGS=--skip-wheel`
+for the shorter iteration after a change. A run from an edited checkout is
+development evidence. Compare it with a clean run before assigning a result
+to a specific commit.
+
+```sh
+.venv/bin/python scripts/run_browser_suites.py --summary <run>/browser
+.venv/bin/python scripts/run_release_rehearsal.py --compare <baseline-run> <current-run>
+```
+
+After a change, reproduce a failed action on a fresh copy of the same project.
+Review changed result digests against the hand-checked passages, expected
+setting and output boundary. Compare timings on the same machine under similar
+load. Record an intentional analytical change in the affected method or release
+notes. For an unintended change, preserve the smallest meaningful assertion
+in the owning test and rerun the workflow. Keep edge-case unit tests for
+thresholds, interrupted writes and error paths alongside the realistic
+journeys. Keep raw runs and private inputs local. A public issue or release
+note needs the reproducible fixture, action and result.
+
+At promotion, retain the rehearsal result for the reviewed commit alongside
+`make rc-verify` and the [published-channel verification](#preparing-a-release).
+For Desktop, check the installed build and run the affected action in a copy of
+Warehouse 4 using the real WebView. Keep the source revision and signed bundle
+identity with the [desktop rollout receipt](desktop/README.md). For Pages,
+confirm the [deployed commit and assets](#publish-and-verify-pages) after the
+run. Record skipped platforms and channels as unverified. This local rehearsal
+uses the same fixtures for fast feedback and the release checks cover the
+broader platform, artifact and publication contracts.
+
 #### CI and test environments
 
 Lixity is **local-first** and uses GitHub Actions **only where hosted runners,
@@ -345,10 +392,13 @@ Commit, push, tag and publication each use their own operation.
    `make workflow-check` and, for changes affecting rendered output,
    `make browser-full`. The release check validates the proposed tag string
    against the source version and requires release notes before running the
-   source checks, generated documentation check and dependency audit. It then
-   promotes the verified archives and `SHA256SUMS` to `dist/` after an isolated
-   wheel smoke test covering package identity, CLI diagnostics, all three
-   reading-website formats and a document PDF. When keeping earlier artifacts,
+   source checks, generated documentation check and dependency audit. The
+   [local rehearsal](#rehearse-a-release-and-review-the-results) then checks the
+   author journeys and corpus before smoke-installing the candidate. Use an
+   isolated checkout of the reviewed commit for promotion. The rehearsal
+   checks that HEAD still matches the full source checks and builds into its
+   own run directory before promoting archives and `SHA256SUMS` to `dist/`.
+   When keeping earlier artifacts,
    set `RELEASE_DIST=.artifacts/release-X.Y.Z/dist` to build in a dedicated
    output directory. To recheck existing archives, use
    `.venv/bin/python scripts/check_release.py --tag vX.Y.Z --smoke` with
@@ -643,8 +693,10 @@ the reserved private directories. Use reviewed public source material throughout
 the documentation, including from paths that can feed generators.
 A push to `main` leaves the site at its previously deployed commit. After the
 reviewed commit reaches remote `main`, use `make pages-deploy` for an authorized
-documentation rollout. The production workflow also accepts a verified release
-ref from the tag pipeline. It verifies generated documentation before staging.
+documentation rollout. The command passes the full local commit SHA. The workflow
+checks that the dispatch resolved to that SHA and verifies the checkout before
+building. The tag pipeline supplies its verified release SHA. Both paths
+verify the generated documentation before staging.
 Wait for the run on the intended commit, then check `source_sha` and
 `workflow_run_url` in the live [deployment record](https://lixity.de/deployment.json)
 (legacy `https://mfahsold.github.io/lixity/deployment.json` redirects)
