@@ -24,9 +24,9 @@
   "share_text": "Export a saved dossier as a PDF with passages and source quotations. You can also make a reading site with selected chapters and background notes.",
   "principle": "You decide what to revise",
   "principle_text": "A mark shows what Lixity counted. Read the passage in context and decide if the long sentence or repetition fits the scene.",
-  "start_title": "Download Lixity",
-  "start_text": "Choose macOS, Windows or Linux. The guide takes you from download to first launch.",
-  "install_link": "Download the desktop app",
+  "start_title": "Install Lixity",
+  "start_text": "Choose a desktop build for your computer or install the published browser app from your terminal.",
+  "install_link": "Desktop downloads",
   "scope": "The demo shows development version v{version}.",
   "languages_title": "Lixity in seven languages",
   "languages_text": "The site and app interface are available in seven languages. Choose the manuscript analysis language explicitly; technical documentation remains in English.",
@@ -78,5 +78,6 @@
   "nav_docs": "Docs",
   "funding_title": "Bring Lixity to more devices",
   "funding_summary": "Early contributions help sign the desktop installers and develop Lixity for Android and iOS.",
-  "funding": "Support Lixity"
+  "funding": "Support Lixity",
+  "install_browser_link": "Local browser app and CLI"
 }

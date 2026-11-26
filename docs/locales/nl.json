@@ -24,9 +24,9 @@
   "share_text": "Exporteer een opgeslagen dossier als pdf met passages en broncitaten. Je kunt ook een leessite maken met zelfgekozen hoofdstukken en achtergrondnotities.",
   "principle": "Jij beslist wat je herziet",
   "principle_text": "Een markering laat zien wat Lixity heeft geteld. Lees de passage in haar context en bepaal of een lange zin of herhaling bij de scène past.",
-  "start_title": "Download Lixity",
-  "start_text": "Kies macOS, Windows of Linux. De Engelstalige handleiding helpt je van download tot de eerste keer openen.",
-  "install_link": "Desktopapp downloaden",
+  "start_title": "Lixity installeren",
+  "start_text": "Kies een versie voor je computer of installeer de lokale browserapp via de terminal. De handleidingen zijn in het Engels.",
+  "install_link": "Desktopdownloads",
   "scope": "De demo toont ontwikkelversie v{version}.",
   "languages_title": "Lixity in zeven talen",
   "languages_text": "De website en de app zijn beschikbaar in zeven talen. Je kiest de analysetaal expliciet; Engels is de standaard. Technische documentatie blijft in het Engels.",
@@ -78,5 +78,6 @@
   "nav_docs": "Handleidingen",
   "funding_title": "Lixity op meer apparaten",
   "funding_summary": "De eerste bijdragen helpen de installatiepakketten te ondertekenen en Lixity voor Android en iOS te ontwikkelen.",
-  "funding": "Steun Lixity"
+  "funding": "Steun Lixity",
+  "install_browser_link": "Lokale browserapp en CLI"
 }

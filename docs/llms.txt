@@ -10,6 +10,21 @@ and [PyPI](https://pypi.org/project/lixity/) for published packages.
 [Release notes](https://mfahsold.github.io/lixity/releases/v0.9.3.md) describe this
 source version. Product versions, response schemas and archive schemas are separate.
 
+## Choose which version to evaluate
+
+- **Native desktop.** Check [Desktop downloads](https://lixity.de/guides/installation.html#desktop)
+  first. Public installers require a compatible operating system and GUI.
+  GitHub Actions test archives require a GitHub sign-in and expire.
+- **Local browser app and CLI.** In a shell with Python, use the published
+  PyPI package in an isolated environment. Record `lixity --version` and
+  `lixity doctor`. With a browser available, use `lixity service start --open`
+  and test the workspace with a sample. In a terminal-only environment, use
+  service status and follow redirects when checking HTTP content.
+- **First analysis.** Use one Markdown file or a file relative to a selected
+  project root, for example `lixity analyze chapter.md --project ./novel`.
+  Include a longer multi-chapter sample before judging across-chapter metrics.
+  State which of CLI, browser and native desktop you exercised.
+
 ## Discover the installed interface
 
 - **CLI and Python.** Use `lixity about --json`, `lixity COMMAND --help` and

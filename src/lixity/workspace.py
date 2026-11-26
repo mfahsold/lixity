@@ -202,6 +202,12 @@ def resolve_manuscript_target(
         info = os.stat(selected)
     except FileNotFoundError as exc:
         raise ValueError(f"Manuscript not found: {selected}") from exc
+    if explicit is not None and stat.S_ISDIR(info.st_mode):
+        raise ValueError(
+            f"Expected a manuscript file, got a folder: {selected}. "
+            "Pass a Markdown file, or select the folder with --project PATH "
+            "and pass a project-relative file or configure manuscript in lixity.toml."
+        )
     if not stat.S_ISREG(info.st_mode):
         raise ValueError(f"Manuscript must be a regular file: {selected}")
     return Workspace(root=str(base), manuscript=selected)

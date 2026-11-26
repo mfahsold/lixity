@@ -52,7 +52,12 @@ lixity analyze manuscript.md --language en
 ```
 
 English is the default. For automatic language detection, choose
-`--language auto`. Some measurements require a longer text.
+`--language auto`. Start a short-text review with counts, sentence lengths or quoted passages.
+A style comparison needs enough measurable chapters and features to build a
+reference from your own text. An unavailable comparison gives you no basis
+to judge the prose. For a first style comparison, use a multi-chapter example
+such as [Effi Briest](examples/effi-briest.html) or
+[Pride and Prejudice](examples/pride-and-prejudice.html).
 [Language support](LOCALIZATION.md) · [Command reference](USAGE.md#which-command-for-which-question)
 
 ## Use the interactive workspace

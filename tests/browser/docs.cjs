@@ -1502,10 +1502,10 @@ async function checkSandboxQuotationPairs(page) {
             const locale = route ? route.slice(6, 8) : 'en';
             await expect(page.locator('html')).toHaveAttribute('lang', locale);
             const sandboxLanguage = locale === 'de' ? 'de' : 'en';
-            await expect(page.locator('.hero-cta a.primary')).toHaveAttribute('href', 'guides/installation.html');
+            await expect(page.locator('.hero-cta a.primary')).toHaveAttribute('href', 'guides/installation.html#desktop');
             await expect(page.locator('#sandbox-cta')).toHaveAttribute('href', 'sandbox/index.html?lang=' + sandboxLanguage);
             await expect(page.locator('#examples')).toHaveAttribute('href', '#product-tour-preview');
-            await expect(page.locator('#installation a.primary')).toHaveAttribute('href', 'guides/installation.html');
+            await expect(page.locator('#installation a.primary')).toHaveAttribute('href', 'guides/installation.html#desktop');
             await expect(page.locator('.language-list a')).toHaveCount(7);
             await expect(page.locator('head link[hreflang]')).toHaveCount(8);
             await expect(page.locator('.language-list a[aria-current=page]')).toHaveAttribute('lang', locale);
@@ -1536,9 +1536,9 @@ async function checkSandboxQuotationPairs(page) {
         await page.keyboard.press('Enter');
         await expect(page).toHaveURL(origin + '/lixity/#installation');
         await expect(page.locator('#installation h2')).toBeInViewport();
-        await page.locator('#installation a[href="guides/installation.html"]').click();
+        await page.locator('#installation a[href="guides/installation.html#desktop"]').click();
         await expect(page, 'An eager visitor can reach installation through the header and its dedicated section')
-          .toHaveURL(origin + '/lixity/guides/installation.html');
+          .toHaveURL(origin + '/lixity/guides/installation.html#desktop');
         const platformLinks = page.getByRole('navigation', {name: 'Desktop installation by operating system'});
         await expect(page.locator('.install-heading img')).toBeVisible();
         assert.equal(await page.locator('.install-heading img').evaluate(img => img.naturalWidth > 0), true);
@@ -1550,7 +1550,7 @@ async function checkSandboxQuotationPairs(page) {
         await page.goto(origin + '/lixity/');
         await page.locator('#download-cta').focus();
         await page.keyboard.press('Enter');
-        await expect(page).toHaveURL(origin + '/lixity/guides/installation.html');
+        await expect(page).toHaveURL(origin + '/lixity/guides/installation.html#desktop');
         await page.goto(origin + '/lixity/');
         await page.locator('#sandbox-cta').click();
         await expect(page).toHaveURL(origin + '/lixity/sandbox/index.html?lang=en');

@@ -244,14 +244,15 @@ def render(catalog: dict[str, Any], test_build: dict[str, Any] | None = None) ->
             for target, (label, _, format_label) in TEST_TARGETS.items():
                 artifact = test_build["artifacts"][target]
                 links.append((target, f'<a class="ctl primary desktop-test-archive" href="{run}/artifacts/{artifact}">'
-                                      f'<strong>{label}</strong><span>Test ZIP · {format_label}</span></a>'))
+                                      f'<strong>{label}</strong><span>GitHub sign-in · ZIP with {format_label}</span></a>'))
             expires = test_build["expires_at"]
             login = f'https://github.com/login?return_to=%2Fmfahsold%2Flixity%2Factions%2Fruns%2F{test_build["run_id"]}'
             return ('<p class="notice-box"><strong>Want to start right away without a GitHub account?</strong> '
                     'Use the <a href="#install">published local browser app and CLI</a> below — '
                     'no sign-in and no expiry. The desktop test archives here are unsigned builds hosted on GitHub Actions.</p>\n'
                     f'<p id="desktop-test-downloads">The {test_build["tag"]} downloads are desktop test builds. '
-                    f'<a href="{login}">Sign in to GitHub</a> to download your ZIP, then extract it.</p>\n'
+                    f'<a href="{login}">Sign in to GitHub</a> before downloading. Signed-out visitors may see a GitHub 404. '
+                    'Extract the archive and follow the setup steps for your system.</p>\n'
                     '<p id="desktop-test-expired" hidden>These test archives have expired. '
                     f'<a href="{TEST_WORKFLOW}">Find another test build</a>.</p>\n'
                     f'{render_platforms(links)}\n'

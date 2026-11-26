@@ -348,7 +348,7 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
             f"{report.asl_contrast:+.1f}" if report.asl_contrast is not None else "–",
         ),
         (
-            "Dialogue tags",
+            "dlg_dialogue_tags",
             (
                 f"{report.dialogue_tags} ({report.dialogue_tag_pct:.1f} %, {report.dialogue_tags_per_1000:.1f}/1k)"
                 if report.dialogue_tag_available
@@ -356,7 +356,7 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
             ),
         ),
         (
-            "Adverbial tags",
+            "dlg_adverbial_tags",
             (
                 f"{report.adverbial_tags} ({report.adverbial_tag_pct:.1f} %)"
                 if report.adverbial_tag_available
@@ -364,7 +364,7 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
             ),
         ),
         (
-            "Indirect speech",
+            "dlg_indirect_speech",
             (
                 f"{report.indirect_speech} ({report.indirect_speech_per_1000:.1f}/1k)"
                 if report.indirect_speech_available
@@ -372,9 +372,9 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
             ),
         ),
         (
-            "Voice separation",
+            "dlg_voice_separation",
             (
-                f"{report.voice_separation.separation_label} "
+                f"{_m('dlg_separation_' + report.voice_separation.separation_label)} "
                 f"(cos {report.voice_separation.cosine_similarity:.2f}, "
                 f"ΔASL {report.voice_separation.asl_delta:+.1f})"
                 if report.voice_separation.available
@@ -384,9 +384,8 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
             ),
         ),
     ):
-        label = (_m(key, short_words=config.short_turn_max_words, long_words=config.long_turn_min_words)
-                 if key.startswith("dlg_") else key)
-        summary.add_row(label, value)
+        summary.add_row(_m(key, short_words=config.short_turn_max_words,
+                           long_words=config.long_turn_min_words), value)
     con.print(summary)
 
     if report.chapters:
@@ -1493,7 +1492,9 @@ def _build_parser(only_command: str | None = None) -> argparse.ArgumentParser:
         ),
         epilog=(
             "Open the local app:  lixity service start --open\n"
-            "Read a report:      lixity analyze manuscript.md --language en\n"
+            "Read one file:      lixity analyze manuscript.md --language en\n"
+            "Use a project:      lixity analyze manuscript.md --project ./novel\n"
+            f"Desktop and browser installs: {docs_url('guides/installation.html')}\n"
             "Inspect commands:   lixity COMMAND --help  |  lixity about --json\n"
             f"Manuals: {docs_url('README.md')}\n"
             "Help is in English. LIXITY_LANG=de selects report/message language;\n"
@@ -1796,6 +1797,7 @@ def _build_parser(only_command: str | None = None) -> argparse.ArgumentParser:
             continue
         if name == "characters":
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: manuscript in root-local project config)")
+            p.add_argument("_extra_files", nargs="*", help=argparse.SUPPRESS)
             p.add_argument(
                 "--name",
                 action="append",
@@ -1992,6 +1994,11 @@ def _main(argv: list[str] | None = None) -> int:
         only_command = None
     parser = _build_parser(only_command=only_command)
     args = parser.parse_args(argv)
+    if args.command == "characters" and args._extra_files:
+        parser.error(
+            "characters takes one manuscript per run. Run it separately for each file, "
+            "or use one manuscript with chapter headings. See lixity characters --help."
+        )
     if args.command in ("project-backup", "project-restore"):
         from . import project_backup
         from .research.repository import ResearchError

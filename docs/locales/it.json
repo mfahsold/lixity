@@ -24,9 +24,9 @@
   "share_text": "Esporta un dossier salvato in PDF con brani e citazioni. Puoi anche creare un sito di lettura con i capitoli e le note che vuoi condividere.",
   "principle": "Decidi tu che cosa rivedere",
   "principle_text": "Una segnalazione mostra che cosa ha contato Lixity. Leggi il brano nel suo contesto e decidi se una frase lunga o una ripetizione si adattano alla scena.",
-  "start_title": "Scarica Lixity",
-  "start_text": "Scegli macOS, Windows o Linux. La guida in inglese ti accompagna dal download al primo avvio.",
-  "install_link": "Scarica l’app",
+  "start_title": "Installare Lixity",
+  "start_text": "Scegli una versione per il tuo computer o installa l’app web locale dal terminale. Le guide sono in inglese.",
+  "install_link": "Download per desktop",
   "scope": "La demo mostra la versione di sviluppo v{version}.",
   "languages_title": "Lixity in sette lingue",
   "languages_text": "Il sito e l’app sono disponibili in sette lingue. Scegli esplicitamente la lingua di analisi; l’inglese è l’impostazione predefinita. La documentazione tecnica resta in inglese.",
@@ -78,5 +78,6 @@
   "nav_docs": "Guide",
   "funding_title": "Lixity su più dispositivi",
   "funding_summary": "I primi contributi aiuteranno a firmare gli installer per computer e a sviluppare Lixity per Android e iOS.",
-  "funding": "Sostieni Lixity"
+  "funding": "Sostieni Lixity",
+  "install_browser_link": "App web locale e CLI"
 }

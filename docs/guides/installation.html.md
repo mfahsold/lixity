@@ -2,7 +2,7 @@
 
 # Install Lixity and open your manuscript
 
-Choose your computer below, download Lixity and open it from your applications menu. The desktop app includes its runtime. Built-in analysis runs on your computer.
+The desktop app includes its runtime and opens from your applications menu. The published local browser app and CLI use Python. Built-in analysis runs on your computer in both editions.
 
 Updated 25 November 2026
 
@@ -121,6 +121,16 @@ This source guide describes **v0.9.3**. Its changes are listed in the source [re
 <a id="requirements"></a>
 
 ## What does the published browser app need?
+
+Working in a terminal-only environment with Python 3.10 or later? Install the published package in an isolated environment. Use the [CLI quick start](https://lixity.de/USAGE.md#quick-start) for file and project examples.
+
+```
+python -m venv .venv
+# Activate the environment for your shell, then run:
+python -m pip install lixity
+lixity --version
+lixity doctor
+```
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/). It supplies managed Python 3.12 and installs Lixity from [PyPI](https://pypi.org/project/lixity/). You can also find the current wheel and its checksums on [GitHub Releases](https://github.com/mfahsold/lixity/releases/latest). Installation needs an internet connection. Analysis runs offline afterward. PDF import has [additional requirements](research-pdf.html#ocr).
 

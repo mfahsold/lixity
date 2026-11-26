@@ -24,9 +24,9 @@
   "share_text": "Exportiere ein gespeichertes Dossier mit Textstellen und Quellenzitaten als PDF. Oder stelle ausgewählte Kapitel und Hintergrundnotizen als Lesewebsite zusammen.",
   "principle": "Du entscheidest, was du überarbeitest",
   "principle_text": "Eine Markierung zeigt, was Lixity gezählt hat. Beim Lesen im Zusammenhang entscheidest du, ob der lange Satz oder die Wiederholung zur Szene passt.",
-  "start_title": "Lixity herunterladen",
-  "start_text": "Wähle macOS, Windows oder Linux. Die englische Anleitung führt dich vom Download bis zum ersten Start.",
-  "install_link": "Desktop-App herunterladen",
+  "start_title": "Lixity installieren",
+  "start_text": "Wähle einen Desktop-Build für deinen Rechner oder installiere die lokale Browser-App über das Terminal. Die Anleitungen sind auf Englisch.",
+  "install_link": "Desktop-Downloads",
   "scope": "Die Demo zeigt den Entwicklungsstand v{version}.",
   "languages_title": "Lixity in sieben Sprachen",
   "languages_text": "Website und App sind in sieben Sprachen verfügbar. Die Analysesprache wählst du ausdrücklich; Englisch ist die Voreinstellung. Die technische Dokumentation bleibt Englisch.",
@@ -78,5 +78,6 @@
   "nav_docs": "Doku",
   "funding_title": "Lixity auf mehr Geräte bringen",
   "funding_summary": "Die ersten Beiträge helfen, die Desktop-Installer zu signieren und Lixity für Android und iOS zu entwickeln.",
-  "funding": "Lixity unterstützen"
+  "funding": "Lixity unterstützen",
+  "install_browser_link": "Lokale Browser-App und CLI"
 }

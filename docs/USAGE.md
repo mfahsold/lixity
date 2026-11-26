@@ -79,7 +79,26 @@ lixity dashboard manuscript.md --language en -o dashboard.html
 `analyze` prints a terminal report; `dashboard` writes a browsable HTML file.
 Both leave the manuscript unchanged. Set the manuscript's actual language;
 English is the default and automatic detection requires `--language auto`.
-To work from a project with a configured manuscript, use an explicit root:
+
+For a German manuscript and German dialogue report on macOS or Linux:
+
+```sh
+LIXITY_LANG=de lixity dialogue manuscript.md --language de
+```
+
+In PowerShell, set `$env:LIXITY_LANG = 'de'` before running the command.
+
+For a folder containing individual chapter files, pass a file relative to
+the project root. Run `characters` on each file or on a single manuscript
+with chapter headings for an across-chapter view. Supply the names to count
+with `--names Jonas,Anna` or configure them in the project.
+
+```sh
+lixity analyze kapitel1.md --project ./novel --language de
+lixity characters kapitel1.md --project ./novel --names Jonas,Anna --language de
+```
+
+To omit the file, configure a default manuscript and use an explicit root:
 
 ```bash
 lixity analyze --project ./novel --json -o analysis.json
@@ -1064,7 +1083,10 @@ Set `--min-chapters N` for the minimum available style reference chapters
 covers the service backends, ports, startup and logs.
 
 `status --json` reports `lixity-service-status/1` without changing app state.
-Check `running: true` to identify a ready instance. Use the
+Check `running: true` to identify a ready instance. For a local HTTP smoke
+test, follow workspace redirects with `curl -fLsS http://127.0.0.1:8765/`.
+A successful page response verifies HTTP delivery. Open the printed URL in a
+browser to verify rendering and interaction. Use the
 [service JSON contract](AGENTS.md#managed-service-and-installed-build) for
 exit codes, fields and unknown states.
 

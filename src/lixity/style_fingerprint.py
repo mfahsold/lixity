@@ -1307,7 +1307,9 @@ def z_color(z: float) -> str:
 PASSPORT_TEXTS: dict[str, dict[str, str]] = {
     "en": {
         "style_passport": "STYLE REFERENCE",
-        "house_style": "self-calibrated house style",
+        "house_style": "chapter comparison",
+        "review_start": "Start with a chapter whose measurements differ. Read the passage to see whether the difference fits the scene.",
+        "review_unavailable": "Chapter comparison needs enough measurable text. Try a longer manuscript with chapter headings.",
         "chapter": "chapter",
         "chapters": "chapters",
         "median": "median",
@@ -1336,7 +1338,9 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
     },
     "de": {
         "style_passport": "STILREFERENZ",
-        "house_style": "selbstkalibrierter Hausstil",
+        "house_style": "Kapitelvergleich",
+        "review_start": "Beginne bei einem Kapitel mit auffälligen Messwerten. Lies die Stelle im Zusammenhang und prüfe, ob der Unterschied zur Szene passt.",
+        "review_unavailable": "Für einen Kapitelvergleich braucht Lixity ausreichend messbaren Text. Probiere es mit einem längeren Manuskript mit Kapitelüberschriften.",
         "chapter": "Kapitel",
         "chapters": "Kapitel",
         "median": "Median",
@@ -2094,6 +2098,7 @@ class StyleFingerprint:
             f"({self.n_chapters} {t('chapters' if self.n_chapters != 1 else 'chapter')})",
             "=" * 72,
         ]
+        lines.append(t("review_start" if self.measured_cells else "review_unavailable"))
         notes = self.interpretation_texts(labels, language_key)
         lines.extend(notes[key] for key in (
             "selection_limits", "decision_band", "decision_deviation", "decision_fdr", "decision_layer"
@@ -2142,14 +2147,15 @@ class StyleFingerprint:
             f"{t('consistency')}: {consistency_text} "
             f"{t('cells_in_band')} (z*)"
         )
-        lines.append(
-            f"{t('multiplicity')}: {format_num(self.expected_false_positives, language_key, 1)} "
-            f"{t('expected_hits')} |z*| >= {format_num(self.thresholds.z_mild, language_key, 1)}; "
-            f"{t('fdr_confirmed')} "
-            f"({'BY' if self.thresholds.fdr_method.lower().startswith('by') else 'BH'} "
-            f"q={format_num(self.thresholds.fdr_q, language_key, 2)}): "
-            f"{sum(len(v) for v in self.fdr_flagged.values())} {t('cells')}"
-        )
+        if self.measured_cells:
+            lines.append(
+                f"{t('multiplicity')}: {format_num(self.expected_false_positives, language_key, 1)} "
+                f"{t('expected_hits')} |z*| >= {format_num(self.thresholds.z_mild, language_key, 1)}; "
+                f"{t('fdr_confirmed')} "
+                f"({'BY' if self.thresholds.fdr_method.lower().startswith('by') else 'BH'} "
+                f"q={format_num(self.thresholds.fdr_q, language_key, 2)}): "
+                f"{sum(len(v) for v in self.fdr_flagged.values())} {t('cells')}"
+            )
         if self.baseline_diagnostics:
             diag = self.baseline_diagnostics
             count = int(diag.get("measured_features", 0))

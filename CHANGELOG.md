@@ -13,6 +13,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `6.44.0` to `6.44.1` (rebuilding `codemirror-editor.js` and its license
   inventory) and apply semver-compatible patch updates in `desktop/Cargo.lock`
   (`sha2` `0.11.2`, `zerocopy` / `zerocopy-derive` `0.8.66`).
+- Link home pages directly to desktop downloads and offer a one-click browser
+  exercise on every localized home page. Explain the GitHub sign-in
+  requirement beside test archives and document a terminal-only setup.
+- Give CLI users next steps for a folder passed as a manuscript or multiple
+  manuscripts passed to `characters`. Localize the remaining German dialogue
+  report labels, show a project example in top-level help, and explain where
+  to start reading a style comparison and why a short input can lack one.
+
 - Tighten the narrow-viewport workspace entry so the first manuscript paragraph
   sits higher on 320 px screens: fold the project support link inline into the
   compact metadata row below 1100 px while keeping the sidebar button on wide

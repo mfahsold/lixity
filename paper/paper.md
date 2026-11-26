@@ -106,25 +106,44 @@ spans and in the surrounding prose? The [case study][case-study] describes
 the measures and their limits. The tagged [sample corpus][samples] includes
 the input Markdown and its provenance. The `dialogue` command emits the
 chapter and corpus values as JSON with an explicit analysis language, and
-[the v0.9.1 archive][release-doi] identifies the software version needed to
+[the v0.9.2 archive][release-doi] identifies the software version needed to
 repeat the analysis. These measurements describe the two editions under
 their respective language profiles. They do not establish a quality target or
 a genre-wide norm. The case study is maintainer-led.
 
-[case-study]: https://mfahsold.github.io/lixity/blog/literary-quality-and-editorial-metrics.html#classic-data
-[samples]: https://github.com/mfahsold/lixity/tree/v0.9.1/samples
-[release-doi]: https://doi.org/10.5281/zenodo.24477720
+[case-study]: https://lixity.de/blog/literary-quality-and-editorial-metrics.html#classic-data
+[samples]: https://github.com/mfahsold/lixity/tree/v0.9.2/samples
+[release-doi]: https://doi.org/10.5281/zenodo.24514421
 
 # AI usage disclosure
 
-Generative AI coding assistants were used for code drafts, refactoring, test
-scaffolding and documentation during development. OpenAI Codex assisted with
-editing this software paper draft and checking its references to public
-software artifacts. The complete inventory of historical tools and model
-versions and the maintainer's verification statement are pending for submission.
+Generative AI tools were used during development and while preparing this
+paper. **Tools and places of use:** OpenAI Codex (code drafts, refactoring,
+test scaffolding, and copy-editing of this paper draft); GitHub Copilot (code
+and documentation, recorded as a `Co-authored-by` trailer on ten commits
+between 23 and 30 October 2026); Cursor (editor assistance and repository
+rules); opencode (one early commit, 23 September 2026). The model versions
+behind these tools were not recorded in the repository at the time of use.
+The measurements and examples reported here come from the deterministic
+analysis engine shipped with the release, not from a language model.
+
+**Review:** The author reviewed, edited and validated every AI-assisted
+output, checked the references and the reported values against the released
+version, and made the design decisions, the scope and the conclusions of this
+paper. The author remains responsible for the accuracy, originality,
+licensing and ethical compliance of the submitted material.
 
 # Acknowledgements
 
 Thanks to the Project Gutenberg editions used as public-domain example texts.
+
+# Conflict of interest and funding
+
+The author is employed by ROST Services GmbH, which offers commercial
+licences for Lixity alongside the AGPL-3.0-or-later release. This dual
+licensing is a commercial interest that the author discloses; it did not
+determine the measurements, the choice of examples or the conclusions of this
+paper. The work received no project-specific third-party funding, and no
+funder reviewed the manuscript before submission.
 
 # References

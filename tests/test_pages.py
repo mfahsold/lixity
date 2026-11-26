@@ -1046,7 +1046,7 @@ class TestPublicLanguages(unittest.TestCase):
                 self.assertIn(f'href="sandbox/index.html?lang={sandbox_language}" hreflang="{sandbox_language}"', text)
                 content = json.loads((ROOT / f"docs/locales/{language}.json").read_text(encoding="utf-8"))
                 self.assertEqual(head.meta["og:image:alt"], [content["preview"]])
-                self.assertIn('href="guides/installation.html"', text)
+                self.assertIn('href="guides/installation.html#desktop"', text)
 
     def test_missing_translation_fails_instead_of_falling_back(self):
         from unittest.mock import patch

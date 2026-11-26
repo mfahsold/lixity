@@ -92,7 +92,12 @@
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">Installation</span></li></ol></nav>
 <div class="install-heading"><img src="../assets/mark.svg" width="64" height="64" alt=""/><h1>Install Lixity and open your manuscript</h1></div>
-<p>Choose your computer below, download Lixity and open it from your applications menu. The desktop app includes its runtime. Built-in analysis runs on your computer.</p>
+<p>The desktop app includes its runtime and opens from your applications menu. The published local browser app and CLI use Python. Built-in analysis runs on your computer in both editions.</p>
+<nav class="install-platforms" aria-label="Ways to get started">
+<a class="ctl" href="#desktop">Desktop downloads</a>
+<a class="ctl" href="#install">Local browser app and CLI</a>
+<a class="ctl" href="../sandbox/index.html">Try a passage in the browser</a>
+</nav>
 <p class="updated">Updated <time datetime="2026-11-25">25 November 2026</time></p>
 
 <h2 id="desktop">Desktop downloads</h2>
@@ -179,6 +184,12 @@
 
 <details id="install" open><summary>Published local browser app and CLI (no GitHub account required)</summary>
 <h2 id="requirements">What does the published browser app need?</h2>
+<p>Working in a terminal-only environment with Python 3.10 or later? Install the published package in an isolated environment. Use the <a href="https://lixity.de/USAGE.md#quick-start">CLI quick start</a> for file and project examples.</p>
+<pre><code>python -m venv .venv
+# Activate the environment for your shell, then run:
+python -m pip install lixity
+lixity --version
+lixity doctor</code></pre>
 <p>Install <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. It supplies managed Python 3.12 and installs Lixity from <a href="https://pypi.org/project/lixity/">PyPI</a>. You can also find the current wheel and its checksums on <a href="https://github.com/mfahsold/lixity/releases/latest">GitHub Releases</a>. Installation needs an internet connection. Analysis runs offline afterward. PDF import has <a href="research-pdf.html#ocr">additional requirements</a>.</p>
 <p class="notice-box">Lixity is open source under AGPL-3.0-or-later. You can write and self-publish with it. A separate commercial license is available for closed-source integrations. <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">Licensing guide</a></p>
 
