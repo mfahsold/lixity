@@ -10,11 +10,7 @@ Updated 25 November 2026
 
 ## Desktop downloads
 
-**Want to start right away without a GitHub account?** Use the [published local browser app and CLI](#install) below — no sign-in and no expiry. The desktop test archives here are unsigned builds hosted on GitHub Actions.
-
-The v0.9.3 downloads are desktop test builds. [Sign in to GitHub](https://github.com/login?return_to=%2Fmfahsold%2Flixity%2Factions%2Fruns%2F45655881121) to download your ZIP, then extract it.
-
-These test archives have expired. [Find another test build](https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml).
+These v0.9.3 desktop preview builds are unsigned/ad-hoc installers you can download directly without a GitHub account. For the published release without OS security prompts, use the [published local browser app and CLI](#install).
 
 <a id="macos"></a>
 
@@ -22,9 +18,9 @@ These test archives have expired. [Find another test build](https://github.com/m
 
 macOS 12 or later
 
-[**Mac with Apple silicon**Test ZIP · DMG disk image](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043122730)
+[**Mac with Apple silicon**Preview · Lixity_0.9.3_aarch64.dmg · 27.3 MiB](https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/Lixity_0.9.3_aarch64.dmg)
 
-[**Mac with an Intel processor**Test ZIP · DMG disk image](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043707385)
+[**Mac with an Intel processor**Preview · Lixity_0.9.3_x64.dmg · 36.7 MiB](https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/Lixity_0.9.3_x64.dmg)
 
 [Mac setup steps](#macos-setup)
 
@@ -34,7 +30,11 @@ macOS 12 or later
 
 64-bit Intel or AMD PCs
 
-[**Windows Installer**Test ZIP · Setup EXE](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043787157)
+[**Windows Setup**Preview · Lixity_0.9.3_x64-setup.exe · 14.8 MiB](https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/Lixity_0.9.3_x64-setup.exe)
+
+[**Windows MSI (German)**Preview · Lixity_0.9.3_x64_de-DE.msi · 21.2 MiB](https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/Lixity_0.9.3_x64_de-DE.msi)
+
+[**Windows MSI (English)**Preview · Lixity_0.9.3_x64_en-US.msi · 21.2 MiB](https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/Lixity_0.9.3_x64_en-US.msi)
 
 [Windows setup steps](#windows-setup)
 
@@ -44,7 +44,9 @@ macOS 12 or later
 
 64-bit Intel or AMD PCs
 
-[**Linux Installer**Test ZIP · DEB or AppImage](https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15044072040)
+[**Ubuntu and Debian**Preview · Lixity_0.9.3_amd64.deb · 46.2 MiB](https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/Lixity_0.9.3_amd64.deb)
+
+[**Linux AppImage**Preview · Lixity_0.9.3_amd64.AppImage · 117.8 MiB](https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/Lixity_0.9.3_amd64.AppImage)
 
 [Linux setup steps](#linux-setup)
 
@@ -56,9 +58,7 @@ Choose the downloaded installer. If it came in a ZIP, extract it first. Your bro
 
 Select the downloaded installer
 
-The archive includes the SHA-256 checksums and the setup guide.
-
-Download by 2026-12-25, 16:45 UTC. [GitHub Actions run](https://github.com/mfahsold/lixity/actions/runs/45655881121#artifacts) · [Source commit](https://github.com/mfahsold/lixity/commit/2d55e56408f8e048d5b976cd9802cf4505e57a3f) · [Find another test build](https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml) · [Alternative installation](#install).
+[Preview release desktop-preview-v0.9.3](https://github.com/mfahsold/lixity/releases/tag/desktop-preview-v0.9.3) · [Check SHA-256 sums](https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/SHA256SUMS-desktop.txt) · [Source commit](https://github.com/mfahsold/lixity/commit/b3bfee6f83498c10d6fcb8eb3702f278ba761e48) · [Published browser app and CLI](#install).
 
 The desktop app includes Python. After installation, open Lixity from your application menu. For a Linux AppImage, keep the executable file and open it again from the same location.
 

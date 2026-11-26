@@ -102,27 +102,28 @@
 <a class="ctl" href="#linux">Linux</a>
 </nav>
 <!-- desktop-downloads:start -->
-<p class="notice-box"><strong>Want to start right away without a GitHub account?</strong> Use the <a href="#install">published local browser app and CLI</a> below — no sign-in and no expiry. The desktop test archives here are unsigned builds hosted on GitHub Actions.</p>
-<p id="desktop-test-downloads">The v0.9.3 downloads are desktop test builds. <a href="https://github.com/login?return_to=%2Fmfahsold%2Flixity%2Factions%2Fruns%2F45655881121">Sign in to GitHub</a> to download your ZIP, then extract it.</p>
-<p id="desktop-test-expired" hidden>These test archives have expired. <a href="https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml">Find another test build</a>.</p>
+<p id="desktop-test-downloads">These v0.9.3 desktop preview builds are unsigned/ad-hoc installers you can download directly without a GitHub account. For the published release without OS security prompts, use the <a href="#install">published local browser app and CLI</a>.</p>
 <div class="desktop-download-grid">
 <section class="desktop-download-card" aria-labelledby="macos">
 <h3 id="macos">Mac</h3>
 <p class="desktop-platform-requirement">macOS 12 or later</p>
-<div class="desktop-download-actions"><a class="ctl primary desktop-test-archive" href="https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043122730"><strong>Mac with Apple silicon</strong><span>Test ZIP · DMG disk image</span></a>
-<a class="ctl primary desktop-test-archive" href="https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043707385"><strong>Mac with an Intel processor</strong><span>Test ZIP · DMG disk image</span></a></div>
+<div class="desktop-download-actions"><a class="ctl primary" href="https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/Lixity_0.9.3_aarch64.dmg"><strong>Mac with Apple silicon</strong><span>Preview · Lixity_0.9.3_aarch64.dmg · 27.3 MiB</span></a>
+<a class="ctl primary" href="https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/Lixity_0.9.3_x64.dmg"><strong>Mac with an Intel processor</strong><span>Preview · Lixity_0.9.3_x64.dmg · 36.7 MiB</span></a></div>
 <p><a href="#macos-setup">Mac setup steps</a></p>
 </section>
 <section class="desktop-download-card" aria-labelledby="windows">
 <h3 id="windows">Windows</h3>
 <p class="desktop-platform-requirement">64-bit Intel or AMD PCs</p>
-<div class="desktop-download-actions"><a class="ctl primary desktop-test-archive" href="https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15043787157"><strong>Windows Installer</strong><span>Test ZIP · Setup EXE</span></a></div>
+<div class="desktop-download-actions"><a class="ctl primary" href="https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/Lixity_0.9.3_x64-setup.exe"><strong>Windows Setup</strong><span>Preview · Lixity_0.9.3_x64-setup.exe · 14.8 MiB</span></a>
+<a class="ctl primary" href="https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/Lixity_0.9.3_x64_de-DE.msi"><strong>Windows MSI (German)</strong><span>Preview · Lixity_0.9.3_x64_de-DE.msi · 21.2 MiB</span></a>
+<a class="ctl primary" href="https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/Lixity_0.9.3_x64_en-US.msi"><strong>Windows MSI (English)</strong><span>Preview · Lixity_0.9.3_x64_en-US.msi · 21.2 MiB</span></a></div>
 <p><a href="#windows-setup">Windows setup steps</a></p>
 </section>
 <section class="desktop-download-card" aria-labelledby="linux">
 <h3 id="linux">Linux</h3>
 <p class="desktop-platform-requirement">64-bit Intel or AMD PCs</p>
-<div class="desktop-download-actions"><a class="ctl primary desktop-test-archive" href="https://github.com/mfahsold/lixity/actions/runs/45655881121/artifacts/15044072040"><strong>Linux Installer</strong><span>Test ZIP · DEB or AppImage</span></a></div>
+<div class="desktop-download-actions"><a class="ctl primary" href="https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/Lixity_0.9.3_amd64.deb"><strong>Ubuntu and Debian</strong><span>Preview · Lixity_0.9.3_amd64.deb · 46.2 MiB</span></a>
+<a class="ctl primary" href="https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/Lixity_0.9.3_amd64.AppImage"><strong>Linux AppImage</strong><span>Preview · Lixity_0.9.3_amd64.AppImage · 117.8 MiB</span></a></div>
 <p><a href="#linux-setup">Linux setup steps</a></p>
 </section>
 </div>
@@ -132,10 +133,9 @@
 <label for="installer-check-file">Select the downloaded installer</label>
 <input id="installer-check-file" type="file" accept=".dmg,.exe,.msi,.deb,.appimage"/>
 <p id="installer-check-status" role="status"></p>
-<script id="installer-check-digests" type="application/json">[{"filename": "Lixity_0.9.3_aarch64.dmg", "bytes": 28599296, "sha256": "7041100edba6a8c96b0acd56c6dea774c6336ef1885dbfdfb8a4fafb3178e032"}, {"filename": "Lixity_0.9.3_amd64.AppImage", "bytes": 123517432, "sha256": "054acb6f798e20181b22a4bb7520e80d8b550c6871044a5d31a6b507944ebfe6"}, {"filename": "Lixity_0.9.3_amd64.deb", "bytes": 48453096, "sha256": "fa6058939440575ba5a92fb9293ee380353e38c53cc2d94f9f8eedbf06be8e5f"}, {"filename": "Lixity_0.9.3_x64-setup.exe", "bytes": 15499150, "sha256": "8171363d9252a454960d78a84454912f78b04f8588343c8cc75772b5afa48f0b"}, {"filename": "Lixity_0.9.3_x64.dmg", "bytes": 38482212, "sha256": "ceee73108faf00aea120bb97a20f1e3f3897461f65066d3f62f0446cc7923781"}, {"filename": "Lixity_0.9.3_x64_de-DE.msi", "bytes": 22200655, "sha256": "6d871b65f25560b1c6f98c5107a517cda4c9f739682d531e36c1e3aa9a5d6ed3"}, {"filename": "Lixity_0.9.3_x64_en-US.msi", "bytes": 22199064, "sha256": "1e1353298d3c3e8205b3e458edea6052420967e4eaf960100c8c752235beca45"}]</script>
+<script id="installer-check-digests" type="application/json">[{"filename": "Lixity_0.9.3_aarch64.dmg", "bytes": 28634624, "sha256": "d92d80ccf0ccabb50123c6ef6a45a651621a49b53629e32cc96aa8c2156dad34"}, {"filename": "Lixity_0.9.3_x64.dmg", "bytes": 38500200, "sha256": "269eb27e16de942f93f76301d5e60e7a9f5a1104bdfd2701089e275763ff1e5c"}, {"filename": "Lixity_0.9.3_x64-setup.exe", "bytes": 15504871, "sha256": "ef508d0f4e0559e24f30ebb3ac5b3d4a8505cae526de6bfee317bd162b555b2c"}, {"filename": "Lixity_0.9.3_x64_de-DE.msi", "bytes": 22196559, "sha256": "7e22ce65581aeda9bb086d3224f94aed21730a6f8ac52f9fa4648b759e4167df"}, {"filename": "Lixity_0.9.3_x64_en-US.msi", "bytes": 22194968, "sha256": "209e1a9b9b747b94c76c7673cc333854a7b236cd531bea058fef1f0ed4a43d48"}, {"filename": "Lixity_0.9.3_amd64.deb", "bytes": 48471142, "sha256": "f01f4a0682893e70dc14ca70e2c6e1e669cd73fee402a8e7644afce08b26dbe4"}, {"filename": "Lixity_0.9.3_amd64.AppImage", "bytes": 123533816, "sha256": "da7d6e254bb241d0f57fd25ab49bba5d9755bc24e8cda4b801a9b7b7bd2d5b7f"}]</script>
 </section>
-<p>The archive includes the SHA-256 checksums and the setup guide.</p>
-<p>Download by <time id="desktop-test-expiry" datetime="2026-12-25T16:45:28Z">2026-12-25, 16:45 UTC</time>. <a href="https://github.com/mfahsold/lixity/actions/runs/45655881121#artifacts">GitHub Actions run</a> · <a href="https://github.com/mfahsold/lixity/commit/2d55e56408f8e048d5b976cd9802cf4505e57a3f">Source commit</a> · <a href="https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml">Find another test build</a> · <a href="#install">Alternative installation</a>.</p>
+<p><a href="https://github.com/mfahsold/lixity/releases/tag/desktop-preview-v0.9.3">Preview release desktop-preview-v0.9.3</a> · <a href="https://github.com/mfahsold/lixity/releases/download/desktop-preview-v0.9.3/SHA256SUMS-desktop.txt">Check SHA-256 sums</a> · <a href="https://github.com/mfahsold/lixity/commit/b3bfee6f83498c10d6fcb8eb3702f278ba761e48">Source commit</a> · <a href="#install">Published browser app and CLI</a>.</p>
 <!-- desktop-downloads:end -->
 <p>The desktop app includes Python. After installation, open Lixity from your application menu. For a Linux AppImage, keep the executable file and open it again from the same location.</p>
 

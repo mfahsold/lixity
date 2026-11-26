@@ -1,64 +1,65 @@
 {
   "schema_version": "lixity-desktop-test-build/1",
   "tag": "v0.9.3",
-  "commit": "2d55e56408f8e048d5b976cd9802cf4505e57a3f",
-  "run_id": 45655881121,
-  "expires_at": "2026-12-25T16:45:28Z",
+  "commit": "b3bfee6f83498c10d6fcb8eb3702f278ba761e48",
+  "run_id": 45852694000,
+  "expires_at": "2026-12-26T15:58:56Z",
+  "preview_release_tag": "desktop-preview-v0.9.3",
   "artifacts": {
-    "aarch64-apple-darwin": 15043122730,
-    "x86_64-apple-darwin": 15043707385,
-    "x86_64-pc-windows-msvc": 15043787157,
-    "x86_64-unknown-linux-gnu": 15044072040
+    "aarch64-apple-darwin": 15134982252,
+    "x86_64-apple-darwin": 15134624772,
+    "x86_64-pc-windows-msvc": 15136400802,
+    "x86_64-unknown-linux-gnu": 15135865556
   },
   "installers": [
     {
       "target": "aarch64-apple-darwin",
       "kind": "macos-dmg",
       "filename": "Lixity_0.9.3_aarch64.dmg",
-      "bytes": 28599296,
-      "sha256": "7041100edba6a8c96b0acd56c6dea774c6336ef1885dbfdfb8a4fafb3178e032"
+      "bytes": 28634624,
+      "sha256": "d92d80ccf0ccabb50123c6ef6a45a651621a49b53629e32cc96aa8c2156dad34"
     },
     {
       "target": "x86_64-unknown-linux-gnu",
       "kind": "linux-appimage",
       "filename": "Lixity_0.9.3_amd64.AppImage",
-      "bytes": 123517432,
-      "sha256": "054acb6f798e20181b22a4bb7520e80d8b550c6871044a5d31a6b507944ebfe6"
+      "bytes": 123533816,
+      "sha256": "da7d6e254bb241d0f57fd25ab49bba5d9755bc24e8cda4b801a9b7b7bd2d5b7f"
     },
     {
       "target": "x86_64-unknown-linux-gnu",
       "kind": "linux-deb",
       "filename": "Lixity_0.9.3_amd64.deb",
-      "bytes": 48453096,
-      "sha256": "fa6058939440575ba5a92fb9293ee380353e38c53cc2d94f9f8eedbf06be8e5f"
+      "bytes": 48471142,
+      "sha256": "f01f4a0682893e70dc14ca70e2c6e1e669cd73fee402a8e7644afce08b26dbe4"
     },
     {
       "target": "x86_64-pc-windows-msvc",
       "kind": "windows-nsis",
       "filename": "Lixity_0.9.3_x64-setup.exe",
-      "bytes": 15499150,
-      "sha256": "8171363d9252a454960d78a84454912f78b04f8588343c8cc75772b5afa48f0b"
+      "bytes": 15504871,
+      "sha256": "ef508d0f4e0559e24f30ebb3ac5b3d4a8505cae526de6bfee317bd162b555b2c"
     },
     {
       "target": "x86_64-apple-darwin",
       "kind": "macos-dmg",
       "filename": "Lixity_0.9.3_x64.dmg",
-      "bytes": 38482212,
-      "sha256": "ceee73108faf00aea120bb97a20f1e3f3897461f65066d3f62f0446cc7923781"
+      "bytes": 38500200,
+      "sha256": "269eb27e16de942f93f76301d5e60e7a9f5a1104bdfd2701089e275763ff1e5c"
     },
     {
       "target": "x86_64-pc-windows-msvc",
       "kind": "windows-msi",
       "filename": "Lixity_0.9.3_x64_de-DE.msi",
-      "bytes": 22200655,
-      "sha256": "6d871b65f25560b1c6f98c5107a517cda4c9f739682d531e36c1e3aa9a5d6ed3"
+      "bytes": 22196559,
+      "sha256": "7e22ce65581aeda9bb086d3224f94aed21730a6f8ac52f9fa4648b759e4167df"
     },
     {
       "target": "x86_64-pc-windows-msvc",
       "kind": "windows-msi",
       "filename": "Lixity_0.9.3_x64_en-US.msi",
-      "bytes": 22199064,
-      "sha256": "1e1353298d3c3e8205b3e458edea6052420967e4eaf960100c8c752235beca45"
+      "bytes": 22194968,
+      "sha256": "209e1a9b9b747b94c76c7673cc333854a7b236cd531bea058fef1f0ed4a43d48"
     }
   ]
 }
