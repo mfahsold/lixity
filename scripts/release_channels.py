@@ -61,6 +61,7 @@ PAGES_VERIFY_FILES = (
     "robots.txt",
     "sitemap.xml",
     "sitemap-alt.xml",
+    "BingSiteAuth.xml",
     "desktop-downloads.json",
     "blog/feed.xml",
     "llms.txt",

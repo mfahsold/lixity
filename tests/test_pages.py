@@ -621,6 +621,19 @@ class TestPagesStaging(unittest.TestCase):
             with self.assertRaises(FileExistsError):
                 stage(docs, output)
 
+    def test_bing_ownership_proof_is_published_verbatim_at_the_apex(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            docs = root / "docs"
+            docs.mkdir()
+            proof = b'<?xml version="1.0"?>\r\n<users><user>synthetic</user></users>\r\n'
+            (docs / "BingSiteAuth.xml").write_bytes(proof)
+            (docs / "local-verification.xml").write_bytes(b"unpublished fixture")
+            output = root / "site"
+            stage(docs, output, base_url="https://lixity.de/")
+            self.assertEqual((output / "BingSiteAuth.xml").read_bytes(), proof)
+            self.assertFalse((output / "local-verification.xml").exists())
+
     def test_screenshot_manifest_excludes_unreviewed_images(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

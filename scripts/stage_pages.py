@@ -51,6 +51,7 @@ DOCS_ROOT_FILES = {
     *(page_path(language) for language in LANGUAGES),
     "robots.txt",
     "sitemap.xml",
+    "BingSiteAuth.xml",  # Public Bing ownership proof; preserve the downloaded bytes.
     "indexnow-key.txt",  # Public ownership proof, scoped by the deployed keyLocation.
     "favicon.ico",
     "manifest.webmanifest",
@@ -316,7 +317,8 @@ def stage(source: Path, output: Path, *, base_url: str = LEGACY_PAGES_BASE_URL) 
         relative = path.relative_to(source)
         target = output / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        if base_url == LEGACY_PAGES_BASE_URL or path.suffix not in _SITE_TEXT_SUFFIXES:
+        if (relative.as_posix() == "BingSiteAuth.xml" or base_url == LEGACY_PAGES_BASE_URL
+                or path.suffix not in _SITE_TEXT_SUFFIXES):
             shutil.copyfile(path, target)
         elif relative.as_posix() not in demo_files:
             content = path.read_bytes().decode("utf-8")

@@ -562,6 +562,10 @@ receipt, not crawling, indexing or ranking. See the
 [IndexNow protocol](https://www.indexnow.org/documentation). Bing Webmaster Tools
 requires its own verified access for performance and indexing diagnostics;
 Google Search Console credentials do not grant Bing access.
+For Bing's XML verification, Pages publishes the downloaded public ownership
+proof from `docs/BingSiteAuth.xml` verbatim at the site's root. After deploying,
+verify the exact bytes at `https://lixity.de/BingSiteAuth.xml` and complete
+verification in Webmaster Tools.
 
 #### Generate and preview
 
