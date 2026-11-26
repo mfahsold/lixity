@@ -106,7 +106,7 @@ _SECTIONS = (
         Entry("consistency", "consistency", "help_consistency"),
         Entry("dimensions", "style_dimensions", "help_dimensions"),
         Entry("structural", "panel_structural", "help_structural"),
-        Entry("fdr", "FDR", "help_fdr"),
+        Entry("fdr", "fdr_flagged", "help_fdr"),
     )),
     Section("matrix", "chapter_table", ("matrix",), (
         Entry("chapter_flags", "panel_flags", "help_chapter_flags"),
@@ -142,7 +142,7 @@ METRIC_REFERENCE_ENTRIES = frozenset(
     for key in (entry.key, *_ENTRY_ALIASES.get(entry.key, ()))
 )
 
-_INVARIANT_TITLES = frozenset({"FDR", "Flesch", "LIX", "TTR", "Yule’s K"})
+_INVARIANT_TITLES = frozenset({"Flesch", "LIX", "TTR", "Yule’s K"})
 
 _NOTES: dict[str, dict[str, str]] = {
     "de": {
@@ -177,7 +177,7 @@ _NOTES: dict[str, dict[str, str]] = {
         "characters": "Enter the names or name patterns in the project. When a name drops out for several chapters, check whether the character is still referred to with pronouns.",
         "style": "Compare a chapter with typical values from measurable chapters of the same manuscript. Start with the raw value and the amount of text measured. A chapter written as a letter may deliberately sound different from the surrounding narrative.",
         "style_support": "By default, each measure needs at least {min_chapters} measurable chapters. If every value is identical, there is no spread to use for comparison.",
-        "matrix": "Each row summarizes one chapter. A dash indicates that a comparison value is unavailable. Open a flagged passage and check whether the pattern fits what the chapter is doing.",
+        "matrix": "Each row summarizes one chapter. A dash indicates that a comparison value is unavailable. Open a marked passage and check whether the pattern fits what the chapter is doing.",
         "revisions": "The comparison measures the confirmed text, current file and draft with the same settings. If the average falls from 12 to 8, the change is −4 words per sentence. Read the text changes to see whether long sentences were removed or short ones were added. Gaps in saved history indicate unavailable comparable measurements.",
         "methods": "Formulas, reference groups and statistical limits",
     },

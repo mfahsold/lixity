@@ -120,3 +120,58 @@ class TestInterpretationLabels(unittest.TestCase):
                 self.assertIn(independence[language], labels["help_distribution_shift"])
                 self.assertIn("nom", labels["structural_no_trends"].lower())
                 self.assertIn("nom", labels["structural_no_shifts"].lower())
+
+    def test_point_of_display_labels_deescalate_narratological_and_inferential_terms(self):
+        expected = {
+            "en": {
+                "flagged": "Deviation candidate",
+                "fdr_flagged": "Uncalibrated selection (self-comparison)",
+                "analysis_nav_showing": "Surface signals",
+                "pac_hook": "Closing cues (rule)",
+            },
+            "de": {
+                "flagged": "Abweichungskandidat",
+                "fdr_flagged": "Unkalibrierte Auswahl (Selbstvergleich)",
+                "analysis_nav_showing": "Oberflächensignale",
+                "pac_hook": "Schlussmerkmale (Regel)",
+            },
+            "fr": {
+                "flagged": "Candidat d’écart",
+                "fdr_flagged": "Sélection non calibrée (auto-comparaison)",
+                "analysis_nav_showing": "Signaux de surface",
+                "pac_hook": "Indices de clôture (règle)",
+            },
+            "es": {
+                "flagged": "Candidato de desviación",
+                "fdr_flagged": "Selección no calibrada (autocomparación)",
+                "analysis_nav_showing": "Señales superficiales",
+                "pac_hook": "Indicios de cierre (regla)",
+            },
+            "it": {
+                "flagged": "Candidato di deviazione",
+                "fdr_flagged": "Selezione non calibrata (autoconfronto)",
+                "analysis_nav_showing": "Segnali di superficie",
+                "pac_hook": "Indizi di chiusura (regola)",
+            },
+            "pt": {
+                "flagged": "Candidato de desvio",
+                "fdr_flagged": "Seleção não calibrada (autocomparação)",
+                "analysis_nav_showing": "Sinais de superfície",
+                "pac_hook": "Indícios de fechamento (regra)",
+            },
+            "nl": {
+                "flagged": "Afwijkingskandidaat",
+                "fdr_flagged": "Ongekalibreerde selectie (zelfvergelijking)",
+                "analysis_nav_showing": "Oppervlaktesignalen",
+                "pac_hook": "Slotkenmerken (regel)",
+            },
+        }
+        for language in LOCALES:
+            with self.subTest(language=language):
+                labels = LANGUAGE_PROFILES[language].labels
+                for key, value in expected[language].items():
+                    self.assertEqual(labels[key], value)
+                self.assertNotIn("immediate scene experience", labels["help_immersion"].lower())
+                self.assertNotIn("unmittelbare szenenerfahrung", labels["help_immersion"].lower())
+                self.assertNotIn("editorial guidance for narrative distance", labels["showing_context_note"].lower())
+                self.assertNotIn("redaktionelle orientierung für erzählnähe", labels["showing_context_note"].lower())

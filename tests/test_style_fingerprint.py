@@ -629,7 +629,7 @@ class TestFingerprintDashboard(unittest.TestCase):
         self.assertIsNotNone(match)
         payload = json.loads(html_module.unescape(match.group(1)))
         self.assertEqual(payload["points"][0]["title"], title)
-        self.assertEqual(payload["labels"]["flagged"], "auffällige Kapitel")
+        self.assertEqual(payload["labels"]["flagged"], "Abweichungskandidaten")
         self.assertNotIn(title, rendered)
 
     def test_dimension_controls_expose_initial_state(self):
@@ -696,7 +696,7 @@ class TestFingerprintDashboard(unittest.TestCase):
         self.assertNotIn('href="#ch-2"', markup)
         self.assertIn("+0,50", markup)
         self.assertIn("-1,25", markup)
-        self.assertIn("Auffällig", markup)
+        self.assertIn("Abweichungskandidat", markup)
         self.assertIn(html_module.escape(title, quote=True), markup)
         self.assertNotIn("<img", markup)
 
@@ -1053,7 +1053,7 @@ class TestDimensionInformation(unittest.TestCase):
         self.assertIn('id="dim-selection"', rendered)
         self.assertIn('id="dim-read-chapter"', rendered)
         self.assertIn('id="dim-expert"', rendered)
-        self.assertIn("Not flagged", rendered)
+        self.assertIn("Not a candidate", rendered)
         self.assertNotIn('"flagged": true', html_module.unescape(rendered))
 
     def test_style_space_highlights_actual_cutoff_membership_not_rounded_scores(self):
