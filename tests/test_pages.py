@@ -670,7 +670,8 @@ class TestPagesStaging(unittest.TestCase):
                 homepage = "index.html" if language == "en" else f"index-{language}.html"
                 rendered_home = (output / homepage).read_text(encoding="utf-8")
                 self.assertIn(f'href="{reference}"', rendered_home)
-                self.assertEqual(rendered_home.count(f'href="{FUNDING_DETAILS_PATH}" hreflang="en"'), 1)
+                self.assertIn(f'id="support-cta" href="{FUNDING_DETAILS_PATH}" hreflang="en"', rendered_home)
+                self.assertEqual(rendered_home.count(f'href="{FUNDING_DETAILS_PATH}" hreflang="en"'), 2)
                 self.assertNotIn("github.com/sponsors/mfahsold", rendered_home)
             sitemap = {node.find("{*}loc").text: node.find("{*}lastmod").text
                        for node in ET.parse(output / "sitemap.xml").getroot()}  # noqa: S314

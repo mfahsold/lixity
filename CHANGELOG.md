@@ -31,9 +31,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Keep the writing toolbar visible during pauses and scrolling. Open editing
   and formatting actions from the text or the toolbar, with keyboard access
   and selection restoration.
-- Add a visible support link to the website, welcome screen and project
-  navigation. The support page shows the funding status, installer plans
-  and company contact.
+- Show a support button in the header of all seven product homepages and a
+  support link in the welcome screen and project navigation. The support page
+  shows the funding status, installer plans and company contact.
 
 ### Fixed
 

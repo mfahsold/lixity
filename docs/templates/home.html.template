@@ -49,7 +49,7 @@ $og_locales
 <a class="skip-link" href="#content">$skip</a>
 <header class="site-header"><div class="header-inner">
 <a class="brand" href="$home_path" aria-current="page"><img src="assets/mark.svg" width="32" height="32" alt=""/><span class="brand-name">Lixity</span></a>
-<nav aria-label="$product" class="home-nav"><a href="#features">$product</a><a href="#installation">$install</a><a href="#guides">$docs</a></nav>
+<nav aria-label="$product" class="home-nav"><a href="#features">$product</a><a href="#installation">$install</a><a href="#guides">$docs</a><a class="ctl ctl-sm" id="support-cta" href="$funding_url" hreflang="en">$funding</a></nav>
 <details class="language-picker"><summary>$language_name</summary><nav aria-label="$language">$language_links</nav></details>
 <button class="ctl theme-btn" id="themeToggle" type="button" hidden>Theme</button>
 </div></header>

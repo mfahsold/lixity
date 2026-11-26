@@ -11,8 +11,8 @@ const docs = stagePages();
 const origin = 'https://pages.example';
 (async () => {
   const browser = await launchChromium();
-  async function open({languages = ['de-DE', 'en'], saved, blocked = false, javaScriptEnabled = true, route = 'index.html', width = 390} = {}) {
-    const context = await browser.newContext({javaScriptEnabled, viewport: {width, height: 900}});
+  async function open({languages = ['de-DE', 'en'], saved, blocked = false, javaScriptEnabled = true, route = 'index.html', width = 390, height = 900, hasTouch = false} = {}) {
+    const context = await browser.newContext({javaScriptEnabled, hasTouch, viewport: {width, height}});
     await context.addInitScript(({languages, saved, blocked}) => {
       Object.defineProperty(navigator, 'languages', {get: () => languages});
       if (saved && !localStorage.getItem('lixity-site-language')) localStorage.setItem('lixity-site-language', saved);
@@ -100,14 +100,19 @@ const origin = 'https://pages.example';
     }
     for (const language of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
       for (const width of [320, 1440]) {
-        state = await open({route: language === 'en' ? 'index.html' : `index-${language}.html`, languages: ['de'], width});
+        const hasTouch = width === 320;
+        state = await open({route: language === 'en' ? 'index.html' : `index-${language}.html`,
+          languages: ['de'], width, height: hasTouch ? 568 : 900, hasTouch});
         assert.equal(await state.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${language} at ${width}px`);
         await expect(state.page.locator('.language-picker a[aria-current="page"]')).toHaveAttribute('lang', language);
         if (language === 'en' || language === 'de') {
           await state.page.screenshot({path: path.join(artifacts, `${language}-${width}.png`), fullPage: true});
         }
-        const support = state.page.locator('.home-footer a[href="guides/support.html"]');
-        await expect(support).toBeVisible();
+        const support = state.page.locator('.site-header #support-cta');
+        await expect(support).toHaveAttribute('href', 'guides/support.html');
+        await expect(support).toBeInViewport({ratio: 1});
+        if (hasTouch) assert.ok((await support.boundingBox()).height >= 44, `${language} support touch target`);
+        await expect(state.page.locator('.home-footer a[href="guides/support.html"]')).toHaveCount(1);
         await support.press('Enter');
         await expect(state.page).toHaveURL(`${origin}/lixity/guides/support.html`);
         const contact = state.page.getByRole('link', {name: 'info@rost-services.de'});
