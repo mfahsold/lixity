@@ -9,10 +9,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Refresh the landscape and portrait product tour from the current workspace.
-  Use the export's poster and content fingerprints for the player media. Put
-  the Lixity mark, product name and question above the social clips, with a
-  close-up of the counted sentence during the review.
+- Refilm the homepage and shareable product tours as one 60-second Warehouse 4
+  walkthrough. Alternate light and dark workspace shots, keep the Lixity mark
+  and name visible, and enlarge the verified result of each action. Follow the
+  blank receipt from manuscript evidence and an unsaved revision to the exhibit
+  book and its PDF. Fingerprint the player media, posters and download links.
 - Create new Unix desktop service directories with private permissions so
   the local browser service can read its status when started after Desktop.
 - Add a full-inventory Pages verification mode for website and asset rollouts.
@@ -22,12 +23,6 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   instructions available for downloads from a workflow run. Match the welcome
   actions to the installed package and the English and German tour captions to
   the recorded actions.
-- Serve a 48-second portrait product tour alongside the landscape version.
-  Reframe each of the six recorded scenes for 1080×1920 and include a 540×960
-  poster. Keep the social clips at 12 seconds. Update the English and German
-  captions to cover baseline comparisons, matched analysis settings and pinned
-  source versions. Encode the portrait video directly from the recorded scenes
-  and verify its frame count, dimensions and byte limit.
 - Give every shareable page its own landscape preview (all under 1 MB with
   `og:image:secure_url`/`type`, matching Twitter image/alt and JSON-LD image).
   Guides, blog posts, demo, reader, companion and examples no longer share one

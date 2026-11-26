@@ -1,14 +1,13 @@
 {
-  "schema_version": "lixity-product-tour-timing/1",
+  "schema_version": "lixity-product-tour-timing/2",
   "fps": 25,
-  "duration": 48,
-  "social_detail": {"x": 874, "y": 286, "width": 374, "height": 504},
+  "duration": 60,
   "scenes": [
-    {"id": "read", "start": 0, "end": 8},
-    {"id": "passage", "start": 8, "end": 16},
-    {"id": "compare", "start": 16, "end": 24},
-    {"id": "chapters", "start": 24, "end": 32},
-    {"id": "dossier", "start": 32, "end": 40},
-    {"id": "pdf", "start": 40, "end": 48}
+    {"id": "read", "start": 0, "end": 10, "theme": "dark", "title": "Who signed for crate 17?"},
+    {"id": "passage", "start": 10, "end": 20, "theme": "light", "title": "See what was counted"},
+    {"id": "compare", "start": 20, "end": 30, "theme": "dark", "title": "Compare a revision"},
+    {"id": "chapters", "start": 30, "end": 40, "theme": "light", "title": "Compare chapter rhythm"},
+    {"id": "dossier", "start": 40, "end": 50, "theme": "dark", "title": "Keep the evidence close"},
+    {"id": "pdf", "start": 50, "end": 60, "theme": "light", "title": "Share the saved dossier"}
   ]
 }

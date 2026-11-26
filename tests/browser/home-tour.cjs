@@ -44,8 +44,8 @@ const root = stagePages();
       assert.equal(await page.locator('#intro-title').evaluate(node => getComputedStyle(node).hyphens), 'auto');
       const video = page.locator('#product-tour');
       assert.deepEqual(await page.locator('#tour-transcript li').evaluateAll(nodes =>
-        nodes.map(node => Number(node.dataset.start))), [0, 8, 16, 24, 32, 40],
-      'Caption boundaries must match the six eight-second scenes');
+        nodes.map(node => Number(node.dataset.start))), [0, 10, 20, 30, 40, 50],
+      'Caption boundaries must match the six ten-second scenes');
       await video.scrollIntoViewIfNeeded();
       await page.waitForTimeout(700);
       assert.ok(await video.evaluate(v => v.paused && v.currentTime === 0), 'Reduced motion never autoplays');
@@ -92,7 +92,7 @@ const root = stagePages();
       await page.goto('https://tour.test/');
       await video.scrollIntoViewIfNeeded();
       await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(.2);
-      await video.evaluate(v => { v.currentTime = 8.1; });
+      await video.evaluate(v => { v.currentTime = 10.1; });
       await expect.poll(() => video.evaluate(v => ({seeking:v.seeking, ready:v.readyState}))).toEqual({seeking:false, ready:4});
       await expect(page.locator('.tour-caption')).toHaveText(await page.locator('#tour-transcript li').nth(1).textContent());
       assert.ok(await page.locator('.tour-caption span').evaluateAll(nodes =>
@@ -151,11 +151,11 @@ const root = stagePages();
         await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(.1);
         await button.click();
         await expect.poll(() => video.evaluate(v => v.paused)).toBe(true);
-        assert.ok(Math.abs(await video.evaluate(v => v.duration) - 48) <= .04,
-          'The complete six-scene tour must decode to 48 seconds');
+        assert.ok(Math.abs(await video.evaluate(v => v.duration) - 60) <= .04,
+          'The complete six-scene tour must decode to 60 seconds');
         const cues = await page.locator('#tour-transcript li').evaluateAll(nodes =>
           nodes.map(node => ({start: Number(node.dataset.start), text: node.textContent})));
-        assert.deepEqual(cues.map(cue => cue.start), [0, 8, 16, 24, 32, 40]);
+        assert.deepEqual(cues.map(cue => cue.start), [0, 10, 20, 30, 40, 50]);
         for (const cue of cues) {
           await video.evaluate((v, start) => { v.currentTime = start + .12; }, cue.start);
           await expect.poll(() => video.evaluate(v => v.seeking)).toBe(false);
@@ -170,6 +170,6 @@ const root = stagePages();
       assert.deepEqual(errors, []);
       await context.close();
     }
-    console.log('Homepage tour: 48-second playback, six cues in all seven languages, static readable captions, reduced motion, pause/offscreen, mobile layout and codec/error fallback passed. Screenshots: ' + artifacts);
+    console.log('Homepage tour: 60-second playback, six cues in all seven languages, static readable captions, reduced motion, pause/offscreen, mobile layout and codec/error fallback passed. Screenshots: ' + artifacts);
   } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exitCode=1; });

@@ -89,8 +89,8 @@ $og_locales
 $tour_cues
 </ol></details>
 <details id="tour-share"><summary>$tour_share</summary><div class="home-task-links">
-<a href="videos/social-hook-9x16.mp4" hreflang="en" download>$tour_share_vertical</a>
-<a href="videos/social-hook-16x9.mp4" hreflang="en" download>$tour_share_horizontal</a>
+<a href="$tour_social_vertical" hreflang="en" download>$tour_share_vertical</a>
+<a href="$tour_social_horizontal" hreflang="en" download>$tour_share_horizontal</a>
 <a href="screenshots/dashboard-measurement-focus.png" hreflang="en" download>$tour_share_image</a>
 </div></details>
 </figcaption>

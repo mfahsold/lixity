@@ -492,15 +492,15 @@ def build_outreach_package(source: Path, output: Path) -> None:
                           "Alt: " + item["alt"], "Caption: " + item["caption"],
                           "Destination: https://lixity.de/" + item["destination"], ""])
         lines.extend([
-            "## Why is this sentence underlined?", "",
-            "The silent clip opens a real explanation in the fictional manuscript.",
-            "English: Why is this sentence underlined? See what Lixity counted, then read it in context.",
-            "Text alternative: Lixity opens the selected sentence's explanation and marks the words it counted.",
+            "## A clue in the Warehouse 4 manuscript", "",
+            "The silent 60-second tour shows the fictional project in the light and dark workspace.",
+            "English: Follow a missing signature from the draft to the case file in one minute.",
+            "Text alternative: Lixity opens a reading suggestion, explains a sentence, compares an unsaved rewrite "
+            "and a chapter measurement, then opens the exhibit receipt and downloads the dossier PDF.",
             "Destination: https://lixity.de/#product-tour-preview", "",
-            "Deutsch: Warum ist dieser Satz unterstrichen? Schau nach, welche Wörter Lixity gezählt hat, "
-            "und lies den Satz im Zusammenhang.",
-            "Alternativtext: Lixity öffnet im Beispielmanuskript die Erklärung zu einem unterstrichenen Satz "
-            "und hebt die gezählten Wörter hervor.",
+            "Deutsch: Folge in einer Minute der Spur einer fehlenden Unterschrift vom Entwurf bis zur Fallakte.",
+            "Alternativtext: Lixity öffnet einen Lesehinweis, erklärt einen Satz, vergleicht einen ungespeicherten "
+            "Entwurf und einen Kapitelwert, zeigt den Versandbeleg und lädt das Dossier als PDF herunter.",
             "Ziel: https://lixity.de/index-de.html#product-tour-preview", "",
         ])
         for name, width, height, limit in SOCIAL_CLIPS:
@@ -510,7 +510,7 @@ def build_outreach_package(source: Path, output: Path) -> None:
             (prepared / "videos" / name).write_bytes(content)
             manifest["clips"].append({"file": name, "width": width, "height": height,
                                       "sha256": sha256(content).hexdigest(), "byte_length": len(content)})
-            lines.append(f"- [Clip, {width} x {height}](videos/{name})")
+            lines.append(f"- [Tour, {width} x {height}](videos/{name})")
         (prepared / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         (prepared / "README.md").write_text("\n".join(lines), encoding="utf-8")
         prepared.rename(output)

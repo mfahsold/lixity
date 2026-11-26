@@ -18,19 +18,20 @@ import sys
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from lixity.server import LixityServerHandler
-from scripts.example_project import create_example_project, save_example_character_dossier
+from lixity.research import api
+from scripts.example_project import create_example_project
 
 project = Path(sys.argv[1]) / 'warehouse-4'
-example = create_example_project(project)
+create_example_project(project)
 manuscript = project / 'harbour-manuscript.md'
-dossier, revision = save_example_character_dossier(project, example['character_evidence_id'])
+dossier = next(item for item in api.list_dossiers(project)['dossiers'] if item['title'] == 'Warehouse 4 exhibit book')
 LixityServerHandler.workspace_root = str(project)
 LixityServerHandler.source_input = str(manuscript)
 LixityServerHandler.exports_dir = str(project / 'exports')
 LixityServerHandler.language = 'en'
 LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
-print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'dossier': dossier, 'revision': revision}), flush=True)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'dossier': dossier['id'], 'revision': dossier['revision']}), flush=True)
 server.serve_forever()
 `, directory);
 }
@@ -70,12 +71,10 @@ async function recordProductTour(options) {
 
 async function recordTourScenes({browser, capture, prepareWorkspacePage, url: origin, dossier, revision, project}) {
   const plan = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/videos/product-tour-timing.json'), 'utf8'));
-  assert.equal(plan.schema_version, 'lixity-product-tour-timing/1');
+  assert.equal(plan.schema_version, 'lixity-product-tour-timing/2');
   assert.equal(plan.fps, 25);
-  assert.equal(plan.duration, 48);
+  assert.equal(plan.scenes.at(-1).end, plan.duration);
   assert.deepEqual(plan.scenes.map(scene => scene.id), ['read', 'passage', 'compare', 'chapters', 'dossier', 'pdf']);
-  assert.deepEqual(plan.scenes.map(scene => [scene.start, scene.end]),
-    [[0, 8], [8, 16], [16, 24], [24, 32], [32, 40], [40, 48]]);
   const directory = path.dirname(capture.videoTarget);
   const sidecar = capture.videoTarget.replace('.webm', '.json');
   // Fixed segment filenames may be replaced during this run. An old manifest
@@ -100,10 +99,9 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
 
   for (const scene of plan.scenes) {
     const duration = scene.end - scene.start;
-    assert.equal(duration, 8);
     const frames = duration * plan.fps;
     const context = await browser.newContext({viewport: {width: capture.width, height: capture.height},
-      reducedMotion: 'reduce', colorScheme: 'light', deviceScaleFactor: 2,
+      reducedMotion: 'reduce', colorScheme: scene.theme, deviceScaleFactor: 2,
       recordVideo: {dir: directory, size: {width: capture.width, height: capture.height}}});
     const page = await context.newPage();
     const errors = [];
@@ -112,6 +110,9 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
     let video;
     try {
       await prepareWorkspacePage(page, {cursor: true, fixtures: false});
+      await page.addInitScript(({origin, theme}) => {
+        if (location.origin === origin) localStorage.setItem('lixity-theme', theme);
+      }, {origin, theme: scene.theme});
       // Record only the disposable app. Comparison reads the unsaved text;
       // an accidental save or other write fails the recording.
       await page.route('**/*', route => {
@@ -125,10 +126,11 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
       const open = async () => {
         await page.goto(origin);
         await page.evaluate(() => document.fonts.ready);
+        assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme.split(' ')[0]), scene.theme);
       };
       const settle = async () => page.evaluate(() => new Promise(resolve =>
         requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      let target, verify, act;
+      let target, verify, act, detail;
       const dossierSummary = page.locator(`#research-dossiers-list [data-research-detail=dossier][data-record-id="${dossier}"]`);
       const dossierCard = dossierSummary.locator('..');
 
@@ -137,9 +139,13 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
         await page.locator('#workbench-overview-open').click();
         target = page.locator('[data-review-passage]');
         const paragraph = page.locator('#' + await target.getAttribute('data-target'));
+        detail = page.locator('#reader-inspector .reader-passage-flag');
         verify = async () => {
           await paragraph.waitFor({state: 'visible'});
+          await proseAtTop(paragraph);
           await visible(page, paragraph.locator('.ptext-inner > p'), 'Review passage reached from the overview');
+          await detail.locator('.reader-tense-group').first().waitFor({state: 'visible'});
+          await visible(page, detail, 'Review suggestion evidence in the passage inspector');
         };
       } else if (scene.id === 'passage') {
         await open();
@@ -149,11 +155,10 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
         await readingMarks.click();
         await page.locator('#analysis-evidence-enabled').check();
         await readingMarks.press('Enter');
-        const paragraphId = await page.evaluate(() => Object.keys(paragraphContent).find(id => {
-          const layer = paragraphContent[id][3]?.layers?.sticky;
-          return layer && layer.mapped_count > 0 && paragraphContent[id][0].length < 500 && document.getElementById(id);
-        }));
-        assert.ok(paragraphId, 'Warehouse 4 must contain a short paragraph with sentence evidence');
+        const paragraphId = await page.evaluate(() => Object.keys(paragraphContent).find(id =>
+          paragraphContent[id][0].includes('a reason for the space')));
+        assert.ok(paragraphId, 'Warehouse 4 must contain the blank receipt passage');
+        await page.evaluate(id => { location.hash = id; }, paragraphId);
         const paragraph = page.locator('#' + paragraphId);
         await proseAtTop(paragraph);
         target = paragraph.locator('.ptext-inner > p');
@@ -171,12 +176,17 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
         verify = async () => {
           const card = page.locator('#analysis-evidence-card');
           await card.waitFor({state: 'visible'});
-          assert.ok(await card.locator('blockquote mark').count(), 'The explanation marks counted words in the exact sentence');
+          assert.equal(await card.locator('blockquote mark').count(), 22, 'The explanation marks all 22 counted words');
           await visible(page, card.locator('.analysis-evidence-explanation'), 'Why the sentence was selected and how to review it');
         };
+        detail = page.locator('#analysis-evidence-card');
       } else if (scene.id === 'compare') {
         const filename = path.join(project, 'warehouse-4', 'harbour-manuscript.md');
         const original = fs.readFileSync(filename, 'utf8');
+        const before = 'It was only when she looked at it again that she began to think that there might have been a reason for the space that he had left on the form.';
+        const after = 'Only then did she wonder why he had left the line blank.';
+        const start = original.indexOf(before);
+        assert.ok(start >= 0);
         await open();
         await page.locator('#manuscript-write').click();
         await page.locator('.cm-content').waitFor({state: 'visible'});
@@ -186,18 +196,25 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
         await target.waitFor({state: 'visible'});
         act = async click => {
           await click(target);
-          await target.evaluate(node => node.setSelectionRange(node.value.length, node.value.length));
-          await page.keyboard.type(' Lanterns lit.', {delay: 80});
+          await target.evaluate((node, range) => node.setSelectionRange(...range), [start, start + before.length]);
+          await page.keyboard.insertText(after);
+          await target.evaluate(node => {
+            node.scrollTop += Math.round(node.clientHeight * .4);
+            document.getElementById('manuscript-comparison-base').scrollTop = node.scrollTop;
+            document.getElementById('manuscript-comparison-current').scrollTop = node.scrollTop;
+          });
         };
         verify = async () => {
           assert.equal(await page.locator('#manuscript-comparison-base').inputValue(), original);
           assert.equal(await page.locator('#manuscript-comparison-current').inputValue(), original);
-          assert.equal(await target.inputValue(), original + ' Lanterns lit.');
-          const chapter = page.locator('#manuscript-comparison-chapters li').filter({hasText: '+2 words'});
+          assert.equal(await target.inputValue(), original.replace(before, after));
+          const chapter = page.locator('#manuscript-comparison-chapters li').filter({hasText: 'The Blank Line'});
           await chapter.waitFor({state: 'visible'});
+          assert.match(await chapter.innerText(), /[-−]19 words/);
           await visible(page, chapter, 'Measured chapter change');
           assert.equal(fs.readFileSync(filename, 'utf8'), original);
         };
+        detail = page.locator('#manuscript-comparison-chapters li').filter({hasText: 'The Blank Line'});
       } else if (scene.id === 'chapters') {
         await open();
         await page.locator('#workbench-overview-open').click();
@@ -215,6 +232,7 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
           await visible(page, page.locator('#metric-context-chapter'), 'Selected chapter');
           await visible(page, page.locator('#metric-context-value'), 'Selected chapter measurement');
         };
+        detail = page.locator('#analysis-metric-context');
       } else {
         await open();
         await page.locator('#tab-view-research').click();
@@ -223,12 +241,15 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
         const body = dossierCard.locator('.research-dossier-body-rendered');
         if (scene.id === 'dossier') {
           target = dossierSummary;
+          detail = body.locator('.dossier-image').filter({has: page.locator('img[alt*="receipt" i]')});
           verify = async () => {
             await body.waitFor({state: 'visible'});
-            await body.locator('table').waitFor({state: 'visible'});
-            assert.ok(await body.locator('blockquote').count(), 'The generated dossier keeps the quoted manuscript passages');
-            await body.locator('table').evaluate(node => node.scrollIntoView({block: 'center', behavior: 'instant'}));
-            await visible(page, body.locator('table thead'), 'Chapter distribution in the saved character dossier');
+            const image = detail.locator('img');
+            await image.scrollIntoViewIfNeeded();
+            await image.evaluate(node => node.decode());
+            await image.evaluate(node => node.scrollIntoView({block: 'center', behavior: 'instant'}));
+            await settle();
+            await visible(page, image, 'The retained dispatch receipt');
           };
         } else {
           await dossierSummary.click();
@@ -248,6 +269,7 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
             await status.getByText(/PDF download started/i).waitFor({state: 'visible'});
             await visible(page, status, 'Download confirmation');
           };
+          detail = target.locator('..');
         }
       }
 
@@ -321,6 +343,12 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
       await settle();
       const actionEnd = (performance.now() - started) / 1000;
       assert.ok(actionEnd <= duration - MINIMUM_HOLD, scene.id + ' action overran its readable outcome hold');
+      const box = ['compare', 'pdf'].includes(scene.id) ? await detail.evaluate(node => {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        return range.getBoundingClientRect().toJSON();
+      }) : await detail.boundingBox();
+      assert.ok(box && box.width && box.height, 'The picture-in-picture needs a visible detail');
       await page.screenshot({path: path.join(directory, 'product-tour-' + scene.id + '-outcome.png')});
       await page.waitForTimeout(Math.max(0, (duration + 1) * 1000 - (performance.now() - started)));
       assert.deepEqual(errors, [], 'Product-tour scene must be free of runtime errors');
@@ -331,7 +359,9 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
       fs.copyFileSync(await video.path(), source);
       const startFrame = anchorFrame(source, frames);
       const sha256 = createHash('sha256').update(fs.readFileSync(source)).digest('hex');
-      segments.push({id: scene.id, file, sha256, startFrame, frames, actionStart: Number(actionStart.toFixed(3)),
+      const {x, y, width, height} = box;
+      segments.push({id: scene.id, theme: scene.theme, file, sha256, startFrame, frames, detail: {x, y, width, height},
+        actionStart: Number(actionStart.toFixed(3)),
         actionEnd: Number(actionEnd.toFixed(3)), outcomeHold: Number((duration - actionEnd).toFixed(3)), clicks});
       console.log('Product tour ' + scene.id + ': action ends ' + actionEnd.toFixed(2) + 's; readable hold ' + (duration - actionEnd).toFixed(2) + 's');
     } catch (error) {
@@ -344,7 +374,7 @@ async function recordTourScenes({browser, capture, prepareWorkspacePage, url: or
   const pendingSidecar = sidecar + '.tmp-' + process.pid;
   try {
     fs.writeFileSync(pendingSidecar, JSON.stringify({
-      schema_version: 'lixity-product-tour-recording/1', fps: plan.fps, duration: plan.duration, segments,
+      schema_version: 'lixity-product-tour-recording/2', fps: plan.fps, duration: plan.duration, segments,
     }, null, 2));
     fs.renameSync(pendingSidecar, sidecar);
   } finally {

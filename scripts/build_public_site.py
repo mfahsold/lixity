@@ -22,6 +22,8 @@ TOUR_MEDIA = {
     'tour_landscape_poster': 'videos/product-tour.webp',
     'tour_portrait_mp4': 'videos/product-tour-portrait.mp4',
     'tour_portrait_poster': 'videos/product-tour-portrait.png',
+    'tour_social_horizontal': 'videos/social-hook-16x9.mp4',
+    'tour_social_vertical': 'videos/social-hook-9x16.mp4',
 }
 
 

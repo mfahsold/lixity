@@ -1048,7 +1048,7 @@ class TestPublicLanguages(unittest.TestCase):
             'src': ('product-tour.mp4', 'product-tour.webm', 'product-tour-portrait.mp4'),
             'poster': ('product-tour.webp',),
             'data-portrait-poster': ('product-tour-portrait.png',),
-            'href': ('product-tour.webp',),
+            'href': ('product-tour.webp', 'social-hook-9x16.mp4', 'social-hook-16x9.mp4'),
         }
         references = []
         for attribute, filenames in media_attributes.items():
@@ -1070,9 +1070,9 @@ class TestPublicLanguages(unittest.TestCase):
                 self.assertIn('muted playsinline controls', text)
                 self.assertNotIn(' autoplay', text)
                 self.assertIn('id="tour-transcript"', text)
-                for media in ("videos/social-hook-9x16.mp4", "videos/social-hook-16x9.mp4",
-                              "screenshots/dashboard-measurement-focus.png"):
-                    self.assertIn(f'href="{media}" hreflang="en" download', text)
+                self.assertIn('href="screenshots/dashboard-measurement-focus.png" hreflang="en" download', text)
+                self.assertRegex(text, r'href="videos/social-hook-9x16\.mp4\?v=[a-f0-9]{12}" hreflang="en" download')
+                self.assertRegex(text, r'href="videos/social-hook-16x9\.mp4\?v=[a-f0-9]{12}" hreflang="en" download')
                 for scene in timing["scenes"]:
                     self.assertIn(html.escape(content['tour_' + scene['id']], quote=True), text)
                 self.assertIn('href="demo/warehouse-4-dossier.pdf"', text)

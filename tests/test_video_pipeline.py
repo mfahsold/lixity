@@ -17,12 +17,12 @@ FFPROBE = shutil.which("ffprobe")
 MEDIA_TOOLS = FFMPEG and FFPROBE
 
 
-def test_all_homepage_transcripts_follow_the_full_48_second_tour() -> None:
+def test_all_homepage_transcripts_follow_the_full_minute_tour() -> None:
     for name, page in render_pages().items():
         starts = [int(value) for value in re.findall(r'<li data-start="(\d+)">', page)]
-        assert starts == [0, 8, 16, 24, 32, 40], name
+        assert starts == [0, 10, 20, 30, 40, 50], name
         title = re.search(r'<video[^>]+aria-label="([^"]+)"', page)
-        assert title and "48" in title.group(1), name
+        assert title and "60" in title.group(1), name
 
 
 @pytest.fixture
@@ -34,19 +34,16 @@ def short_tour_recording(
     source = raw / "product-tour.webm"
     assert FFMPEG
     subprocess.run(  # noqa: S603 - fixed synthetic media fixture invocation
-        [FFMPEG, "-v", "error", "-f", "lavfi", "-i", "color=size=160x100:rate=25",
+        [FFMPEG, "-v", "error", "-f", "lavfi", "-i", "color=size=1440x900:rate=25",
          "-t", "0.4", "-c:v", "libvpx", str(source)], check=True,
     )
-    ids = [scene["id"] for scene in make_videos._tour_plan()["scenes"]]
+    plan = make_videos._tour_plan()
     timing = {
-        "schema_version": "lixity-product-tour-recording/1", "fps": 25, "duration": 48,
-        "segments": [{"id": name, "file": source.name, "startFrame": 2, "frames": 200,
+        "schema_version": "lixity-product-tour-recording/2", "fps": plan["fps"], "duration": plan["duration"],
+        "segments": [{"id": scene["id"], "theme": scene["theme"], "file": source.name, "startFrame": 2,
+                      "frames": (scene["end"] - scene["start"]) * plan["fps"],
                       "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}
-                     for name in ids],
-        # The old pipeline accepts this contradictory short source.
-        "trim": 0,
-        "scenes": [{"name": name, "start": index * 8, "x": .5, "y": .5, "zoom": 1}
-                   for index, name in enumerate(ids)],
+                     for scene in plan["scenes"]],
     }
     source.with_suffix(".json").write_text(json.dumps(timing), encoding="utf-8")
     monkeypatch.setattr(make_videos, "RAW_DIR", raw)
@@ -56,7 +53,7 @@ def short_tour_recording(
 
 
 @pytest.mark.skipif(not MEDIA_TOOLS, reason="ffmpeg and ffprobe are required for video validation")
-def test_encoder_rejects_a_source_without_eight_seconds_after_its_anchor(
+def test_encoder_rejects_a_source_without_the_scene_duration_after_its_anchor(
     short_tour_recording: Path,
 ) -> None:
     assert short_tour_recording.is_file()
@@ -90,9 +87,9 @@ def test_export_validation_rejects_non_square_pixels(tmp_path: Path, monkeypatch
 @pytest.mark.skipif(not MEDIA_TOOLS, reason="ffmpeg and ffprobe are required for video validation")
 @pytest.mark.parametrize(
     ("filename", "frames", "width", "height"),
-    [("product-tour.mp4", 1200, 1440, 900), ("product-tour.webm", 1200, 1440, 900),
-     ("product-tour-portrait.mp4", 1200, 1080, 1920),
-     ("social-hook-16x9.mp4", 300, 1600, 900), ("social-hook-9x16.mp4", 300, 1080, 1920)],
+    [("product-tour.mp4", 1500, 1440, 900), ("product-tour.webm", 1500, 1440, 900),
+     ("product-tour-portrait.mp4", 1500, 1080, 1920),
+     ("social-hook-16x9.mp4", 1500, 1600, 900), ("social-hook-9x16.mp4", 1500, 1080, 1920)],
 )
 def test_published_video_has_complete_constant_frame_timing_and_geometry(
     filename: str, frames: int, width: int, height: int,
