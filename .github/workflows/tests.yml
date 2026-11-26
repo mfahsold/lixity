@@ -1,8 +1,7 @@
-# Full source checks run locally and are reusable by release qualification.
+# Full source checks are local-first (`make check`). Dispatch on demand for
+# Linux / Python 3.10+3.12 evidence; `rc.yml` calls this before release tagging.
 name: tests
 on:
-  pull_request:
-    branches: [main]
   workflow_dispatch:
     inputs:
       pytest_workers:
@@ -19,7 +18,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   check:

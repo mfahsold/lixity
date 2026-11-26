@@ -234,9 +234,17 @@ remain separate checks.
 
 ### Installer workflows
 
-- The desktop checks run the isolated runtime smoke, Rust tests, Clippy and
-  dependency checks. Dispatch with
-  `build_bundle=true` to also build, verify and upload installers on three OSes.
+Everyday macOS Rust tests, Clippy, WKWebView smoke and local `.app`/`.dmg`
+builds run locally (see [macOS app bundle](#macos-app-bundle) and
+[Rust and native WebView checks](#rust-and-native-webview-checks)). Hosted
+desktop workflows are manual `workflow_dispatch` runs reserved for cross-OS
+verification and installer builds (Linux, Windows, Intel Mac), signing and
+hosted build provenance attestations:
+
+- The desktop checks workflow runs the isolated runtime smoke, Rust tests,
+  Clippy and `cargo-deny` dependency checks on Linux, macOS and Windows.
+  Dispatch with `build_bundle=true` to also build, verify and upload installers
+  on all three OSes.
   [Desktop checks workflow](../.github/workflows/desktop.yml)
 - The desktop release build targets all four rows. Apple jobs sign the app
   before creating its DMG and smoke-test the runtime from the mounted image.

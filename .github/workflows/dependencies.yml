@@ -1,21 +1,7 @@
+# Dependency audits are local-first (`make audit`, `npm run --prefix scripts/editor check`,
+# `python scripts/dependency_inventory.py audit-vendors`). Dispatch on demand or via `rc.yml`.
 name: dependencies
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - .gitattributes
-      - .github/dependabot.yml
-      - .github/workflows/dependencies.yml
-      - pyproject.toml
-      - MANIFEST.in
-      - scripts/browser-vendor.json
-      - scripts/check_release.py
-      - scripts/dependency_inventory.py
-      - scripts/editor/**
-      - src/lixity/ui/assets/vendor/**
-      - tests/test_dependency_inventory.py
-  schedule:
-    - cron: '34 6 * * 2'
   workflow_dispatch:
   workflow_call:
 permissions:

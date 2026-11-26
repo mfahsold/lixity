@@ -167,24 +167,40 @@ assertions, follow [Investigating performance](#investigating-performance).
 
 #### CI and test environments
 
-Pull requests targeting `main` run the `tests` workflow on Linux with Python
-3.10 and 3.12, Poppler and FFmpeg. Both interpreter jobs run the full suite
-through `make test` and smoke-install the wheel. The Python 3.12 job also runs
-the shared Ruff and mypy checks configured for the supported Python 3.10 target.
-The development extra includes NumPy for audio fixtures and
-independent numerical tests. The `dependencies` workflow also runs on pull
-requests touching dependency inputs and on its weekly schedule.
+Lixity is **local-first** and uses GitHub Actions **only where hosted runners,
+OIDC or release infrastructure are strictly technically necessary**:
 
-Dispatch `tests`, `browser` or `research-platforms` manually for targeted CI
-evidence. Match the run's commit to the change. For filesystem, process lifecycle,
-packaging and other native-tool changes, verify Windows and macOS locally or
-through `research-platforms`. That workflow defaults to the pytest `portability` marker
+- **Run locally** for everyday development: `make check` (Ruff, `mypy --strict`,
+  full pytest with `-W error`), `make browser` / `make browser-changed`,
+  `make docs-check`, `make workflow-check`, dependency audits (`make audit`,
+  `npm run --prefix scripts/editor check`,
+  `python scripts/dependency_inventory.py audit-vendors`) and local macOS
+  desktop tests, Clippy and `.app`/`.dmg` rollouts.
+- **Reserve GitHub Actions** for capabilities that genuinely require hosted
+  infrastructure: cross-OS builds and portability checks (Windows, Linux, Intel
+  Mac), pre-tag release-candidate qualification with build/SBOM attestations
+  (`rc.yml`), immutable GitHub Release publication and PyPI OIDC trusted
+  publishing (`release.yml`), signed/attested multi-OS desktop installers
+  (`desktop-release.yml`) and GitHub Pages deployment (`pages.yml`).
+- **Keep triggers minimal**: only `release.yml` runs automatically (on `v*`
+  release tags). Do not add automatic `push`, `pull_request` or `schedule`
+  triggers for checks that can run locally.
+
+Dispatch `tests`, `browser`, `dependencies`, `desktop` or `research-platforms`
+manually (`workflow_dispatch`) when targeted hosted evidence is needed, and
+match the run's commit to the change. `tests.yml` runs on Linux with Python
+3.10 and 3.12, Poppler and FFmpeg, executing `make test` and an isolated wheel
+smoke-install on both interpreters plus Ruff and mypy on Python 3.12; the
+development extra includes NumPy for audio fixtures and independent numerical
+tests. For filesystem, process lifecycle, packaging and other native-tool
+changes, verify Windows and macOS locally or through `research-platforms`. That
+workflow defaults to the pytest `portability` marker
 (`python -m pytest tests -m portability -W error -q -p no:asyncio`), covering
 archive/filesystem, service observation, installed-package notices and read-only
 export seams, plus real start/restart/stop, simultaneous starts and the Windows
-PowerShell wrapper. Select `scope=full` only when the full research/lifecycle suite is
-needed on both systems. The ordinary local full suite still runs every test;
-markers do not remove coverage from `make check`.
+PowerShell wrapper. Select `scope=full` only when the full research/lifecycle
+suite is needed on both systems. The ordinary local full suite still runs every
+test; markers do not remove coverage from `make check`.
 
 The shared `scripts/check_release.py` builds
 the source archive and wheel in a fresh temporary directory, compares both

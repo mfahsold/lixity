@@ -1,3 +1,6 @@
+# macOS desktop checks and builds are local-first (`cargo test`, `cargo clippy`,
+# `desktop/scripts/build_macos_app.py --offline`). Dispatch on demand for cross-OS
+# Linux/Windows/macOS verification and optional installer builds.
 name: desktop
 on:
   workflow_dispatch:
@@ -6,23 +9,12 @@ on:
         description: Also build and verify native OS installers (.dmg, .exe/.msi, .deb/.AppImage)
         type: boolean
         default: false
-  pull_request:
-    paths:
-      - "desktop/**"
-      - "src/lixity/server/desktop.py"
-      - "src/lixity/server/runtime.py"
-      - "src/lixity/server/_base.py"
-      - "src/lixity/server/handler.py"
-      - "src/lixity/ui/assets/desktop-bridge.js"
-      - ".github/workflows/desktop.yml"
-      - ".github/actions/build-desktop-runtime/**"
-      - ".github/actions/upload-desktop-installers/**"
 
 permissions:
   contents: read
 
 concurrency:
-  group: desktop-${{ github.event.pull_request.number || github.ref }}
+  group: desktop-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
