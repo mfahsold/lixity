@@ -370,6 +370,55 @@ disagreements even when the quotation cue is correct. Excerpt boundaries,
 historical conventions, tokenization and annotation scope matter, and the
 inspected corpus is not a held-out or representative contemporary evaluation.
 
+#### Synthetic held-out contemporary-style prose benchmark (EN & DE)
+
+To evaluate default heuristics on contemporary-style literary prose (distinct
+from the 19th-century public-domain excerpts and development fixtures),
+`PYTHONPATH=src python scripts/evaluate_contemporary_prose.py` (with optional
+`--json`) runs an offline, deterministic, stdlib-only benchmark over freshly
+authored English and German passages covering sentence boundaries (abbreviations
+such as `Dr.`, `z. B.`, `Dept.`, `Tel.`, ellipses, dialogue punctuation,
+staccato sentences, numbers/initials), dialogue cues (standard quotation marks,
+non-speech quotes such as signs/scare quotes, dash-introduced speech, unquoted
+interior thoughts, and free indirect speech), and finite tense cues (past,
+present, compound perfect, mixed narration/dialogue, and lexically ambiguous
+verbs). Internal sentence boundaries exclude forced passage-final ends.
+
+| Language | Task | Sample | TP / FP / FN | Precision (95% Wilson CI) | Recall (95% Wilson CI) | F1 |
+| --- | --- | --- | ---: | --- | --- | ---: |
+| EN | Sentence boundaries | 15 passages / 39 sents / 24 bounds | 22 / 1 / 2 | 95.7% [79.0%, 99.2%] | 91.7% [74.2%, 97.7%] | 93.6% |
+| EN | Dialogue cues (all) | 16 passages / 217 tokens | 49 / 5 / 77 | 90.7% [80.1%, 96.0%] | 38.9% [30.8%, 47.6%] | 54.4% |
+| EN | Tense cues (combined) | 32 passages / 64 cues | 48 / 4 / 16 | 92.3% [81.8%, 97.0%] | 75.0% [63.2%, 84.0%] | 82.8% |
+| EN | Tense cues (past) | 39 gold cues | 36 / 2 / 3 | 94.7% [82.7%, 98.5%] | 92.3% [79.7%, 97.3%] | 93.5% |
+| EN | Tense cues (present) | 25 gold cues | 12 / 2 / 13 | 85.7% [60.1%, 96.0%] | 48.0% [30.0%, 66.5%] | 61.5% |
+| DE | Sentence boundaries | 15 passages / 40 sents / 25 bounds | 23 / 1 / 2 | 95.8% [79.8%, 99.3%] | 92.0% [75.0%, 97.8%] | 93.9% |
+| DE | Dialogue cues (all) | 16 passages / 199 tokens | 44 / 3 / 71 | 93.6% [82.8%, 97.8%] | 38.3% [29.9%, 47.4%] | 54.3% |
+| DE | Tense cues (combined) | 32 passages / 61 cues | 35 / 5 / 26 | 87.5% [73.9%, 94.5%] | 57.4% [44.9%, 69.0%] | 69.3% |
+| DE | Tense cues (past) | 34 gold cues | 22 / 1 / 12 | 95.7% [79.0%, 99.2%] | 64.7% [47.9%, 78.5%] | 77.2% |
+| DE | Tense cues (present) | 27 gold cues | 13 / 4 / 14 | 76.5% [52.7%, 90.4%] | 48.1% [30.7%, 66.0%] | 59.1% |
+
+Dialogue breakdown by category shows why aggregate dialogue recall is low on
+contemporary prose: on `standard_quoted` passages, default quotation scanning
+achieves 100.0% precision and recall (EN: 49/49, 95% Wilson CI [92.7%, 100.0%];
+DE: 44/44, [92.0%, 100.0%]), while `non_speech_quote` (signs and scare quotes)
+produces false positives (EN: 5 FP; DE: 3 FP), and contemporary unmarked forms
+all record 0.0% recall under default EN/DE rules (`dash_speech` EN 0/19
+[0.0%, 16.8%], DE 0/23 [0.0%, 14.3%]; `interior_thought` EN 0/22 [0.0%, 14.9%],
+DE 0/17 [0.0%, 18.4%]; `free_indirect` EN 0/36 [0.0%, 9.6%], DE 0/31
+[0.0%, 11.0%]). Sentence-boundary misses come from unlisted abbreviations
+(`Dept.`, `Tel.`), sentence-final protected abbreviations (`Ltd.`, `usw.`), and
+sentence-ending Unicode ellipses (`…`). Tense-cue misses reflect Lixity's
+incomplete default lexicons (no productive present-tense rule in either
+language, and German's v0.7.7 removal of the unrestricted `-te/-ten` suffix
+rule so unlisted regular preterites are missed) plus ambiguous verb forms.
+
+**Explicit limitations:** this benchmark is a small, synthetic, author-constructed
+held-out set, not a representative sample of published contemporary fiction.
+The wide 95% Wilson intervals reflect small sample sizes, dialogue recall
+depends directly on the chosen proportion of quoted vs. unmarked speech and
+thought, and only the default offline heuristic path (without optional
+spaCy/Stanza models) is evaluated here.
+
 ### Voice-reference diagnostics limits
 
 `audio-reference inspect` measures level, noise floor, clipping and spectral
@@ -480,12 +529,20 @@ zero-SE collapse on 0%/100% or zero-hit chapters without establishing population
 certainty; missing SE still means no estimated measurement error.
 
 BH/BY are established selection procedures **given valid null probabilities**
-and their dependence conditions. Lixity's normal-tail probabilities use a
-baseline estimated from the same chapters; their calibration is not established.
-BY and the exploratory runs/lag diagnostics do not repair that gap.
-`fdr_flagged` means selected under the implemented model, and
-`expected_false_positives` is a standard-normal reference expectation, not an
-observed error count. Cliff's delta describes ordinal contrast, not quality.
+and their dependence conditions. Lixity's normal-tail probabilities suffer from
+**self-calibration circularity**: each chapter contributes to the manuscript's
+own median and MAD against which it is then scored, inducing in-sample
+dependence and finite-sample ratio distortions whose null calibration is not
+established. Applying BH or BY to these same-manuscript scores—or inspecting
+exploratory runs/lag diagnostics—does not repair that circularity.
+`fdr_flagged` is therefore an **uncalibrated descriptive selection** under the
+implemented model, and `expected_false_positives` is a standard-normal reference
+expectation, not an observed error count. Establishing calibrated inferential
+thresholds remains an open boundary for future work (for example, via
+leave-one-out chapter baselines or constrained block/chapter-order permutation
+tests under explicit exchangeability strata; naive chapter-label permutation
+alone preserves unordered values and cannot calibrate same-sample outlier
+scores). Cliff's delta describes ordinal contrast, not quality.
 Definitions and active thresholds: [METHODS §§1–4](METHODS.md#1-robust-house-style-baseline).
 
 The additive `meta.interpretation` legend identifies model selection explicitly.
@@ -565,13 +622,22 @@ Suffix cues over-include on purpose-ambiguous words: English nominal `-th`
 counts *month/health/truth*, German adjective `-ig`/`-al` count
 *König/Saal*, German nominal `-ik`/`-ur` count *Musik/Natur*. Modal lexicons
 have unequal morphology coverage (German and Dutch include preterite forms,
-the other profiles only present), so `modal_density` is not comparable across
-languages.
+the other five language profiles cover present forms only, and `generic` has no
+modal lexicon), so `modal_density` is **not comparable across languages**.
+
+In `generic` mode, `count_generic()` strips all characters outside ASCII `a–z`
+before counting `[aeiouy]+` vowel nuclei. Non-Latin scripts (such as Cyrillic,
+Greek, Arabic, or CJK) therefore yield zero estimated syllables (`asw == 0.0`,
+causing syllable-based readability to report unavailable while LIX remains
+measured), and non-ASCII Latin diacritics outside the seven named language
+profiles are silently stripped from syllable estimation.
 
 Readability coefficient tests verify the declared formulas, not their original
 calibration or reader comprehension. Amstad's original coefficient page and
-calibration protocol have not been verified here. Scores may fall outside 0–100
-and are not comparable across language formulas. The dashboard shows the inputs
+calibration protocol have not been verified here. The seven named formulas use
+distinct intercepts and ASL/ASW weights calibrated under different language
+conventions: scores may fall outside 0–100 and are **not comparable across
+languages or translations**. The dashboard shows the inputs
 beside the heuristic results, including the estimated status of syllable counts.
 [German PALME research
 (2026)](https://aclanthology.org/2026.bea-1.6/) separates controlled detector tests

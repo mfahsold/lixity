@@ -328,9 +328,18 @@ See [Chapter register settings](USAGE.md#chapter-register-settings).
 - **BY** ($c = \sum_{i=1}^{m} 1/i$): accommodates arbitrary dependence
   between valid null probabilities. It does not repair invalid probabilities.
 
-Lixity estimates its median/MAD from the same chapters it scores and then
-applies a normal tail to the custom $z^*$. That calibration has not been
-established. Runs/lag diagnostics and switching to BY do not establish it.
+**Self-calibration circularity:** Lixity estimates the manuscript's median and
+MAD from the same chapters it then scores, and converts the resulting custom
+$z^*$ to two-sided standard-normal tail probabilities. Because each chapter
+influences its own reference center and scale, the resulting $z^*$ values are
+mutually dependent and their finite-sample null distribution is not calibrated
+to $\mathcal{N}(0, 1)$. Running BH or BY over these same-sample tail
+probabilities—or consulting runs/lag diagnostics—does not remove that
+circularity; `fdr_flagged` is an **uncalibrated descriptive selection**, not a
+validated false-discovery-rate guarantee. Leave-one-out chapter baselines and
+constrained block or chapter-order permutation schemes (see the conditional
+complete-null boundary below; naive chapter-label permutation preserves
+unordered outlier scores) mark the boundary for future inferential calibration.
 
 <a id="decision-legend-and-small-chapter-sets-unreleased"></a>
 
@@ -707,7 +716,10 @@ $\mathrm{ASL}$ = words per sentence; $\mathrm{ASW}$ = syllables per word
 (heuristic syllable counter), not syllables per 100 words. These scores are
 not clipped to 0–100. Empty or fully unmeasurable input returns `0.0` as an
 explicit unavailable sentinel, not a readability score. The coefficients above match `language_data.READABILITY`;
-correct formula dispatch is not empirical validation on every manuscript. **LIX** uses the
+correct formula dispatch is not empirical validation on every manuscript, and
+because the seven formulas use different intercepts and ASL/ASW weights, raw
+readability scores are **not comparable across languages** (even across
+translations of the same text). **LIX** uses the
 standard Björnsson cut: words with **more than six characters**, for every
 language: $\mathrm{LIX} = \mathrm{ASL} + 100 \cdot \frac{\text{long words}}{\text{tokens}}$.
 
@@ -730,14 +742,18 @@ They are an orthographic proxy, not phonetic transcription: regional hiatus,
 foreign names and loans, and poetic synaeresis remain outside the estimate.
 Regression examples do not establish language-wide accuracy or reader comprehension.
 
-The generic counter uses Latin `a–z` vowel groups. A token with no retained
-letters contributes zero estimated syllables. When no token in a manuscript has
-retained syllable letters (`asw == 0.0`, for example in non-Latin scripts under
-`generic`), Flesch returns the `0.0` unavailable sentinel and displays as
+The generic counter (`count_generic()`) retains only ASCII Latin `a–z` letters
+and counts `[aeiouy]+` vowel groups; non-ASCII Latin diacritics outside the
+seven named language profiles are stripped before counting. A token with no
+retained ASCII letters contributes zero estimated syllables. When no token in a
+manuscript has retained syllable letters (`asw == 0.0`, for example in
+non-Latin scripts such as Cyrillic, Greek, Arabic, or CJK under `generic`),
+Flesch returns the `0.0` unavailable sentinel and displays as
 unavailable (`–`) across dashboard, CLI, Markdown and reading-site reports while
 LIX remains available. Generic ASW and derived
-syllable-based readability are unsuitable for comparing texts in scripts
-outside that alphabet. The word tokenizer can still recognize those tokens.
+syllable-based readability are unsuitable for non-Latin scripts and for
+comparing texts across scripts or languages. The word tokenizer can still
+recognize those tokens.
 
 **Since v0.7.2:** the estimator corrects skipped closed-vowel nuclei in Spanish, for example
 `vivir` from one estimated syllable to two and `dibujo` from one to three.
@@ -901,7 +917,7 @@ restating formulas.
 | Severity | `classify_severity` truth table; defaults: 3 = switch + mixed + minority ≥ 3, 2 = (switch + minority ≥ 2) or (mixed + minority ≥ 3), 1 = either, 0 = neither | Only `flag_min_severity` reaches CLI/API/config; other `ProfileThresholds` fields need direct `ParagraphProfiler` construction |
 | Dominance | Neutral with at most one marker; otherwise present when `present/(past+ε) > 1.5`, past when `< 0.67`, mixed within the band; ε = 0.001 (`style_profile.py`) | Ratio bands are conventions, not measured boundaries |
 | Nominal/adjective suffixes | Curated suffix cues; default nominal cues exclude curated function words (`language_data.py`) | Over-include (e.g. `month/health/truth`, `König/Saal`, `Musik/Natur`); adjective cues have no equivalent function-word exclusion |
-| Modal lexicons | Curated forms per language | Unequal morphology coverage; not cross-language comparable |
+| Modal lexicons | Curated forms per language (`modal_density`) | Unequal morphology coverage (German and Dutch include preterite forms; the other five profiles cover present forms only; `generic` has no modal lexicon) — strictly not comparable across languages |
 
 **Since v0.7.6:** nominal ending lists include selected plural forms in each
 language, including `Entscheidungen`, `decisions`, `décisions`, `decisiones`,
