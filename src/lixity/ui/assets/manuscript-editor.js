@@ -222,6 +222,7 @@
   const metricGuide = document.body.dataset.metricGuide;
   if (metricGuide) {
     const reference = document.createElement('a');
+    reference.className = "ctl metric-guide-action";
     reference.href = metricGuide + '#revisions';
     reference.target = '_blank';
     reference.rel = 'noopener noreferrer';

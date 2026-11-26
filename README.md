@@ -32,9 +32,9 @@ See [Validation and limits](https://github.com/mfahsold/lixity/blob/main/docs/ST
    [Mac with Apple silicon or an Intel processor](https://lixity.de/guides/installation.html#macos),
    [Windows 64-bit PC](https://lixity.de/guides/installation.html#windows)
    or [Linux 64-bit PC](https://lixity.de/guides/installation.html#linux).
-   The current desktop test archives require GitHub sign-in. Windows and Linux
+   The preview installers are public downloads. Windows and Linux
    builds target x86-64.
-2. Extract the archive, [check the installer in your browser](https://lixity.de/guides/installation.html#installer-check)
+2. Download the installer, [check the installer in your browser](https://lixity.de/guides/installation.html#installer-check)
    and follow the setup steps for your computer. The desktop app includes the analysis runtime.
 3. Open Lixity. Choose **Try the example offline**
    for an editable sample, **Open a project folder** for work already in a
@@ -45,7 +45,8 @@ Try the [browser exercise](https://lixity.de/sandbox/index.html)
 or follow a finding in the [read-only demo](https://lixity.de/demo/report.html)
 before installing. The published
 [local browser app and CLI](https://lixity.de/guides/installation.html#install)
-are available through PyPI. [Installation and updates](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md)
+are available through PyPI. If you already use pipx with Python 3.10 or newer, run
+`pipx install lixity`, then `lixity service start --open`. [Installation and updates](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md)
 
 <a id="choose-what-leaves-the-project"></a>
 

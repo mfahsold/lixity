@@ -22,6 +22,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven-language homepage copy with `STABILITY.md`, publish the task-based
   usability study protocol (`docs/USER_STUDY_PROTOCOL.md`), and document
   AI-model version disclosure in `CONTRIBUTING.md`.
+- Open local measurement explanations inside the desktop workspace and style
+  their controls consistently in passage cards, panels and revision comparisons.
+
 - Update the vendored CodeMirror editor dependency `@codemirror/view` from
   `6.44.0` to `6.44.1` (rebuilding `codemirror-editor.js` and its license
   inventory) and apply semver-compatible patch updates in `desktop/Cargo.lock`

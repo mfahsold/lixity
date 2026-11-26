@@ -26,6 +26,50 @@
     return (document.body && document.body.dataset && document.body.dataset.api) || "/api";
   }
 
+  // Workspace guides use the desktop session cookie and project-specific settings.
+  // Keep them in the authenticated window, including links rendered after startup.
+  document.addEventListener("click", async function (event) {
+    var link = event.target.closest && event.target.closest("a[href]");
+    var guide = document.body.dataset.metricGuide;
+    if (!window.lixityDesktop || !guide || !link || event.defaultPrevented) return;
+    var url = new URL(link.href);
+    var base = new URL(guide, location.href);
+    if (url.origin !== location.origin || url.pathname !== base.pathname || !url.hash) return;
+    event.preventDefault();
+    var dialog = document.createElement("dialog");
+    dialog.className = "lixity-modal";
+    dialog.setAttribute("aria-label", link.textContent.trim());
+    dialog.innerHTML = '<div class="modal-card"><div class="modal-header"><h2></h2><button class="modal-close" type="button">×</button></div><div class="modal-body" role="status"></div></div>';
+    var heading = dialog.querySelector("h2");
+    heading.textContent = link.textContent.trim();
+    var close = dialog.querySelector("button");
+    close.setAttribute("aria-label", label("close", "Close"));
+    close.onclick = function () { dialog.close(); };
+    dialog.addEventListener("close", function () { dialog.remove(); }, {once:true});
+    document.body.appendChild(dialog);
+    dialog.showModal();
+    var body = dialog.querySelector(".modal-body");
+    body.textContent = "…";
+    try {
+      var response = await fetch(base.href);
+      if (!response.ok) throw new Error(String(response.status));
+      var doc = new DOMParser().parseFromString(await response.text(), "text/html");
+      var section = doc.getElementById(url.hash.slice(1));
+      if (!section) throw new Error(url.hash);
+      var title = section.querySelector("h2, h3, dt");
+      if (title) heading.textContent = title.textContent;
+      body.replaceChildren();
+      section.querySelectorAll("h3, dt, p, li").forEach(function (item) {
+        if (item === title) return;
+        var line = document.createElement(item.matches("dt,h3") ? "h3" : "p");
+        line.textContent = item.textContent;
+        body.appendChild(line);
+      });
+    } catch (error) {
+      body.textContent = label("error", "Error") + ": " + error.message;
+    }
+  });
+
   var statusDialog = null;
   var statusBody = null;
   var updateStatusEl = null;

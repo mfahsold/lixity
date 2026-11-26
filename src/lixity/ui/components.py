@@ -412,7 +412,7 @@ def metric_reference_link(
         return ""
     identifier = f' id="{esc(element_id)}"' if element_id else ""
     return (
-        f'<a{identifier} href="{esc(base + "#" + section)}" target="_blank" rel="noopener noreferrer">'
+        f'<a{identifier} class="ctl metric-guide-action" href="{esc(base + "#" + section)}" target="_blank" rel="noopener noreferrer">'
         f'{esc(label(labels, label_key))}</a>'
     )
 

@@ -387,7 +387,7 @@
           window.LixityManuscriptEditor.openAtLine(targetLine);
         }}>${message("evidence_edit_passage")}</button>
       </div>` : null}
-      ${metricGuide ? html`<p class="ctl-note"><a href=${metricGuide + "#measure-" + key} target="_blank" rel="noopener noreferrer">${message("metric_reference_link")}</a></p>` : null}
+      ${metricGuide ? html`<p class="ctl-note"><a class="ctl metric-guide-action" href=${metricGuide + "#measure-" + key} target="_blank" rel="noopener noreferrer">${message("metric_reference_link")}</a></p>` : null}
       <details class="analysis-evidence-guide" onToggle=${function() {if (card) position(card.rect);}}><summary>${message("analysis_coverage")}</summary>
         ${comparison ? html`<p class="analysis-evidence-comparison-score">${uiFormat("evidence_comparison_z", {value:z})}</p>` : null}
         ${valueAllowed && !comparison && !comparisonGap && option.dataset.inlineEvidence !== "1" ? html`<p class="analysis-evidence-unavailable">${message("evidence_comparison_missing")}</p>` : null}
