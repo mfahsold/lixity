@@ -1008,7 +1008,7 @@ class TestPublicLanguages(unittest.TestCase):
     def test_home_social_image_dimensions_follow_regenerated_screenshot_in_every_language(self):
         from unittest.mock import patch
 
-        from scripts.build_public_site import LANGUAGES, ROOT, render_pages
+        from scripts.build_public_site import LANGUAGES, ROOT, TOUR_MEDIA, render_pages
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -1018,6 +1018,9 @@ class TestPublicLanguages(unittest.TestCase):
                 target = root / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes((ROOT / relative).read_bytes())
+            for relative in TOUR_MEDIA.values():
+                # The generator only fingerprints these files.
+                (root / "docs" / relative).write_bytes(relative.encode())
             version = root / "src/lixity/_version.py"
             version.parent.mkdir(parents=True)
             version.write_text('__version__ = "0.0.0"\n', encoding="utf-8")
@@ -1041,16 +1044,28 @@ class TestPublicLanguages(unittest.TestCase):
         from scripts.build_public_site import LANGUAGES, ROOT, page_path, render_pages
 
         timing = json.loads((ROOT / "docs/videos/product-tour-timing.json").read_text())
+        media_attributes = {
+            'src': ('product-tour.mp4', 'product-tour.webm', 'product-tour-portrait.mp4'),
+            'poster': ('product-tour.webp',),
+            'data-portrait-poster': ('product-tour-portrait.png',),
+            'href': ('product-tour.webp',),
+        }
+        references = []
+        for attribute, filenames in media_attributes.items():
+            for filename in filenames:
+                relative = f'videos/{filename}'
+                digest = hashlib.sha256((ROOT / 'docs' / relative).read_bytes()).hexdigest()[:12]
+                references.append(f'{attribute}="{relative}?v={digest}"')
 
         pages = render_pages()
         for language in LANGUAGES:
             with self.subTest(language=language):
                 content = json.loads((ROOT / f"docs/locales/{language}.json").read_text())
                 text = pages[page_path(language)]
-                self.assertIn('src="videos/product-tour.mp4"', text)
-                self.assertIn('src="videos/product-tour-portrait.mp4"', text)
+                for reference in references:
+                    self.assertIn(reference, text)
                 self.assertIn('media="(orientation: portrait)"', text)
-                self.assertIn('data-portrait-poster="videos/product-tour-portrait.png"', text)
+                self.assertIn(f'property="og:video" content="{SITE}videos/product-tour.mp4"', text)
                 self.assertIn('preload="none"', text)
                 self.assertIn('muted playsinline controls', text)
                 self.assertNotIn(' autoplay', text)

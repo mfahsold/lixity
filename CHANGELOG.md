@@ -9,6 +9,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Refresh the landscape and portrait product tour from the current workspace.
+  Use the export's poster and content fingerprints for the player media. Put
+  the Lixity mark, product name and question above the social clips, with a
+  close-up of the counted sentence during the review.
+- Create new Unix desktop service directories with private permissions so
+  the local browser service can read its status when started after Desktop.
 - Add a full-inventory Pages verification mode for website and asset rollouts.
   Compare every served file with the staged build for the deployed commit.
 - Explain direct desktop preview installation and per-file checksums on the

@@ -19,7 +19,7 @@ $alternates
 <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)"/>
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)"/>
 <meta name="fediverse:creator" content="@lixity@mastodon.social"/>
-<link rel="preload" as="image" href="screenshots/dashboard-light.png" fetchpriority="high"/>
+<link rel="preload" as="image" href="$tour_landscape_poster" media="(orientation: landscape)" fetchpriority="high"/>
 <link rel="stylesheet" href="assets/site.css"/>
 <link rel="stylesheet" href="assets/home.css"/>
 <script src="assets/site-language.js" defer></script>
@@ -74,10 +74,10 @@ $og_locales
 </aside></div>
 <figure id="product-tour-preview" tabindex="-1" class="product-preview product-tour" aria-label="$tour_title">
 <div class="tour-screen">
-<video id="product-tour" width="1440" height="900" poster="screenshots/dashboard-light.png" data-portrait-poster="videos/product-tour-portrait.png" preload="none" muted playsinline controls aria-label="$tour_title" aria-describedby="tour-note">
-<source src="videos/product-tour-portrait.mp4" type="video/mp4" media="(orientation: portrait)"/>
-<source src="videos/product-tour.webm" type='video/webm; codecs="av01.0.08M.08"'/>
-<source src="videos/product-tour.mp4" type="video/mp4"/>
+<video id="product-tour" width="1440" height="900" poster="$tour_landscape_poster" data-portrait-poster="$tour_portrait_poster" preload="none" muted playsinline controls aria-label="$tour_title" aria-describedby="tour-note">
+<source src="$tour_portrait_mp4" type="video/mp4" media="(orientation: portrait)"/>
+<source src="$tour_landscape_webm" type='video/webm; codecs="av01.0.08M.08"'/>
+<source src="$tour_landscape_mp4" type="video/mp4"/>
 <a href="demo/report.html" hreflang="en">$demo</a>
 </video>
 <div class="tour-caption" aria-hidden="true" hidden><span>$tour_read</span></div>

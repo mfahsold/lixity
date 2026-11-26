@@ -210,8 +210,21 @@ impl Drop for WindowsJobGuard {
 pub fn sidecar_log_dir() -> Option<PathBuf> {
     let base = dirs::state_dir().or_else(dirs::data_local_dir)?;
     let dir = base.join("lixity").join("service");
-    fs::create_dir_all(&dir).ok()?;
+    create_sidecar_log_dir(&dir).ok()?;
     Some(dir)
+}
+
+fn create_sidecar_log_dir(dir: &Path) -> std::io::Result<()> {
+    let mut builder = fs::DirBuilder::new();
+    builder.recursive(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+
+        // Managed browser services require private access to this shared directory.
+        builder.mode(0o700);
+    }
+    builder.create(dir)
 }
 
 fn sidecar_log_path() -> Option<PathBuf> {
@@ -550,11 +563,33 @@ fn attach_kill_on_close_job(child: &Child) -> Option<WindowsJobGuard> {
 mod tests {
     use super::*;
 
+    struct RuntimeFixture(PathBuf);
+    impl Drop for RuntimeFixture {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
     const READY: &str = concat!(
         r#"{"schema_version":"lixity-desktop-ready/1","ready":true,"#,
         r#""host":"127.0.0.1","port":12345,"version":"0.9.1"}"#,
         "\n"
     );
+
+    #[cfg(unix)]
+    #[test]
+    fn creates_private_sidecar_log_directories_and_preserves_existing_mode() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let fixture = RuntimeFixture(std::env::temp_dir().join(random_token_hex()));
+        let dir = fixture.0.join("lixity").join("service");
+        create_sidecar_log_dir(&dir).unwrap();
+        assert_eq!(fs::metadata(&dir).unwrap().permissions().mode() & 0o077, 0);
+
+        fs::set_permissions(&dir, fs::Permissions::from_mode(0o755)).unwrap();
+        create_sidecar_log_dir(&dir).unwrap();
+        assert_eq!(fs::metadata(&dir).unwrap().permissions().mode() & 0o777, 0o755);
+    }
 
     #[test]
     fn accepts_the_complete_loopback_readiness_frame() {
@@ -618,13 +653,6 @@ mod tests {
 
     #[test]
     fn selects_regular_python_files_and_keeps_the_packaged_path() {
-        struct RuntimeFixture(PathBuf);
-        impl Drop for RuntimeFixture {
-            fn drop(&mut self) {
-                let _ = fs::remove_dir_all(&self.0);
-            }
-        }
-
         let fixture = RuntimeFixture(std::env::temp_dir().join(random_token_hex()));
         let root = &fixture.0;
         let python = root.join("python");

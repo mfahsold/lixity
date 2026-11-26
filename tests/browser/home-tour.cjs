@@ -126,7 +126,7 @@ const root = stagePages();
       await button.click();
       await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);
       // Exercise real source exhaustion, not an invented media-element event.
-      const tourSources = '**/videos/{product-tour.mp4,product-tour.webm,product-tour-portrait.mp4}';
+      const tourSources = url => /\/videos\/product-tour(?:-portrait)?\.(mp4|webm)$/.test(url.pathname);
       await page.route(tourSources, route => route.abort());
       await page.goto('https://tour.test/');
       await video.scrollIntoViewIfNeeded();
@@ -134,7 +134,7 @@ const root = stagePages();
       await expect(page.locator('.tour-caption')).toBeHidden();
       await page.unroute(tourSources);
       const unavailable = width === 390 ? 'product-tour-portrait.mp4' : 'product-tour.webm';
-      await page.route(`**/videos/${unavailable}`, route => route.abort());
+      await page.route(url => url.pathname.endsWith(`/videos/${unavailable}`), route => route.abort());
       await page.goto('https://tour.test/');
       await video.scrollIntoViewIfNeeded();
       await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(.2);

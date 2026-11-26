@@ -438,12 +438,18 @@ both code hashes and the backup path in `rollout.json`. If the staged or
 installed bundle fails verification, the previous bundle is preserved or
 restored. Keep the backup for manual rollback.
 
-After the replacement, verify the installed bundle and launch a synthetic
-project. Open **Tools → System Status & Extensions** to confirm the source
-commit and bundled runtime. Check a local analysis result and confirm that
-the bundled engine exits when you quit. Desktop and browser services have
-separate lifecycles. For manual rollback, quit the app before restoring the
-verified backup listed in `rollout.json`.
+After the replacement, open the installed app from **Applications → Lixity** or
+run the following command. Use this same app when reopening the test build.
+
+```sh
+open -a /Applications/Lixity.app
+```
+
+Open **Tools → System Status & Extensions** and match **Build** (**Build-Stand**
+in German) to the source commit in `rollout.json`. Different test builds can share
+a version string. With a synthetic project, check a local analysis result and
+confirm that the bundled engine exits when you quit. For manual rollback, quit
+the app before restoring the verified backup listed in `rollout.json`.
 [Desktop logs](../docs/INSTALLATION.md#find-the-desktop-logs)
 
 #### App-managed updates

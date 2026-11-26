@@ -334,8 +334,13 @@ def convert_social_cuts() -> None:
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         raise SystemExit("ffmpeg is required to publish social clips.")
-    font = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
-    font_opt = f":fontfile={font}" if Path(font).is_file() else ""
+    fonts = (
+        Path("/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"),
+        Path("/System/Library/Fonts/Supplemental/Arial Bold.ttf"),
+    )
+    font = next((candidate for candidate in fonts if candidate.is_file()), None)
+    font_opt = f":fontfile='{font}'" if font else ""
+    logo = BASE_DIR / "docs/assets/brand/icon-192.png"
     scene = next(scene for scene in plan["scenes"] if scene["id"] == "passage")
     duration = scene["end"] - scene["start"]
     reading_hold = 4
@@ -351,14 +356,19 @@ def convert_social_cuts() -> None:
             "setpts=PTS-STARTPTS",
             f"tpad=stop_mode=clone:stop_duration={reading_hold}",
         ]
-        layout = []
         if portrait:
-            layout.extend(("crop=1120:ih:320:0", "scale=1080:-2:flags=lanczos", "setsar=1"))
-        frame_y = "310" if portrait else "(oh-ih)/2"
+            layout = ["crop=1120:ih:320:0", "scale=996:-2:flags=lanczos"]
+        else:
+            layout = ["scale=1280:800:flags=lanczos"]
+        layout.append("setsar=1")
+        frame_y = 310 if portrait else 96
         layout.append(f"pad={width}:{height}:(ow-iw)/2:{frame_y}:color=0x0d1322")
-        inset_width = 518 if portrait else 424
+        inset_width = 560 if portrait else 424
         inset_x = "(main_w-overlay_w)/2" if portrait else "80"
-        inset_y = 1100 if portrait else 175
+        inset_y = 1110 if portrait else 175
+        logo_size = 72 if portrait else 46
+        logo_x, logo_y = (64, 80) if portrait else (80, 24)
+        name_x = logo_x + logo_size + (20 if portrait else 14)
         detail_filters = (
             f"crop={detail_width}:{detail_height}:{x}:{y},"
             f"scale={inset_width}:-2:flags=lanczos,setsar=1,"
@@ -368,17 +378,15 @@ def convert_social_cuts() -> None:
             f"[0:v]{','.join(shot)},split[context][detail]",
             f"[context]{','.join(layout)}[base]",
             f"[detail]{detail_filters}[inset]",
+            f"[1:v]scale={logo_size}:{logo_size}:flags=lanczos[logo]",
         ]
         composed = [
             f"[base][inset]overlay=x={inset_x}:y={inset_y}:enable='gte(t,{duration / 2:g})'",
+            f"drawtext=text='Lixity'{font_opt}:fontsize={48 if portrait else 32}:fontcolor=white:"
+            f"x={name_x}:y={logo_y + (10 if portrait else 6)}",
         ]
-        if portrait:
-            composed.append(
-                f"drawtext=text='LIXITY'{font_opt}:fontsize=30:fontcolor=0x93c5fd:"
-                "x=(w-text_w)/2:y=126"
-            )
-        caption_y = "198" if portrait else "h-text_h-36"
-        caption_size = 54 if portrait else 32
+        caption_y = 210 if portrait else 31
+        caption_size = 48 if portrait else 34
         captions = (
             ("Why is this sentence underlined?", f"lt(t,{duration / 2:g})"),
             ("See the words Lixity counted.", f"between(t,{duration / 2:g},{duration - 1 / fps:g})"),
@@ -390,10 +398,13 @@ def convert_social_cuts() -> None:
                 f"fontsize={caption_size}:fontcolor=white:box=1:boxcolor=0x0d1322@0.94:"
                 f"boxborderw=14:x=(w-text_w)/2:y={caption_y}:enable='{interval}'"
             )
-        filters.append(",".join(composed) + "[out]")
+        filters.extend((
+            ",".join(composed) + "[labeled]",
+            f"[labeled][logo]overlay=x={logo_x}:y={logo_y}[out]",
+        ))
         with tempfile.TemporaryDirectory(prefix=".clip-", dir=OUT_DIR) as pending:
             target = Path(pending) / name
-            run([ffmpeg, "-y", "-loglevel", "error", "-i", str(source),
+            run([ffmpeg, "-y", "-loglevel", "error", "-i", str(source), "-i", str(logo),
                  "-filter_complex", ";".join(filters), "-map", "[out]", "-an", "-map_metadata", "-1",
                  "-frames:v", str(frames), "-r", str(fps), "-fps_mode", "cfr",
                  "-c:v", "libx264", "-preset", "slow", "-crf", "25", "-pix_fmt", "yuv420p",

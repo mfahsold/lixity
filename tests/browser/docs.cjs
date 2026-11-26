@@ -112,7 +112,7 @@ async function checkHomepageTourPlayback(page, portrait) {
     await page.keyboard.press('Enter');
     await expect.poll(() => video.evaluate(clip => clip.paused)).toBe(true);
     if (!portrait) {
-      const landscapeSources = /\/videos\/product-tour\.(mp4|webm)$/;
+      const landscapeSources = url => /\/videos\/product-tour\.(mp4|webm)$/.test(url.pathname);
       await page.route(landscapeSources, route => route.fulfill({contentType: 'application/octet-stream', body: ''}));
       try {
         await page.reload();
@@ -1566,7 +1566,8 @@ async function checkSandboxQuotationPairs(page) {
             const video = page.locator('.product-preview video');
             const portrait = width <= page.viewportSize().height;
             const poster = javaScriptEnabled && portrait
-              ? 'videos/product-tour-portrait.png' : 'screenshots/dashboard-light.png';
+              ? /^videos\/product-tour-portrait\.png\?v=[0-9a-f]{12}$/
+              : /^videos\/product-tour\.webp\?v=[0-9a-f]{12}$/;
             await expect(video).toHaveAttribute('poster', poster);
             await expect(video).toHaveAttribute('preload', 'none');
             await expect.poll(() => video.evaluate(el => el.clientWidth / el.clientHeight))

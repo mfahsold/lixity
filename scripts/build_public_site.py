@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
 import json
 import struct
@@ -15,6 +16,13 @@ LANGUAGES = {'en': 'English', 'de': 'Deutsch', 'fr': 'Français', 'es': 'Españo
 OG_LOCALES = {'en': 'en_US', 'de': 'de_DE', 'fr': 'fr_FR', 'es': 'es_ES',
               'it': 'it_IT', 'pt': 'pt_PT', 'nl': 'nl_NL'}
 BASE = 'https://lixity.de/'
+TOUR_MEDIA = {
+    'tour_landscape_mp4': 'videos/product-tour.mp4',
+    'tour_landscape_webm': 'videos/product-tour.webm',
+    'tour_landscape_poster': 'videos/product-tour.webp',
+    'tour_portrait_mp4': 'videos/product-tour-portrait.mp4',
+    'tour_portrait_poster': 'videos/product-tour-portrait.png',
+}
 
 
 def page_path(language: str) -> str:
@@ -38,6 +46,10 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
     dictionaries = {lang: json.loads((base / f'docs/locales/{lang}.json').read_text(encoding="utf-8"))
                     for lang in LANGUAGES}
     tour = json.loads((base / 'docs/videos/product-tour-timing.json').read_text(encoding='utf-8'))
+    tour_urls = {}
+    for field, path in TOUR_MEDIA.items():
+        fingerprint = hashlib.sha256((base / 'docs' / path).read_bytes()).hexdigest()[:12]
+        tour_urls[field] = f'{path}?v={fingerprint}'
     template = Template((base / 'docs/templates/home.html.template').read_text(encoding="utf-8"))
     footer = Template((base / 'docs/templates/home-footer.html.template').read_text(encoding="utf-8"))
     version = source_version(base)
@@ -54,6 +66,7 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
                              .replace('{tour_duration}', str(tour['duration'])), quote=True)
             for key, value in content.items()
         }
+        fields.update(tour_urls)
         fields['tour_cues'] = ''.join(
             f'<li data-start="{scene["start"]}">{fields["tour_" + scene["id"]]}</li>'
             for scene in tour['scenes']

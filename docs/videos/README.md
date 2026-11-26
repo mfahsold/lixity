@@ -86,6 +86,11 @@ WebP still. The portrait encoder produces H.264 and a 540×960 PNG poster.
 Inspect small UI text, framing, cursor motion and caption alignment before
 accepting new encodings.
 
+The homepage uses both encoded posters. `make docs-sync` incorporates a short
+content fingerprint in each player video and poster URL so a refreshed page
+loads the corresponding export. Public direct-download and sharing URLs stay
+stable.
+
 ## Social excerpts
 
 `social-hook-16x9.mp4` and `social-hook-9x16.mp4` show the same twelve-second
@@ -95,9 +100,10 @@ that invites the reader to find out what was counted.
 
 The 1600×900 landscape file preserves the full workspace. The 1080×1920 portrait
 file frames the manuscript more tightly and leaves room for readable titles.
-Both enlarge the actual evidence card as a picture-in-picture detail after it
-opens. The crop is defined in `product-tour-timing.json` and should be checked
-against any new recording. Both clips are silent with English text overlays.
+Both put the Lixity mark, product name and question above the workspace. They
+enlarge the actual evidence card as a picture-in-picture detail after it opens.
+The crop is defined in `product-tour-timing.json` and should be checked against
+any new recording. Both clips are silent with English text overlays.
 The full product tour has localized captions. The landscape limit is 3.5 MB
 and the portrait limit is 4 MB.
 
