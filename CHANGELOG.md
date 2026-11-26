@@ -28,9 +28,18 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   preserving its exact token-bound routes.
 - Keep map numbers from blocking nearby features at narrow widths. Keep every
   feature selectable in the list when the map has room for fewer numbers.
+- Keep the writing toolbar visible during pauses and scrolling. Open editing
+  and formatting actions from the text or the toolbar, with keyboard access
+  and selection restoration.
+- Link the website and workspace to the project funding status and planned
+  desktop and mobile installer work.
 
 ### Fixed
 
+- Keep delayed editor requests from taking over a newer workspace or focus
+  choice. Preserve the cursor across an unchanged return to Write and complete
+  pending saves before leaving. Include draft edits in the comparison dialog
+  in the desktop close guard.
 - Keep unsaved voice profile edits open when applying a reviewed audio settings
   upgrade. Bind the upgrade review to the manuscript open in the app.
 - Show the selected speech worker's availability and setup link beside the

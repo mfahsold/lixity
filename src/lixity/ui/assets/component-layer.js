@@ -13,7 +13,6 @@
   var SHARED_CHROME_SELECTOR = [
     "#manuscript-reader-controls",
     ".manuscript-reading .toolbar",
-    ".manuscript-editor-toolbar",
     ".teleprompter-toolbar",
     ".pane-ribbon",
     ".research-pane-navigation"
@@ -615,7 +614,7 @@
       }
       return Boolean(
         target.nodeType === 1 &&
-        target.matches(".cm-scroller, .teleprompter-scroll-pane")
+        target.matches(".teleprompter-scroll-pane")
       );
     }
 
@@ -627,10 +626,6 @@
     }
 
     function getActiveScrollDepth() {
-      if (document.body.classList.contains("manuscript-writing")) {
-        var cmScroller = document.querySelector("#manuscript-editor-host .cm-scroller");
-        if (cmScroller) return Math.max(window.scrollY || 0, cmScroller.scrollTop || 0);
-      }
       var telePane = document.querySelector("#teleprompter-modal:not([hidden]) .teleprompter-scroll-pane");
       if (telePane) return telePane.scrollTop || 0;
       return window.scrollY || document.documentElement.scrollTop || 0;
@@ -638,6 +633,8 @@
 
     function shouldHoldVisible() {
       if (!document.body) return true;
+      // Save state and the way back to the reader must stay in view while writing.
+      if (document.body.matches('.manuscript-writing[data-workspace-view="analysis"]:not(.teleprompter-open)')) return true;
       // Reviewing measurements requires the metric picker and the way back
       // to the text even after the pointer and keyboard leave the toolbar.
       if (document.body.matches(
@@ -672,7 +669,6 @@
     function canAutoHideByIdle() {
       if (!document.body || shouldHoldVisible()) return false;
       if (document.body.classList.contains("reader-focus")) return true;
-      if (document.body.classList.contains("manuscript-writing")) return true;
       if (document.querySelector("#teleprompter-modal:not([hidden])")) return true;
       if (
         document.body.classList.contains("manuscript-reading") &&
@@ -742,7 +738,7 @@
       }
       var isInteractiveScroll =
         performance.now() <= userScrollUntil ||
-        (target && target.nodeType === 1 && target.matches(".cm-scroller, .teleprompter-scroll-pane"));
+        (target && target.nodeType === 1 && target.matches(".teleprompter-scroll-pane"));
       if (!isInteractiveScroll) {
         scheduleIdle();
         return;

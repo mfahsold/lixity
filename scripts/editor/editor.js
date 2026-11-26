@@ -56,7 +56,7 @@ export function mount(parent, text, onChange, language, label) {
       ...searchKeymap, ...defaultKeymap, ...historyKeymap,
     ]), markdown(), EditorView.lineWrapping,
     EditorState.phrases.of(Object.fromEntries(searchTerms.map((term,i) => [term, (searchTranslations[language] || searchTerms)[i]]))),
-    EditorView.contentAttributes.of({spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off', lang: language, 'aria-label': label}),
+    EditorView.contentAttributes.of({spellcheck: 'false', autocorrect: 'off', autocapitalize: 'off', lang: language, tabindex: '0', 'aria-label': label}),
     EditorView.theme({
       '&': {backgroundColor: 'var(--surface)', color: 'var(--fg)', borderRadius: 'var(--radius-lg, 16px)', border: '1px solid var(--line, transparent)'},
       '.cm-scroller': {fontFamily: 'var(--font-title)', fontSize: 'var(--reader-font-size, 1.125rem)', lineHeight: 'var(--reader-leading, 1.8)', overflow: 'auto', height: '66vh'},
@@ -85,6 +85,7 @@ export function mount(parent, text, onChange, language, label) {
     replace: text => view.dispatch({changes: {from: 0, to: view.state.doc.length, insert: text}}),
     line: line => {const pos = view.state.doc.line(Math.min(Math.max(1, line), view.state.doc.lines)).from;
       view.dispatch({selection: {anchor: pos}, effects: EditorView.scrollIntoView(pos, {y: 'center'})});},
+    revealSelection: () => view.dispatch({effects: EditorView.scrollIntoView(view.state.selection.main, {y: 'nearest'})}),
     currentLine: () => view.state.doc.lineAt(view.state.selection.main.head).number,
     wrap: (before, after, placeholder = 'text') => wrapSelection(view, before, after, placeholder),
     togglePrefix: prefix => toggleLinePrefix(view, prefix),

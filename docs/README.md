@@ -43,7 +43,7 @@ explains offline help.
 | Application layers, local storage and evidence revisions | [Architecture](ARCHITECTURE.md) · [Research data model](research/DATA_MODEL.md) |
 | Development, checks and publication | [Contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) · [Desktop maintainers' guide](https://github.com/mfahsold/lixity/blob/main/desktop/README.md) |
 | Product priorities and feedback criteria | [Product direction](PRODUCT.md) · [Compare manuscript workflows](guides/manuscript-analysis-tools.html) |
-| Licensing and reporting issues | [Licensing](LICENSING.md) · [Security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) |
+| Licensing, project funding and reporting issues | [Licensing](LICENSING.md) · [Project funding and use of funds](FUNDING.md) · [Security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) |
 
 ## Maintain the documentation
 

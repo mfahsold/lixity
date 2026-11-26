@@ -54,9 +54,9 @@
     if (span) span.textContent = newLabel;
     else b.textContent = newLabel;
   }
-  let editor, snapshot, dirty = false, paused = false, inflight = false, pending = null, timer, maximum, loading = false;
-  let composing = false;
-  let loaded = false, generation = 0, openingLine = 1, lastState = '';
+  let editor, snapshot, dirty = false, paused = false, inflight = null, pending = null, timer, maximum;
+  let composing = false, closing = false, opening = null, editorBundle = null;
+  let generation = 0, workspaceGeneration = 0, lastState = '', readerPosition = null;
   const closeWords = [L('editor_close_writing'), L('editor_close_writing_help')];
   const writeHelp = L('editor_write_help');
   const openButton = button(text(0), 'manuscript-write', open, writeHelp, {icon: 'pen-line', className: 'ctl reader-compact-control', labelClass: 'reader-control-label'});
@@ -66,9 +66,18 @@
   const openAnchor = companionControls || controls.querySelector('#reader-teleprompter') || controls.querySelector('#workbench-overview-label') || controls.querySelector('#reader-analysis-settings');
   if (openAnchor) openAnchor.before(openButton);
   else controls.append(openButton);
+  const openingError = document.createElement('p');
+  openingError.id = 'manuscript-opening-error';
+  openingError.className = 'ctl-note warn';
+  openingError.setAttribute('role', 'alert');
+  openingError.hidden = true;
+  openButton.after(openingError);
   const section = document.createElement('section'); section.id = 'manuscript-editor'; section.hidden = true;
   section.setAttribute('aria-label', text(13)); chapters.before(section);
-  const tools = document.createElement('div'); tools.className = 'manuscript-edit-tools manuscript-editor-toolbar'; section.append(tools);
+  const tools = document.createElement('div'); tools.className = 'manuscript-edit-tools manuscript-editor-toolbar';
+  tools.setAttribute('role', 'group');
+  tools.setAttribute('aria-label', text(0));
+  section.append(tools);
   const historyGroup = document.createElement('div'); historyGroup.className = 'editor-tool-group editor-group-history';
   const formatGroup = document.createElement('div'); formatGroup.className = 'editor-tool-group editor-group-format';
   formatGroup.setAttribute('role', 'group'); formatGroup.setAttribute('aria-label', L('editor_formatting'));
@@ -80,12 +89,33 @@
   const contextGroup = document.createElement('div'); contextGroup.className = 'editor-tool-group editor-group-context';
   const statusGroup = document.createElement('div'); statusGroup.className = 'editor-tool-group editor-group-status';
   tools.append(historyGroup, formatGroup, contextGroup, versions, statusGroup);
-  const fmtWords = ['editor_fmt_h2', 'editor_fmt_bold', 'editor_fmt_italic', 'editor_fmt_break'].map(L);
-  const fmtH2 = button('H2', 'manuscript-fmt-h2', () => editor && editor.togglePrefix && editor.togglePrefix('## '), fmtWords[0], {className: 'ctl ctl-sm editor-fmt-btn', accessibleName: fmtWords[0]});
-  const fmtBold = button('B', 'manuscript-fmt-bold', () => editor && editor.wrap && editor.wrap('**', '**', 'text'), fmtWords[1], {className: 'ctl ctl-sm editor-fmt-btn editor-fmt-bold', shortcut: editorShortcut('B'), accessibleName: L('editor_bold')});
-  const fmtItalic = button('I', 'manuscript-fmt-italic', () => editor && editor.wrap && editor.wrap('*', '*', 'text'), fmtWords[2], {className: 'ctl ctl-sm editor-fmt-btn editor-fmt-italic', shortcut: editorShortcut('I'), accessibleName: L('editor_italic')});
-  const fmtBreak = button('—', 'manuscript-fmt-break', () => editor && editor.insertBreak && editor.insertBreak(), fmtWords[3], {className: 'ctl ctl-sm editor-fmt-btn', accessibleName: fmtWords[3]});
-  formatGroup.append(fmtH2, fmtBold, fmtItalic, fmtBreak);
+  const writingCommands = {
+    bold: {label: L('editor_bold'), help: L('editor_fmt_bold'), shortcut: editorShortcut('B'), run: () => editor.wrap('**', '**', 'text')},
+    italic: {label: L('editor_italic'), help: L('editor_fmt_italic'), shortcut: editorShortcut('I'), run: () => editor.wrap('*', '*', 'text')},
+    heading: {label: L('editor_fmt_h2'), run: () => editor.togglePrefix('## ')},
+    scene: {label: L('editor_fmt_break'), run: () => editor.insertBreak()},
+    undo: {label: text(2), shortcut: editorShortcut('Z'), run: () => editor.undo()},
+    redo: {label: text(3), shortcut: redoShortcut, run: () => editor.redo()},
+    find: {label: L('editor_find_replace'), shortcut: editorShortcut('F'), run: () => editor.search()},
+  };
+  function runWritingCommand(command) {
+    if (!editor || section.hidden || composing) return;
+    editor.focus();
+    command.run();
+  }
+  function writingCommandButton(name, id, label, options) {
+    const command = writingCommands[name];
+    return button(label || command.label, id, () => runWritingCommand(command), command.help || command.label, {
+      ...options, shortcut: command.shortcut, accessibleName: command.label,
+    });
+  }
+  const formatClass = 'ctl ctl-sm editor-fmt-btn';
+  formatGroup.append(
+    writingCommandButton('heading', 'manuscript-fmt-h2', 'H2', {className: formatClass}),
+    writingCommandButton('bold', 'manuscript-fmt-bold', 'B', {className: formatClass + ' editor-fmt-bold'}),
+    writingCommandButton('italic', 'manuscript-fmt-italic', 'I', {className: formatClass + ' editor-fmt-italic'}),
+    writingCommandButton('scene', 'manuscript-fmt-break', '—', {className: formatClass}),
+  );
   const status = document.createElement('span'); status.id = 'manuscript-save-status'; status.setAttribute('role', 'status');
   const freshness = document.createElement('aside'); freshness.id = 'manuscript-analysis-freshness'; freshness.className = 'status-strip'; freshness.hidden = true; freshness.setAttribute('role', 'status'); const freshnessText = document.createElement('span'); freshnessText.className = 'warn'; freshnessText.textContent = text(14); freshness.append(freshnessText);
   document.body.prepend(freshness);
@@ -137,9 +167,9 @@
   const recovery = document.createElement('select'); recovery.className = 'ctl ctl-sm'; recovery.id = 'manuscript-recovery'; recovery.setAttribute('aria-label', text(8));
   const recoveryNote = document.createElement('p'); recoveryNote.id = 'manuscript-recovery-note'; recoveryNote.className = 'ctl-note';
   recoveryNote.textContent = L('editor_recovery_unsaved');
-  const retry = button(text(11), 'manuscript-save', () => {paused = false; flush();}, null, {icon: 'save', className: 'ctl ctl-sm primary'});
-  const undoBtn = button(text(2), 'manuscript-undo', () => {if (editor) {editor.undo(); editor.focus();}}, text(2), {icon: 'undo', shortcut: editorShortcut('Z'), iconOnly: true});
-  const redoBtn = button(text(3), 'manuscript-redo', () => {if (editor) {editor.redo(); editor.focus();}}, text(3), {icon: 'redo', shortcut: redoShortcut, iconOnly: true});
+  const retry = button(text(11), 'manuscript-save', saveDraft, null, {icon: 'save', shortcut: editorShortcut('S'), className: 'ctl ctl-sm primary'});
+  const undoBtn = writingCommandButton('undo', 'manuscript-undo', null, {icon: 'undo', iconOnly: true});
+  const redoBtn = writingCommandButton('redo', 'manuscript-redo', null, {icon: 'redo', iconOnly: true});
   historyGroup.append(undoBtn, redoBtn);
   statusGroup.append(status, retry, closeButton);
   const reload = button(text(1), 'manuscript-reload', () => {if (dirty) download(); location.reload();}, null, {icon: 'rotate-cw'});
@@ -179,7 +209,7 @@
     'editor_compare_current', 'editor_compare_draft', 'editor_compare_use_draft',
     'editor_compare_cancel', 'editor_compare_note', 'editor_compare_changed',
   ].map(L);
-  const searchBtn = button(comparisonWords[0], 'manuscript-search', () => editor && editor.search(), comparisonWords[0], {icon: 'search', shortcut: editorShortcut('F')});
+  const searchBtn = writingCommandButton('find', 'manuscript-search', null, {icon: 'search'});
   historyGroup.append(searchBtn);
   const comparison = document.createElement('dialog'); comparison.id = 'manuscript-comparison'; comparison.className = 'lixity-modal'; comparison.setAttribute('closedby', 'any'); comparison.setAttribute('aria-label', comparisonWords[1]);
   const comparisonCard = document.createElement('div'); comparisonCard.className = 'modal-card';
@@ -229,7 +259,10 @@
   }
   comparisonClose.addEventListener('click', closeComparison);
   comparison.addEventListener('cancel', event => {event.preventDefault(); closeComparison();});
-  comparison.addEventListener('close', cancelComparisonMeasurements);
+  comparison.addEventListener('close', () => {
+    cancelComparisonMeasurements();
+    notifyDesktopDirty();
+  });
   const comparisonUse = button(comparisonWords[5], 'manuscript-comparison-use', () => {
     if (!comparisonSnapshot || inflight) return;
     const proposed = comparisonFields[2].field.value;
@@ -281,6 +314,138 @@
     else openButton.after(companionControls);
   }
   section.append(host);
+  function revealWritingTools() {
+    if (section.hidden || document.body.dataset.workspaceView !== 'analysis') return;
+    const bounds = tools.getBoundingClientRect();
+    if (bounds.bottom <= 0 || (bounds.bottom > window.innerHeight && bounds.top > 0)) {
+      section.scrollIntoView({block: 'start', behavior: 'instant'});
+    }
+  }
+  function keepFocusedWritingToolsInView() {
+    if (section.contains(document.activeElement)) revealWritingTools();
+  }
+  window.addEventListener('resize', keepFocusedWritingToolsInView, {passive: true});
+  if (typeof ResizeObserver === 'function') {
+    new ResizeObserver(keepFocusedWritingToolsInView).observe(tools);
+  }
+  const editMenuLabel = L('editor_edit_actions');
+  const editMenu = document.createElement('div');
+  editMenu.id = 'manuscript-edit-menu';
+  editMenu.className = 'manuscript-context-menu';
+  editMenu.setAttribute('role', 'menu');
+  editMenu.setAttribute('aria-label', editMenuLabel);
+  editMenu.hidden = true;
+  document.body.append(editMenu);
+  const editActions = button('…', 'manuscript-edit-actions', () => {
+    if (!editMenu.hidden) closeEditMenu(true);
+    else openEditMenu(editActions.getBoundingClientRect(), editActions);
+  }, L('editor_edit_actions_help'), {accessibleName: editMenuLabel, shortcut: 'Shift+F10'});
+  editActions.setAttribute('aria-haspopup', 'menu');
+  editActions.setAttribute('aria-controls', editMenu.id);
+  editActions.setAttribute('aria-expanded', 'false');
+  versions.before(editActions);
+  let editMenuOpener;
+  const menuItems = Object.entries(writingCommands).map(([name, command]) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'ctl';
+    item.id = 'manuscript-edit-menu-' + name;
+    item.setAttribute('role', 'menuitem');
+    item.tabIndex = -1;
+    item.textContent = command.label;
+    item.addEventListener('click', () => {
+      closeEditMenu(false);
+      runWritingCommand(command);
+    });
+    return item;
+  });
+  editMenu.append(...menuItems);
+  function closeEditMenu(restoreFocus) {
+    if (editMenu.hidden) return;
+    editMenu.hidden = true;
+    editActions.setAttribute('aria-expanded', 'false');
+    if (restoreFocus && !section.hidden) {
+      if (editMenuOpener) editMenuOpener.focus({preventScroll: true});
+      else editor.focus();
+    }
+    editMenuOpener = null;
+  }
+  function focusEditMenuItem(index) {
+    menuItems.forEach((item, i) => {item.tabIndex = i === index ? 0 : -1;});
+    menuItems[index].focus();
+  }
+  function openEditMenu(anchor, opener = null, last = false) {
+    if (!editor || section.hidden || composing) return;
+    versions.open = false;
+    editMenuOpener = opener;
+    editActions.setAttribute('aria-expanded', 'true');
+    LixityComponents.measureOverlay(editMenu, () => {
+      editMenu.hidden = false;
+      const bounds = editMenu.getBoundingClientRect();
+      const top = anchor.bottom + bounds.height + 8 <= innerHeight || anchor.top < innerHeight / 2
+        ? anchor.bottom + 4 : anchor.top - bounds.height - 4;
+      LixityComponents.placeClampedOverlay(editMenu, anchor.left, top, {bounds, gutter: 8});
+    });
+    focusEditMenuItem(last ? menuItems.length - 1 : 0);
+  }
+  host.addEventListener('contextmenu', event => {
+    // The native clipboard menu remains available with Shift+right-click.
+    if (!event.target.closest('.cm-content') || event.shiftKey || !editor || composing) return;
+    event.preventDefault();
+    openEditMenu({left: event.clientX, top: event.clientY, bottom: event.clientY});
+  });
+  function isEditMenuKey(event) {
+    return event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey);
+  }
+  host.addEventListener('keydown', event => {
+    if (!isEditMenuKey(event) || event.isComposing || !event.target.closest('.cm-content')) return;
+    event.preventDefault();
+    const selection = window.getSelection();
+    let anchor = host.getBoundingClientRect();
+    if (selection?.focusNode && event.target.contains(selection.focusNode)) {
+      const caret = document.createRange();
+      caret.setStart(selection.focusNode, selection.focusOffset);
+      caret.collapse(true);
+      if (caret.getClientRects().length) anchor = caret.getBoundingClientRect();
+    }
+    openEditMenu(anchor);
+  });
+  editActions.addEventListener('keydown', event => {
+    if (!isEditMenuKey(event) && event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    openEditMenu(editActions.getBoundingClientRect(), editActions, event.key === 'ArrowUp');
+  });
+  editMenu.addEventListener('keydown', event => {
+    if (event.key === 'Tab' || event.key === 'Escape') {
+      if (event.key === 'Escape') event.preventDefault();
+      event.stopPropagation();
+      closeEditMenu(true);
+      return;
+    }
+    const current = menuItems.indexOf(document.activeElement);
+    let next;
+    if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = menuItems.length - 1;
+    else if (event.key === 'ArrowDown') next = (current + 1) % menuItems.length;
+    else if (event.key === 'ArrowUp') next = (current - 1 + menuItems.length) % menuItems.length;
+    else return;
+    event.preventDefault();
+    event.stopPropagation();
+    focusEditMenuItem(next);
+  });
+  function closeEditMenuOutside(event) {
+    if (!editMenu.contains(event.target) && !editActions.contains(event.target)) closeEditMenu(false);
+  }
+  document.addEventListener('pointerdown', closeEditMenuOutside);
+  document.addEventListener('focusin', closeEditMenuOutside);
+  document.addEventListener('scroll', event => {
+    if (event.target !== editMenu) closeEditMenu(true);
+  }, {capture: true, passive: true});
+  window.addEventListener('resize', () => closeEditMenu(true));
+  document.addEventListener('lixity:workbench-change', () => closeEditMenu(false));
+  new MutationObserver(() => {
+    if (section.hidden) closeEditMenu(false);
+  }).observe(section, {attributeFilter: ['hidden']});
   const css = document.createElement('style'); css.textContent = `
     #manuscript-comparison {width:min(1200px,95vw);max-width:min(1200px,95vw);max-height:min(92dvh,56rem);}
     #manuscript-comparison .modal-card {max-height:min(calc(92dvh - 2px),calc(56rem - 2px));}
@@ -313,7 +478,7 @@
     .manuscript-editor-toolbar button.ctl:not(.primary):hover {background:var(--surface-hover);border-color:var(--line);color:var(--fg);}
     #manuscript-save-status {min-width:0;flex:0 1 auto;font-size:var(--text-micro,.8125rem);color:var(--muted);padding:3px 10px;border-radius:var(--radius-pill,999px);background:var(--surface-raised,var(--bg));border:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:12rem;}
     #manuscript-save-status[data-state=saved] {color:var(--status-success-fg,var(--present-ink));background:var(--status-success-bg,var(--present-light));border-color:var(--status-success-border,transparent);}
-    #manuscript-save-status[data-state=conflict],#manuscript-save-status[data-state=error] {color:var(--flag);background:var(--flag-light);border-color:color-mix(in srgb,var(--flag) 30%,transparent);font-weight:600;}
+    #manuscript-save-status:is([data-state=conflict],[data-state=error]) {color:var(--flag);background:var(--flag-light);border-color:color-mix(in srgb,var(--flag) 30%,transparent);font-weight:600;max-inline-size:24rem;white-space:normal;overflow-wrap:anywhere;}
     #manuscript-recovery {width:100%;min-width:0;}
     .manuscript-editor-toolbar button.editor-fmt-btn {min-width:2rem;padding-inline:.45rem;font-size:.82rem;font-weight:650;}
     .manuscript-editor-toolbar button.editor-fmt-italic {font-style:italic;font-family:var(--font-title,serif);}
@@ -351,7 +516,16 @@
       .manuscript-editor-toolbar {flex-wrap:wrap;}
       .editor-tool-group {flex-wrap:wrap;flex-shrink:1;max-width:100%;}
       .editor-group-context {padding-inline-start:0;border-inline-start:0;}
-      .editor-group-status {margin-inline-start:0;padding-inline-start:0;}
+      .editor-group-status {flex:1 1 100%;margin-inline-start:0;padding-inline-start:0;}
+      #manuscript-save-status {flex:1 1 0;max-inline-size:none;white-space:normal;overflow-wrap:anywhere;}
+      #manuscript-save-status[data-state=saved] {flex-shrink:1;}
+    }
+    @container editor-tools (max-width: 24rem) {
+      /* Editing actions exposes these commands when the direct buttons no longer fit. */
+      .manuscript-editor-toolbar:has(#manuscript-edit-actions) :is(.editor-group-history,.editor-group-format) {display:none;}
+      .manuscript-editor-toolbar:has(#manuscript-versions[open]) {position:relative;}
+      #manuscript-versions[open] {flex:1 1 100%;min-inline-size:0;}
+      .editor-versions-panel {position:static;box-sizing:border-box;inline-size:100%;margin-block-start:var(--space-2);}
     }
     @media(max-width:600px) {
       .manuscript-editor-toolbar button.ctl, #manuscript-versions > summary {min-height:2.75rem;}
@@ -359,21 +533,33 @@
     }
     body.manuscript-writing #chapters,body.manuscript-writing #text-search,body.manuscript-writing .toolbar {display:none!important;}
     body.manuscript-writing #manuscript-reader-controls {display:none!important;}
-    body.workbench-overview #manuscript-write, body.workbench-overview #manuscript-close,
-    body.reader-focus #manuscript-write, body.reader-focus #manuscript-close {display:none!important;}
+    body.workbench-overview #manuscript-write, body.reader-focus #manuscript-write {display:none!important;}
   `; document.head.append(css);
+  const hasUnsavedText = () => Boolean(dirty || inflight || comparisonDirty());
+  let desktopDirtyState, desktopDirtyRequest;
   function notifyDesktopDirty() {
-    if (window.lixityDesktop && typeof window.lixityDesktop.setDirtyState === 'function') {
-      try {
-        window.lixityDesktop.setDirtyState({ unsavedEditor: Boolean(dirty || inflight || comparisonDirty()) });
-      } catch (_) { /* Desktop bridge is advisory; browser beforeunload remains active. */ }
-    }
+    const bridge = window.lixityDesktop;
+    const next = hasUnsavedText();
+    if (!bridge || typeof bridge.setDirtyState !== 'function' || desktopDirtyState === next || desktopDirtyRequest) return;
+    const failed = () => {
+      // Browser beforeunload remains active if the desktop bridge is unavailable.
+      desktopDirtyRequest = null;
+      desktopDirtyState = undefined;
+    };
+    try {
+      desktopDirtyState = next;
+      desktopDirtyRequest = Promise.resolve(bridge.setDirtyState({unsavedEditor: next})).then(() => {
+        desktopDirtyRequest = null;
+        notifyDesktopDirty();
+      }, failed);
+    } catch (_) { failed(); }
   }
   function show(state, message) {
     freshness.hidden = !dirty && (!snapshot || snapshot.revision === document.body.dataset.manuscriptSourceSha256);
     const changed = lastState !== state;
     lastState = state;
-    status.dataset.state = state; status.textContent = message;
+    if (changed) status.dataset.state = state;
+    if (status.textContent !== message) status.textContent = message;
     if (changed && window.LixityMotion && window.LixityMotion.status) window.LixityMotion.status(status);
     retry.hidden = state === 'saved' || state === 'saving';
     reload.hidden = !paused;
@@ -557,6 +743,7 @@
   }
   comparisonFields[2].field.addEventListener('input', () => {
     if (!comparison.open || !comparisonSnapshot) return;
+    notifyDesktopDirty();
     cancelComparisonMeasurements();
     comparisonFields[2].summary.textContent = L('editor_compare_metrics_loading');
     comparisonChapters.hidden = true;
@@ -647,23 +834,36 @@
     composing = false;
     if (dirty) scheduleSave();
   }, true);
-  async function flush() {
+  function saveDraft() {
+    if (composing) return;
+    paused = false;
+    return flush();
+  }
+  function flush() {
+    if (inflight) return inflight;
     clearTimeout(timer); clearTimeout(maximum); maximum = null;
-    if (!editor || !dirty || inflight || paused || composing) return;
-    inflight = true; show('saving', text(4));
+    if (!editor || !dirty || paused || composing) return;
     if (!pending) pending = {document: snapshot.document, revision: snapshot.revision,
       operation: crypto.randomUUID().replaceAll('-', ''), text: editor.text()};
-    const sent = pending;
+    inflight = save(pending);
+    show('saving', text(4));
+    return inflight;
+  }
+  async function save(sent) {
     try {
       const result = await request('/manuscript-edit', sent);
       snapshot.revision = result.revision; snapshot.text = sent.text; pending = null; dirty = editor.text() !== sent.text;
       show(dirty ? 'unsaved' : 'saved', dirty ? L('editor_pending_changes') : text(5));
       if (versions.open && pulse.open) refreshPulse();
-    } catch (error) {paused = true; show(error.conflict ? 'conflict' : 'error', text(error.conflict ? 7 : 6) + ': ' + error.message); await refreshRecovery().catch(() => {});}
+    } catch (error) {
+      paused = true;
+      show(error.conflict ? 'conflict' : 'error', text(error.conflict ? 7 : 6) + ': ' + error.message);
+      refreshRecovery().catch(() => {});
+    }
     finally {
-      inflight = false;
+      inflight = null;
       notifyDesktopDirty();
-      if (dirty && !paused && !composing) timer = setTimeout(flush, 800);
+      if (dirty) scheduleSave();
     }
   }
   function download() {
@@ -676,82 +876,203 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = 'manuscript-draft.md'; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  async function refreshRecovery() {
-    const current = await request('/manuscript-edit');
+  function showRecovery(current) {
+    const selected = recovery.value;
     recovery.replaceChildren(new Option(text(16), ''));
     current.recovery.forEach(row => {
       const name = row.kind === 'draft' ? L('editor_compare_draft') : text(8);
       const option = new Option(name + ' · ' + recoveryDate.format(new Date(row.created * 1000)), row.id);
       option.dataset.kind = row.kind;
       recovery.append(option);
+      if (row.id === selected) recovery.value = selected;
     });
     syncRecoveryActions();
   }
-  function visibleReaderLine() {
-    const controlsBottom = controls ? controls.getBoundingClientRect().bottom : 0;
-    const visible = Array.from(chapters.querySelectorAll('[data-start]')).find(
-      node => node.getClientRects().length > 0 && node.getBoundingClientRect().bottom > controlsBottom
-    );
-    return visible ? Number(visible.dataset.start) : 1;
+  let recoveryRefresh = null;
+  async function refreshRecovery() {
+    recoveryRefresh?.abort();
+    const controller = new AbortController();
+    recoveryRefresh = controller;
+    const requestedDocument = snapshot?.document;
+    try {
+      const current = await request('/manuscript-edit', null, {signal: controller.signal});
+      if (recoveryRefresh === controller && snapshot?.document === requestedDocument &&
+          current.document === requestedDocument) showRecovery(current);
+    } catch (error) {
+      if (!controller.signal.aborted) throw error;
+    } finally {
+      if (recoveryRefresh === controller) recoveryRefresh = null;
+    }
   }
-  function enterEditor() {
+  function captureReaderPosition() {
+    const controlsBottom = controls ? controls.getBoundingClientRect().bottom : 0;
+    const visible = Array.from(chapters.querySelectorAll('.ptext[data-start]')).find(node => {
+      const rect = node.getBoundingClientRect();
+      return rect.height > 0 && rect.bottom > controlsBottom && rect.top < window.innerHeight;
+    });
+    return {
+      line: visible ? Number(visible.dataset.start) : 1,
+      offset: visible ? visible.getBoundingClientRect().top : null,
+      left: window.scrollX,
+      top: window.scrollY,
+    };
+  }
+  const readerReturnKey = 'lixity:editor-return:' + location.pathname + location.search;
+  function restoreReaderPosition(position) {
+    openButton.focus({preventScroll: true});
+    const passage = position.offset === null ? null :
+      chapters.querySelector('.ptext[data-start="' + position.line + '"]');
+    const top = passage?.getClientRects().length
+      ? window.scrollY + passage.getBoundingClientRect().top - position.offset
+      : position.top;
+    window.scrollTo({top, left: position.left, behavior: 'instant'});
+  }
+  window.addEventListener('pageshow', () => {
+    try {
+      const position = JSON.parse(sessionStorage.getItem(readerReturnKey) || 'null');
+      sessionStorage.removeItem(readerReturnKey);
+      if (!position || position.revision !== document.body.dataset.manuscriptSourceSha256) return;
+      const before = workspaceGeneration, identity = projectIdentity(), focused = document.activeElement;
+      // Browser and workspace navigation settle their scroll positions after pageshow.
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (before === workspaceGeneration && identity === projectIdentity() &&
+            focused === document.activeElement && writingContextAvailable()) restoreReaderPosition(position);
+      }));
+    } catch (_) { /* The reader remains usable with browser storage disabled. */ }
+  });
+  function writingContextAvailable(state = window.LixityWorkbench?.state()) {
+    return !state || state.view === 'analysis' && state.surface === 'document' && !state.focus;
+  }
+  function projectIdentity() {
+    const {manuscriptProjectToken, manuscriptSourceSha256} = document.body.dataset;
+    return [manuscriptProjectToken, manuscriptSourceSha256].join(':');
+  }
+  function showWritingMode(position, requestedLine, shouldFocus) {
+    const samePosition = readerPosition && (readerPosition.line === position.line ||
+      Math.abs(readerPosition.top - position.top) <= 1);
+    const moveToLine = requestedLine ?? (samePosition ? null : position.line);
+    readerPosition = position;
     dockCompanionTools(true);
     section.hidden = false;
     document.body.classList.add('manuscript-writing');
+    openButton.hidden = true;
+    closeButton.hidden = false;
+    window.LixityChrome?.reveal?.();
+    window.LixityMotion?.surface?.(section);
+    revealWritingTools();
+    if (moveToLine !== null) editor.line(moveToLine);
+    else editor.revealSelection();
+    if (shouldFocus) editor.focus();
+  }
+  function setOpening(value) {
+    if (value) {
+      openButton.setAttribute('aria-disabled', 'true');
+      openButton.setAttribute('aria-busy', 'true');
+      openButton.removeAttribute('aria-describedby');
+      openingError.hidden = true;
+    } else {
+      openButton.removeAttribute('aria-disabled');
+      openButton.removeAttribute('aria-busy');
+    }
+    setButtonLabel(openButton, text(value ? 17 : 0), value ? text(17) : writeHelp);
+  }
+  function cancelOpening() {
+    if (!opening) return;
+    opening.abort();
+    opening = null;
+    setOpening(false);
+  }
+  window.LixityWorkbench?.subscribe((current, previous) => {
+    if (current.view !== previous.view || current.surface !== previous.surface || current.focus !== previous.focus) {
+      workspaceGeneration++;
+      cancelOpening();
+      cancelVersionRead();
+    }
+  });
+  function loadEditor() {
+    if (!editorBundle) editorBundle = new Promise((resolve, reject) => {
+      const bundle = document.createElement('script');
+      bundle.nonce = nonce;
+      bundle.src = api + '/editor-bundle.js';
+      bundle.onload = resolve;
+      bundle.onerror = () => {
+        bundle.remove();
+        reject(new Error('Editor bundle unavailable'));
+      };
+      document.head.append(bundle);
+    }).catch(error => {
+      editorBundle = null;
+      throw error;
+    });
+    return editorBundle;
   }
   async function open(targetLine) {
-    if (loading) return;
+    if (!writingContextAvailable() || closing) return;
     const requestedLine = Number.isInteger(targetLine) && targetLine > 0 ? targetLine : null;
+    if (opening && requestedLine === null) return;
+    const position = captureReaderPosition();
     if (editor) {
-      openingLine = requestedLine || visibleReaderLine();
-      enterEditor();
-      openButton.hidden = true; closeButton.hidden = false;
-      if (window.LixityChrome && window.LixityChrome.reveal) window.LixityChrome.reveal();
-      if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(section);
-      editor.line(openingLine); editor.focus(); return;
-    }
-    loading = true; openButton.disabled = true; setButtonLabel(openButton, text(17));
-    try {
-      snapshot = await request('/manuscript-edit');
-      openingLine = requestedLine || visibleReaderLine();
-      if (!loaded) await new Promise((resolve, reject) => {const bundle = document.createElement('script'); bundle.nonce = nonce; bundle.src = api + '/editor-bundle.js'; bundle.onload = resolve; bundle.onerror = () => reject(new Error('Editor bundle unavailable')); document.head.append(bundle);});
-      loaded = true;
-      enterEditor();
-      openButton.hidden = true; closeButton.hidden = false;
-      if (window.LixityChrome && window.LixityChrome.reveal) window.LixityChrome.reveal();
-      editor = window.LixityCodeMirror.mount(host, snapshot.text, changes, language, text(13));
-      sessionBaselineLines = snapshot.text.split('\n');
-      const cmContent = host.querySelector('.cm-content');
-      if (cmContent) {
-        cmContent.setAttribute('spellcheck', 'false');
-        cmContent.setAttribute('autocorrect', 'off');
-        cmContent.setAttribute('autocapitalize', 'off');
-      }
-      if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(section);
-      editor.line(openingLine); show('saved', text(5)); await refreshRecovery(); editor.focus();
-    } catch (error) {section.hidden = false; show('error', error.message);}
-    finally {loading = false; openButton.disabled = false; setButtonLabel(openButton, text(0), writeHelp);}
-  }
-  async function close() {
-    if (comparison.open || composing) return;
-    cancelVersionRead();
-    while (inflight) await new Promise(resolve => setTimeout(resolve, 25));
-    if (composing) return;
-    if (dirty && !paused) await flush();
-    if (paused) return;
-    if (snapshot && snapshot.revision !== document.body.dataset.manuscriptSourceSha256) {
-      location.reload();
+      showWritingMode(position, requestedLine, true);
       return;
     }
-    // Keep the mounted editor and its undo history; only leave the writing surface.
-    versions.open = false;
-    section.hidden = true; document.body.classList.remove('manuscript-writing');
-    dockCompanionTools(false);
-    closeButton.hidden = true; openButton.hidden = false;
-    if (window.LixityChrome && window.LixityChrome.reveal) window.LixityChrome.reveal();
-    if (window.LixityMotion && window.LixityMotion.surface) window.LixityMotion.surface(chapters);
-    if (window.LixityLog && window.LixityLog.debug) window.LixityLog.debug('manuscript-editor:close', {dirty, paused});
-    openButton.focus({preventScroll: true});
+    cancelOpening();
+    const controller = new AbortController(), identity = projectIdentity();
+    const focused = document.activeElement;
+    const current = () => opening === controller && identity === projectIdentity() && writingContextAvailable();
+    opening = controller;
+    setOpening(true);
+    try {
+      const result = await request('/manuscript-edit', null, {signal: controller.signal});
+      if (!current()) return;
+      await loadEditor();
+      if (!current()) return;
+      snapshot = result;
+      const shouldFocus = document.activeElement === focused;
+      editor = window.LixityCodeMirror.mount(host, snapshot.text, changes, language, text(13));
+      sessionBaselineLines = snapshot.text.split('\n');
+      showRecovery(snapshot);
+      showWritingMode(position, requestedLine, shouldFocus);
+      show('saved', text(5));
+    } catch (_) {
+      if (current()) {
+        openingError.textContent = L('editor_open_error');
+        openingError.hidden = false;
+        openButton.setAttribute('aria-describedby', openingError.id);
+      }
+    } finally {
+      if (opening === controller) { opening = null; setOpening(false); }
+    }
+  }
+  async function close() {
+    if (!editor || section.hidden || closing || comparison.open || composing) return;
+    const before = workspaceGeneration, identity = projectIdentity();
+    const current = () => before === workspaceGeneration && identity === projectIdentity() && writingContextAvailable();
+    closing = true;
+    cancelVersionRead();
+    try {
+      while (current() && !composing && !paused && (inflight || dirty)) await flush();
+      if (!current() || composing || paused) return;
+      if (snapshot.revision !== document.body.dataset.manuscriptSourceSha256) {
+        try {
+          sessionStorage.setItem(readerReturnKey, JSON.stringify({...readerPosition, revision: snapshot.revision}));
+        } catch (_) { /* Browser storage is optional. */ }
+        location.reload();
+        return;
+      }
+      // Keep the document, selection and undo history mounted across a clean exit.
+      versions.open = false;
+      section.hidden = true; document.body.classList.remove('manuscript-writing');
+      dockCompanionTools(false);
+      closeButton.hidden = true; openButton.hidden = false;
+      window.LixityChrome?.reveal?.();
+      window.LixityMotion?.surface?.(chapters);
+      window.LixityLog?.debug?.('manuscript-editor:close', {dirty, paused});
+      restoreReaderPosition(readerPosition);
+      // Compare the next entry with the rendered reader, whose chrome can reflow on return.
+      readerPosition = captureReaderPosition();
+    } finally {
+      closing = false;
+    }
   }
   let nudgeTimer = 0;
   function nudgeWriteButton() {
@@ -778,7 +1099,14 @@
     if (!t || !t.closest || (!t.closest('#chapters') && t !== document.body)) return;
     nudgeWriteButton();
   });
-  window.addEventListener('beforeunload', event => {if (dirty || inflight || comparisonDirty()) {event.preventDefault(); event.returnValue = '';}});
+  document.addEventListener('keydown', event => {
+    if (section.hidden || !section.contains(event.target) || !writingContextAvailable() ||
+        !(macKeyboard ? event.metaKey : event.ctrlKey) || event.shiftKey || event.altKey ||
+        event.key.toLowerCase() !== 's') return;
+    event.preventDefault();
+    if (!event.isComposing) saveDraft();
+  }, true);
+  window.addEventListener('beforeunload', event => {if (hasUnsavedText()) {event.preventDefault(); event.returnValue = '';}});
   document.addEventListener('visibilitychange', () => {if (document.hidden) flush();});
   // Keep shortcuts from the read-only manuscript layer away from the editor.
   host.addEventListener('keydown', event => event.stopPropagation());

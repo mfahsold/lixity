@@ -60,17 +60,24 @@ Public exports remain read-only and do not contain the editor bundle.
 
 Lixity starts saving to your project file after 800 ms without typing or after
 up to four seconds of continuous typing. **Saved locally** appears when the server
-acknowledges the save. Undo and redo work across autosaves. Open **Versions** to
-compare versions or manage recovery copies. **Download draft** in the same menu
-saves the current editor text as a separate Markdown file. For saved manuscript
-and research files, see
+acknowledges the save. The writing toolbar stays visible when you pause or
+scroll. Undo and redo work across autosaves. Open **Versions** to compare versions
+or manage recovery copies. **Download draft** in the same menu saves the current
+editor text as a separate Markdown file. For saved manuscript and research files, see
 [project backup and restore](PROJECT_BACKUP.md).
 
 **Close writing** saves pending edits and returns to the reader. When the saved
 file changes, Lixity reloads the reader and recalculates its analysis. A reload
 resets undo history. Returning without a reload restores the previous analysis
-display. A failed save or a conflicting edit keeps the editor open so you can
+display and keeps the editor's cursor and undo history for the next time you open
+**Write**. A failed save or a conflicting edit keeps the editor open so you can
 check the save status, recover your text or compare versions.
+
+Right-click in the editor, press **Shift+F10**, or open **Editing actions** in
+the writing toolbar to find editing and formatting commands. Escape returns
+to the editor with your selection. On narrow layouts, **Editing actions** also
+holds the commands shown directly in the wide toolbar. Use your usual clipboard shortcuts,
+the desktop **Edit** menu, or Shift+right-click for the platform's text menu.
 
 Open **Dossier alongside** to keep research beside the editor. Where text links
 are available, use **Text associations** to show or hide them. Lixity remembers
@@ -572,6 +579,8 @@ keys from the corresponding view or control.
 | Action | Key and scope |
 | --- | --- |
 | Open the passage menu | `Shift+F10` on a focused paragraph |
+| Open editing actions | `Shift+F10` in the writing editor, or **Editing actions** in the toolbar |
+| Save the current text | `Cmd/Ctrl+S` in **Write** |
 | Enter or leave focus reading | `F` or `Cmd/Ctrl+Shift+F` in the manuscript reader. `Escape` also leaves active focus reading. |
 | Focus manuscript search | `/` or `Cmd/Ctrl+F` in the manuscript reader |
 | Navigate search results | `Enter`, `Shift+Enter` or `Escape` in the search field |

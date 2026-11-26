@@ -181,6 +181,7 @@ IDENTITY_LABELS = {
         "license_notice": "Open source · AGPL-3.0",
         "license_sales_notice": "Lixity is licensed under AGPL-3.0-or-later. You can write and sell your books, including self-publishing. A separate commercial software license is available for closed-source integrations.",
         "license_terms": "License terms", "license_text": "Full AGPL license",
+        "license_funding": "Project funding",
         "license_contact": "Request a commercial license",
     },
     "de": {
@@ -188,6 +189,7 @@ IDENTITY_LABELS = {
         "license_notice": "Open Source · AGPL-3.0",
         "license_sales_notice": "Lixity steht unter AGPL-3.0-or-later. Du kannst deine Bücher damit schreiben und verkaufen, auch im Selfpublishing. Für Closed-Source-Integrationen ist eine separate kommerzielle Softwarelizenz erhältlich.",
         "license_terms": "Lizenzbedingungen", "license_text": "Vollständiger AGPL-Lizenztext",
+        "license_funding": "Projektförderung",
         "license_contact": "Kommerzielle Lizenz anfragen",
     },
     "fr": {
@@ -195,6 +197,7 @@ IDENTITY_LABELS = {
         "license_notice": "Open source · AGPL-3.0",
         "license_sales_notice": "Lixity est sous licence AGPL-3.0-or-later. Vous pouvez écrire et vendre vos livres, y compris en autoédition. Une licence logicielle commerciale distincte est disponible pour les intégrations à code source fermé.",
         "license_terms": "Conditions de licence", "license_text": "Texte intégral de la licence AGPL",
+        "license_funding": "Financement du projet",
         "license_contact": "Demander une licence commerciale",
     },
     "es": {
@@ -202,6 +205,7 @@ IDENTITY_LABELS = {
         "license_notice": "Código abierto · AGPL-3.0",
         "license_sales_notice": "Lixity se distribuye bajo la licencia AGPL-3.0-or-later. Puedes escribir y vender tus libros, también si los autopublicas. Hay una licencia comercial de software para integraciones de código cerrado.",
         "license_terms": "Condiciones de licencia", "license_text": "Texto completo de la licencia AGPL",
+        "license_funding": "Financiación del proyecto",
         "license_contact": "Solicitar una licencia comercial",
     },
     "it": {
@@ -209,6 +213,7 @@ IDENTITY_LABELS = {
         "license_notice": "Open source · AGPL-3.0",
         "license_sales_notice": "Lixity è distribuito con licenza AGPL-3.0-or-later. Puoi scrivere e vendere i tuoi libri, anche in autopubblicazione. Per le integrazioni a codice chiuso è disponibile una licenza commerciale per il software.",
         "license_terms": "Condizioni di licenza", "license_text": "Testo integrale della licenza AGPL",
+        "license_funding": "Finanziamento del progetto",
         "license_contact": "Richiedi una licenza commerciale",
     },
     "pt": {
@@ -216,6 +221,7 @@ IDENTITY_LABELS = {
         "license_notice": "Código aberto · AGPL-3.0",
         "license_sales_notice": "O Lixity é distribuído sob a licença AGPL-3.0-or-later. Podes escrever e vender os teus livros, incluindo em autopublicação. Está disponível uma licença comercial de software para integrações de código fechado.",
         "license_terms": "Termos da licença", "license_text": "Texto integral da licença AGPL",
+        "license_funding": "Financiamento do projeto",
         "license_contact": "Pedir uma licença comercial",
     },
     "nl": {
@@ -223,6 +229,7 @@ IDENTITY_LABELS = {
         "license_notice": "Open source · AGPL-3.0",
         "license_sales_notice": "Lixity valt onder de AGPL-3.0-or-later. Je kunt je boeken schrijven en verkopen, ook in eigen beheer. Voor integraties met gesloten broncode is een aparte commerciële softwarelicentie beschikbaar.",
         "license_terms": "Licentievoorwaarden", "license_text": "Volledige AGPL-licentietekst",
+        "license_funding": "Projectfinanciering",
         "license_contact": "Commerciële licentie aanvragen",
     },
 }

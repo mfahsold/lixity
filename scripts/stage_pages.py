@@ -60,6 +60,7 @@ DOCS_ROOT_FILES = {
     "RUST_EVALUATION_RFC.md",
     "INSTALLATION.md",
     "LICENSING.md",
+    "FUNDING.md",
     "LOCALIZATION.md",
     "METHODS.md",
     "ONBOARDING.md",

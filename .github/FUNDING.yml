@@ -1,0 +1,3 @@
+# Publish the funding details before enabling the repository's Sponsor button.
+# Add a provider profile only after its checkout and recipient are verified.
+custom: ["https://github.com/mfahsold/lixity/blob/main/docs/FUNDING.md"]

@@ -1,5 +1,5 @@
 {
-  "sha256": "50a115d2384b8f0fc6986fa9c543fe459f9e6844f646b3049b767677d8bd6072",
+  "sha256": "cfc496cca8d2ebf8ef3437dfb690a3c224dc59ad9883318b9b8521131f758e8a",
   "packages": {
     "node_modules/@codemirror/autocomplete": "6.20.4",
     "node_modules/@codemirror/commands": "6.11.2",

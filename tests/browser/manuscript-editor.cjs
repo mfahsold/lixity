@@ -69,7 +69,36 @@ async function holdVersionRead(page, urlPattern) {
     const editorToolbarBox = await page.locator('.manuscript-editor-toolbar').boundingBox();
     assert.ok(editorToolbarBox && editorToolbarBox.height <= 60, 'Unified editor toolbar fits on a single desktop row');
     assert.equal(await page.evaluate(() => Boolean(window.LixityChrome && typeof window.LixityChrome.hide === 'function' && typeof window.LixityChrome.reveal === 'function')), true, 'Central LixityChrome auto-hide controller is mounted');
+    await page.locator('.cm-content').focus();
+    await page.mouse.move(780, 460);
+    // A normal pause in writing must not start the shared idle fade.
+    await page.waitForTimeout(3900);
+    assert.equal(await page.locator('.manuscript-editor-toolbar').evaluate(node => getComputedStyle(node).opacity), '1');
+    for (const [width, fontSize] of [[390, '100%'], [320, '200%']]) {
+      await page.setViewportSize({width, height: 844});
+      await page.evaluate(size => { document.documentElement.style.fontSize = size; }, fontSize);
+      await page.waitForFunction(() => document.querySelector('.manuscript-editor-toolbar').getBoundingClientRect().bottom <= innerHeight);
+      assert.deepEqual(await page.evaluate(() => {
+        const reachable = selector => {
+          const control = document.querySelector(selector);
+          const rect = control.getBoundingClientRect();
+          return rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight &&
+            control.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2));
+        };
+        const status = document.querySelector('#manuscript-save-status');
+        return {
+          fit: document.documentElement.scrollWidth <= innerWidth,
+          actions: reachable('#manuscript-edit-actions'),
+          versions: reachable('#manuscript-versions > summary'),
+          close: reachable('#manuscript-close'),
+          status: status.clientWidth > 0 && status.scrollWidth <= status.clientWidth && status.scrollHeight <= status.clientHeight,
+        };
+      }), {fit: true, actions: true, versions: true, close: true, status: true}, `Writing tools at ${width}px and ${fontSize} text`);
+    }
+    await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+    await page.setViewportSize({width: 1440, height: 900});
     assert.equal(await page.locator('.cm-content').getAttribute('spellcheck'), 'false', 'CodeMirror editor disables browser spellcheck underlines');
+    assert.equal(await page.locator('.cm-content').getAttribute('tabindex'), '0', 'The editable text is reachable in the sequential tab order');
     assert.equal(await page.locator('#manuscript-recover').isHidden(), true, 'Recover button stays hidden until a recovery entry is selected');
     assert.equal(await page.locator('#manuscript-discard').isHidden(), true, 'Discard button stays hidden until a recovery entry is selected');
     await page.locator('#manuscript-undo').focus();
@@ -126,6 +155,7 @@ async function holdVersionRead(page, urlPattern) {
     await page.locator('#chapters').waitFor();
     assert.match(await page.locator('#chapters').innerText(), /New sentence\./);
     assert.match(fs.readFileSync(source, 'utf8'), /New sentence/, 'Close writing flushes dirty text before returning');
+    await page.waitForFunction(() => document.activeElement?.id === 'manuscript-write');
     await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); window.LixityChrome.hide(); });
     assert.equal(await page.evaluate(() => document.body.classList.contains('chrome-autohidden')), true, 'Auto-hidden chrome hides reader controls');
     await page.locator('#chapters .ptext').first().click();
@@ -211,6 +241,25 @@ async function holdVersionRead(page, urlPattern) {
     assert.match(await page.locator('.cm-content').innerText(), /My retained draft/);
     assert.equal(fs.readFileSync(source, 'utf8'), '# Externally revised while reading\n');
     await page.setViewportSize({width:1440, height:900});
+    // Check the real nested scroller, including a second gesture after its initial scroll event.
+    const scrollPage = await browser.newPage({viewport: {width: 1440, height: 900}});
+    try {
+      fs.writeFileSync(source, '# A synthetic chapter\n\n' + 'A quiet morning beside the river.\n\n'.repeat(160));
+      await scrollPage.goto(base);
+      await scrollPage.locator('#manuscript-write').click();
+      const scroller = scrollPage.locator('#manuscript-editor-host .cm-scroller');
+      await scroller.hover();
+      await scrollPage.mouse.wheel(0, 585);
+      await scrollPage.waitForFunction(() => document.querySelector('#manuscript-editor-host .cm-scroller').scrollTop >= 500);
+      await scrollPage.mouse.wheel(0, 220);
+      await scrollPage.waitForFunction(() => document.querySelector('#manuscript-editor-host .cm-scroller').scrollTop >= 750);
+      await scrollPage.waitForTimeout(240);
+      assert.equal(await scrollPage.locator('.manuscript-editor-toolbar').evaluate(node => getComputedStyle(node).opacity), '1');
+      await scrollPage.locator('#manuscript-versions > summary').click();
+      assert.equal(await scrollPage.locator('#manuscript-compare').isVisible(), true);
+    } finally {
+      await scrollPage.close();
+    }
     for (const words of [50000, 150000, 300000]) {
       const manuscript = '# Synthetic scale fixture\n\n' + ('Synthetic river morning words '.repeat(25) + '\n\n').repeat(words / 100);
       const start = performance.now();

@@ -648,6 +648,7 @@ class TestPagesStaging(unittest.TestCase):
                 stage(docs, root / "site")
 
     def test_published_html_head_contract(self):
+        from lixity.site import FUNDING_DETAILS_URL
         from lixity.status import LANGUAGE_CODES
         from lixity.ui.metric_reference import (
             METRIC_REFERENCE_ENTRIES,
@@ -661,11 +662,15 @@ class TestPagesStaging(unittest.TestCase):
             stage(docs, output)
             pages = sorted(output.rglob("*.html"))
             self.assertTrue(pages, "Staged pages expected")
+            self.assertEqual((output / "FUNDING.md").read_bytes(), (docs / "FUNDING.md").read_bytes())
             references = {f"guides/metrics/{code}.html": code for code in LANGUAGE_CODES if code != "generic"}
             self.assertLessEqual(references.keys(), {page.relative_to(output).as_posix() for page in pages})
             for reference, language in references.items():
                 homepage = "index.html" if language == "en" else f"index-{language}.html"
-                self.assertIn(f'href="{reference}"', (output / homepage).read_text(encoding="utf-8"))
+                rendered_home = (output / homepage).read_text(encoding="utf-8")
+                self.assertIn(f'href="{reference}"', rendered_home)
+                self.assertEqual(rendered_home.count(f'href="{FUNDING_DETAILS_URL}" hreflang="en"'), 1)
+                self.assertNotIn("github.com/sponsors/mfahsold", rendered_home)
             sitemap = {node.find("{*}loc").text: node.find("{*}lastmod").text
                        for node in ET.parse(output / "sitemap.xml").getroot()}  # noqa: S314
             for page in pages:

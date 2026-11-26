@@ -924,7 +924,6 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
 :is(
   #manuscript-reader-controls,
   .manuscript-reading .toolbar,
-  .manuscript-editor-toolbar,
   .teleprompter-toolbar,
   .pane-ribbon,
   .research-pane-navigation
@@ -938,7 +937,6 @@ details.markdown-alert summary.markdown-alert-title::-webkit-details-marker { di
 body.chrome-autohidden :is(
   #manuscript-reader-controls,
   .manuscript-reading .toolbar,
-  .manuscript-editor-toolbar,
   .teleprompter-toolbar,
   .pane-ribbon,
   .research-pane-navigation
@@ -952,7 +950,6 @@ body.chrome-autohidden :is(
   :is(
     #manuscript-reader-controls,
     .manuscript-reading .toolbar,
-    .manuscript-editor-toolbar,
     .teleprompter-toolbar,
     .pane-ribbon,
     .research-pane-navigation

@@ -34,6 +34,13 @@ a book that was written with Lixity's help.
 The maintainer receives no rights to your manuscript, your research sources or
 your book under either option.
 
+## Project funding
+
+Access to Lixity under **AGPL-3.0-or-later** is independent of project support.
+The funding page records payment availability, planned priorities and actual
+allocations. Commercial licenses use a separate written agreement.
+[Project funding and use of funds](FUNDING.md)
+
 ## When to talk to the maintainer
 
 Contact [mfahsold@googlemail.com](mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20License)

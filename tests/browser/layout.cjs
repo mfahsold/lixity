@@ -69,12 +69,15 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       await page.keyboard.press('Enter');
       await page.waitForURL('**/#license-terms');
       assert.ok(page.url().endsWith('#license-terms'));
-      assert.equal(await page.locator('.license-links a').count(), 2);
+      assert.equal(await page.locator('.license-links a').count(), 3);
       if (width === 1440) {
         const host = 'https://github.com/mfahsold/lixity/blob/main/';
         await page.context().route(host + '**', route => route.fulfill({body: 'Public licensing destination'}));
+        const funding = 'https://github.com/mfahsold/lixity/blob/main/docs/FUNDING.md';
+        await page.context().route(funding, route => route.fulfill({body: 'Project funding information'}));
         for (const [name, target] of [
           [/Full AGPL license/, host + 'LICENSE'],
+          [/Project funding/, funding],
           [/Request a commercial license/, host + 'docs/LICENSING.md#when-to-talk-to-the-maintainer'],
         ]) {
           const opened = page.waitForEvent('popup');

@@ -256,6 +256,7 @@ class TestLocalization(unittest.TestCase):
 
     def test_project_identity_is_escaped_versioned_and_localized(self):
         from lixity import __version__
+        from lixity.site import FUNDING_DETAILS_URL
         from lixity.ui.components import project_header
 
         for language in LOCALES:
@@ -267,8 +268,10 @@ class TestLocalization(unittest.TestCase):
                 self.assertIn(labels["license_sales_notice"], rendered)
                 self.assertIn(labels["license_terms"], rendered)
                 self.assertIn(labels["license_text"], rendered)
+                self.assertIn(labels["license_funding"], rendered)
                 self.assertIn(labels["license_contact"], rendered)
                 self.assertIn('href="https://github.com/mfahsold/lixity/blob/main/LICENSE"', rendered)
+                self.assertIn(f'href="{FUNDING_DETAILS_URL}" hreflang="en"', rendered)
                 self.assertIn(
                     'href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md'
                     '#when-to-talk-to-the-maintainer"', rendered,

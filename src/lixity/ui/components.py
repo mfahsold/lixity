@@ -33,7 +33,7 @@ from ..language_data import (
     SCENE_LABELS,
     UI_LABELS,
 )
-from ..site import docs_url
+from ..site import FUNDING_DETAILS_URL, docs_url
 from ..status import (
     LANGUAGE_CHOICES,
     LANGUAGE_CODES,
@@ -371,6 +371,8 @@ def license_terms(labels: Mapping[str, str] | None) -> str:
         '<div class="license-links">'
         '<a href="https://github.com/mfahsold/lixity/blob/main/LICENSE" '
         f'target="_blank" rel="noopener noreferrer">{esc(label(labels, "license_text"))}</a>'
+        f'<a href="{esc(FUNDING_DETAILS_URL)}" hreflang="en" '
+        f'target="_blank" rel="noopener noreferrer">{esc(label(labels, "license_funding"))}</a>'
         '<a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md#when-to-talk-to-the-maintainer" '
         f'target="_blank" rel="noopener noreferrer">{esc(label(labels, "license_contact"))}</a>'
         '</div></aside>'
