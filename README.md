@@ -14,6 +14,16 @@ reading copy you choose. Built-in analysis runs offline.
 [Download Lixity for desktop](https://lixity.de/guides/installation.html#desktop) ·
 [Visit the product website](https://lixity.de/)
 
+## What Lixity counts — and what it cannot prove
+
+| What Lixity counts (L0/L1) | What Lixity cannot prove (L3–L5) |
+| --- | --- |
+| **Surface text counts:** words, sentences, recognized quotation spans, local phrase echoes, and language-profile lexical cues (such as verb-form patterns, noun endings and perception words). | **Literary quality or error verdicts:** no number is a prose grade, quality score or instruction to rewrite. A deviation is a question to the text. |
+| **Within-manuscript comparisons:** how chapters or saved revisions differ from your draft's own baseline (robust medians, MAD corridors, exploratory `z*` / FDR shortlists). | **Calibrated significance or reader response:** chapter baselines are internal to your draft, not a population norm, and exploratory shortlists are not calibrated p-values or predictions of reader impact. |
+| **Traceable links:** exact passages behind each count and immutable version pins to retained research sources. | **Grammar, speaker attribution or semantic truth:** default cues are lexical heuristics; quotation marks do not identify speakers; word overlap does not resolve pronouns or synonyms; optional grammar models remain bounded by known parser errors. |
+
+See [Validation and limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md) for measured boundaries and [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) for full formulas.
+
 <a id="start-here"></a>
 
 ## Install and start
@@ -54,8 +64,11 @@ are available through PyPI. [Installation and updates](https://github.com/mfahso
   reading website with the chapters and background you choose.
   [Reading website export](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#export-a-reading-website)
 
-The interface is available in German, English, French, Spanish, Italian,
-Portuguese and Dutch. Measurement coverage depends on the language.
+The **interface** is localized in seven languages (German, English, French,
+Spanish, Italian, Portuguese and Dutch). **Language-dependent analysis
+coverage** is separate: English is the default analysis language unless chosen
+explicitly (or via `--language auto`), and linguistic rules and validation are
+deepest for German and English.
 [Language coverage](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md) ·
 [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) ·
 [Manuals by task](https://github.com/mfahsold/lixity/blob/main/docs/README.md)

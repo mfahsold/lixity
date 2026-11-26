@@ -42,9 +42,9 @@ Beim **ASL-Abstand zwischen Zitaten und Erzähltext** liegen beide Romane nah be
 
 <a id="kapitel-diagnose"></a>
 
-## 3. Wie einzelne Kapitel-Ausreißer dramaturgische Wendepunkte sichtbar machen
+## 3. Kapitel-Messwerte und Lektoratsdeutung sauber trennen
 
-Erst im Kapitelvergleich zeigt sich, wie präzise diese Kennzahlen dramatische Szenen, Monologe und eingeschobene Briefe abbilden.
+Im Kapitelvergleich markieren diese Kennzahlen auffällige Oberflächenverschiebungen (**L0/L1**). Was sie dramaturgisch bedeuten, entscheidet erst der Rücksprung in den Text (**L3/L4**, vgl. [STABILITY.md](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md)) – nicht die Zahl allein.
 
 ### Beispiel 1: Fontanes *Effi Briest* – Plauderton vs. Entdeckung der Briefe
 
@@ -55,13 +55,13 @@ Erst im Kapitelvergleich zeigt sich, wie präzise diese Kennzahlen dramatische S
 | Kap. 26: Fund der Crampas-Briefe und Duell-Entschluss | 25,7 % | 66,7 % | 9,29 | 29,16 | −19,87 | **46,6 %** |
 | Kap. 33: Späte Berliner Szenen und ärztlicher Rat | 62,5 % | **68,4 %** | 9,62 | 22,13 | −12,51 | 25,0 % |
 
-- **Kapitel 10 (Exposition im Dialog):** Bei Effis Ankunft in Kessin steigt der Zitatanteil auf **85,8 %**, und der ASL-Abstand dreht ins Positive (`+0,40`): Innstetten übernimmt im Gespräch die erklärende Beschreibung des Hauses und der Nachbarschaft.
+- **Kapitel 10 — Zählung vs. Lektüre:** **Was Lixity zählt (L0/L1)**, ist ein erkannter Zitatanteil von **85,8 %** und ein positiver ASL-Abstand (`+0,40`). **Erst der Rücksprung in den Text (L3)** zeigt den erzählerischen Zusammenhang: Bei Effis Ankunft in Kessin übernimmt Innstetten im Gespräch die erläuternde Beschreibung des Hauses und der Nachbarschaft.
 
-- **Kapitel 26 (Der Wendepunkt):** Als Innstetten die Briefe von Major Crampas entdeckt und mit Wüllersdorf über das Duell spricht, fällt der Dialog auf knappe, angespannte Sätze (`ASL Zitate = 9,29`, zwei Drittel aller Zitate ≤ 12 Wörter), während der Erzähltext auf **29,16 Wörter pro Satz** anwächst und die **Wortbrücke zwischen Folgesätzen auf den Romanhöchstwert von 46,6 %** springt: Jeder Satz im Absatz greift die Begriffe des vorangehenden Satzes auf, während Innstetten sich Schritt für Schritt in die Unausweichlichkeit des Duells hineinargumentiert.
+- **Kapitel 26 — Zählung vs. Lektüre:** **Was Lixity zählt (L0/L1)**, sind vier Oberflächenwerte: Der erkannte Zitatanteil sinkt auf **25,7 %** (`ASL Zitate = 9,29`, `66,7 %` der Zitatabschnitte ≤ 12 Wörter), der unzitierte Erzähltext liegt im Mittel bei **29,16 Wörtern pro Satz** (`ASL-Abstand = −19,87`), und die **Wortbrücke zwischen Folgesätzen** erreicht mit **46,6 %** den Höchstwert im Roman (Gesamtmittel: `23,7 %`). Diese Zählwerte beweisen für sich genommen weder psychologischen Druck noch, dass jeder Absatz mechanisch dieselben Begriffe wiederholt: Die Wortbrücke prüft lediglich, ob zwei Nachbarsätze mindestens ein identisches kleingeschriebenes Inhaltswort teilen. **Erst die Lektoratslektüre am Text (L3)** ordnet den Befund ein – Innstettens Fund der Crampas-Briefe und das Gespräch mit Wüllersdorf –; Aussagen über die tatsächliche Lesewirkung auf ein Publikum (**L4**) erfordern eigene Rezeptionsstudien und folgen nicht aus den Oberflächenzählungen.
 
 ### Beispiel 2: Austens *Pride and Prejudice* – Schlagabtausch vs. Darcys Brief
 
-In *Pride and Prejudice* markiert derselbe Blick sofort das berühmte Briefkapitel (Kapitel 35). Dort stehen **87,6 %** des Kapitels in Anführungszeichen, aber der Anteil kurzer Zitate fällt auf **0,0 %** und die Satzlänge innerhalb der Anführungszeichen steigt auf **27,39 Wörter** (`ASL-Abstand = +0,81`). In Lixity lässt sich ein solches Briefkapitel gezielt einem eigenen [Stilregister](intentional-registers.html) zuordnen, damit beabsichtigte Briefprosa nicht als unfreiwillige Dialog-Abweichung gewertet wird.
+In *Pride and Prejudice* fällt derselbe Unterschied zwischen Zählung und Lektüre an Kapitel 35 auf: **Was Lixity zählt (L0/L1)**, sind **87,6 %** Wörter in Anführungszeichen, **0,0 %** kurze Zitatabschnitte (≤ 12 Wörter) und eine Satzlänge von **27,39 Wörtern** innerhalb der Anführungszeichen (`ASL-Abstand = +0,81`). **Erst der Blick in den Text (L3)** zeigt, dass es sich um Mr. Darcys formellen Brief handelt. In Lixity lässt sich ein solches Briefkapitel gezielt einem eigenen [Stilregister](intentional-registers.html) zuordnen, damit beabsichtigte Briefprosa nicht als unfreiwillige Dialog-Abweichung gewertet wird.
 
 <a id="workflow"></a>
 

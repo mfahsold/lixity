@@ -9,8 +9,20 @@ research note within reach. When the draft is ready for feedback, share the
 passages and background you choose.
 
 The local workspace includes writing, reading and research. Built-in analysis
-runs offline. The interface supports seven languages. Measurement coverage
-varies by language. [Language support](LOCALIZATION.md) · [Architecture](ARCHITECTURE.md)
+runs offline. The **interface** is localized in seven languages (German,
+English, French, Spanish, Italian, Portuguese and Dutch); **language-dependent
+analysis coverage** varies by language and is deepest for German and English
+(English is the default analysis language). [Language support](LOCALIZATION.md) · [Architecture](ARCHITECTURE.md)
+
+## What Lixity counts — and what it cannot prove
+
+| What Lixity counts (L0/L1) | What Lixity cannot prove (L3–L5) |
+| --- | --- |
+| **Deterministic surface counts:** words, sentences, recognized quotation spans, local phrase echoes and language-profile lexical cues. | **Literary quality or editorial verdicts:** measurements support human review; no deviation is a mistake, a prose grade or an instruction to rewrite. |
+| **Internal draft comparisons:** chapter-to-chapter shifts and revision diffs under the same settings (medians, MAD corridors, exploratory `z*` / FDR review shortlists). | **Calibrated significance or reader effect:** baselines belong to the supplied draft, not a genre norm; exploratory shortlists are not calibrated p-values or measured reader reactions. |
+| **Explicit evidence links:** passage locations for every count and version-pinned links to retained research records. | **Deep syntax, speaker identity or factual truth:** default cues are lexical heuristics; quotation spans are punctuation-based; optional grammar models remain bounded by documented parser limits; retaining a source does not verify its claim. |
+
+Full formulas live in [Methods](METHODS.md); empirical bounds and known failure modes live in [Validation and limits](STABILITY.md).
 
 ## Benefits we can demonstrate
 
@@ -71,10 +83,12 @@ iPadOS ports. [Project funding and payment status](guides/support.html)
 | Audio | Observe a real capture and playback, including permission handling and microphone selection. Record which runtime was used for any synthesis result. [Author voice](AUDIO.md#author-voice-recording-and-listening) |
 | Large projects | Time readiness, readable text, the first evidence jump and return on the same input. Measure archive validation separately from index queries. Keep evidence, saved project data and recovery in the checks when changing implementation. [Desktop and large-project priorities](RUST_EVALUATION_RFC.md#desktop-and-large-project-priorities) |
 
-Keep observation records free of private manuscript text and search terms. For
-public discovery, compare visits to the demo and installation guide, search
-impressions and clicks over comparable periods. Record language and referral
-context before attributing changes to copy or discovery work.
+Keep observation records free of private manuscript text and search terms. Use
+the [task-based user study protocol](https://github.com/mfahsold/lixity/blob/main/docs/USER_STUDY_PROTOCOL.md) for structured
+author and editor comprehension and usability sessions. For public discovery,
+compare visits to the demo and installation guide, search impressions and
+clicks over comparable periods. Record language and referral context before
+attributing changes to copy or discovery work.
 
 <a id="reuse-before-building"></a>
 

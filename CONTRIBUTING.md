@@ -27,6 +27,14 @@ See [licensing](docs/LICENSING.md).
 - Follow the storage rules below for private projects and their outputs. Use
   [`.gitignore`](.gitignore) and [the security policy](SECURITY.md) for the
   repository and deployment boundaries.
+- **AI-assisted development and reproducibility disclosure:** When AI coding
+  assistants or language models materially assist code, documentation or
+  evaluation work, record the exact tool name, version/build and exact model
+  identifier (never vague labels such as "an LLM" or "latest") in the PR
+  description or reproducibility note. Maintain the software paper's
+  corresponding tool-and-model disclosure separately in `paper/paper.md` when
+  updating the paper. AI-assisted changes follow the same human review,
+  deterministic test gates and licensing requirements as human-authored work.
 
 ## Where work belongs
 

@@ -50,13 +50,13 @@ An `ASL Δ` near zero means the two measured averages are close. If a draft's di
 
 <a id="chapter-drills"></a>
 
-## 3. How chapter-level outliers reveal narrative structure
+## 3. Separating chapter-level counts from editorial readings
 
-Corpus averages only set the stage. The real editorial value appears when we inspect individual chapters where dialogue cadence, voice contrast or local sentence overlap breaks away from the novel's own baseline.
+Corpus averages only set the stage. Individual chapters become useful during revision when you separate **what Lixity counted (L0/L1)** from **the reader's editorial interpretation after returning to the text (L3/L4)**, matching the evidence ladder in [STABILITY.md](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md).
 
-### Case A: *Pride and Prejudice* (banter, pompous monologue, and Darcy's letter)
+### Case A: *Pride and Prejudice* (banter, summary prose, and Darcy's letter)
 
-In Austen's novel, jumping from the **Pacing & scenes** panel to the **Quoted passages** chapter disclosure immediately highlights four famous dramaturgical shifts:
+In Austen's novel, jumping from the **Pacing & scenes** panel to the **Quoted passages** chapter disclosure flags four chapters whose surface counts move away from the novel's baseline:
 
 | Chapter & narrative moment | Quoted share | Short spans (≤ 12 w.) | Quoted ASL | Narration ASL | ASL Δ | Adjacent overlap |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -65,15 +65,15 @@ In Austen's novel, jumping from the **Pacing & scenes** panel to the **Quoted pa
 | Ch. 35: Darcy's letter to Elizabeth | 87.6% | 0.0% | **27.39** | 26.57 | **+0.81** | 31.7% |
 | Ch. 49: Family reaction to Lydia's settlement | 62.5% | **69.5%** | **9.21** | 13.27 | −4.06 | 12.1% |
 
-- **Why Chapter 35 stands out:** In Chapter 35, 87.6% of the words sit inside quotation marks, yet `short_turn_pct` drops to **0.0%** and `Quoted ASL` doubles to **27.39 words per sentence** (`ASL Δ = +0.81`). Why? Because the entire quoted span is Mr. Darcy's formal letter explaining Wickham and Jane. In Lixity, an author writing an epistolary chapter like Chapter 35 can assign it to an explicit `epistolary` [chapter register](intentional-registers.html) so its formal sentence length is evaluated against letter targets rather than flagged as a dialogue anomaly.
+- **Chapter 35 — count vs. reading:** **What Lixity counts (L0/L1)** is 87.6% of words inside quotation marks, `short_turn_pct` at **0.0%**, and `Quoted ASL` at **27.39 words per sentence** (`ASL Δ = +0.81`). The counts do not identify the genre or speaker. **Returning to the text (L3)** shows that the quoted span is Mr. Darcy's formal letter explaining Wickham and Jane; in Lixity, an author writing an epistolary chapter like this can assign an explicit `epistolary` [chapter register](intentional-registers.html) so its sentence length is reviewed against letter targets rather than dialogue norms.
 
-- **Why Chapter 15 chains almost every sentence:** In Chapter 15, where Austen summarizes Mr. Collins's self-important logic and his designs on Longbourn, narration ASL climbs to **36.62 words** and within-paragraph adjacent sentence overlap reaches **47.1%** (nearly double the novel's 23.6% mean) as each clause elaborates the same social premise.
+- **Chapter 15 — count vs. reading:** **What Lixity counts (L0/L1)** is an unquoted narration ASL of **36.62 words** and within-paragraph adjacent sentence overlap of **47.1%** (nearly double the novel's 23.6% mean). That overlap count only records shared lowercased non-function words between consecutive sentences. **Returning to the text (L3)** supplies the editorial context: Austen's summary of Mr. Collins's introduction and designs on Longbourn repeats names and estate terms across adjacent clauses.
 
-- **Why Chapter 49 accelerates:** When news of Lydia and Wickham's marriage terms arrives in Chapter 49, nearly 70% of the 59 quoted spans are 12 words or fewer, and quoted ASL drops to **9.21 words**.
+- **Chapter 49 — count vs. reading:** **What Lixity counts (L0/L1)** is 69.5% of 59 quoted spans at 12 words or fewer, with quoted ASL at **9.21 words**. **Returning to the text (L3)** shows brief exchanges reacting to news of Lydia and Wickham's settlement; whether that rhythm feels hurried to readers is a separate reader-response question (L4).
 
 ### Case B: *Effi Briest* (conversational parlor vs. Innstetten's discovery of the letters)
 
-The same measurements trace Fontane's famous contrast between light social conversation (*Plauderton*) and psychological pressure:
+In Fontane's novel, the same surface counts highlight chapters where quotation share, sentence length and token overlap shift sharply; only returning to the prose connects those counts to Fontane's *Plauderton* or dramatic tension:
 
 | Chapter & narrative moment | Quoted share | Short spans (≤ 12 w.) | Quoted ASL | Narration ASL | ASL Δ | Adjacent overlap |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -82,7 +82,7 @@ The same measurements trace Fontane's famous contrast between light social conve
 | Ch. 26: Discovery of Crampas's letters and duel decision | 25.7% | 66.7% | 9.29 | 29.16 | −19.87 | **46.6%** |
 | Ch. 33: Late Berlin scenes and medical advice | 62.5% | **68.4%** | 9.62 | 22.13 | −12.51 | 25.0% |
 
-In **Chapter 26** (the turning point where Innstetten finds Major Crampas's letters in Effi's sewing table), dialogue drops to 25.7% (brief, clipped exchanges with Wüllersdorf at 9.29 words per sentence). The narrative sentences lengthen to **29.16 words** and adjacent sentence content-word overlap surges to **46.6%**, the highest in the entire novel. Every paragraph hammers on the same recurring nouns as Innstetten talks himself into the duel.
+In **Chapter 26**, **what Lixity counts (L0/L1)** is a surface shift across four measures: recognized quoted words drop to **25.7%** (`Quoted ASL = 9.29` words, `66.7%` of quoted spans ≤ 12 words), unquoted narration averages **29.16 words per sentence** (`ASL Δ = −19.87`), and within-paragraph adjacent sentence overlap reaches **46.6%** — the highest chapter value in the novel (versus `23.7%` overall). Those counts do not prove psychological pressure or that every paragraph “hammers on the same nouns”: overlap only records that consecutive sentences share at least one lowercased non-function word. **Returning to the text (L3 editorial reading)** supplies the narrative context — Innstetten's discovery of Major Crampas's letters and his exchange with Wüllersdorf — and lets a human reader judge how the recurring terms and long unquoted sentences work in that scene; any claim about actual reader experience belongs to empirical reader-response evidence (L4), which surface counts cannot establish.
 
 <a id="workflow"></a>
 

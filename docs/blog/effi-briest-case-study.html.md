@@ -32,7 +32,7 @@ Open the [Effi Briest case study](../examples/effi-briest.html) in the browser. 
 
 3. **The chapter matrix (drift column).** The reference summary of every chapter: words, sentence length, dialogue share, function words, tense, flags and the number of selected deviations.
 
-A useful question is “what changed in this chapter, and was it on purpose?”. Deviations are questions to the text. A chapter that sheds dialogue may be a solitary interior section; a jump in nominalisation may be a documentary letter; a drop in sentence length may be the action scene you intended. These are possible interpretations, not conclusions the measurements establish.
+A useful question is “what changed in this chapter, and was it on purpose?”. The heatmap and bands report **what Lixity counted and compared (L0/L1)**; deviations are questions to the text, not explanations. Only **returning to the passage (L3 editorial reading)** tells you whether a drop in quoted words belongs to a solitary interior section, a rise in nominalisation cues belongs to a documentary letter, or shorter sentences serve an action scene — and claims about how readers experience those shifts require separate reader-response evidence (L4; see [STABILITY.md](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md)).
 
 <a id="try"></a>
 

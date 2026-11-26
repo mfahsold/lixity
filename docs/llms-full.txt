@@ -164,7 +164,7 @@ explains offline help.
 | CLI, project settings and machine-readable responses | [Commands and configuration](USAGE.md) · [Automation contracts and MCP](AGENTS.md) · [Agent skill](https://github.com/mfahsold/lixity/blob/main/skills/lixity/SKILL.md) |
 | Application layers, local storage and evidence revisions | [Architecture](ARCHITECTURE.md) · [Research data model](research/DATA_MODEL.md) |
 | Development, checks and publication | [Contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) · [Desktop maintainers' guide](https://github.com/mfahsold/lixity/blob/main/desktop/README.md) |
-| Product priorities and feedback criteria | [Product direction](PRODUCT.md) · [Compare manuscript workflows](guides/manuscript-analysis-tools.html) |
+| Product priorities, feedback criteria and user study | [Product direction](PRODUCT.md) · [Task-based user study protocol](https://github.com/mfahsold/lixity/blob/main/docs/USER_STUDY_PROTOCOL.md) · [Compare manuscript workflows](guides/manuscript-analysis-tools.html) |
 | Licensing, project funding and reporting issues | [Licensing](LICENSING.md) · [Project funding and use of funds](guides/support.html) · [Security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) |
 
 ## Maintain the documentation
