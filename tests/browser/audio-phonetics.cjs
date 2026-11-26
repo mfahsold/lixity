@@ -14,8 +14,10 @@ from http.server import ThreadingHTTPServer
 from lixity.server import LixityServerHandler
 from lixity.speech import generate_silence_wav
 from lixity.speech_references import save_reference
+import lixity.speech_providers as providers
 import lixity.speech_status as status
 status.worker_health = lambda target, **kwargs: {'target':target, 'state':'unavailable', 'model':None}
+providers._zonos_runtime_status = lambda profile: {'target':'local', 'state':'unavailable', 'model':None}
 base = Path(sys.argv[1]); root = base / 'project'; root.mkdir()
 os.environ['XDG_DATA_HOME'] = str(base / 'data')
 source = root / 'manuscript.md'; source.write_text('## Garten\\n\\nDer rote Vogel singt leise.\\n\\nDer blaue Vogel antwortet.\\n')
@@ -90,7 +92,7 @@ server.serve_forever()
         await Promise.all([page.waitForNavigation(),page.locator('[data-speech-action=schema_apply]').click()]);
         await openProfile('Retained voice');
         await page.locator('[data-speech-action=create]').click();
-        assert.equal(await page.locator('#speech-engine').inputValue(),'ims-toucan','A new German author profile chooses the reference-capable engine');
+        assert.equal(await page.locator('#speech-engine').inputValue(),'ims-toucan','IMS-Toucan is the German default when ZONOS3 is unavailable');
         assert.equal(await page.locator('#speech-language').inputValue(),'de');
         await page.locator('#speech-name').fill('Synthetic author voice');
         await page.locator('#speech-reference_id').selectOption(server.fixture.reference);
