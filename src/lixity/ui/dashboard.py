@@ -75,6 +75,7 @@ from .components import (
     select_control,
     status_banner,
     status_strip,
+    support_lixity_link,
     table_wrap_start,
     tense_class,
     tense_label,
@@ -708,6 +709,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             )
         parts.append("</nav></details>")
         parts.append('<p class="workspace-product-details">' + read_only_note + product_details(labels) + '</p>')
+        if can_edit and not first_workspace:
+            parts.append('<div>' + support_lixity_link(labels) + '</div>')
         parts.append("</div></div>")
 
     if status:
@@ -801,7 +804,9 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             parts.append(
                 '    <p class="welcome-example"><a href='
                 f'"{docs_url("demo/report.html")}" target="_blank" rel="noopener noreferrer">'
-                f"{L('welcome_example')}</a></p>"
+                f"{L('welcome_example')}</a>"
+                + (support_lixity_link(labels) if first_workspace else "")
+                + "</p>"
             )
         parts.append(
             f'    <details class="welcome-more"><summary>{L("welcome_quickstart")}</summary>'

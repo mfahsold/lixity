@@ -31,8 +31,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Keep the writing toolbar visible during pauses and scrolling. Open editing
   and formatting actions from the text or the toolbar, with keyboard access
   and selection restoration.
-- Link the website and workspace to the project funding status and planned
-  desktop and mobile installer work.
+- Add a visible support link to the website, welcome screen and project
+  navigation. The support page shows the funding status, installer plans
+  and company contact.
 
 ### Fixed
 

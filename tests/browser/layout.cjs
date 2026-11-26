@@ -63,6 +63,10 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
         await page.locator('#reader-focus').click();
         assert.ok(toolbar.height <= 64, `Wide desktop reading toolbar stays one compact row: ${toolbar.height}px`);
       }
+      const support = page.locator('#workspace-navigation-content').getByRole('link', {name: 'Support Lixity'});
+      assert.ok(await support.isVisible(), `Project support belongs in the visible workspace at ${width}px`);
+      assert.ok(await support.evaluate(link => link.scrollWidth <= link.clientWidth + 1
+        && link.getBoundingClientRect().height >= 44), `The support link fits and remains touchable at ${width}px`);
       assert.ok(await page.locator('#license-terms').isVisible());
       assert.ok((await page.locator('#license-terms').textContent()).includes('self-publishing'));
       await page.locator('.license-badge').focus();
@@ -73,15 +77,17 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       if (width === 1440) {
         const host = 'https://github.com/mfahsold/lixity/blob/main/';
         await page.context().route(host + '**', route => route.fulfill({body: 'Public licensing destination'}));
-        const funding = 'https://github.com/mfahsold/lixity/blob/main/docs/FUNDING.md';
+        const funding = 'https://mfahsold.github.io/lixity/guides/support.html';
         await page.context().route(funding, route => route.fulfill({body: 'Project funding information'}));
-        for (const [name, target] of [
-          [/Full AGPL license/, host + 'LICENSE'],
-          [/Project funding/, funding],
-          [/Request a commercial license/, host + 'docs/LICENSING.md#when-to-talk-to-the-maintainer'],
+        const licensing = page.locator('.license-links');
+        for (const [link, target] of [
+          [licensing.getByRole('link', {name: 'Full AGPL license'}), host + 'LICENSE'],
+          [licensing.getByRole('link', {name: 'Project funding'}), funding],
+          [licensing.getByRole('link', {name: 'Request a commercial license'}), host + 'docs/LICENSING.md#when-to-talk-to-the-maintainer'],
+          [support, funding],
         ]) {
           const opened = page.waitForEvent('popup');
-          await page.locator('.license-links').getByRole('link', {name}).press('Enter');
+          await link.press('Enter');
           const external = await opened;
           await external.waitForURL(target);
           await external.close();

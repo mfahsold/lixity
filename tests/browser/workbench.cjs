@@ -197,7 +197,7 @@ async function nativeReaderPreferences(browser) {
       const footer = page.locator('#license-terms .license-links');
       for (const [name, url, activate] of [
         ['Full AGPL license', 'https://github.com/mfahsold/lixity/blob/main/LICENSE', link => link.press('Enter')],
-        ['Project funding', 'https://github.com/mfahsold/lixity/blob/main/docs/FUNDING.md', link => link.click()],
+        ['Project funding', 'https://mfahsold.github.io/lixity/guides/support.html', link => link.click()],
         ['Request a commercial license', 'https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md#when-to-talk-to-the-maintainer', link => link.click()],
       ]) {
         await page.context().route(url.split('#')[0], route => route.fulfill({body: name}));

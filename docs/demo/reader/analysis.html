@@ -2074,9 +2074,13 @@ margin-block-end: var(--space-5);
 }
 & #welcome-sample { grid-column: 1 / -1; }
 & .welcome-example {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
     margin: var(--space-4) 0 0;
     font-size: var(--text-small);
-    & a { color: var(--accent); text-underline-offset: .15em; }
+    & a:not(.ctl) { color: var(--accent); text-underline-offset: .15em; }
 }
 & .welcome-more { margin-block-start: var(--space-3); }
 }

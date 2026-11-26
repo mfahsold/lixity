@@ -7,7 +7,7 @@ deployment change touches one constant instead of scattered string literals.
 from __future__ import annotations
 
 DOCS_BASE = "https://mfahsold.github.io/lixity"
-FUNDING_DETAILS_URL = "https://github.com/mfahsold/lixity/blob/main/docs/FUNDING.md"
+FUNDING_DETAILS_PATH = "guides/support.html"
 
 
 def docs_url(path: str = "") -> str:
@@ -15,3 +15,6 @@ def docs_url(path: str = "") -> str:
     if not path:
         return f"{DOCS_BASE}/"
     return f"{DOCS_BASE}/{path.lstrip('/')}"
+
+
+FUNDING_DETAILS_URL = docs_url(FUNDING_DETAILS_PATH)

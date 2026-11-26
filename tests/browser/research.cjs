@@ -98,6 +98,9 @@ server.serve_forever()
       await expect(page.locator('#hero-btn-open-project')).toBeVisible();
       await expect(page.locator('#hero-btn-new-project')).toBeVisible();
       await expect(page.locator('#hero-btn-write')).toBeVisible();
+      const support = page.locator('#welcome-hero').getByRole('link', {name: 'Support Lixity'});
+      await expect(support).toBeVisible();
+      await expect(support).toHaveAttribute('href', 'https://mfahsold.github.io/lixity/guides/support.html');
       await openProjectActions(page);
       await expect(page.locator('#btn-modal-open-project')).toBeVisible();
       await expect(page.locator('#btn-modal-new-project')).toBeVisible();

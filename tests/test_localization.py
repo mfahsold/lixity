@@ -257,7 +257,7 @@ class TestLocalization(unittest.TestCase):
     def test_project_identity_is_escaped_versioned_and_localized(self):
         from lixity import __version__
         from lixity.site import FUNDING_DETAILS_URL
-        from lixity.ui.components import project_header
+        from lixity.ui.components import project_header, support_lixity_link
 
         for language in LOCALES:
             with self.subTest(language=language):
@@ -278,6 +278,9 @@ class TestLocalization(unittest.TestCase):
                 )
                 self.assertIn("&lt;img", rendered)
                 self.assertNotIn("<img", rendered)
+                support = support_lixity_link(labels)
+                self.assertIn(labels["support_lixity"], support)
+                self.assertIn(f'href="{FUNDING_DETAILS_URL}" hreflang="en"', support)
 
     def test_cli_language_precedence(self):
         with tempfile.TemporaryDirectory() as directory:

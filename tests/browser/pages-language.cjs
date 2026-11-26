@@ -106,6 +106,15 @@ const origin = 'https://pages.example';
         if (language === 'en' || language === 'de') {
           await state.page.screenshot({path: path.join(artifacts, `${language}-${width}.png`), fullPage: true});
         }
+        const support = state.page.locator('.home-footer a[href="guides/support.html"]');
+        await expect(support).toBeVisible();
+        await support.press('Enter');
+        await expect(state.page).toHaveURL(`${origin}/lixity/guides/support.html`);
+        const contact = state.page.getByRole('link', {name: 'info@rost-services.de'});
+        await expect(contact).toBeVisible();
+        await expect(contact).toHaveAttribute('href', 'mailto:info@rost-services.de');
+        assert.equal(await state.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+        await state.page.goBack();
         const sandboxLanguage = language === 'de' ? 'de' : 'en';
         const link = state.page.locator('#sandbox-cta');
         await expect(link).toHaveAttribute('hreflang', sandboxLanguage);
@@ -119,6 +128,6 @@ const origin = 'https://pages.example';
       }
     }
     console.log(`Screenshots: ${artifacts}`);
-    console.log('Public language suggestions, Sandbox language and preset links, storage failure and seven responsive pages passed.');
+    console.log('Public language suggestions, Sandbox language and preset links, funding contact, storage failure and seven responsive pages passed.');
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

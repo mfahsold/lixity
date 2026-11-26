@@ -27,7 +27,7 @@ def page_url(language: str) -> str:
 
 def render_pages(root: Path | None = None) -> dict[str, str]:
     """Require complete translations rather than silently shipping English fallback."""
-    from lixity.site import FUNDING_DETAILS_URL
+    from lixity.site import FUNDING_DETAILS_PATH
 
     try:
         from check_release import source_version
@@ -74,7 +74,7 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
         fields.update(image_dimensions)
         fields['canonical'] = page_url(lang)
         fields['home_path'] = './' if lang == 'en' else page_path(lang)
-        fields['funding_url'] = FUNDING_DETAILS_URL
+        fields['funding_url'] = FUNDING_DETAILS_PATH
         fields['sandbox_language'] = 'de' if lang == 'de' else 'en'
         fields['passage_guide_language'], fields['passage_guide_path'] = (
             ('de', 'guides/first-look-de.html#beleg') if lang == 'de'

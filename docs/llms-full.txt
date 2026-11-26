@@ -93,7 +93,7 @@ connected AI client's data handling have separate network boundaries.
 - [Repository guidance](https://github.com/mfahsold/lixity/blob/main/AGENTS.md) and [contributor operations](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md): working on the Lixity source.
 
 Lixity is AGPL-3.0-or-later. Writing, research and self-publishing are covered.
-The [project funding page](https://mfahsold.github.io/lixity/FUNDING.md) records
+The [project funding page](https://mfahsold.github.io/lixity/guides/support.html) records
 payment status and the priorities for desktop and mobile installers.
 A separate commercial license is available for integrations that cannot meet
 the AGPL. See the [licensing guide](https://mfahsold.github.io/lixity/LICENSING.md).
@@ -148,7 +148,7 @@ explains offline help.
 | Application layers, local storage and evidence revisions | [Architecture](ARCHITECTURE.md) · [Research data model](research/DATA_MODEL.md) |
 | Development, checks and publication | [Contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) · [Desktop maintainers' guide](https://github.com/mfahsold/lixity/blob/main/desktop/README.md) |
 | Product priorities and feedback criteria | [Product direction](PRODUCT.md) · [Compare manuscript workflows](guides/manuscript-analysis-tools.html) |
-| Licensing, project funding and reporting issues | [Licensing](LICENSING.md) · [Project funding and use of funds](FUNDING.md) · [Security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) |
+| Licensing, project funding and reporting issues | [Licensing](LICENSING.md) · [Project funding and use of funds](guides/support.html) · [Security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) |
 
 ## Maintain the documentation
 

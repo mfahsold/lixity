@@ -71,7 +71,7 @@ connected AI client's data handling have separate network boundaries.
 - [Repository guidance](https://github.com/mfahsold/lixity/blob/main/AGENTS.md) and [contributor operations](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md): working on the Lixity source.
 
 Lixity is AGPL-3.0-or-later. Writing, research and self-publishing are covered.
-The [project funding page](https://mfahsold.github.io/lixity/FUNDING.md) records
+The [project funding page](https://mfahsold.github.io/lixity/guides/support.html) records
 payment status and the priorities for desktop and mobile installers.
 A separate commercial license is available for integrations that cannot meet
 the AGPL. See the [licensing guide](https://mfahsold.github.io/lixity/LICENSING.md).

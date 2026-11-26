@@ -338,6 +338,14 @@ def product_details(labels: Mapping[str, str] | None = None) -> str:
     )
 
 
+def support_lixity_link(labels: Mapping[str, str] | None) -> str:
+    """Offer an optional route to the public project funding information."""
+    return (
+        f'<a class="ctl ctl-sm" id="support-lixity" href="{esc(FUNDING_DETAILS_URL)}" hreflang="en" '
+        f'target="_blank" rel="noopener noreferrer">{esc(label(labels, "support_lixity"))}</a>'
+    )
+
+
 def project_header(
     title: str, labels: Mapping[str, str] | None = None,
     language_name: str = "", engine_name: str = "Lixity",
