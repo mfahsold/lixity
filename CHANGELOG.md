@@ -9,6 +9,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Update the vendored CodeMirror editor dependency `@codemirror/view` from
+  `6.44.0` to `6.44.1` (rebuilding `codemirror-editor.js` and its license
+  inventory) and apply semver-compatible patch updates in `desktop/Cargo.lock`
+  (`sha2` `0.11.2`, `zerocopy` / `zerocopy-derive` `0.8.66`).
 - Tighten the narrow-viewport workspace entry so the first manuscript paragraph
   sits higher on 320 px screens: fold the project support link inline into the
   compact metadata row below 1100 px while keeping the sidebar button on wide
