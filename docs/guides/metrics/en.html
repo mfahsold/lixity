@@ -187,7 +187,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 <li><a href="#dist">Sentence lengths</a></li>
 <li><a href="#sticky">Sentences with many function words</a></li>
 <li><a href="#dialogue">Quotes and marked speech</a></li>
-<li><a href="#showing">Word patterns &amp; quotes</a></li>
+<li><a href="#showing">Surface signals</a></li>
 <li><a href="#motifs">Motifs &amp; repetition</a></li>
 <li><a href="#characters">Character name mentions</a></li>
 <li><a href="#scenes">Scenes &amp; style registers</a></li>
@@ -237,7 +237,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 <div id="measure-sentence_cv"><dt><span id="measure-cv"></span>Sentence length variation</dt><dd><p>Variation in sentence lengths relative to their mean. 0 = equal lengths; higher = more variation. Not a quality rating.</p></dd></div>
 <div id="measure-pacing_cohesion"><dt>Adjacent sentence overlap</dt><dd><p>Share of adjacent sentence pairs in the same paragraph that share at least one content word.</p></dd></div>
 <div id="measure-pacing_monotony"><dt>Repeated sentence starts</dt><dd><p>Count of runs where 3 or more consecutive sentences in the same paragraph begin with the identical word. Marks candidates for either deliberate anaphora or unintended sentence-start monotony.</p></dd></div>
-<div id="measure-pacing_hook"><dt>Ending cues</dt><dd><p>0–3 heuristic: one point each for a closing sentence of 1–8 words, terminal ?, ! or …, and detected quoted speech. This is not a validated suspense or quality measure.</p></dd></div>
+<div id="measure-pacing_hook"><dt>Closing cues (rule)</dt><dd><p>0–3 heuristic: one point each for a closing sentence of 1–8 words, terminal ?, ! or …, and detected quoted speech. This is not a validated suspense or quality measure.</p></dd></div>
 <div id="measure-start_entropy"><dt>Starter entropy</dt><dd><p>Variety of the first counted word of detected sentences. Repeated openings such as &#x27;I&#x27; lower this value; varied openings raise it. Repetition can be intentional.</p></dd></div>
 <div id="measure-first_person_start_rate"><dt><span id="measure-first_start"></span>I-starts</dt><dd><p>Share of detected sentences whose first counted word is &#x27;I&#x27;, including recognized contractions. 50% means half start this way; it can be an intended narrative voice.</p></dd></div>
 </dl>
@@ -274,7 +274,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 </dl>
 </section>
 <section id="showing" aria-labelledby="heading-showing">
-<h2 id="heading-showing">Word patterns &amp; quotes</h2>
+<h2 id="heading-showing">Surface signals</h2>
 <p>Pattern counts are scaled to 1,000 words to make chapters of different lengths easier to compare. Read the passage to see what the matched word does there.</p>
 <dl>
 <div id="measure-filter"><dt><span id="measure-filter_density"></span><span id="measure-perception"></span>Perception filters</dt><dd><p>Matches to the configured pattern for perception, thoughts and memories per 1,000 words. Read the passage to see whose perception or thought the words express.</p><p>Can you tell who is noticing, remembering or thinking here?</p></dd></div>
@@ -321,12 +321,12 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 <div id="measure-consistency"><dt>Comparisons within the limit</dt><dd><p>Share of measurable chapter-feature comparisons within the chosen deviation limit. Not a quality score. Insufficient data: –.</p></dd></div>
 <div id="measure-dimensions"><dt>Feature-rank projection</dt><dd><p>Exploratory projection of standardized feature ranks for complete chapters. Proximity applies to the displayed axes. Variance shares come from the regularized rank matrix, not established literary registers. Incomplete chapters are omitted.</p></dd></div>
 <div id="measure-structural"><dt>Style across chapters</dt><dd><p>Compare style features across chapters and between the two manuscript halves. Finding candidate changes requires a complete chapter series. Trends and half comparisons can use available values. Signals help you choose chapters to reread.</p></dd></div>
-<div id="measure-fdr"><dt>FDR</dt><dd><p>When many chapter features are compared, a nominal multiple-testing rule marks a shortlist for review. Read these signals with their size and prose context; chapter error rates are not calibrated.</p></dd></div>
+<div id="measure-fdr"><dt>Uncalibrated selection (self-comparison)</dt><dd><p>When many chapter features are compared, a nominal multiple-testing rule marks a shortlist for review. Read these signals with their size and prose context; chapter error rates are not calibrated.</p></dd></div>
 </dl>
 </section>
 <section id="matrix" aria-labelledby="heading-matrix">
 <h2 id="heading-matrix">Chapter matrix</h2>
-<p>Each row summarizes one chapter. A dash indicates that a comparison value is unavailable. Open a flagged passage and check whether the pattern fits what the chapter is doing.</p>
+<p>Each row summarizes one chapter. A dash indicates that a comparison value is unavailable. Open a marked passage and check whether the pattern fits what the chapter is doing.</p>
 <dl>
 <div id="measure-chapter_flags"><dt>Tense findings</dt><dd><p>Number of paragraphs meeting the active severity threshold. These are review hints, not errors or FDR results.</p></dd></div>
 <div id="measure-chapter_deviation"><dt>deviation</dt><dd><p>Number of features above the deviation threshold. 0 = none above it; – = no comparison. Not an FDR count or quality rating.</p></dd></div>

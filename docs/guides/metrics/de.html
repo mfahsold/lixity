@@ -187,7 +187,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 <li><a href="#dist">Satzlängen</a></li>
 <li><a href="#sticky">Sätze mit vielen Funktionswörtern</a></li>
 <li><a href="#dialogue">Zitate und markierte Rede</a></li>
-<li><a href="#showing">Wortmuster &amp; Zitate</a></li>
+<li><a href="#showing">Oberflächensignale</a></li>
 <li><a href="#motifs">Motive &amp; Wiederholungen</a></li>
 <li><a href="#characters">Namensnennungen</a></li>
 <li><a href="#scenes">Szenen &amp; Stilregister</a></li>
@@ -237,7 +237,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 <div id="measure-sentence_cv"><dt><span id="measure-cv"></span>Schwankung der Satzlänge</dt><dd><p>Schwankung der Satzlängen relativ zum Mittel. 0 = gleich lange Sätze; höher = mehr Variation. Keine Qualitätsbewertung.</p></dd></div>
 <div id="measure-pacing_cohesion"><dt>Wortbrücke Folgesätze</dt><dd><p>Anteil benachbarter Satzpaare im selben Absatz mit mindestens einem gemeinsamen Inhaltswort.</p></dd></div>
 <div id="measure-pacing_monotony"><dt>Gleiche Satzanfänge</dt><dd><p>Anzahl der Ketten, in denen 3 oder mehr aufeinanderfolgende Sätze desselben Absatzes mit demselben Wort beginnen. Markiert Stellen für bewusste Anaphern oder unbeabsichtigte Satzanfangs-Wiederholungen.</p></dd></div>
-<div id="measure-pacing_hook"><dt>Schlussmerkmale</dt><dd><p>Heuristik von 0–3: je ein Punkt für einen Schlusssatz mit 1–8 Wörtern, Schlusszeichen ?, ! oder … und erkannte wörtliche Rede. Kein validiertes Maß für Spannung oder Qualität.</p></dd></div>
+<div id="measure-pacing_hook"><dt>Schlussmerkmale (Regel)</dt><dd><p>Heuristik von 0–3: je ein Punkt für einen Schlusssatz mit 1–8 Wörtern, Schlusszeichen ?, ! oder … und erkannte wörtliche Rede. Kein validiertes Maß für Spannung oder Qualität.</p></dd></div>
 <div id="measure-start_entropy"><dt>Satzanfangs-Entropie</dt><dd><p>Vielfalt des ersten gezählten Wortes erkannter Sätze. Wiederholte Anfänge wie »Ich« senken den Wert, unterschiedliche erhöhen ihn. Wiederholung kann beabsichtigt sein.</p></dd></div>
 <div id="measure-first_person_start_rate"><dt><span id="measure-first_start"></span>Ich-Anfänge</dt><dd><p>Anteil erkannter Sätze, deren erstes gezähltes Wort »ich« ist. 50% bedeuten, dass die Hälfte so beginnt; das kann zur beabsichtigten Erzählstimme gehören.</p></dd></div>
 </dl>
@@ -274,7 +274,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 </dl>
 </section>
 <section id="showing" aria-labelledby="heading-showing">
-<h2 id="heading-showing">Wortmuster &amp; Zitate</h2>
+<h2 id="heading-showing">Oberflächensignale</h2>
 <p>Die Listen zählen Treffer von Wortmustern je 1.000 Wörter. Das macht Kapitel unterschiedlicher Länge leichter vergleichbar. Lies die Fundstelle, um zu erkennen, was das Wort dort leistet.</p>
 <dl>
 <div id="measure-filter"><dt><span id="measure-filter_density"></span><span id="measure-perception"></span>Perzeptionsfilter</dt><dd><p>Treffer des eingestellten Wortmusters für Wahrnehmung, Gedanken und Erinnerungen je 1.000 Wörter. Lies die Stelle und prüfe, wessen Wahrnehmung oder Gedanke hier erzählt wird.</p><p>Ist klar, wer hier etwas wahrnimmt, sich erinnert oder nachdenkt?</p></dd></div>
@@ -321,7 +321,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 <div id="measure-consistency"><dt>Vergleiche innerhalb der Schwelle</dt><dd><p>Anteil messbarer Kapitel-Merkmal-Vergleiche innerhalb der gewählten Abweichungsgrenze. Keine Qualitätsnote. Zu wenig Daten: –.</p></dd></div>
 <div id="measure-dimensions"><dt>Projektion der Merkmalsränge</dt><dd><p>Explorative Projektion standardisierter Merkmalsränge vollständig gemessener Kapitel. Nähe gilt für die gezeigten Achsen. Die Varianzanteile stammen aus der regularisierten Rangmatrix; keine nachgewiesenen literarischen Register. Fehlende Kapitel werden ausgelassen.</p></dd></div>
 <div id="measure-structural"><dt>Stil im Kapitelverlauf</dt><dd><p>Vergleicht Stilmerkmale im Kapitelverlauf und zwischen Manuskripthälften. Die Suche nach möglichen Stilwechseln braucht eine lückenlose Kapitelfolge. Trends und Hälftenvergleiche können verfügbare Werte nutzen. Signale helfen bei der Auswahl von Kapiteln zum Nachlesen.</p></dd></div>
-<div id="measure-fdr"><dt>FDR</dt><dd><p>Bei vielen Kapitelvergleichen markiert eine nominale Mehrfachtest-Regel eine Prüfauswahl. Die Signale mit ihrer Stärke und dem Textkontext lesen; Fehlerraten für Kapiteldaten sind nicht kalibriert.</p></dd></div>
+<div id="measure-fdr"><dt>Unkalibrierte Auswahl (Selbstvergleich)</dt><dd><p>Bei vielen Kapitelvergleichen markiert eine nominale Mehrfachtest-Regel eine Prüfauswahl. Die Signale mit ihrer Stärke und dem Textkontext lesen; Fehlerraten für Kapiteldaten sind nicht kalibriert.</p></dd></div>
 </dl>
 </section>
 <section id="matrix" aria-labelledby="heading-matrix">

@@ -187,7 +187,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 <li><a href="#dist">Lunghezze di frase</a></li>
 <li><a href="#sticky">Frasi con molte parole funzionali</a></li>
 <li><a href="#dialogue">Citazioni e battute segnalate</a></li>
-<li><a href="#showing">Parole e citazioni</a></li>
+<li><a href="#showing">Segnali di superficie</a></li>
 <li><a href="#motifs">Motivi e ripetizioni</a></li>
 <li><a href="#characters">Menzioni dei personaggi</a></li>
 <li><a href="#scenes">Scene e registri di stile</a></li>
@@ -237,7 +237,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 <div id="measure-sentence_cv"><dt><span id="measure-cv"></span>Variazione della lunghezza delle frasi</dt><dd><p>Variazione delle lunghezze delle frasi rispetto alla media. 0 = lunghezze uguali; più alto = più variazione. Non è un voto di qualità.</p></dd></div>
 <div id="measure-pacing_cohesion"><dt>Ripresa tra frasi adiacenti</dt><dd><p>Quota di coppie di frasi consecutive nello stesso paragrafo che condividono almeno una parola di contenuto.</p></dd></div>
 <div id="measure-pacing_monotony"><dt>Inizi di frase ripetuti</dt><dd><p>Numero di sequenze in cui 3 o più frasi consecutive dello stesso paragrafo iniziano con la stessa parola. Segnala possibili anafore intenzionali o ripetizioni involontarie a inizio frase.</p></dd></div>
-<div id="measure-pacing_hook"><dt>Indizi finali</dt><dd><p>Euristica da 0 a 3: un punto per una frase finale di 1–8 parole, terminazione in ?, ! o … e discorso citato rilevato. Non è una misura validata di suspense o qualità.</p></dd></div>
+<div id="measure-pacing_hook"><dt>Indizi di chiusura (regola)</dt><dd><p>Euristica da 0 a 3: un punto per una frase finale di 1–8 parole, terminazione in ?, ! o … e discorso citato rilevato. Non è una misura validata di suspense o qualità.</p></dd></div>
 <div id="measure-start_entropy"><dt>Entropia degli inizi</dt><dd><p>Varietà della prima parola contata nelle frasi rilevate. Inizi ripetuti come «io» riducono il valore; inizi diversi lo aumentano. La ripetizione può essere intenzionale.</p></dd></div>
 <div id="measure-first_person_start_rate"><dt><span id="measure-first_start"></span>Inizi in «io»</dt><dd><p>Quota di frasi rilevate la cui prima parola contata è «io». 50% significa che la metà inizia così; può far parte di una voce narrativa intenzionale.</p></dd></div>
 </dl>
@@ -274,7 +274,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 </dl>
 </section>
 <section id="showing" aria-labelledby="heading-showing">
-<h2 id="heading-showing">Parole e citazioni</h2>
+<h2 id="heading-showing">Segnali di superficie</h2>
 <p>Le occorrenze sono riportate per 1.000 parole per confrontare capitoli di lunghezze diverse. Leggi il passaggio per capire il ruolo della parola segnalata.</p>
 <dl>
 <div id="measure-filter"><dt><span id="measure-filter_density"></span><span id="measure-perception"></span>Filtri percettivi</dt><dd><p>Corrispondenze al motivo configurato per percezioni, pensieri e ricordi ogni 1.000 parole. Leggi il passo per capire chi percepisce o pensa.</p><p>È chiaro chi qui percepisce qualcosa, ricorda o sta pensando?</p></dd></div>
@@ -321,7 +321,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 <div id="measure-consistency"><dt>Confronti entro la soglia</dt><dd><p>Quota dei confronti misurabili tra capitoli e caratteristiche entro il limite di deviazione scelto. Non è un voto di qualità. Dati insufficienti: –.</p></dd></div>
 <div id="measure-dimensions"><dt>Proiezione dei ranghi delle caratteristiche</dt><dd><p>Proiezione esplorativa dei ranghi standardizzati dei capitoli completi. La vicinanza riguarda gli assi mostrati. Le quote di varianza provengono dalla matrice regolarizzata, non da registri letterari accertati. I capitoli incompleti sono omessi.</p></dd></div>
 <div id="measure-structural"><dt>Lo stile lungo i capitoli</dt><dd><p>Confronta i tratti dello stile lungo i capitoli e tra le due metà del manoscritto. La ricerca di possibili cambiamenti richiede una serie di capitoli completa. Le tendenze e i confronti tra le metà possono usare i valori disponibili. I segnali aiutano a scegliere i capitoli da rileggere.</p></dd></div>
-<div id="measure-fdr"><dt>FDR</dt><dd><p>Quando si confrontano molte caratteristiche dei capitoli, una regola nominale per test multipli segnala una selezione da esaminare. Leggi questi segnali insieme alla loro entità e al contesto del testo; i tassi d&#x27;errore per i capitoli non sono calibrati.</p></dd></div>
+<div id="measure-fdr"><dt>Selezione non calibrata (autoconfronto)</dt><dd><p>Quando si confrontano molte caratteristiche dei capitoli, una regola nominale per test multipli segnala una selezione da esaminare. Leggi questi segnali insieme alla loro entità e al contesto del testo; i tassi d&#x27;errore per i capitoli non sono calibrati.</p></dd></div>
 </dl>
 </section>
 <section id="matrix" aria-labelledby="heading-matrix">

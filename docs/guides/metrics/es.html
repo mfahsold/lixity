@@ -187,7 +187,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 <li><a href="#dist">Longitudes de frase</a></li>
 <li><a href="#sticky">Frases con muchas palabras funcionales</a></li>
 <li><a href="#dialogue">Citas e intervenciones marcadas</a></li>
-<li><a href="#showing">Palabras y citas</a></li>
+<li><a href="#showing">Señales superficiales</a></li>
 <li><a href="#motifs">Motivos y repeticiones</a></li>
 <li><a href="#characters">Menciones de personajes</a></li>
 <li><a href="#scenes">Escenas y registros de estilo</a></li>
@@ -237,7 +237,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 <div id="measure-sentence_cv"><dt><span id="measure-cv"></span>Variación de la longitud de las frases</dt><dd><p>Variación de la longitud de las oraciones respecto a su media. 0 = longitudes iguales; mayor = más variación. No es una nota de calidad.</p></dd></div>
 <div id="measure-pacing_cohesion"><dt>Solapamiento entre frases vecinas</dt><dd><p>Proporción de pares de frases consecutivas en el mismo párrafo que comparten al menos una palabra de contenido.</p></dd></div>
 <div id="measure-pacing_monotony"><dt>Inicios de frase repetidos</dt><dd><p>Número de secuencias en las que 3 o más frases consecutivas del mismo párrafo comienzan con la misma palabra. Señala posibles anáforas deliberadas o monotonía involuntaria en los inicios de frase.</p></dd></div>
-<div id="measure-pacing_hook"><dt>Indicios del cierre</dt><dd><p>Heurística de 0 a 3: un punto por una frase final de 1 a 8 palabras, terminación en ?, ! o … y habla citada detectada. No es una medida validada del suspense ni de la calidad.</p></dd></div>
+<div id="measure-pacing_hook"><dt>Indicios de cierre (regla)</dt><dd><p>Heurística de 0 a 3: un punto por una frase final de 1 a 8 palabras, terminación en ?, ! o … y habla citada detectada. No es una medida validada del suspense ni de la calidad.</p></dd></div>
 <div id="measure-start_entropy"><dt>Entropía de inicios</dt><dd><p>Variedad del primer término contado de las oraciones detectadas. Los comienzos repetidos como «yo» reducen el valor; los comienzos variados lo elevan. La repetición puede ser intencionada.</p></dd></div>
 <div id="measure-first_person_start_rate"><dt><span id="measure-first_start"></span>Inicios en «yo»</dt><dd><p>Proporción de oraciones detectadas cuyo primer término contado es «yo». 50 % significa que la mitad empieza así; puede formar parte de una voz narrativa intencionada.</p></dd></div>
 </dl>
@@ -274,7 +274,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 </dl>
 </section>
 <section id="showing" aria-labelledby="heading-showing">
-<h2 id="heading-showing">Palabras y citas</h2>
+<h2 id="heading-showing">Señales superficiales</h2>
 <p>Las coincidencias se expresan por cada 1.000 palabras para comparar capítulos de distinta extensión. Lee el pasaje para ver qué función cumple la palabra marcada.</p>
 <dl>
 <div id="measure-filter"><dt><span id="measure-filter_density"></span><span id="measure-perception"></span>Filtros de percepción</dt><dd><p>Coincidencias con el patrón configurado para percepciones, pensamientos y recuerdos por cada 1.000 palabras. Lee el pasaje y fíjate en quién percibe o piensa.</p><p>¿Queda claro quién percibe algo, recuerda o piensa en este pasaje?</p></dd></div>
@@ -321,7 +321,7 @@ section:target, dl > div:target, dl > div:has([id]:target) { border-color: var(-
 <div id="measure-consistency"><dt>Comparaciones dentro del umbral</dt><dd><p>Proporción de comparaciones medibles de capítulos y rasgos dentro del límite de desviación elegido. No es una nota de calidad. Datos insuficientes: –.</p></dd></div>
 <div id="measure-dimensions"><dt>Proyección de rangos de rasgos</dt><dd><p>Proyección exploratoria de rangos estandarizados de capítulos completos. La proximidad corresponde a los ejes mostrados. Las proporciones de varianza proceden de la matriz regularizada, no de registros literarios establecidos. Se omiten capítulos incompletos.</p></dd></div>
 <div id="measure-structural"><dt>El estilo a lo largo de los capítulos</dt><dd><p>Compara los rasgos de estilo a lo largo de los capítulos y entre las dos mitades del manuscrito. La búsqueda de cambios posibles exige una serie de capítulos completa. Las tendencias y las comparaciones de mitades pueden usar los valores disponibles. Las señales ayudan a elegir capítulos para releer.</p></dd></div>
-<div id="measure-fdr"><dt>FDR</dt><dd><p>Al comparar muchos rasgos de capítulos, una regla nominal de pruebas múltiples marca una selección para revisar. Lea estas señales junto con su magnitud y el contexto del texto; las tasas de error para los capítulos no están calibradas.</p></dd></div>
+<div id="measure-fdr"><dt>Selección no calibrada (autocomparación)</dt><dd><p>Al comparar muchos rasgos de capítulos, una regla nominal de pruebas múltiples marca una selección para revisar. Lea estas señales junto con su magnitud y el contexto del texto; las tasas de error para los capítulos no están calibradas.</p></dd></div>
 </dl>
 </section>
 <section id="matrix" aria-labelledby="heading-matrix">

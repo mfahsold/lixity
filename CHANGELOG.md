@@ -9,6 +9,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- De-escalate narratological and inferential UI display labels across all seven
+  locales (`Deviation candidate` / `Abweichungskandidat`, `Surface signals` /
+  `Oberflächensignale`, `Closing cues (rule)` / `Schlussmerkmale (Regel)`, and
+  `Uncalibrated selection (self-comparison)` for `z*`/FDR) while keeping public
+  JSON contracts stable.
+- Add an offline held-out contemporary-style prose benchmark
+  (`scripts/evaluate_contemporary_prose.py`) with 95% Wilson confidence
+  intervals for English and German sentence boundaries, dialogue cues and tense
+  cues, and strengthen `docs/STABILITY.md` and `docs/METHODS.md` caveats.
+- Align public case-study blog posts, `README.md`, `docs/PRODUCT.md` and the
+  seven-language homepage copy with `STABILITY.md`, publish the task-based
+  usability study protocol (`docs/USER_STUDY_PROTOCOL.md`), and document
+  AI-model version disclosure in `CONTRIBUTING.md`.
 - Update the vendored CodeMirror editor dependency `@codemirror/view` from
   `6.44.0` to `6.44.1` (rebuilding `codemirror-editor.js` and its license
   inventory) and apply semver-compatible patch updates in `desktop/Cargo.lock`
