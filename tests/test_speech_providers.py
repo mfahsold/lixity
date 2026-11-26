@@ -150,7 +150,7 @@ def test_standard_request_accepts_provider_wav_without_native_headers(monkeypatc
 
 
 def test_mlx_audio_request_uses_language_model_speed_and_temperature():
-    from lixity.speech_profiles import MLX_AUDIO_TTS_MODEL
+    from lixity.speech_profiles import MLX_AUDIO_DEFAULT_VOICE, MLX_AUDIO_TTS_MODEL
     from lixity.speech_providers import synthesize_external
 
     with provider() as (url, records):
@@ -160,6 +160,7 @@ def test_mlx_audio_request_uses_language_model_speed_and_temperature():
         'model': MLX_AUDIO_TTS_MODEL,
         'input': 'Synthetischer Text.',
         'response_format': 'wav',
+        'voice': MLX_AUDIO_DEFAULT_VOICE,
         'lang_code': 'de',
         'speed': 1.1,
         'temperature': 0.0,
@@ -473,3 +474,149 @@ def test_resolved_localhost_http_rejects_dns_rebinding_to_non_loopback(monkeypat
     )
     with pytest.raises(ValueError, match='loopback'):
         validate_resolved_endpoint('http://localhost:8000/v1/audio/speech')
+
+
+def test_zonos_persistent_worker_reuses_single_process_across_segments(tmp_path):
+    import sys
+    from pathlib import Path
+
+    from lixity.speech_providers import _ZonosWorkerSession
+
+    worker = tmp_path / 'fake_zonos_worker.py'
+    pid_file = tmp_path / 'worker_pids.txt'
+    wav_bytes = generate_silence_wav(0.05)
+    worker.write_text(
+        f"""import json, os, sys
+from pathlib import Path
+Path({str(pid_file)!r}).open('a').write(str(os.getpid()) + '\\n')
+sys.stdout.write(json.dumps({{'ready': True, 'model': 'mlx-community/ZONOS3-Mini'}}) + '\\n')
+sys.stdout.flush()
+for line in sys.stdin:
+    req = json.loads(line)
+    Path(req['output_path']).write_bytes({wav_bytes!r})
+    sys.stdout.write('{{"ok":true}}\\n')
+    sys.stdout.flush()
+""",
+        encoding='utf-8',
+    )
+    session = _ZonosWorkerSession(idle_timeout_seconds=60.0)
+    try:
+        for index in range(3):
+            out = tmp_path / f'out-{index}.wav'
+            session.synthesize(
+                Path(sys.executable),
+                worker,
+                {'model': 'mlx-community/ZONOS3-Mini', 'input': f'Segment {index}.', 'output_path': str(out)},
+            )
+            assert out.read_bytes() == wav_bytes
+        pids = pid_file.read_text(encoding='utf-8').splitlines()
+        assert len(pids) == 1, 'Persistent ZONOS3 session must reuse the warm worker across segments'
+    finally:
+        session.close()
+
+
+def test_zonos_worker_keeps_dependency_output_off_its_response_pipe(tmp_path):
+    import sys
+    from pathlib import Path
+
+    import lixity.speech_mlx_zonos as worker_module
+    from lixity.speech_providers import _ZonosWorkerSession
+
+    worker = tmp_path / 'worker.py'
+    shutil.copyfile(worker_module.__file__, worker)
+    package = tmp_path / 'mlx_audio'
+    package.mkdir()
+    (package / 'tts.py').write_text(
+        "import os\n"
+        "from types import SimpleNamespace\n"
+        "class Model:\n"
+        "    def generate(self, text, **kwargs):\n"
+        "        os.write(1, b'native generation progress\\n')\n"
+        "        yield SimpleNamespace(audio=text.encode(), sample_rate=24000)\n"
+        "def load(model):\n"
+        "    print('loading local weights', flush=True)\n"
+        "    return Model()\n",
+        encoding='utf-8',
+    )
+    (package / 'audio_io.py').write_text(
+        "from pathlib import Path\n"
+        "def write(path, audio, sample_rate, format):\n"
+        "    print('writing local audio', flush=True)\n"
+        "    Path(path).write_bytes(audio)\n",
+        encoding='utf-8',
+    )
+    session = _ZonosWorkerSession(startup_timeout_seconds=5, request_timeout_seconds=5)
+    try:
+        for segment in ('Die Sonne scheint.', 'On continue.'):
+            output = tmp_path / 'speech.wav'
+            session.synthesize(Path(sys.executable), worker, {
+                'model': worker_module.ALLOWED_MODEL, 'input': segment, 'output_path': str(output),
+            })
+            assert output.read_bytes() == segment.encode()
+    finally:
+        session.close()
+
+
+def test_mlx_audio_preset_voice_is_sent_to_avoid_adapter_default():
+    from lixity.speech_profiles import MLX_AUDIO_DEFAULT_VOICE
+    from lixity.speech_providers import external_speech_request
+
+    profile = AudioProfile(engine='mlx-audio', language='de')
+    assert profile.voice == MLX_AUDIO_DEFAULT_VOICE
+    request = external_speech_request('Hallo Welt.', profile)
+    assert request['voice'] == MLX_AUDIO_DEFAULT_VOICE
+
+
+def test_mlx_audio_reference_request_omits_voice_in_favour_of_reference_audio():
+    from lixity.speech_providers import external_speech_request
+
+    profile = AudioProfile(engine='mlx-audio', language='de', voice='reference',
+                           reference_id='a' * 64)
+    request = external_speech_request('Hallo Welt.', profile)
+    assert 'voice' not in request
+    assert request['lang_code'] == 'de'
+
+
+def test_zonos_worker_drain_consumes_remainder_until_newline(monkeypatch):
+    import sys
+
+    import lixity.speech_mlx_zonos as worker_module
+
+    chunks = iter(['middle-chunk', 'final-chunk\n', 'next-request\n'])
+    seen: list[str] = []
+    monkeypatch.setattr(
+        sys, 'stdin',
+        SimpleNamespace(readline=lambda _size: seen.append(1) or next(chunks, '')),
+    )
+    worker_module._drain_truncated_line('x' * (worker_module.MAX_STDIN_BYTES + 2))
+    assert len(seen) == 2
+
+
+def test_zonos_session_times_out_on_hung_worker(tmp_path):
+    import sys
+    from pathlib import Path
+
+    from lixity.speech_providers import _ZonosWorkerSession
+
+    worker = tmp_path / 'hung_worker.py'
+    worker.write_text(
+        "import json, sys, time\n"
+        "sys.stdout.write(json.dumps({'ready': True, 'model': 'mlx-community/ZONOS3-Mini'}) + '\\n')\n"
+        "sys.stdout.flush()\n"
+        "time.sleep(30)\n",
+        encoding='utf-8',
+    )
+    session = _ZonosWorkerSession(
+        idle_timeout_seconds=60.0, startup_timeout_seconds=5.0, request_timeout_seconds=0.2,
+    )
+    try:
+        out = tmp_path / 'out.wav'
+        with pytest.raises(RuntimeError, match='synthesis failed'):
+            session.synthesize(
+                Path(sys.executable),
+                worker,
+                {'model': 'mlx-community/ZONOS3-Mini', 'input': 'Hallo.', 'output_path': str(out)},
+            )
+        assert session._process is None
+    finally:
+        session.close()

@@ -40,7 +40,7 @@ def test_api_index_without_a_loaded_project(endpoint, path):
     assert data["version"] == __version__
     assert data["project"]["manuscript_loaded"] is False
     assert data["project"]["research_store_present"] is False
-    assert data["documentation"] == "https://mfahsold.github.io/lixity/AGENTS.md"
+    assert data["documentation"] == "https://lixity.de/AGENTS.md"
     assert "/api/research/record" in data["routes"]["GET"]
     assert "/api/research/history" in data["routes"]["GET"]
     assert "/api/research/ocr-status" in data["routes"]["GET"]

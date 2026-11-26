@@ -72,6 +72,9 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
             ('de', 'guides/first-look-de.html#beleg') if lang == 'de'
             else ('en', 'guides/first-look.html#passage')
         )
+        fields['rhythm_guide_path'] = (
+            'guides/first-look-de.html#rhythmus' if lang == 'de' else 'guides/first-look.html#contrast'
+        )
         fields['research_guide_path'] = (
             'guides/first-look-de.html#recherche' if lang == 'de' else 'guides/first-look.html#decision'
         )

@@ -240,8 +240,12 @@ from pathlib import Path
 from http.server import ThreadingHTTPServer
 from lixity.server import LixityServerHandler
 import lixity.speech_status as speech_status
+import lixity.speech_providers as speech_providers
+from lixity.speech_profiles import MLX_AUDIO_TTS_MODEL
 speech_status.worker_health = lambda target, **kwargs: {'target':target, 'state':'unavailable',
     'transport':'loopback' if target == 'local' else 'ssh', 'model':None}
+speech_providers._zonos_runtime_status = lambda profile: {'target':'local', 'state':'unavailable',
+    'transport':'isolated-process', 'model':MLX_AUDIO_TTS_MODEL, 'model_matches':True}
 from tests.locales import LOCALES
 import lixity.speech_jobs as jobs
 from lixity.speech import SpeechCancelled, generate_silence_wav
@@ -948,8 +952,27 @@ server.serve_forever()
     await savedPage.waitForFunction(()=>document.querySelector('#speech-schema-review').textContent.includes('lixity-audio-settings/5'));
     await Promise.all([savedPage.waitForNavigation(), savedPage.locator('[data-speech-action=schema_apply]').click()]);
     await savedPage.locator('#tab-view-project').click();
+    await savedPage.route('**/api/speech?*', async route => {
+      const response = await route.fetch();
+      const data = await response.json();
+      const zonos = data.workers.find(worker => worker.engines.includes('mlx-audio'));
+      zonos.state = 'ready';
+      await route.fulfill({response, json: data});
+    }, {times:1});
     await savedPage.locator('#settings-speech').click();
     await savedPage.waitForFunction(()=>document.querySelector('#speech-name').value==='Narrator');
+    await savedPage.locator('#speech-language').selectOption('de');
+    await savedPage.locator('[data-speech-action=create]').click();
+    assert.equal(await savedPage.locator('#speech-engine').inputValue(),'mlx-audio');
+    assert.equal(await savedPage.locator('#speech-voice').inputValue(),'liesel', 'The preset matches the draft language');
+    assert.equal(await savedPage.locator('#speech-reference_id').inputValue(),'', 'A new profile does not bind a saved recording');
+    await savedPage.locator('#speech-service > summary').click();
+    const draftProbe=savedPage.waitForResponse(response=>new URL(response.url()).searchParams.get('engine')==='mlx-audio');
+    await savedPage.locator('[data-speech-action=worker_refresh]').click();
+    assert.equal((await draftProbe).status(),200);
+    await savedPage.waitForFunction(expected=>document.querySelector('#speech-worker-status').textContent===expected,
+      data.fixtures.en.labels.speech_worker_unavailable.replace('{target}',data.fixtures.en.labels.speech_target_local));
+    await savedPage.locator('[data-speech-action=profiles_discard]').click();
     await savedPage.locator('#speech-language').selectOption('de');
     await savedPage.locator('[data-speech-action=create]').click();
     assert.equal(await savedPage.locator('#speech-language').inputValue(),'de','New author profiles retain the supported chosen language');

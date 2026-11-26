@@ -710,6 +710,28 @@ class TestPagesStaging(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "checksum|changed"):
                 stage(docs, root / "changed")
 
+    def test_local_documents_are_excluded_inside_public_subtrees(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            docs = root / "docs"
+            private = (
+                "guides/private/notes.html", "examples/Confidential/agreement.pdf",
+                "research/secrets/settings.json", "research/client_secret.json",
+                "research/client_secret_DEMO.json", "research/credentials.json",
+                "research/credentials-local/settings.json",
+            )
+            public = ("guides/private-writing.html", "research/USAGE.md", "examples/report.pdf")
+            for name in (*private, *public):
+                path = docs / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"synthetic fixture")
+            output = root / "site"
+            stage(docs, output)
+            for name in private:
+                self.assertFalse((output / name).exists(), name)
+            for name in public:
+                self.assertEqual((output / name).read_bytes(), b"synthetic fixture")
+
     def test_symlink_cannot_publish_external_bytes(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -759,7 +781,10 @@ class TestPagesStaging(unittest.TestCase):
                     continue  # Its canonical/refresh/fallback link have a dedicated contract above.
                 head = PageHead()
                 head.feed(page.read_text(encoding="utf-8"))
-                canonical = SITE + ("" if relative == "index.html" else relative)
+                if relative in references:
+                    canonical = CUSTOM_PAGES_BASE_URL + relative
+                else:
+                    canonical = SITE + ("" if relative == "index.html" else relative)
                 self.assertEqual([item["href"] for item in head.links if item.get("rel") == "canonical"], [canonical])
                 if relative in references:
                     language = references[relative]
@@ -788,9 +813,10 @@ class TestPagesStaging(unittest.TestCase):
                         self.assertTrue(head.meta[key][0].strip(), f"{relative}: nonempty {key}")
                     self.assertEqual(head.meta["twitter:card"], ["summary_large_image"])
                     image = head.meta["og:image"][0]
-                    self.assertTrue(image.startswith(SITE), f"{relative}: hosted preview image")
+                    self.assertTrue(image.startswith((SITE, CUSTOM_PAGES_BASE_URL)), f"{relative}: hosted preview image")
                     self.assertEqual(head.meta["twitter:image"], [image])
-                    image_bytes = (output / image.removeprefix(SITE)).read_bytes()
+                    base = SITE if image.startswith(SITE) else CUSTOM_PAGES_BASE_URL
+                    image_bytes = (output / image.removeprefix(base)).read_bytes()
                     self.assertEqual(image_bytes[:8], b"\x89PNG\r\n\x1a\n")
                     self.assertEqual(
                         (int(head.meta["og:image:width"][0]), int(head.meta["og:image:height"][0])),
@@ -936,24 +962,26 @@ class TestPublicLanguages(unittest.TestCase):
                     self.assertIn(html.escape(content['tour_' + scene['id']], quote=True), text)
                 self.assertIn('href="demo/warehouse-4-dossier.pdf"', text)
 
-    def test_analysis_links_open_the_passage_guide_and_localized_methods(self):
+    def test_analysis_links_open_the_guides_and_localized_methods(self):
         from scripts.build_public_site import LANGUAGES, ROOT, page_path, render_pages
 
         pages = render_pages()
         for language in LANGUAGES:
             with self.subTest(language=language):
-                guide_lang, guide_path, fragment = (
-                    ("de", "guides/first-look-de.html", "beleg") if language == "de"
-                    else ("en", "guides/first-look.html", "passage")
+                guide_lang, guide_path, passage, rhythm = (
+                    ("de", "guides/first-look-de.html", "beleg", "rhythmus") if language == "de"
+                    else ("en", "guides/first-look.html", "passage", "contrast")
                 )
                 content = json.loads((ROOT / f"docs/locales/{language}.json").read_text(encoding="utf-8"))
                 rendered = pages[page_path(language)]
-                self.assertIn(
-                    f'href="{guide_path}#{fragment}" hreflang="{guide_lang}">'
-                    f'{html.escape(content["passage_guide_link"], quote=True)}</a>', rendered,
-                )
+                guide = (ROOT / "docs" / guide_path).read_text(encoding="utf-8")
+                for fragment, label in ((passage, "passage_guide_link"), (rhythm, "rhythm_guide_link")):
+                    self.assertIn(
+                        f'href="{guide_path}#{fragment}" hreflang="{guide_lang}">'
+                        f'{html.escape(content[label], quote=True)}</a>', rendered,
+                    )
+                    self.assertIn(f'id="{fragment}"', guide)
                 self.assertIn(f'href="guides/metrics/{language}.html" hreflang="{language}"', rendered)
-                self.assertIn(f'id="{fragment}"', (ROOT / "docs" / guide_path).read_text(encoding="utf-8"))
 
     def test_generated_languages_are_complete_and_reciprocal(self):
         from scripts.build_public_site import (

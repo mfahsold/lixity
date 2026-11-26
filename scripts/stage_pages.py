@@ -102,6 +102,7 @@ PUBLIC_TREES = {
     "examples": {".html", ".pdf", ".md"},
     "research": {".md", ".json", ".txt"},
 }
+LOCAL_ONLY_DIRECTORIES = frozenset({"private", "confidential", "secrets"})
 DEMO_READER_AUDIO_CHAPTERS = (1, 2)
 
 
@@ -281,6 +282,14 @@ def stage(source: Path, output: Path, *, base_url: str = LEGACY_PAGES_BASE_URL) 
             raise ValueError("Canonical design assets must be regular packaged files")
     for path in sorted(source.rglob("*")):
         relative = path.relative_to(source)
+        # Local previews can see ignored files inside the public subtrees.
+        parts = tuple(part.casefold() for part in relative.parts)
+        name = parts[-1]
+        if (LOCAL_ONLY_DIRECTORIES.intersection(parts)
+                or any(part.startswith("credentials") for part in parts)
+                or name == "client_secret.json"
+                or (name.startswith("client_secret_") and name.endswith(".json"))):
+            continue
         if relative.as_posix() in ("assets/design-tokens.css", "assets/components.css"):
             raise ValueError("Pages must use the packaged canonical design assets")
         if path.is_symlink():

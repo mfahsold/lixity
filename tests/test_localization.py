@@ -228,9 +228,19 @@ class TestLocalization(unittest.TestCase):
             self.assertIn(visible_action, html)
 
         legacy = render_dashboard([], [], controls=True)
-        for legacy_action in ('data-action="load"', 'data-action="export"'):
-            self.assertIn(legacy_action, legacy)
+        self.assertIn('data-action="load"', legacy)
+        self.assertNotIn('data-action="export"', legacy)
         self.assertNotIn('id="nda-draft-form"', legacy)
+
+        adapter_actions = ("export", "sync", "audit", "prune", "gdrive")
+        adapter = render_dashboard(chapters, paragraphs, controls=True,
+                                   enabled_actions=adapter_actions)
+        self.assertIn('data-action="export" data-payload="format"', adapter)
+        self.assertIn('id="fmt"', adapter)
+        for action in adapter_actions:
+            with self.subTest(action=action):
+                self.assertIn(f'data-action="{action}"', adapter)
+                self.assertNotIn(f'data-action="{action}"', legacy)
 
     def test_readability_dispatch_uses_language_specific_coefficients(self):
         expected = {"en": 27.485, "de": 53.0, "fr": 49.65, "es": 72.135,

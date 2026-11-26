@@ -2,6 +2,18 @@
 
 Practical articles for authors, editors and manuscript reviewers: investigate a passage, examine the research behind a scene detail and prepare the right reading copy. Each article connects a concrete question to a reading decision. All examples use public-domain or synthetic texts.
 
+## [Who sees the scratches first? Manuscript revision in Lixity 0.9.3](lixity-093-manuscript-revision.html)
+
+Published 26 November 2026 · 4 minutes
+
+Swap two sentences in the Warehouse 4 opening, compare the draft beside the saved file with the same analysis settings, rehearse where clues land and record spoken direction beside the text.
+
+## [A board moved. Should Mara turn in the same sentence?](lixity-093-one-passage-revision.html)
+
+Published 26 November 2026 · 3 minutes
+
+Read two versions of the same three-sentence action in Warehouse 4, check the counted sentence-length card in the read-only demo and decide whether Mara needs a beat before she turns.
+
 ## [Ein Romankapitel prüfen, ohne seine Stimme glattzubügeln](romankapitel-pruefen-de.html)
 
 Veröffentlicht 11. November 2026 · 5 Minuten · [English version](review-a-chapter.html)

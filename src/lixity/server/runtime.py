@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import errno
 import json
 import os
@@ -42,6 +43,10 @@ class _LoopbackHTTPServer(ThreadingHTTPServer):
         manager = getattr(self, "speech_jobs", None)
         if manager is not None:
             manager.close()
+        with contextlib.suppress(Exception):
+            from ..speech_providers import close_zonos_worker
+
+            close_zonos_worker()
         super().server_close()
 
     def server_bind(self) -> None:

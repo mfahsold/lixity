@@ -205,6 +205,16 @@ async function checkSupportContact(page) {
         if (homeWidths.includes(viewport)) {
           await page.goBack();
           const sandboxLanguage = language === 'de' ? 'de' : 'en';
+          const [guide, section] = language === 'de'
+            ? ['guides/first-look-de.html', 'rhythmus']
+            : ['guides/first-look.html', 'contrast'];
+          const chapterLink = page.locator(`#linguistic-analysis a[href="${guide}#${section}"]`);
+          await expect(chapterLink).toHaveAttribute('hreflang', sandboxLanguage);
+          await chapterLink.click();
+          await expect(page).toHaveURL(`${origin}/lixity/${guide}#${section}`);
+          await expect(page.locator('html')).toHaveAttribute('lang', sandboxLanguage);
+          await expect(page.locator(`h2#${section}`)).toBeVisible();
+          await page.goBack();
           await expect(page.locator('.home-intro :is(.home-example-finding, #sandbox-cta)')).toHaveCount(0);
           await expect(page.locator('#measurement-context .home-example-finding')).toBeVisible();
           const features = await page.locator('#features').boundingBox();
@@ -235,7 +245,27 @@ async function checkSupportContact(page) {
     assert.ok(blogOverflow <= 1, `Blog cards fit 768px at 200% text size (${blogOverflow}px overflow)`);
     assert.deepEqual(state.errors, []);
     await state.context.close();
+    for (const route of [
+      'blog/lixity-093-manuscript-revision.html',
+      'blog/lixity-093-one-passage-revision.html',
+    ]) {
+      for (const {width, height, hasTouch} of homeWidths) {
+        state = await open({route, width, height, hasTouch});
+        const articleVideo = state.page.locator('main video');
+        await expect(articleVideo).toBeVisible();
+        for (const fontSize of ['100%', '200%']) {
+          const fits = await articleVideo.evaluate((video, size) => {
+            document.documentElement.style.fontSize = size;
+            const frame = video.getBoundingClientRect();
+            return frame.left >= 0 && frame.right <= innerWidth && document.documentElement.scrollWidth <= innerWidth;
+          }, fontSize);
+          assert.ok(fits, `Article video and text fit ${width}px at ${fontSize} in ${route}`);
+        }
+        assert.deepEqual(state.errors, []);
+        await state.context.close();
+      }
+    }
     console.log(`Screenshots: ${artifacts}`);
-    console.log('Public language suggestions, Sandbox presets, funding contact, storage failure and 320–2560px layouts passed, including enlarged blog text.');
+    console.log('Public language suggestions, Sandbox presets, funding contact, storage failure and 320–2560px layouts passed, including enlarged blog text and article videos.');
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

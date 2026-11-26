@@ -289,12 +289,13 @@ class SpeechRoutesMixin(ResponseMixin):
         ).hexdigest()
         return text, digest, settings, key
 
-    def _speech_query(self, *, job: bool = False) -> dict[str, str]:
+    def _speech_query(self, *, job: bool = False, allow_engine: bool = False) -> dict[str, str]:
         if not self._same_origin():
             raise PermissionError("Cross-origin request forbidden")
         raw = parse_qs(urlparse(self.path).query, keep_blank_values=True)
-        allowed = {"project_token", "source_sha256", *(("id",) if job else ())}
-        if set(raw) != allowed or any(len(value) != 1 or not value[0] for value in raw.values()):
+        required = {"project_token", "source_sha256", *(("id",) if job else ())}
+        allowed = required | ({"engine"} if allow_engine else set())
+        if not required <= set(raw) <= allowed or any(len(value) != 1 or not value[0] for value in raw.values()):
             raise ValueError("Supply one selected audio context and job ID when required")
         return {key: value[0] for key, value in raw.items()}
 
@@ -321,7 +322,10 @@ class SpeechRoutesMixin(ResponseMixin):
 
     def _handle_speech(self, _query: Any = None) -> None:
         try:
-            query = self._speech_query()
+            query = self._speech_query(allow_engine=True)
+            requested_engine = query.get("engine")
+            if requested_engine is not None and requested_engine not in audio_capabilities():
+                raise ValueError("Unknown audio engine")
             self._speech_manager().cancel_stale()
             with self._workspace_lock:
                 text, digest, config, _key = self._speech_bound(query)
@@ -386,13 +390,29 @@ class SpeechRoutesMixin(ResponseMixin):
                 }
             # Probe fixed loopback endpoints without holding the workspace lock.
             # A worker status is a snapshot, not a promise of later readiness.
-            if selected_profile is not None and selected_profile.engine in EXTERNAL_ENGINES:
+            probe_engine = requested_engine or (selected_profile.engine if selected_profile is not None else None)
+            if probe_engine in EXTERNAL_ENGINES:
                 from ..speech_providers import external_provider_status
 
-                worker = external_provider_status(selected_profile)
-                response["workers"] = [{**worker, "engines": [selected_profile.engine]}]
+                probe_profile = (
+                    selected_profile
+                    if selected_profile is not None and selected_profile.engine == probe_engine
+                    else None
+                )
+                worker = (
+                    external_provider_status(probe_profile)
+                    if probe_profile is not None
+                    else external_provider_status(None, engine=probe_engine)
+                )
+                response["workers"] = [{**worker, "engines": [probe_engine]}]
             else:
-                response["workers"] = native_worker_inventory()
+                workers = native_worker_inventory()
+                if requested_engine is None:
+                    from ..speech_providers import external_provider_status
+
+                    mlx_worker = external_provider_status(None, engine="mlx-audio")
+                    workers.append({**mlx_worker, "engines": ["mlx-audio"]})
+                response["workers"] = workers
             from ..speech_record import get_microphone_status
             from ..speech_references import CALIBRATION_TEXTS, list_references
 
@@ -716,11 +736,13 @@ class SpeechRoutesMixin(ResponseMixin):
                 if not isinstance(profile_id, str) or profile_id not in settings.profiles:
                     raise ValueError("Choose an existing voice profile to activate the saved recording")
                 current = settings.profiles[profile_id]
-                if current.engine not in NATIVE_ENGINES or not native_engine(current.engine).reference_required:
+                if current.engine == "mlx-audio":
+                    updated_profile = {**current.model_dump(), "voice": "reference", "reference_id": ref.id}
+                elif current.engine in NATIVE_ENGINES and native_engine(current.engine).reference_required:
+                    updated_profile = {**current.model_dump(), "reference_id": ref.id}
+                else:
                     raise ValueError("Recording saved. Choose a reference voice profile to activate it")
-                settings.profiles[profile_id] = AudioProfile.model_validate({
-                    **current.model_dump(), "reference_id": ref.id,
-                })
+                settings.profiles[profile_id] = AudioProfile.model_validate(updated_profile)
                 prepared = prepare_project_settings(root, {"audio": settings.model_dump(by_alias=True)})
                 prepared.commit()
                 activation = {"state": "activated", "message": ""}

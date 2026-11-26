@@ -136,6 +136,26 @@ analysis language. For project work, retain the root-local configuration too.
 The [JSON contracts](AGENTS.md#3-json-contracts) describe result envelopes;
 [Methods](METHODS.md) defines TTR, HD-D, MTLD, sentence measures and readability.
 
+### Review academic and other structured prose
+
+Work on a separate UTF-8 Markdown copy of the passages you intend to measure.
+Give the abstract and body sections explicit `##` headings if they should
+appear in section comparisons. Set `appendix_marker` in the selected project's
+`lixity.toml` to the first references or appendix heading to exclude that
+heading and the material after it. Check the chapter list before interpreting
+the results.
+
+Inspect sentence spans with `profile --layer asl --evidence`. Abbreviations
+such as `et al.`, single-letter group labels at sentence endings and dates such
+as `12. Mai` can affect the reported sentence count. Tables, display equations
+and citation keys can contribute tokens to the Markdown prose projection.
+Record any removal or conversion before comparing drafts or sharing results.
+
+Pair `lixity diff` with a text comparison when dates, numbers, negation or
+references matter. A metrics delta can remain zero when one of these changes.
+Review the claims, quantities and qualifications in the actual text before
+sharing a revision or an accessible summary.
+
 **Interpretation:** chapter comparisons use this text's internal reference,
 not a representative language corpus. Length, genre, segmentation and language
 resources affect comparisons. Readability is a model estimate, not a reader

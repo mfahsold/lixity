@@ -2,7 +2,7 @@
 
 Start with the decision you want to make. Finding a repeated phrase, revising a scene and sharing a draft with an editor each call for a different workflow. Use these examples to decide what to try with your own text.
 
-Updated 25 November 2026
+Updated 26 November 2026
 
 <a id="families"></a>
 
@@ -21,7 +21,7 @@ Updated 25 November 2026
 
 ## Choose a grammar or style checker if…
 
-…you want suggested corrections, clarity feedback or a broader editorial report. AutoCrit and ProWritingAid document whole-manuscript reports and passage-level findings. Papyrus combines in-text style and readability analysis with book-writing tools. Check the edition and its operating requirements. ProWritingAid, for example, documents internet access as a requirement. [AutoCrit reports](https://help.autocrit.com/en/collections/2339242-interpreting-autocrit-results) · [ProWritingAid requirements](https://help.prowritingaid.com/article/99-what-do-i-need-to-use-prowritingaid) · [Papyrus style analysis](https://papyrus.de/features/style-analysis)
+…you want suggested corrections, clarity feedback or a broader editorial report. AutoCrit and ProWritingAid document whole-manuscript reports and passage-level findings. Papyrus combines in-text style and readability analysis with book-writing tools. Its chapter statistics compare chapters with the document average and link back to the manuscript. Check the edition and its operating requirements. ProWritingAid, for example, documents internet access as a requirement. [AutoCrit reports](https://help.autocrit.com/en/collections/2339242-interpreting-autocrit-results) · [ProWritingAid requirements](https://help.prowritingaid.com/article/99-what-do-i-need-to-use-prowritingaid) · [Papyrus chapter statistics](https://support.papyrusauthor.com/wiki/style-statistics/)
 
 <a id="corpus"></a>
 
@@ -79,7 +79,7 @@ Explore [*The Crate at Warehouse 4*](../demo/report.html), one read-only project
 
 **Is Lixity an alternative to Grammarly or ProWritingAid?**
 
-Grammar and style checkers suggest sentence-level corrections. Lixity compares chapter patterns such as sentence rhythm, vocabulary, dialogue and tense, and provides paragraph-level text, measurements and source lines for review. It does not fix grammar or rewrite prose.
+Grammarly and ProWritingAid offer sentence-level suggestions. ProWritingAid also offers feedback on chapters and whole manuscripts. Lixity focuses on locally measured language patterns, the passages behind them and comparisons between saved drafts under the same settings.
 
 **Does my manuscript leave my computer when I use Lixity?**
 

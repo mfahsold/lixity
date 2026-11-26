@@ -52,6 +52,9 @@ preferred font can hide missing glyphs in the platform fallback.
 Select non-sensitive fields before printing diagnostics. Raw webhook URLs,
 environment values and service command lines can contain credentials; do not
 render those responses wholesale, even during read-only checks.
+Treat screenshots, exported reports and traces derived from private inputs as
+private too. Reproduce problems with a synthetic fixture before preparing a
+public example.
 
 ### Verify the running workspace
 

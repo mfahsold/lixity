@@ -45,7 +45,7 @@ async function createPage(browser, html, width, desktop = false) {
     window.desktopLinkCalls = [];
     window.desktopRevealCalls = [];
     window.desktopUpdateResult = {current_version: '0.10.0', latest_tag: 'v0.10.0', status: 'current',
-      guide_url: 'https://mfahsold.github.io/lixity/guides/installation.html#desktop'};
+      guide_url: 'https://lixity.de/guides/installation.html#desktop'};
     window.lixityDesktop = {
       version: 1,
       openExternalUrl: async url => {
@@ -197,7 +197,7 @@ async function nativeReaderPreferences(browser) {
       const footer = page.locator('#license-terms .license-links');
       for (const [name, url, activate] of [
         ['Full AGPL license', 'https://github.com/mfahsold/lixity/blob/main/LICENSE', link => link.press('Enter')],
-        ['Project funding', 'https://mfahsold.github.io/lixity/guides/support.html', link => link.click()],
+        ['Project funding', 'https://lixity.de/guides/support.html', link => link.click()],
         ['Request a commercial license', 'https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md#when-to-talk-to-the-maintainer', link => link.click()],
       ]) {
         await page.context().route(url.split('#')[0], route => route.fulfill({body: name}));

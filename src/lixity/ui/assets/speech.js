@@ -153,8 +153,8 @@
   function context() { return [settingsForm.dataset.projectToken, body.dataset.manuscriptSourceSha256].join(":"); }
   function tokens() { return {project_token: settingsForm.dataset.projectToken, source_sha256: body.dataset.manuscriptSourceSha256}; }
   function url(route, extra) { return API + "/" + route + "?" + new URLSearchParams(Object.assign(tokens(), extra || {})); }
-  async function request(route, payload) {
-    var response = await fetch(payload ? API + "/" + route : url(route), payload ? {
+  async function request(route, payload, extra) {
+    var response = await fetch(payload ? API + "/" + route : url(route, extra), payload ? {
       method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)
     } : {});
     var data = await response.json();
@@ -648,6 +648,19 @@
     if (fields.plan) { fields.plan.replaceChildren(); fields.plan.hidden = true; }
     if (fields.audit_result) fields.audit_result.replaceChildren();
   }
+  function applyWorkerInventory(inventory) {
+    if (!Array.isArray(inventory)) return;
+    var previous = Array.isArray(workers) ? workers : [];
+    workers = previous.filter(function(item) {
+      return !inventory.some(function(observed) {
+        return observed.target === item.target &&
+          (!item.engines || !observed.engines || item.engines.some(function(engine) {
+            return observed.engines.includes(engine);
+          }));
+      });
+    }).concat(inventory);
+    updateWorkerStatus(); updateRuntimeHint();
+  }
   function updateWorkerStatus() {
     if (!fields.worker_status || !fields.engine || !capabilities) return;
     var selectedCap = profileCapability();
@@ -728,7 +741,7 @@
     var designed = !!cap.voice_design;
     var external = !!cap.configurable_model;
     var provider = providerFields(cap);
-    var language = fields.language.value, voice = fields.voice.value;
+    var language = fields.language.value, voice = fields.voice.value || (cap.reference_supported && fields.reference_id.value.trim() ? "reference" : "");
     options(fields.language, cap.languages.map(function(value) { return [value, languageName(value)]; }), language);
     var voices = Object.entries(cap.voices).filter(function(pair) { return pair[1].languages.includes(fields.language.value); });
     options(fields.voice, designed ? [["design", "VoiceDesign"]] : voices.map(function(pair) { return [pair[0], pair[1].name]; }), designed ? "design" : voice);
@@ -963,18 +976,25 @@
     // Preserve languages that require an explicitly configured external provider.
     var projectLanguage = document.getElementById("set-language");
     var language = fields.language.value || (projectLanguage && projectLanguage.value) || document.documentElement.lang;
-    var authorEngine = "ims-toucan", cap = capabilities[authorEngine];
+    var mlxPreset = Object.entries(capabilities["mlx-audio"]?.voices || {}).find(function(pair) {
+      return pair[0] !== "reference" && pair[1].languages.includes(language);
+    })?.[0];
+    var mlxReady = Array.isArray(workers) &&
+      workers.some(function(item) { return item.engines?.includes("mlx-audio") && item.state === "ready"; });
+    var authorEngine = mlxReady && mlxPreset ? "mlx-audio" : "ims-toucan", cap = capabilities[authorEngine];
     var engine = cap && cap.creation_enabled !== false && cap.languages.includes(language) ? authorEngine : Object.keys(capabilities).find(function(key) {
-      return capabilities[key].creation_enabled !== false && capabilities[key].languages.includes(language) && !capabilities[key].reference_required && !capabilities[key].voice_design;
+      return key !== "mlx-audio" && capabilities[key].creation_enabled !== false && capabilities[key].languages.includes(language) && !capabilities[key].reference_required && !capabilities[key].voice_design;
     }) || "openai-compatible";
     cap = capabilities[engine];
     var external = !!cap.configurable_model;
     if (external && !["lixity-audio-settings/4", currentAudioSchema].includes(settings.schema_version)) { guideToSchemaReview("provider_schema_required"); return; }
-    if (engine === authorEngine && settings.schema_version !== currentAudioSchema) { guideToSchemaReview("phonemes_schema_required"); return; }
-    var voice = cap.reference_required ? "reference" : external ? "" : cap.default_voice || Object.keys(cap.voices)[0];
-    settings.profiles[id] = {name: label("new_profile"), engine: engine, language: language, voice: voice, speed: cap.speed.default,
+    if (engine === "ims-toucan" && settings.schema_version !== currentAudioSchema) { guideToSchemaReview("phonemes_schema_required"); return; }
+    var voice = engine === "mlx-audio" ? mlxPreset : cap.reference_required ? "reference" :
+      external ? "" : cap.default_voice || Object.keys(cap.voices)[0];
+    var created = {name: label("new_profile"), engine: engine, language: language, voice: voice, speed: cap.speed.default,
       instructions: "", paragraph_pause: profileConstraints.default_paragraph_pause,
       scene_pause: profileConstraints.default_scene_pause, pronunciations: {}};
+    settings.profiles[id] = created;
     profilesDirty = true;
     settings.selected = id; profileOptions(); loadProfile(); fields.name.focus();
   }
@@ -2096,9 +2116,13 @@
     fields.worker_guide.id = "speech-worker-guide"; fields.worker_guide.target = "_blank";
     fields.worker_guide.rel = "noopener noreferrer"; fields.worker_guide.hidden = true;
     fields.worker_refresh = button(content, "worker_refresh", async function() {
-      var sequence = openSequence; fields.worker_refresh.disabled = true;
+      var sequence = openSequence, selectedEngine = fields.engine && fields.engine.value;
+      fields.worker_refresh.disabled = true;
       function currentOpen() { return sequence === openSequence && dialog.open && openedContext === context(); }
-      try { var data = await request("speech"); if (currentOpen()) { workers = data.workers; updateWorkerStatus(); updateRuntimeHint(); } }
+      try {
+        var data = await request("speech", null, selectedEngine ? {engine: selectedEngine} : undefined);
+        if (currentOpen()) applyWorkerInventory(data.workers);
+      }
       catch (_) { if (currentOpen()) { workers = null; updateWorkerStatus(); updateRuntimeHint(); } }
       finally { if (currentOpen()) fields.worker_refresh.disabled = false; }
     });
@@ -2440,7 +2464,9 @@
         return pair[1].languages.includes(fields.language.value);
       });
       var defaultVoice = cap.default_voice || "";
-      var voice = cap.voice_design ? "design" : cap.reference_required ? "reference" :
+      var hasReference = Boolean(fields.reference_id && fields.reference_id.value.trim());
+      var voice = cap.voice_design ? "design" :
+        (cap.reference_required || (cap.reference_supported && hasReference)) ? "reference" :
         cap.voices[lastPreset] && cap.voices[lastPreset].languages.includes(fields.language.value) ? lastPreset :
         cap.voices[defaultVoice] && cap.voices[defaultVoice].languages.includes(fields.language.value) ? defaultVoice :
         (matchingVoices[0] && matchingVoices[0][0]) || "";
@@ -2454,6 +2480,16 @@
         fields.provider_voice.value = voice || fields.provider_voice.value;
       }
       voiceControls(); invalidate();
+      var chosenEngine = fields.engine.value;
+      if (chosenEngine && chosenEngine !== "openai-compatible" && cap.runtime_status !== "unavailable" &&
+          Array.isArray(workers) && !workers.some(function(item) { return !item.engines || item.engines.includes(chosenEngine); })) {
+        var sequence = openSequence;
+        request("speech", null, {engine: chosenEngine}).then(function(data) {
+          if (sequence === openSequence && dialog.open && openedContext === context()) {
+            applyWorkerInventory(data.workers);
+          }
+        }).catch(function() {});
+      }
     });
     fields.language.addEventListener("change", function() { fields.voice.value = ""; voiceControls(); status(label("voice_changed")); });
     fields.voice.addEventListener("change", function() {

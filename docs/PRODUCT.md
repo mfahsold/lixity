@@ -2,10 +2,11 @@
 
 ## The promise
 
-Lixity helps writers revise a manuscript and editors discuss it in context.
-Open the passage behind a measurement, decide what to revisit and keep the
-exact source behind a research note within reach. When the draft is ready for
-feedback, share the passages and background you choose.
+Lixity helps writers and editors see how language changes across a manuscript.
+Compare chapters, open the text behind a measurement and check the effect of
+a revision under the same analysis settings. Keep the exact source behind a
+research note within reach. When the draft is ready for feedback, share the
+passages and background you choose.
 
 The local workspace includes writing, reading and research. Built-in analysis
 runs offline. The interface supports seven languages. Measurement coverage
@@ -15,6 +16,7 @@ varies by language. [Language support](LOCALIZATION.md) · [Architecture](ARCHIT
 
 | You want to… | What to show |
 | --- | --- |
+| See how sentence rhythm changes across chapters | Compare the two chapters in **Analysis overview**. Open the passage and inspect the counted sentences. Return to the draft to decide whether the contrast serves the scene. [Chapter comparison](guides/first-look.html#contrast) |
 | See why a sentence was marked | Open a counted result in **Manuscript**, explain the count and return to the paragraph. [First look](guides/first-look.html#passage) |
 | Decide whether to revise a passage | Compare the draft with the saved text in **Write** under the same settings. Check which version was saved and how to recover earlier text. [Writing and recovery](WORKSPACE.md#write-a-manuscript) |
 | Revisit the research behind a scene | Open **Research for this passage** and follow a quotation or dossier to its retained version. [Dossiers beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript) |
@@ -63,6 +65,7 @@ iPadOS ports. [Project funding and payment status](guides/support.html)
 | Workflow | Evidence to collect |
 | --- | --- |
 | First session | Ask a first-time user to choose the offline sample, confirm its destination, explain one finding and return to the same paragraph. Then ask them to find **Write**. Repeat with keyboard, touch, larger text and a narrow window. [First session](ONBOARDING.md) |
+| Chapter comparison | Ask a writer or editor to explain a difference between two chapters, find the contributing text and return to the reading position. Repeat when the comparison is unavailable and check whether they can still find measured passages. Record where they needed help. [Analysis marks and limits](guides/interpretation.html#analysis-marks) |
 | Desktop distribution | Verify the exact candidate files and their hashes. Exercise a fresh installation, first launch, upgrade and rollback on each supported system. Open the sample in the installed app. [Installer qualification](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#review-and-publish-one-candidate) |
 | Revision and research | Ask an author or editor to make a recoverable change and open a dossier with a pinned source. Check the saved result after reopening, including interruption, conflict or restore when relevant. [Writing and recovery](WORKSPACE.md#write-a-manuscript) |
 | Audio | Observe a real capture and playback, including permission handling and microphone selection. Record which runtime was used for any synthesis result. [Author voice](AUDIO.md#author-voice-recording-and-listening) |

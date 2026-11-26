@@ -40,7 +40,7 @@ def test_command_help_needs_no_project_network_or_process(command, tmp_path, mon
     result = capsys.readouterr()
     assert not result.err
     assert "usage: lixity " + command in result.out
-    assert "https://mfahsold.github.io/lixity/" in result.out
+    assert "https://lixity.de/" in result.out
     assert list(tmp_path.iterdir()) == []
 
 

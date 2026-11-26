@@ -24,7 +24,7 @@ FORBIDDEN_PATHS = (
     "build/", "dist/", "dist-desktop/", "dist-verified/", ".release-candidate/",
     "desktop/build/", "desktop/target/", "desktop/src-tauri/gen/",
 )
-FORBIDDEN_SUFFIXES = (".key", ".pem", ".p12", ".pfx", ".jks", ".keystore")
+FORBIDDEN_SUFFIXES = (".key", ".pem", ".p8", ".p12", ".pfx", ".jks", ".keystore")
 FORBIDDEN_NAMES = ("uv.lock", ".pypirc", ".netrc", ".npmrc", "nohup.out")
 #: Process, database and editor leftovers that belong to a working copy only.
 FORBIDDEN_STATE_ENDINGS = (".log", ".pid", ".sock", ".sqlite", ".sqlite3",
@@ -70,6 +70,17 @@ def test_no_planning_or_local_state_is_tracked() -> None:
     assert offenders == [], f"Local planning or tool state must not be tracked: {offenders}"
 
 
+def test_no_ignored_paths_are_tracked() -> None:
+    git = shutil.which("git")
+    assert git is not None
+    result = subprocess.run(  # noqa: S603 - resolved git executable, repository-owned ignores only
+        [git, "ls-files", "--cached", "--ignored", "--exclude-per-directory=.gitignore", "-z"],
+        cwd=ROOT, check=True, capture_output=True,
+    )
+    count = result.stdout.count(b"\0")
+    assert count == 0, f"{count} ignored paths are tracked. Review the tracked paths privately."
+
+
 def test_ignore_rules_distinguish_local_outputs_from_source(tmp_path: Path) -> None:
     git = shutil.which("git")
     assert git is not None
@@ -81,10 +92,18 @@ def test_ignore_rules_distinguish_local_outputs_from_source(tmp_path: Path) -> N
         "logs/workspace.jsonl", "outreach/calendar.json", "samples/.lixity/cache.sqlite3",
         "cache.sqlite-journal", "cache.sqlite3-journal", "cache.db-journal",
         "scripts/editor/node_modules/package/index.js",
+        "private/application.md", "docs/guides/private/notes.html",
+        "docs/research/Confidential/agreement.pdf", "tests/confidential/fixture.py",
+        "outreach/account.json", "manuscripts/example.md", "research/HEAD.json",
+        "client_secret.json", "docs/research/client_secret_DEMO.json", "signing/AuthKey_DEMO.p8",
+        ".envrc", ".env.production", "lixity.toml",
     )
     source = (
         "docs/research/USAGE.md", "docs/examples/build/guide.md", "docs/examples/dist/guide.md",
         "desktop/Cargo.lock", "scripts/editor/package-lock.json", ".env.example", ".env.template",
+        "samples/example/lixity.toml", "samples/example/manuscript.md",
+        "src/lixity/research/models.py", "docs/guides/private-writing.html",
+        "docs/examples/report.pdf", "docs/assets/demo.mp4", "tests/fixtures/workspace.zip",
     )
     result = subprocess.run(  # noqa: S603 - resolved git executable
         [git, "-c", "core.excludesFile=", "check-ignore", "--stdin"],
@@ -105,8 +124,8 @@ def test_no_credentials_or_private_keys_are_tracked() -> None:
     for name in tracked_files():
         path = Path(name)
         private_key = path.suffix in FORBIDDEN_SUFFIXES or path.name.startswith(("id_rsa", "id_ed25519", "id_ecdsa"))
-        environment = path.name == ".env" or (
-            path.name.startswith(".env.") and not path.name.endswith((".example", ".template"))
+        environment = path.name in (".env", ".envrc") or (
+            path.name.startswith(".env.") and path.name not in (".env.example", ".env.template")
         )
         if private_key or environment:
             offenders.append(name)

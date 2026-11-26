@@ -186,6 +186,8 @@ class LixityServerHandler(
     }
 
     #: Actions deliberately not implemented by the standalone server.
+    #: They keep HTTP 501 (not 400) so embedding hosts can distinguish
+    #: "known but unsupported here" from a truly unknown route.
     UNSUPPORTED_ACTIONS: ClassVar[frozenset[str]] = frozenset(
         {"export", "sync", "audit", "prune", "gdrive"}
     )

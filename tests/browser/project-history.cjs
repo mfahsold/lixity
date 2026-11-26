@@ -311,7 +311,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
         await menuAction();
         assert.equal(await samplePage.evaluate(() => desktopUpdateChecks), 1, 'An in-flight check prevents duplicates');
         const reply = (status, tag) => samplePage.evaluate(({status, tag}) => window.resolveDesktopUpdate({
-          status, latest_tag: tag, current_version: '0.9.1', guide_url: 'https://mfahsold.github.io/lixity/guides/installation.html#desktop',
+          status, latest_tag: tag, current_version: '0.9.1', guide_url: 'https://lixity.de/guides/installation.html#desktop',
         }), {status, tag});
         const downloadLink = updates.getByRole('button', {name: data.fixtures.de.labels.desktop_env_open_downloads});
         await reply('no_public_installer', null);
@@ -325,7 +325,7 @@ const history = [' /synthetic/first ', '/synthetic/first', 42, null, {path: '/wr
         await reply('available', 'v0.10.0');
         await updateStatus.getByText(data.fixtures.de.labels.desktop_env_update_available).waitFor();
         await downloadLink.click();
-        assert.deepEqual(await samplePage.evaluate(() => desktopOpenedUrls), ['https://mfahsold.github.io/lixity/guides/installation.html#desktop']);
+        assert.deepEqual(await samplePage.evaluate(() => desktopOpenedUrls), ['https://lixity.de/guides/installation.html#desktop']);
         await updateAction.press('Enter');
         await samplePage.evaluate(() => window.rejectDesktopUpdate(new Error('Synthetic unreachable catalog')));
         await updateStatus.getByText(data.fixtures.de.labels.desktop_env_update_failed).waitFor();

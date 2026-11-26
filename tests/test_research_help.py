@@ -47,7 +47,7 @@ def test_research_command_and_alias_help_has_no_runtime_effects(
     assert not result.err
     assert "Output:" in result.out
     assert "Examples" in result.out
-    assert "https://mfahsold.github.io/lixity/research/USAGE.md" in result.out
+    assert "https://lixity.de/research/USAGE.md" in result.out
     assert list(tmp_path.iterdir()) == []
 
 

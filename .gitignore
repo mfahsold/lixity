@@ -94,9 +94,14 @@ nda/
 *_style.json
 *_style_passport.txt
 lixity-dashboard.html
-/manuscripts/
-/private/
 .lixity/
+/lixity.toml
+
+# Private working material. Keep complete author projects outside the checkout.
+# These names are reserved for local material even inside a public subtree.
+[Pp]rivate/
+[Cc]onfidential/
+/manuscripts/
 /research/
 /backups/
 /backup/
@@ -110,6 +115,7 @@ lixity-dashboard.html
 *.enc
 *.key
 *.pem
+*.p8
 *.p12
 *.pfx
 *.jks
@@ -118,6 +124,8 @@ id_ed25519*
 id_ecdsa*
 secrets/
 credentials*
+client_secret.json
+client_secret_*.json
 .netrc
 .npmrc
 .pypirc

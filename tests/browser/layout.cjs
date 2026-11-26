@@ -77,7 +77,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       if (width === 1440) {
         const host = 'https://github.com/mfahsold/lixity/blob/main/';
         await page.context().route(host + '**', route => route.fulfill({body: 'Public licensing destination'}));
-        const funding = 'https://mfahsold.github.io/lixity/guides/support.html';
+        const funding = 'https://lixity.de/guides/support.html';
         await page.context().route(funding, route => route.fulfill({body: 'Project funding information'}));
         const licensing = page.locator('.license-links');
         for (const [link, target] of [

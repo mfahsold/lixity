@@ -158,8 +158,9 @@ development and optional integration environments separately.
 - Use private project storage, isolated development environments and reviewed
   release tags. Check the staged changes before publishing.
 - Follow [the ignore rules](.gitignore) for local secrets, state and outputs.
-  Existing tracked files need explicit review. Keep credential templates to
-  placeholders and rotate credentials exposed in repository history.
+  Keep complete private projects outside the public checkout. Existing tracked
+  files need explicit review. Keep credential templates to placeholders and
+  rotate credentials exposed in repository history.
 - Publish only intended public or synthetic material to Pages. Review every
   export, log and screenshot for private manuscript data and metadata before
   sharing it.

@@ -5,7 +5,7 @@ version: "0.9.3"
 date-released: "2026-11-25"
 license: AGPL-3.0-or-later
 repository-code: "https://github.com/mfahsold/lixity"
-url: "https://mfahsold.github.io/lixity/"
+url: "https://lixity.de/"
 doi: "10.5281/zenodo.23390297"
 abstract: >-
   Offline, deterministic engine for manuscript revision and exploratory linguistic

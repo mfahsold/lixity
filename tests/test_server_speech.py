@@ -284,7 +284,9 @@ def test_speech_fixture_does_not_probe_external_workers(speech_server, monkeypat
     monkeypatch.setattr("lixity.speech_worker.urllib.request.build_opener", forbidden)
     response = send(port, "/api/speech?" + urlencode(context(source, handler)))
     assert response.status == 200
-    assert [worker["state"] for worker in json.loads(response.body)["workers"]] == ["unavailable"] * 4
+    workers = json.loads(response.body)["workers"]
+    assert [worker["state"] for worker in workers] == ["unavailable"] * 5
+    assert workers[-1]["engines"] == ["mlx-audio"]
 
 
 def test_speech_view_exposes_actual_workers_without_sensitive_details(speech_server, monkeypatch):
@@ -305,6 +307,8 @@ def test_speech_view_exposes_actual_workers_without_sensitive_details(speech_ser
                 "model": QWEN_BASE_MODEL if target == "local" else None}
 
     monkeypatch.setattr("lixity.speech_status.worker_health", health)
+    mlx = {"target": "local", "state": "ready", "model_matches": True}
+    monkeypatch.setattr("lixity.speech_providers.external_provider_status", lambda profile, *, engine: mlx)
     response = send(port, "/api/speech?" + urlencode(context(source, handler)))
     assert response.status == 200
     data = json.loads(response.body)
@@ -318,7 +322,8 @@ def test_speech_view_exposes_actual_workers_without_sensitive_details(speech_ser
     local, remote = data["workers"][:2]
     assert local["state"] == "ready" and local["model"] == QWEN_BASE_MODEL
     assert remote["state"] == "unavailable" and remote["model"] is None
-    assert all(row["model_matches"] is None for row in data["workers"])
+    assert all(row["model_matches"] is None for row in data["workers"] if "mlx-audio" not in row["engines"])
+    assert data["workers"][-1] == {**mlx, "engines": ["mlx-audio"]}
     assert set(observed_targets) == {"local", "jetson"}
     assert "A bird crosses" not in json.dumps(data["workers"])
 
@@ -352,6 +357,23 @@ voice = "synthetic-voice"
     response = send(port, "/api/speech?" + urlencode(context(source, handler)))
     assert response.status == 200, response.body
     assert json.loads(response.body)["workers"] == [{**worker, "engines": [engine]}]
+
+
+def test_speech_view_allows_probing_selected_engine_before_saving_profile(speech_server, monkeypatch):
+    port, source, handler, _observed = speech_server
+    worker = {"target": "local", "transport": "isolated-process", "state": "ready", "model": "mlx-community/ZONOS3-Mini"}
+    monkeypatch.setattr(
+        "lixity.speech_providers.external_provider_status",
+        lambda profile, *, engine=None: {**worker, "configured": profile is not None, "probed_engine": engine},
+    )
+    query = urlencode({**context(source, handler), "engine": "mlx-audio"})
+    response = send(port, "/api/speech?" + query)
+    assert response.status == 200, response.body
+    assert json.loads(response.body)["workers"] == [
+        {**worker, "configured": False, "probed_engine": "mlx-audio", "engines": ["mlx-audio"]}
+    ]
+    bad_query = urlencode({**context(source, handler), "engine": "unknown-engine"})
+    assert send(port, "/api/speech?" + bad_query).status == 400
 
 
 @pytest.mark.parametrize(("audio_section", "settings_present", "expected_error"), [
@@ -505,8 +527,11 @@ def test_bound_recording_save_rejects_partial_context_before_any_write(speech_se
     assert settings_path.read_bytes() == before
 
 
+@pytest.mark.parametrize("engine", ["qwen3-base", "mlx-audio"])
 @pytest.mark.parametrize("refresh_error", [None, ValueError, RuntimeError])
-def test_bound_recording_save_activates_only_the_validated_reference_profile(speech_server, monkeypatch, refresh_error):
+def test_bound_recording_save_activates_only_the_validated_reference_profile(
+    speech_server, monkeypatch, engine, refresh_error
+):
     import base64
 
     from lixity.config import prepare_project_settings, read_explicit_project_config
@@ -515,8 +540,12 @@ def test_bound_recording_save_activates_only_the_validated_reference_profile(spe
 
     port, source, handler, _observed = speech_server
     original = save_reference(source.parent, generate_silence_wav(1), "Original synthetic reference.")
-    profile = AudioProfile(engine="qwen3-base", voice="reference", reference_id=original.id)
-    audio = AudioSettings(selected="narrator", profiles={"narrator": profile})
+    if engine == "mlx-audio":
+        profile = AudioProfile(engine="mlx-audio", language="de", voice="liesel")
+        audio = AudioSettings(schema_version="lixity-audio-settings/5", selected="narrator", profiles={"narrator": profile})
+    else:
+        profile = AudioProfile(engine="qwen3-base", voice="reference", reference_id=original.id)
+        audio = AudioSettings(selected="narrator", profiles={"narrator": profile})
     prepare_project_settings(source.parent, {"audio": audio.model_dump(by_alias=True)}).commit()
     handler.refresh()
     payload = {**context(source, handler), "action": "save_reference", "profile_id": "narrator",
@@ -531,7 +560,8 @@ def test_bound_recording_save_activates_only_the_validated_reference_profile(spe
     assert result["activation"]["state"] == "activated"
     saved = parse_audio_settings(read_explicit_project_config(source.parent)["audio"])
     assert saved.profiles["narrator"].reference_id == result["reference"]["id"] != original.id
-    assert saved.profiles["narrator"].engine == "qwen3-base"
+    assert saved.profiles["narrator"].voice == "reference"
+    assert saved.profiles["narrator"].engine == engine
     assert len(list_references(source.parent)) == 2
     assert result["reload_required"] is bool(refresh_error)
     assert bool(result["refresh_warning"]) is bool(refresh_error)

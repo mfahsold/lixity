@@ -80,7 +80,7 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/mfahsold/lixity"
 Repository = "https://github.com/mfahsold/lixity"
-Documentation = "https://mfahsold.github.io/lixity/"
+Documentation = "https://lixity.de/"
 Documentation-Source = "https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md"
 Changelog = "https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md"
 Issues = "https://github.com/mfahsold/lixity/issues"

@@ -554,7 +554,7 @@ there by their text and duration.
 ### Use a reference with ZONOS3
 
 The fixed local MLX binding loads `mlx-community/ZONOS3-Mini` in an isolated
-short-lived Python worker. It supports fixed voices and `voice = "reference"` using
+Python worker. It supports fixed voices and `voice = "reference"` using
 the project reference ID. The worker receives only a validated temporary WAV copy;
 the original record and transcript remain under `.lixity/audio-references/`.
 
@@ -1277,9 +1277,11 @@ reference data and cache keys retain their behavior.
 
 ### MLX-Audio on Apple Silicon
 
-Use the isolated runtime for local ZONOS3 synthesis. Lixity starts a short-lived
-worker that calls the model directly and returns 44.1 kHz audio for
-normalization. For speech recognition, start the separate MLX-Audio HTTP
+Use the isolated runtime for local ZONOS3 synthesis. Lixity loads the model on
+the first render and reuses that worker between segments and renders. It
+releases the worker after five idle minutes or when the local app or service
+closes. The model returns 44.1 kHz audio for normalization. For speech
+recognition, start the separate MLX-Audio HTTP
 service at port 8000. [Apple Silicon runtime setup](INSTALLATION.md#mlx-audio-on-apple-silicon)
 
 | Lixity language | Fixed voices | Reference |

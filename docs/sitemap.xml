@@ -92,7 +92,7 @@
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/guides/manuscript-analysis-tools.html</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/guides/research-pdf.html</loc>
@@ -109,6 +109,14 @@
       <video:duration>9</video:duration>
       <video:publication_date>2026-10-12</video:publication_date>
     </video:video>
+  </url>
+  <url>
+    <loc>https://mfahsold.github.io/lixity/blog/lixity-093-manuscript-revision.html</loc>
+    <lastmod>2026-11-26</lastmod>
+  </url>
+  <url>
+    <loc>https://mfahsold.github.io/lixity/blog/lixity-093-one-passage-revision.html</loc>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/blog/romankapitel-pruefen-de.html</loc>
@@ -140,7 +148,7 @@
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/blog/index.html</loc>
-    <lastmod>2026-11-20</lastmod>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html</loc>

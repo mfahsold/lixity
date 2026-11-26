@@ -6,7 +6,7 @@ deployment change touches one constant instead of scattered string literals.
 
 from __future__ import annotations
 
-DOCS_BASE = "https://mfahsold.github.io/lixity"
+DOCS_BASE = "https://lixity.de"
 FUNDING_DETAILS_PATH = "guides/support.html"
 
 

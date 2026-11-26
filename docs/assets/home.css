@@ -86,7 +86,7 @@
 .public-home .site-back-top { position: static; margin: 1rem 1.5rem 1rem auto; display: flex; width: max-content; }
 @media (max-width: 56rem) {
   .home-nav { flex: 1 0 100%; }
-  .public-home .theme-btn { font-size: 0; min-inline-size: var(--control-touch-size); min-block-size: var(--control-touch-size); padding: .4rem; }
+  .public-home .theme-btn { font-size: 0; min-inline-size: var(--control-touch-size); padding: .4rem; }
   .public-home .theme-btn::before { content: "◐"; font-size: 1.25rem; }
 }
 @media (max-width: 48rem) {

@@ -5,6 +5,8 @@ are local, and diagnostic errors never include URLs, secrets or response bodies.
 """
 from __future__ import annotations
 
+import atexit
+import contextlib
 import io
 import ipaddress
 import json
@@ -13,6 +15,8 @@ import shutil
 import socket
 import subprocess
 import tempfile
+import threading
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -132,8 +136,11 @@ def _zonos_runtime_status(profile: AudioProfile | None) -> dict[str, Any]:
     snapshots = Path(hub_cache) / "models--mlx-community--ZONOS3-Mini/snapshots"
     runtime_available = (runtime.is_file() and os.access(runtime, os.X_OK)
                          and Path(__file__).with_name("speech_mlx_zonos.py").is_file())
-    model_cached = any(snapshot.joinpath("config.json").is_file()
-                       and any(snapshot.glob("*.safetensors")) for snapshot in snapshots.glob("*/"))
+    model_cached = any(
+        snapshot.joinpath("config.json").is_file()
+        and (any(snapshot.rglob("*.safetensors")) or any(snapshot.rglob("*.gguf")))
+        for snapshot in snapshots.glob("*/")
+    )
     ready = runtime_available and model_cached
     return {
         "target": "local", "state": "ready" if ready else "unavailable", "transport": "isolated-process",
@@ -222,13 +229,16 @@ def _normalize_wav(data: bytes) -> bytes:
 
 def external_speech_request(text: str, profile: AudioProfile) -> dict[str, str | float]:
     """Build the adapter-specific speech JSON from one validated profile."""
-    from .speech_profiles import MLX_AUDIO_DEFAULT_VOICE, MLX_AUDIO_TEMPERATURE
+    from .speech_profiles import MLX_AUDIO_TEMPERATURE
 
     request_data: dict[str, str | float] = {
         "model": profile.model, "input": text, "response_format": "wav",
     }
     if profile.engine == "mlx-audio":
-        if profile.voice not in (MLX_AUDIO_DEFAULT_VOICE, "reference"):
+        # ZONOS3 selects its speaker embedding from ``voice``; omitting the
+        # preset would silently fall back to the adapter default ("jett").
+        # Only reference cloning relies on ``ref_audio`` instead of ``voice``.
+        if profile.voice != "reference":
             request_data["voice"] = profile.voice
         request_data["lang_code"] = profile.language
         request_data["speed"] = profile.speed
@@ -257,6 +267,155 @@ def _zonos_worker_env() -> dict[str, str]:
     )
 
 
+DEFAULT_ZONOS_IDLE_TIMEOUT_SECONDS = 300.0
+DEFAULT_ZONOS_STARTUP_TIMEOUT_SECONDS = 120.0
+DEFAULT_ZONOS_REQUEST_TIMEOUT_SECONDS = REQUEST_TIMEOUT_SECONDS
+
+
+def _readline_with_timeout(pipe: Any, size: int, timeout_seconds: float) -> bytes:
+    """Read one bounded line without blocking the server thread indefinitely."""
+    result: list[Any] = []
+
+    def _target() -> None:
+        try:
+            result.append(pipe.readline(size))
+        except Exception as exc:  # noqa: BLE001 - transport errors become bounded failures
+            result.append(exc)
+
+    reader = threading.Thread(target=_target, daemon=True)
+    reader.start()
+    reader.join(timeout_seconds)
+    if reader.is_alive():
+        raise TimeoutError("Local ZONOS3 worker timed out")
+    if not result:
+        return b""
+    item = result[0]
+    if isinstance(item, Exception):
+        raise item
+    if item is None:
+        return b""
+    if isinstance(item, str):
+        return item.encode("utf-8")
+    return bytes(item)
+
+
+class _ZonosWorkerSession:
+    """Keep the isolated ZONOS3 worker warm across segments and release on idle."""
+
+    def __init__(
+        self,
+        *,
+        idle_timeout_seconds: float = DEFAULT_ZONOS_IDLE_TIMEOUT_SECONDS,
+        startup_timeout_seconds: float = DEFAULT_ZONOS_STARTUP_TIMEOUT_SECONDS,
+        request_timeout_seconds: float = DEFAULT_ZONOS_REQUEST_TIMEOUT_SECONDS,
+        popen_factory: Any = None,
+    ) -> None:
+        self._idle_timeout = idle_timeout_seconds
+        self._startup_timeout = startup_timeout_seconds
+        self._request_timeout = request_timeout_seconds
+        self._popen_factory = popen_factory if popen_factory is not None else subprocess.Popen
+        self._lock = threading.Lock()
+        self._process: subprocess.Popen[bytes] | None = None
+        self._runtime_key: tuple[str, str] | None = None
+        self._timer: threading.Timer | None = None
+        self._completed: float | None = None
+
+    def _dispose(self) -> None:
+        process = self._process
+        self._process = None
+        self._runtime_key = None
+        if process is None:
+            return
+        try:
+            if process.poll() is None:
+                with contextlib.suppress(OSError):
+                    process.terminate()
+                try:
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    with contextlib.suppress(OSError):
+                        process.kill()
+                    with contextlib.suppress(OSError):
+                        process.wait()
+        finally:
+            for stream in (process.stdin, process.stdout, process.stderr):
+                if stream is not None:
+                    with contextlib.suppress(OSError):
+                        stream.close()
+
+    def _expire(self, completed: float) -> None:
+        with self._lock:
+            if self._completed == completed:
+                self._dispose()
+
+    def close(self) -> None:
+        with self._lock:
+            if self._timer is not None:
+                self._timer.cancel()
+                self._timer = None
+            self._dispose()
+
+    def synthesize(self, runtime: Path, worker_script: Path, worker_request: dict[str, Any]) -> None:
+        payload = json.dumps(worker_request, ensure_ascii=False).encode("utf-8") + b"\n"
+        key = (str(runtime), str(worker_script))
+        with self._lock:
+            if self._timer is not None:
+                self._timer.cancel()
+                self._timer = None
+            if (self._process is not None
+                    and (self._process.poll() is not None or self._runtime_key != key)):
+                self._dispose()
+            try:
+                if self._process is None:
+                    process = self._popen_factory(
+                        [str(runtime), str(worker_script), "--persistent", str(os.getpid())],
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.DEVNULL,
+                        env=_zonos_worker_env(),
+                    )
+                    self._process = process
+                    self._runtime_key = key
+                    if process.stdout is None:
+                        raise RuntimeError("Local ZONOS3 worker failed to start")
+                    banner_raw = _readline_with_timeout(process.stdout, 4096, self._startup_timeout)
+                    banner = json.loads(banner_raw.decode("utf-8")) if banner_raw else {}
+                    if not isinstance(banner, dict) or banner.get("ready") is not True:
+                        raise RuntimeError("Local ZONOS3 worker failed to start")
+                process = self._process
+                if process is None or process.stdin is None or process.stdout is None:
+                    raise RuntimeError("Local ZONOS3 worker is unavailable")
+                try:
+                    process.stdin.write(payload)
+                    process.stdin.flush()
+                except (BrokenPipeError, OSError) as exc:
+                    raise RuntimeError("Local ZONOS3 synthesis failed") from exc
+                reply_raw = _readline_with_timeout(process.stdout, 4096, self._request_timeout)
+                reply = json.loads(reply_raw.decode("utf-8")) if reply_raw else {}
+                if not isinstance(reply, dict) or reply.get("ok") is not True:
+                    raise RuntimeError("Local ZONOS3 synthesis failed")
+            except Exception as exc:
+                self._dispose()
+                if isinstance(exc, RuntimeError):
+                    raise
+                raise RuntimeError("Local ZONOS3 synthesis failed") from exc
+            finally:
+                self._completed = time.monotonic()
+                if self._process is not None and self._idle_timeout > 0:
+                    self._timer = threading.Timer(self._idle_timeout, self._expire, args=(self._completed,))
+                    self._timer.daemon = True
+                    self._timer.start()
+
+
+_ZONOS_SESSION = _ZonosWorkerSession()
+atexit.register(_ZONOS_SESSION.close)
+
+
+def close_zonos_worker() -> None:
+    """Release any warm ZONOS3 subprocess owned by this process."""
+    _ZONOS_SESSION.close()
+
+
 def _synthesize_zonos_direct(text: str, profile: AudioProfile,
                              reference: SpeechReference | None) -> bytes:
     from .speech_references import validate_reference
@@ -271,6 +430,7 @@ def _synthesize_zonos_direct(text: str, profile: AudioProfile,
     elif reference is not None:
         raise ValueError("A preset ZONOS3 voice cannot use a local reference")
     request_data = external_speech_request(text, profile)
+    worker_script = Path(__file__).with_name("speech_mlx_zonos.py")
     with tempfile.TemporaryDirectory(prefix="lixity-zonos-") as directory:
         os.chmod(directory, 0o700)
         output = Path(directory) / "speech.wav"
@@ -281,13 +441,8 @@ def _synthesize_zonos_direct(text: str, profile: AudioProfile,
             reference_path = Path(directory) / "reference.wav"
             reference_path.write_bytes(reference.audio)
             worker_request["ref_audio"] = str(reference_path)
-        result = subprocess.run(  # noqa: S603 - fixed isolated runtime and package worker
-            [str(runtime), str(Path(__file__).with_name("speech_mlx_zonos.py"))],
-            input=json.dumps(worker_request, ensure_ascii=False).encode("utf-8"),
-            env=_zonos_worker_env(),
-            capture_output=True, timeout=REQUEST_TIMEOUT_SECONDS, check=False,
-        )
-        if result.returncode != 0 or output.is_symlink() or not output.is_file():
+        _ZONOS_SESSION.synthesize(runtime, worker_script, worker_request)
+        if output.is_symlink() or not output.is_file():
             raise RuntimeError("Local ZONOS3 synthesis failed")
         with output.open("rb") as stream:
             data = stream.read(MAX_RESPONSE_BYTES + 1)

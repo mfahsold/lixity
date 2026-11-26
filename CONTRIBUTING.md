@@ -24,8 +24,9 @@ See [licensing](docs/LICENSING.md).
 - Statistical code stays stdlib-only (no numpy/scipy) so wheels stay tiny
   and installs stay predictable.
 - Prefer small, reviewable PRs with tests.
-- Never commit manuscripts, dashboards under `exports/`, or secrets —
-  see [`.gitignore`](.gitignore) and [`SECURITY.md`](SECURITY.md).
+- Follow the storage rules below for private projects and their outputs. Use
+  [`.gitignore`](.gitignore) and [the security policy](SECURITY.md) for the
+  repository and deployment boundaries.
 
 ## Where work belongs
 
@@ -41,15 +42,24 @@ See [licensing](docs/LICENSING.md).
 | Agent operating rules that `AGENTS.md` delegates to | `AGENT_PROFILE.md` | Commit only durable rules; a session log belongs in `.planning/` |
 | Task plans, session notes, temporary implementation decisions | `.planning/` | Local only, ignored |
 | Browser screenshots, traces and diagnostic scratch output | `.artifacts/` or `/tmp` | Local only; reviewed public examples are a separate deliberate addition |
-| Manuscripts, retained research bytes, backups and credentials | Separate project storage | Never include in engine commits or public artifacts |
+| Private manuscripts, retained source material, applications, agreements, correspondence and backups | Separate private project storage | Local only, including exports and diagnostics derived from them |
+| Local-only copies needed in a checkout | A `private/` or `confidential/` directory | Ignored at any depth and excluded from Pages staging |
+| Credentials and signing material | A credential store or the service's private configuration | Public examples use placeholders |
 
 `AGENTS.md` governs repository work; `AGENT_PROFILE.md` contains delegated
 operating rules. `docs/AGENTS.md` describes the shipped automation interface.
 Keep proposals clearly marked and task checklists out of product documentation.
 
-Review staged paths and their complete diff before each commit. Ignore rules do
-not remove tracked files. Preserve local planning before removing it from the
-public tree; routine cleanup does not include rewriting Git history.
+Stage explicit product paths and review both `git diff --cached --name-status`
+and the full staged diff. Review generated HTML, PDFs, archives, images and
+recordings for embedded project text, references and metadata. When a Git rule
+is unclear, diagnose the path with `git check-ignore -v -- PATH`. Check tracked
+paths against the repository's ignore rules with
+`git ls-files --cached --ignored --exclude-per-directory=.gitignore`.
+Ignore rules govern untracked files. Tracked files remain in the index.
+If private material is already tracked, pause publication and report it
+privately. Preserve local copies and coordinate any removal from Git history
+with the maintainer. Rotate credentials that have been exposed.
 
 ## Development setup
 
@@ -504,7 +514,7 @@ processed dashboard count. Verify pageviews and each named CTA after deployment
 against the actual statistics. Existing visits cannot be backfilled. API read
 credentials and outreach snapshots belong outside this repository; the site
 code is public, an API token is not. See the
-[visitor notice](https://mfahsold.github.io/lixity/#website-measurement).
+[visitor notice](https://lixity.de/#website-measurement).
 
 ### Updating documentation and Pages
 
@@ -542,8 +552,9 @@ unavailable measurements as unknown.
 
 For participating search engines, `docs/indexnow-key.txt` is a public IndexNow
 ownership proof, not an account credential. Pages stages it at
-`https://mfahsold.github.io/lixity/indexnow-key.txt`; use that exact `keyLocation`
-with host `mfahsold.github.io` so submissions stay within `/lixity/`. After an
+`https://lixity.de/indexnow-key.txt` (legacy `https://mfahsold.github.io/lixity/indexnow-key.txt`
+redirects); use that exact `keyLocation`
+with host `lixity.de` so submissions stay within the apex. After an
 authorized deployment, verify the public key file and submit added, changed or
 removed public URLs to `https://api.indexnow.org/indexnow`. Do not submit local
 preview URLs or repeatedly notify unchanged pages. An accepted request confirms
@@ -593,13 +604,17 @@ text spacing. Describe the measured results within the
 
 #### Publish and verify Pages
 
-Review the staged public paths for private data, local reports and planning.
+Review the staged site inventory and the actual contents of generated pages,
+reports, media and the LLM bundle before deployment. The staging rules exclude
+the reserved private directories. Use reviewed public source material throughout
+the documentation, including from paths that can feed generators.
 A push to `main` leaves the site at its previously deployed commit. After the
 reviewed commit reaches remote `main`, use `make pages-deploy` for an authorized
 documentation rollout. The production workflow also accepts a verified release
 ref from the tag pipeline. It verifies generated documentation before staging.
 Wait for the run on the intended commit, then check `source_sha` and
-`workflow_run_url` in the live [deployment record](https://mfahsold.github.io/lixity/deployment.json)
+`workflow_run_url` in the live [deployment record](https://lixity.de/deployment.json)
+(legacy `https://mfahsold.github.io/lixity/deployment.json` redirects)
 and open the affected public routes. Run `make pages-verify` from that deployed
 checkout to compare the exact SHA and public files with live Pages. The byte
 comparison covers the localized home pages and guides, crawl files, measurement
@@ -633,8 +648,8 @@ switch time in the measurement history.
 
 #### Maintain the Wiki and historical references
 
-Keep `docs/wiki/` as the source of the navigation pages linking to maintained
-manuals. `python scripts/sync_wiki.py` previews the changes. Use
+Keep `docs/wiki/` for public navigation pages linking to maintained manuals.
+Inspect the content and links in `python scripts/sync_wiki.py`'s preview. Use
 `python scripts/sync_wiki.py --publish` only for an authorized Wiki update.
 The script publishes to the Wiki repository's default branch. Pages publication
 and a push to the product repository leave the Wiki unchanged.
@@ -708,7 +723,7 @@ surface and version that actually showed the problem.
 | CLI | `lixity --version`, Python version and the command with private paths replaced |
 | Local browser app | Browser and version, running Lixity version and URL path without project IDs or query data. Check the running version with `lixity doctor`. [Service diagnostics](docs/INSTALLATION.md#logs) |
 | Desktop app | Version from **About Lixity**, installer or test-build identity and relevant lines from the desktop log. [Desktop logs](docs/INSTALLATION.md#find-the-desktop-logs) |
-| Public website, demo or sandbox | Public URL, browser and version, and the deployment source when available. [Deployment record](https://mfahsold.github.io/lixity/deployment.json) |
+| Public website, demo or sandbox | Public URL, browser and version, and the deployment source when available. [Deployment record](https://lixity.de/deployment.json) |
 
 Review logs, diagnostics and screenshots for manuscript excerpts, account
 details, local paths and secrets before sharing. Report security issues

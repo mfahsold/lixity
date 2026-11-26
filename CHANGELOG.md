@@ -9,6 +9,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Use `https://lixity.de/` in the application, package metadata, funding and
+  citation links. The earlier GitHub Pages address redirects to the same path
+  on the new domain. The Pages build rewrites site links for the selected base.
+- Keep the local ZONOS3 speech worker warm between segments and release it
+  after 300 seconds of inactivity, instead of reloading the model per segment.
+  New voice profiles prefer ZONOS3 when it is ready. The default preset voice
+  is always sent to the worker; reference cloning continues to use the saved
+  reference audio.
+- Remove the obsolete single-book export, sync, audit, prune and gdrive
+  controls from unconfigured workspaces. Hosts that explicitly provide these
+  capabilities can still render their controls. The standalone server keeps
+  answering these actions with HTTP 501.
+
 - Lead the product site and setup guides with platform downloads. Check the
   desktop installer locally in the browser and keep terminal setup available
   as a fallback.
@@ -24,7 +37,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   selected research as readers progress.
 - Introduce the workspace and its writing, analysis and research tools on all
   seven product pages. Group the Warehouse 4 editorial examples below the
-  product overview and simplify the German first-look guide.
+  product overview and simplify the German first-look guide. Link the analysis
+  feature directly to a chapter comparison with counted sentences.
 - Store each prepared research response once in a static review export while
   preserving its exact token-bound routes.
 - Keep map numbers from blocking nearby features at narrow widths. Keep every
@@ -41,6 +55,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Exclude reserved private directories and credential files from local Pages
+  staging, including inside approved public subtrees.
 - Keep the home navigation, language picker and blog index within the page at
   narrow widths and enlarged text sizes. Let homepage titles wrap naturally.
 - Keep delayed editor requests from taking over a newer workspace or focus

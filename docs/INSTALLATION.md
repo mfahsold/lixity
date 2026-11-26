@@ -1261,6 +1261,6 @@ The [Unlimited-OCR integration guide](research/OCR_INTEGRATION.md) describes the
 external-worker boundary and the limited historical CPU experiment. Upstream
 `infer.py` cannot be used directly as a `LIXITY_OCR_WORKER` executable.
 
-The [installation guide](https://mfahsold.github.io/lixity/guides/installation.html)
+The [installation guide](https://lixity.de/guides/installation.html)
 includes desktop downloads and a first-session example. It also links to
 interpretation and source/PDF workflows.

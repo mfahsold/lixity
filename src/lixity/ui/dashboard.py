@@ -498,6 +498,10 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
     def action_enabled(action: str) -> bool:
         return not read_only and (allowed_actions is None or action in allowed_actions)
 
+    adapter_export = allowed_actions is not None and action_enabled("export")
+    adapter_actions = ("sync", "audit", "prune", "gdrive") if allowed_actions is not None else ()
+    result_actions = [action for action in ("analyze", *adapter_actions, "rebuild") if action_enabled(action)]
+
     rehearsal_token = (options.scene_intents_token or manuscript_pdf_token) if (
         can_edit and allowed_actions is not None and action_enabled("analysis-intents")
     ) else ""
@@ -826,8 +830,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             '<div class="view-pane" id="view-pane-project" data-view-pane="project" data-requires-write role="tabpanel" aria-labelledby="tab-view-project">'
         )
         parts.append(panel_start("controls", labels, "workspace_project", extra_class="controls"))
-        results_available = action_enabled("export") or any(
-            action_enabled(action) for action in ("analyze", "sync", "audit", "prune", "gdrive", "rebuild"))
+        results_available = adapter_export or bool(result_actions)
         ribbon_gates = {
             None: True,
             "overview": show_project_overview,
@@ -909,28 +912,19 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             )
         parts.append('</section>')
 
-        # Actions advertised by the embedding server.
-        visible_actions = [
-            action
-            for action in ("analyze", "sync", "audit", "prune", "gdrive", "rebuild")
-            if action_enabled(action)
-        ]
-        if action_enabled("export") or visible_actions:
+        # Standalone workspaces do not advertise the adapter actions.
+        if adapter_export or result_actions:
             # The heading belongs to the results group. Keeping both in one
             # element preserves the separator rule between adjacent groups.
             parts.append('<div class="ctl-group" id="project-results">')
             parts.append(f'<h3 class="section-heading">{L("settings_results")}</h3>')
-            action_heading = (
-                f"{L('export')} · {L('run_analysis')}"
-                if action_enabled("export") and visible_actions
-                else L("export")
-                if action_enabled("export")
-                else L("run_analysis")
-            )
-            if action_enabled("export") or len(visible_actions) > 1:
+            if adapter_export or len(result_actions) > 1:
+                action_heading = L("export") if adapter_export else L("run_analysis")
+                if adapter_export and result_actions:
+                    action_heading += f" · {L('run_analysis')}"
                 parts.append(f'<span class="ctl-label">{action_heading}</span>')
             parts.append('<div class="row">')
-            if action_enabled("export"):
+            if adapter_export:
                 parts.append(
                     f'<select class="ctl" id="fmt" aria-label="{esc(L("export"))}" '
                     f'title="{esc(label(labels, "help_format"))}" '
@@ -940,19 +934,19 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                     f'<option value="taschenbuch">{L("format_paperback")}</option>'
                     f'<option value="mobile">Mobile</option>'
                     f'<option value="epub">EPUB</option>'
-                    "</select>"
+                    f'</select>'
                 )
                 parts.append(
                     f'<button class="ctl primary" data-action="export" data-payload="format">'
                     f"{help_term(labels, 'export', L('export'))}</button>"
                 )
-            if "analyze" in visible_actions:
+            if "analyze" in result_actions:
                 parts.append(
                     f'<button class="ctl" data-action="analyze">{help_term(labels, "rebuild", L("run_analysis"))}</button>'
                 )
             parts.extend(
                 f'<button class="ctl" data-action="{action}">{help_term(labels, action, L(action))}</button>'
-                for action in visible_actions
+                for action in result_actions
                 if action != "analyze"
             )
             parts.append("</div></div>")

@@ -377,7 +377,7 @@ async function pinnedIdentity(page, panel, cellIndex) {
     const report = await browser.newPage({viewport: {width: 320, height: 900}, javaScriptEnabled: false});
     await report.route('http://lixity.test/**', route => route.fulfill({contentType: 'text/html', body: fixtures.standalone}));
     await report.goto('http://lixity.test/');
-    const publicGuide = 'https://mfahsold.github.io/lixity/guides/metrics/en.html';
+    const publicGuide = 'https://lixity.de/guides/metrics/en.html';
     assert.equal(await report.locator('body').getAttribute('data-metric-guide'), publicGuide);
     await assertMetricLink(report.locator('#pacing > p a[href*="/guides/metrics/"]'),
       `${publicGuide}#pacing`, 'How it’s measured');

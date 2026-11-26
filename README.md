@@ -1,4 +1,4 @@
-# <img src="https://mfahsold.github.io/lixity/assets/brand/icon-192.png" width="64" height="64" alt=""> Lixity
+# <img src="https://lixity.de/assets/brand/icon-192.png" width="64" height="64" alt=""> Lixity
 
 [![PyPI](https://img.shields.io/pypi/v/lixity)](https://pypi.org/project/lixity/)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
@@ -6,34 +6,35 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23390297.svg)](https://doi.org/10.5281/zenodo.23390297)
 
 Lixity is an open-source manuscript workspace for writers, editors and
-researchers. When a sentence is marked, open the words that were counted and
-read them in context. Revise the draft, keep the sources that shaped it close
-by, and share the reading copy you choose. Built-in analysis runs offline.
+researchers. Compare sentence rhythm, word choice and quoted words across
+chapters. Open the passages behind a measurement to see what Lixity counted.
+Revise your draft, keep the sources that shaped it close by, and share the
+reading copy you choose. Built-in analysis runs offline.
 
-[Download Lixity for desktop](https://mfahsold.github.io/lixity/guides/installation.html#desktop) ·
-[Visit the product website](https://mfahsold.github.io/lixity/)
+[Download Lixity for desktop](https://lixity.de/guides/installation.html#desktop) ·
+[Visit the product website](https://lixity.de/)
 
 <a id="start-here"></a>
 
 ## Install and start
 
 1. Choose a desktop download for a
-   [Mac with Apple silicon or an Intel processor](https://mfahsold.github.io/lixity/guides/installation.html#macos),
-   [Windows 64-bit PC](https://mfahsold.github.io/lixity/guides/installation.html#windows)
-   or [Linux 64-bit PC](https://mfahsold.github.io/lixity/guides/installation.html#linux).
+   [Mac with Apple silicon or an Intel processor](https://lixity.de/guides/installation.html#macos),
+   [Windows 64-bit PC](https://lixity.de/guides/installation.html#windows)
+   or [Linux 64-bit PC](https://lixity.de/guides/installation.html#linux).
    The current desktop test archives require GitHub sign-in. Windows and Linux
    builds target x86-64.
-2. Extract the archive, [check the installer in your browser](https://mfahsold.github.io/lixity/guides/installation.html#installer-check)
+2. Extract the archive, [check the installer in your browser](https://lixity.de/guides/installation.html#installer-check)
    and follow the setup steps for your computer. The desktop app includes the analysis runtime.
 3. Open Lixity. Choose **Try the example offline**
    for an editable sample, **Open a project folder** for work already in a
    project, or **Import a manuscript** to bring in a Word, Markdown or text file.
    [First session](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md)
 
-Try the [browser exercise](https://mfahsold.github.io/lixity/sandbox/index.html)
-or follow a finding in the [read-only demo](https://mfahsold.github.io/lixity/demo/report.html)
+Try the [browser exercise](https://lixity.de/sandbox/index.html)
+or follow a finding in the [read-only demo](https://lixity.de/demo/report.html)
 before installing. The published
-[local browser app and CLI](https://mfahsold.github.io/lixity/guides/installation.html#install)
+[local browser app and CLI](https://lixity.de/guides/installation.html#install)
 are available through PyPI. [Installation and updates](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md)
 
 <a id="choose-what-leaves-the-project"></a>
@@ -110,8 +111,8 @@ books with it, including through self-publishing. The first project funding is
 intended for public desktop installers and the Android and iOS / iPadOS ports.
 A separate commercial license is available for closed-source integrations.
 [Licensing guide](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md) ·
-[Support Lixity](https://mfahsold.github.io/lixity/guides/support.html) ·
-[Legal notice and contact](https://mfahsold.github.io/lixity/#impressum)
+[Support Lixity](https://lixity.de/guides/support.html) ·
+[Legal notice and contact](https://lixity.de/#impressum)
 
 Cite the software using [Zenodo](https://doi.org/10.5281/zenodo.23390297) or
 [CITATION.cff](https://github.com/mfahsold/lixity/blob/main/CITATION.cff).

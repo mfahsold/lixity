@@ -19,6 +19,7 @@ $alternates
 <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)"/>
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)"/>
 <meta name="fediverse:creator" content="@lixity@mastodon.social"/>
+<link rel="preload" as="image" href="screenshots/dashboard-light.png" fetchpriority="high"/>
 <link rel="stylesheet" href="assets/site.css"/>
 <link rel="stylesheet" href="assets/home.css"/>
 <script src="assets/site-language.js" defer></script>
@@ -30,10 +31,10 @@ $og_locales
 <meta property="og:title" content="$title"/>
 <meta property="og:description" content="$description"/>
 <meta property="og:url" content="$canonical"/>
-<meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
+<meta property="og:image" content="https://lixity.de/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="$image_width"/>
 <meta property="og:image:height" content="$image_height"/>
-<meta property="og:video" content="https://mfahsold.github.io/lixity/videos/product-tour.mp4"/>
+<meta property="og:video" content="https://lixity.de/videos/product-tour.mp4"/>
 <meta property="og:video:type" content="video/mp4"/>
 <meta property="og:video:width" content="1440"/>
 <meta property="og:video:height" content="900"/>
@@ -42,7 +43,7 @@ $og_locales
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="$title"/>
 <meta name="twitter:description" content="$description"/>
-<meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
+<meta name="twitter:image" content="https://lixity.de/screenshots/dashboard-light.png"/>
 <script type="application/ld+json">$structured</script>
 </head>
 <body id="top" tabindex="-1" class="site-page public-home">
@@ -92,7 +93,7 @@ $tour_cues
 </section>
 <section class="home-section" id="features" aria-labelledby="features-title"><h2 id="features-title">$tasks_title</h2><div class="home-tasks">
 <article id="writing" class="home-feature"><h3>$read_title</h3><p>$read_text</p><div class="home-task-links"><a href="https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#write-a-manuscript" hreflang="en">$editor_link</a></div></article>
-<article id="linguistic-analysis" class="home-feature"><h3>$linguistics_title</h3><p>$linguistics_text</p><div class="home-task-links"><a href="guides/metrics/${lang}.html" hreflang="$lang">$linguistics_link</a></div></article>
+<article id="linguistic-analysis" class="home-feature"><h3>$linguistics_title</h3><p>$linguistics_text</p><div class="home-task-links"><a href="$rhythm_guide_path" hreflang="$passage_guide_language">$rhythm_guide_link</a><a href="guides/metrics/${lang}.html" hreflang="$lang">$linguistics_link</a></div></article>
 <article id="research-workspace" class="home-feature"><h3>$research_title</h3><p>$research_text</p><div class="home-task-links"><a href="guides/research-pdf.html" hreflang="en">$research_guide_link</a></div></article>
 <article id="reading-copies" class="home-feature"><h3>$share_title</h3><p>$share_text</p><div class="home-task-links"><a href="demo/warehouse-4-dossier.pdf" hreflang="en">$dossier_example</a><a href="demo/reader/index.html" hreflang="en">$reading_copy</a></div></article>
 </div></section>

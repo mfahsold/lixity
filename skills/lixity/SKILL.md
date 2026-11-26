@@ -7,6 +7,8 @@ description: Use Lixity to inspect manuscript evidence, compare drafts, review d
 
 Use this skill to work with Lixity's public interfaces. For source changes, follow the [repository guidance](https://github.com/mfahsold/lixity/blob/main/AGENTS.md).
 
+Keep private projects, source material, credentials and derived outputs outside public checkouts. Use synthetic material in public examples. Check the contents and metadata of prepared exports against the requested sharing scope before sending or publishing them. [Operating boundaries](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md#operating-boundaries)
+
 ## Choose the entry point
 
 - For the **installed CLI**, use `lixity about --section commands --json` and the relevant command's `--help`. Use `.venv/bin/lixity` on POSIX when running from an installed checkout. Request the format and read the matching contract. Use `lixity project --project PATH --json` to check the project file roles. [CLI guide](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md)
