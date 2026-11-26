@@ -484,8 +484,9 @@ as separate observations; unavailable statistics remain unknown.
 Pages-only `docs/assets/analytics.js` uses GoatCounter's documented
 [pixel endpoint](https://www.goatcounter.com/help/pixel). The public site code
 lives in the explicitly staged `docs/assets/analytics.json`; `null` disables it.
-Only the production HTTPS origin and `/lixity/` path are eligible. Respect browser
-Do Not Track / Global Privacy Control. Send only public pathname, public title,
+Only the two production website bases, `https://mfahsold.github.io/lixity/` and
+`https://lixity.de/`, are eligible. Respect browser Do Not Track / Global Privacy
+Control. Send only the visited public pathname, public title,
 origin-only referrer and fixed CTA names; exclude URL query/hash, form inputs,
 selection, manuscript/research data, local paths and persistent identifiers.
 The local app and generated user exports must never acquire this adapter.
@@ -604,6 +605,31 @@ checkout to compare the exact SHA and public files with live Pages. The byte
 comparison covers the localized home pages and guides, crawl files, measurement
 assets, shared styles, demo, sandbox and reviewed video files. The check works
 for deployments from `main` and from release tags.
+
+#### Move Pages to the verified custom domain
+
+The Pages workflow uses the base URL reported by GitHub. The staging script
+supports the existing project address and the custom domain at its root.
+Preview the custom-domain output in a fresh directory before switching DNS.
+
+```sh
+pages_preview_dir="$(mktemp -d "${TMPDIR:-/tmp}/lixity-domain.XXXXXX")"
+python3 scripts/stage_pages.py --base-url https://lixity.de/ --output "$pages_preview_dir/site"
+```
+
+Verify domain ownership in the repository owner's account settings. During the
+coordinated switch, save `lixity.de` as the project's Pages custom domain, then
+replace the apex web records at the DNS provider and point `www` to
+`mfahsold.github.io`. Keep the ownership TXT and existing mail records. Recheck
+DNS, wait for the Pages certificate and enable HTTPS before announcing the new
+address. Follow the [GitHub custom-domain procedure](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site).
+
+Deploy from the intended commit and run
+`make pages-verify PAGES_BASE_URL=https://lixity.de/`. Try legacy deep links,
+the `www` redirect, the feed and the desktop download catalog. Existing desktop
+test builds that reject redirects need a new installer for in-app update checks.
+Verify the new property in Search Console, submit its sitemap and record the
+switch time in the measurement history.
 
 #### Maintain the Wiki and historical references
 

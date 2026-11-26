@@ -40,7 +40,9 @@ jobs:
       - name: Verify generated documentation
         run: make docs-generated-check PYTHON=python
       - name: Stage public product documentation
-        run: python3 scripts/stage_pages.py --output "$RUNNER_TEMP/lixity-pages"
+        env:
+          PAGES_BASE_URL: ${{ steps.pages.outputs.base_url }}
+        run: python3 scripts/stage_pages.py --output "$RUNNER_TEMP/lixity-pages" --base-url "$PAGES_BASE_URL"
       - name: Record exact public deployment source
         id: metadata
         env:

@@ -102,7 +102,7 @@ RELEASE_VERIFY_ROOT ?= .
 release-verify: release-tools-ready ## Verify a published release (RELEASE_TAG=vX.Y.Z, optionally RELEASE_VERIFY_ARGS)
 	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to verify a published release"; exit 1)
 	@commit=$$(git -C "$(RELEASE_VERIFY_ROOT)" rev-parse --verify "$(RELEASE_TAG)^{commit}") && \
-		$(SCRIPT_PYTHON) scripts/release_channels.py verify-release --root "$(RELEASE_VERIFY_ROOT)" --tag "$(RELEASE_TAG)" --expected-commit "$$commit" --repo mfahsold/lixity --dist "$(or $(RELEASE_VERIFY_DIR),dist-verified)" --check-zenodo $(RELEASE_VERIFY_ARGS)
+		$(SCRIPT_PYTHON) scripts/release_channels.py verify-release --root "$(RELEASE_VERIFY_ROOT)" --tag "$(RELEASE_TAG)" --expected-commit "$$commit" --repo mfahsold/lixity --dist "$(or $(RELEASE_VERIFY_DIR),dist-verified)" --check-zenodo $(if $(PAGES_BASE_URL),--base-url "$(PAGES_BASE_URL)") $(RELEASE_VERIFY_ARGS)
 
 screenshots: ## Regenerate docs/screenshots (needs headless Chromium)
 	PYTHONPATH=src $(VPY) scripts/make_screenshots.py
@@ -137,7 +137,7 @@ pages-deploy: docs-generated-check ## Trigger the GitHub Pages deployment workfl
 
 pages-verify: ## Verify that live Pages matches the checked-out commit and staged content
 	@commit=$$(git rev-parse --verify HEAD) && \
-		$(SCRIPT_PYTHON) scripts/release_channels.py verify-pages --root . --expected-commit "$$commit"
+		$(SCRIPT_PYTHON) scripts/release_channels.py verify-pages --root . --expected-commit "$$commit" $(if $(PAGES_BASE_URL),--base-url "$(PAGES_BASE_URL)")
 
 clean-caches: ## Remove default checkout test, lint and coverage caches
 	rm -rf -- .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage .coverage.* coverage.xml

@@ -34,6 +34,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Explain the first funding priorities in a dedicated section on all seven
   product homepages. Keep the support link in the app welcome screen and project
   navigation. The support page shows the funding status and company contact.
+- Prepare GitHub Pages staging and verification for `lixity.de`, including the
+  site links, sitemap and feed. Let new desktop builds follow the exact
+  download catalog redirect during the domain change.
 
 ### Fixed
 

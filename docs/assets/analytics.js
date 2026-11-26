@@ -1,8 +1,9 @@
 // Public Pages aggregates: https://www.goatcounter.com/help/pixel
 (() => {
   'use strict';
-  const origin = 'https://mfahsold.github.io';
-  if (location.origin !== origin || !location.pathname.startsWith('/lixity/')) return;
+  const {origin, pathname} = location;
+  const mount = origin === 'https://lixity.de' ? '' : origin === 'https://mfahsold.github.io' ? '/lixity' : null;
+  if (mount === null || !pathname.startsWith(mount + '/')) return;
   if (navigator.globalPrivacyControl === true ||
       [navigator.doNotTrack, window.doNotTrack].some(value => value === '1' || value === 'yes')) return;
   if (window.lixityPagesAnalyticsLoaded) return;
@@ -17,7 +18,7 @@
   const loader = document.currentScript;
   if (!loader || !loader.src) { warn('configuration location is unavailable.'); return; }
   const configUrl = new URL('analytics.json', loader.src);
-  if (configUrl.origin !== origin || configUrl.pathname !== '/lixity/assets/analytics.json') {
+  if (configUrl.origin !== origin || configUrl.pathname !== mount + '/assets/analytics.json') {
     warn('configuration location is invalid.'); return;
   }
 
@@ -65,7 +66,7 @@
         const previous = new URL(document.referrer);
         if (previous.protocol === 'https:' || previous.protocol === 'http:') referrer = previous.origin;
       } catch { /* Direct arrivals have no referrer. */ }
-      count(location.pathname, document.title.slice(0, 200) || location.pathname, referrer, false);
+      count(pathname, document.title.slice(0, 200) || pathname, referrer, false);
 
       const labels = {
         'demo-open': 'Open demo',
@@ -79,7 +80,7 @@
         'bluesky-open': 'Open Bluesky',
         'blog-open': 'Open blog article',
       };
-      if (location.pathname === '/lixity/demo/report.html') {
+      if (pathname === mount + '/demo/report.html') {
         document.addEventListener('lixity:public-pdf-download', () => {
           count('pdf-download', labels['pdf-download'], '', true);
         });
@@ -90,14 +91,15 @@
         let destination;
         try { destination = new URL(anchor.href); } catch { return; }
         let name;
-        if (destination.origin === origin) {
-          if (destination.pathname === '/lixity/demo/report.html') name = 'demo-open';
-          else if (['/lixity/sandbox/', '/lixity/sandbox/index.html'].includes(destination.pathname)) name = 'sandbox-open';
-          else if (/^\/lixity\/videos\/social-hook-(9x16|16x9)\.mp4$/.test(destination.pathname)) name = 'social-clip-open';
-          else if (['/lixity/INSTALLATION.md', '/lixity/guides/installation.html'].includes(destination.pathname) ||
-                   (destination.pathname === '/lixity/' && ['#install', '#installation'].includes(destination.hash))) name = 'install-open';
-          else if (/^\/lixity\/demo\/warehouse-4-(book|editor|sheet|report|document)\.pdf$/.test(destination.pathname)) name = 'pdf-download';
-          else if (destination.pathname.startsWith('/lixity/blog/') && destination.pathname.endsWith('.html') && destination.pathname !== '/lixity/blog/index.html') name = 'blog-open';
+        if (destination.origin === origin && destination.pathname.startsWith(mount + '/')) {
+          const path = destination.pathname.slice(mount.length);
+          if (path === '/demo/report.html') name = 'demo-open';
+          else if (['/sandbox/', '/sandbox/index.html'].includes(path)) name = 'sandbox-open';
+          else if (/^\/videos\/social-hook-(9x16|16x9)\.mp4$/.test(path)) name = 'social-clip-open';
+          else if (['/INSTALLATION.md', '/guides/installation.html'].includes(path) ||
+                   (path === '/' && ['#install', '#installation'].includes(destination.hash))) name = 'install-open';
+          else if (/^\/demo\/warehouse-4-(book|editor|sheet|report|document)\.pdf$/.test(path)) name = 'pdf-download';
+          else if (path.startsWith('/blog/') && path.endsWith('.html') && path !== '/blog/index.html') name = 'blog-open';
         } else if (destination.origin === 'https://github.com' &&
                    /^\/mfahsold\/lixity\/?$/.test(destination.pathname)) name = 'repository-open';
         else if (destination.origin === 'https://pypi.org' && destination.pathname.startsWith('/project/lixity')) name = 'pypi-open';

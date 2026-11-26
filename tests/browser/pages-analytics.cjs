@@ -3,12 +3,14 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const {runInNewContext} = require('node:vm');
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-pages-analytics-'));
 const runtime = fs.readFileSync(path.resolve(__dirname, '../../docs/assets/analytics.js'), 'utf8');
 const publicOrigin = 'https://mfahsold.github.io';
+const customOrigin = 'https://lixity.de';
 const pixelOrigin = 'https://mfahsold.goatcounter.com';
 const gif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
 const fixture = `<!doctype html><title>Lixity public guide</title>
@@ -31,15 +33,22 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
 <a id="mastodon" href="https://mastodon.social/@lixity">Mastodon</a>
 <a id="bluesky" href="https://bsky.app/profile/lixity.bsky.social">Bluesky</a>
 <a id="blog" href="/lixity/blog/why-this-passage.html">Blog</a>
+<a id="outside-mount" href="https://mfahsold.github.io/demo/report.html">Outside the project site</a>
+<a id="other-origin" href="#other-origin">Demo on the other public domain</a>
 <a id="untracked" data-goatcounter-click="PRIVATE CUSTOM EVENT" href="https://example.test/private">Other destination</a>
 <a id="spoof" href="https://github.com.evil.test/mfahsold/lixity">Other host</a></main>
 <script defer src="/lixity/assets/analytics.js"></script>`;
+
+// Chrome upgrades public HTTP navigations before interception. Verify the
+// adapter returns before reading navigator or the DOM on the insecure origin.
+runInNewContext(runtime, {location: {origin: 'http://lixity.de', pathname: '/demo/report.html'}});
 
 (async () => {
   const browser = await launchChromium();
   async function open({url = publicOrigin + '/lixity/guides/first-look.html?private=SECRET#quote',
     config = {site_code: 'mfahsold'}, configStatus = 200, brokenJson = false,
     pixelFailure = false, holdPixels = false, holdConfig = false, privacy = {}, width = 1440} = {}) {
+    const mount = new URL(url).origin === customOrigin ? '' : '/lixity';
     const context = await browser.newContext({viewport: {width, height: 900}});
     await context.addInitScript(privacy => {
       for (const [key, value] of Object.entries(privacy)) {
@@ -64,15 +73,20 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
         if (holdPixels) await pixelGate;
         return route.fulfill({contentType: 'image/gif', body: gif});
       }
-      if (requestUrl.pathname === '/lixity/assets/analytics.js') {
+      if (requestUrl.pathname === mount + '/assets/analytics.js') {
         return route.fulfill({contentType: 'application/javascript', body: runtime});
       }
-      if (requestUrl.pathname === '/lixity/assets/analytics.json') {
+      if (requestUrl.pathname === mount + '/assets/analytics.json') {
         if (holdConfig) await configGate;
         return route.fulfill({status: configStatus, contentType: 'application/json',
           body: brokenJson ? '{broken' : JSON.stringify(config)});
       }
-      if (request.isNavigationRequest()) return route.fulfill({contentType: 'text/html', body: fixture});
+      if (request.isNavigationRequest()) {
+        const otherSite = mount ? customOrigin : publicOrigin + '/lixity';
+        return route.fulfill({contentType: 'text/html', body: fixture
+          .replaceAll('"/lixity/', `"${mount}/`)
+          .replace('href="#other-origin"', `href="${otherSite}/demo/report.html"`)});
+      }
       unexpected.push(request.url());
       return route.abort();
     });
@@ -100,7 +114,9 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
       return data;
     });
   }
-  async function actualDemo(width) {
+  async function actualDemo(width, origin) {
+    const mount = origin === customOrigin ? '' : '/lixity';
+    const site = origin + mount;
     const context = await browser.newContext({viewport: {width, height: 1000}, acceptDownloads: true});
     const page = await context.newPage();
     const pixels = [], requests = [], unexpected = [], errors = [], warnings = [];
@@ -119,8 +135,8 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
         pixels.push({url, headers: request.headers(), method: request.method()});
         return route.fulfill({contentType: 'image/gif', body: gif});
       }
-      if (url.origin === publicOrigin && url.pathname.startsWith('/lixity/')) {
-        const relative = decodeURIComponent(url.pathname.slice('/lixity/'.length)) || 'index.html';
+      if (url.origin === origin && url.pathname.startsWith(mount + '/')) {
+        const relative = decodeURIComponent(url.pathname.slice(mount.length + 1)) || 'index.html';
         const docs = path.join(root, 'docs');
         let file = path.resolve(docs, relative);
         // Pages stages these canonical shared styles from the packaged UI.
@@ -141,7 +157,7 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
       return route.abort();
     });
     try {
-      await page.goto(publicOrigin + '/lixity/demo/report.html?private=SECRET', {waitUntil: 'domcontentloaded'});
+      await page.goto(site + '/demo/report.html?private=SECRET', {waitUntil: 'domcontentloaded'});
       await expect(page).toHaveTitle('Lixity project demo — The Crate at Warehouse 4');
       const notice = page.locator('.workspace-shell .site-read-only-notice');
       await expect(notice).toBeVisible();
@@ -154,7 +170,7 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
       }
       assert.ok(requests.some(request => request.url.endsWith('/assets/analytics.js')),
         'The actual generated CSP permits the owned analytics runtime');
-      assert.deepEqual(payloads({pixels}), [{p: '/lixity/demo/report.html',
+      assert.deepEqual(payloads({pixels}), [{p: mount + '/demo/report.html',
         t: 'Lixity project demo — The Crate at Warehouse 4', r: '', e: 'false'}]);
       const sourceState = () => page.locator('#chapters .ptext').evaluateAll(panels => panels.map(panel => ({
         id: panel.id, start: panel.dataset.start, end: panel.dataset.end, hash: panel.dataset.paragraphSha256,
@@ -181,21 +197,21 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
         await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === 'pdf-download').length).toBe(index + 1);
       }
       assert.deepEqual(await page.evaluate(() => window.__cspViolations), []);
-      await page.screenshot({path: path.join(artifacts, `native-demo-${width}.png`), fullPage: false});
+      await page.screenshot({path: path.join(artifacts, `native-demo-${new URL(origin).hostname}-${width}.png`), fullPage: false});
       await page.locator('#example-context > summary').click();
       await page.locator('#example-context a[href="../guides/installation.html"]').click();
-      await page.waitForURL(publicOrigin + '/lixity/guides/installation.html');
+      await page.waitForURL(site + '/guides/installation.html');
       await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === 'install-open').length).toBe(1);
-      await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === '/lixity/guides/installation.html').length,
+      await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === mount + '/guides/installation.html').length,
         {message: 'The destination finishes loading its analytics configuration before the next navigation'}).toBe(1);
-      assert.equal(pixels.filter(pixel => pixel.url.searchParams.get('p') === '/lixity/demo/report.html').length, 1);
-      await page.goto(publicOrigin + '/lixity/', {waitUntil: 'domcontentloaded'});
-      await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === '/lixity/').length).toBe(1);
+      assert.equal(pixels.filter(pixel => pixel.url.searchParams.get('p') === mount + '/demo/report.html').length, 1);
+      await page.goto(site + '/', {waitUntil: 'domcontentloaded'});
+      await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === mount + '/').length).toBe(1);
       await page.locator('.site-header a[href="#installation"]').click();
       await expect.poll(() => pixels.filter(pixel => pixel.url.searchParams.get('p') === 'install-open').length,
         {message: 'The current landing-page Install section link records one installation event'}).toBe(2);
       await expect(page.locator('#installation')).toBeInViewport();
-      await page.screenshot({path: path.join(artifacts, `landing-install-${width}.png`), fullPage: false});
+      await page.screenshot({path: path.join(artifacts, `landing-install-${new URL(origin).hostname}-${width}.png`), fullPage: false});
       payloads({pixels});
       assert.deepEqual(await page.evaluate(() => window.__cspViolations), []);
       assert.deepEqual(requests.filter(request => request.method !== 'GET'), [], 'Public demo interactions make no server writes');
@@ -206,12 +222,14 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
   }
   async function settle(page) { await page.waitForTimeout(80); }
   try {
-    for (const width of [1440, 320]) await actualDemo(width);
-    for (const width of [1440, 320]) {
-      const state = await open({width});
+    const cases = [[publicOrigin, 1440], [publicOrigin, 320], [customOrigin, 1440]];
+    for (const [origin, width] of cases) await actualDemo(width, origin);
+    for (const [origin, width] of cases) {
+      const mount = origin === customOrigin ? '' : '/lixity';
+      const state = await open({url: origin + mount + '/guides/first-look.html?private=SECRET#quote', width});
       const {page} = state;
       await expect.poll(() => state.pixels.length).toBe(1);
-      assert.deepEqual(payloads(state), [{p: '/lixity/guides/first-look.html',
+      assert.deepEqual(payloads(state), [{p: mount + '/guides/first-look.html',
         t: 'Lixity public guide', r: 'https://ref.example', e: 'false'}]);
       await page.locator('textarea').fill('NEVER SEND THIS SELECTED MANUSCRIPT');
       await page.locator('textarea').press('ControlOrMeta+A');
@@ -222,7 +240,7 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
       assert.equal(state.pixels.length, 1, 'The public demo completion event is ignored on other pages');
       const clicks = ['demo', 'sandbox', 'clip', 'other-sandbox', 'install', 'repository', 'pdf', 'untracked', 'spoof', 'demo',
         'install-reference', 'install-anchor', 'pdf-editor', 'pdf-sheet', 'pdf-report', 'pdf-document', 'other-pdf',
-        'pypi', 'mastodon', 'bluesky', 'blog'];
+        'pypi', 'mastodon', 'bluesky', 'blog', 'outside-mount', 'other-origin'];
       for (const id of clicks) await page.locator('#' + id).click();
       await expect.poll(() => state.pixels.length).toBe(18);
       assert.deepEqual(payloads(state).slice(1), [
@@ -242,7 +260,7 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
         {p: 'blog-open', e: 'true', t: 'Open blog article', r: ''},
       ]);
       assert.deepEqual(await page.evaluate(() => window.__navigationPrevented), Array(clicks.length).fill(false));
-      await page.addScriptTag({url: publicOrigin + '/lixity/assets/analytics.js'});
+      await page.addScriptTag({url: origin + mount + '/assets/analytics.js'});
       await settle(page);
       assert.equal(state.pixels.length, 18, 'Duplicate inclusion cannot add a pageview or event listener');
       assert.deepEqual(state.unexpected, []);
@@ -253,7 +271,10 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
     for (const options of [
       {config: {site_code: null}}, {url: 'http://127.0.0.1:8765/lixity/demo/report.html'},
       {url: 'https://example.test/lixity/demo/report.html'}, {url: publicOrigin + '/other/report.html'},
-      {url: publicOrigin + '/lixity-other/report.html'}, {privacy: {doNotTrack: '1'}},
+      {url: publicOrigin + '/lixity-other/report.html'}, {url: 'https://lixity.de:8443/demo/report.html'},
+      {url: 'https://www.lixity.de/demo/report.html'}, {url: 'https://lixity.de.example.test/demo/report.html'},
+      {url: customOrigin + '/demo/report.html', privacy: {doNotTrack: '1'}},
+      {url: customOrigin + '/demo/report.html', privacy: {globalPrivacyControl: true}}, {privacy: {doNotTrack: '1'}},
       {privacy: {doNotTrack: 'yes'}}, {privacy: {globalPrivacyControl: true}},
     ]) {
       const state = await open(options);
@@ -262,7 +283,7 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
       assert.equal(state.pixels.length, 0);
       if (options.url || options.privacy) assert.equal(state.requests.some(url => url.endsWith('/analytics.json')), false);
       assert.deepEqual(state.unexpected, []);
-      assert.deepEqual(state.warnings, []);
+      assert.deepEqual(state.warnings, [], `Unexpected warnings for ${JSON.stringify(options)} at ${state.page.url()}`);
       assert.deepEqual(state.errors, []);
       await state.context.close();
     }

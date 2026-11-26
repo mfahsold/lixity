@@ -29,6 +29,14 @@ except ModuleNotFoundError:
     from scripts.build_public_site import LANGUAGES, page_path
     from scripts.make_videos import PUBLIC_VIDEO_FILES
 
+LEGACY_PAGES_BASE_URL = "https://mfahsold.github.io/lixity/"
+CUSTOM_PAGES_BASE_URL = "https://lixity.de/"
+PAGES_BASE_URLS = frozenset({LEGACY_PAGES_BASE_URL, CUSTOM_PAGES_BASE_URL})
+_LEGACY_SITE_LINK = re.compile(
+    re.escape(LEGACY_PAGES_BASE_URL.rstrip("/")) + r"""(?:/|(?=$|[\s"'<>?#)\]`]))"""
+)
+_SITE_TEXT_SUFFIXES = frozenset({".html", ".md", ".txt", ".xml"})
+
 #: Approved files inside ``docs/``, keyed by their path relative to it.
 #:
 #: The packaged design-token and component stylesheets come from outside ``docs/``.
@@ -43,7 +51,7 @@ DOCS_ROOT_FILES = {
     *(page_path(language) for language in LANGUAGES),
     "robots.txt",
     "sitemap.xml",
-    "indexnow-key.txt",  # Public ownership proof, scoped to /lixity/ via keyLocation.
+    "indexnow-key.txt",  # Public ownership proof, scoped by the deployed keyLocation.
     "favicon.ico",
     "manifest.webmanifest",
     "llms.txt",
@@ -199,8 +207,57 @@ def _demo_bundle_files(source: Path, *, directory: str = "demo", entrypoint: str
     return selected
 
 
-def stage(source: Path, output: Path) -> int:
-    """Copy approved public paths to a new directory; never overwrite output."""
+def normalize_pages_base_url(base_url: str) -> str:
+    """Accept either deployed HTTPS base, with or without a terminal slash."""
+    normalized = base_url if base_url.endswith("/") else base_url + "/"
+    if normalized not in PAGES_BASE_URLS:
+        raise ValueError("Pages base URL must be a supported public site")
+    return normalized
+
+
+def _site_text(content: str, relative_path: Path, base_url: str) -> str:
+    """Use the deployment base for public links and preserve Atom identifiers."""
+    if relative_path.as_posix() == "blog/feed.xml":
+        return "".join(
+            line if line.lstrip().startswith("<id>") else _LEGACY_SITE_LINK.sub(base_url, line)
+            for line in content.splitlines(keepends=True)
+        )
+    if relative_path.as_posix() == "robots.txt":
+        content = "".join(line for line in content.splitlines(keepends=True)
+                          if not line.startswith(("# Deployment note:", "# Only /robots.txt")))
+    return _LEGACY_SITE_LINK.sub(base_url, content)
+
+
+def _demo_html_for_base(content: bytes, base_url: str) -> bytes:
+    # Keep reviewed publication bodies, assets and citations byte-identical.
+    head, closing_tag, body = content.partition(b"</head>")
+    if not closing_tag:
+        return content
+    metadata = _LEGACY_SITE_LINK.sub(base_url, head.decode("utf-8"))
+    return metadata.encode("utf-8") + closing_tag + body
+
+
+def _update_demo_manifests(
+    output: Path, demo_files: set[str], changes: dict[Path, dict[str, int | str]],
+) -> None:
+    """Record the exact staged bytes after changing reviewed HTML heads."""
+    for relative in sorted(demo_files):
+        manifest = output / relative
+        if manifest.name != "manifest.json":
+            continue
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        changed_members = {
+            name: changes[manifest.parent / name]
+            for name in data["files"] if manifest.parent / name in changes
+        }
+        if changed_members:
+            data["files"].update(changed_members)
+            manifest.write_bytes((json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8"))
+
+
+def stage(source: Path, output: Path, *, base_url: str = LEGACY_PAGES_BASE_URL) -> int:
+    """Stage approved public paths and metadata for the selected deployment base."""
+    base_url = normalize_pages_base_url(base_url)
     if not source.is_dir():
         raise ValueError("Documentation source directory is missing")
     if output.resolve().is_relative_to(source.resolve()):
@@ -245,10 +302,26 @@ def stage(source: Path, output: Path) -> int:
         if approved:
             selected.append(path)
     output.mkdir(parents=True, exist_ok=False)
+    demo_changes: dict[Path, dict[str, int | str]] = {}
     for path in selected:
-        target = output / path.relative_to(source)
+        relative = path.relative_to(source)
+        target = output / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(path, target)
+        if base_url == LEGACY_PAGES_BASE_URL or path.suffix not in _SITE_TEXT_SUFFIXES:
+            shutil.copyfile(path, target)
+        elif relative.as_posix() not in demo_files:
+            content = path.read_bytes().decode("utf-8")
+            target.write_bytes(_site_text(content, relative, base_url).encode("utf-8"))
+        elif path.suffix == ".html":
+            original = path.read_bytes()
+            revised = _demo_html_for_base(original, base_url)
+            target.write_bytes(revised)
+            if revised != original:
+                demo_changes[target] = {"sha256": hashlib.sha256(revised).hexdigest(), "byte_length": len(revised)}
+        else:
+            shutil.copyfile(path, target)
+    if demo_changes:
+        _update_demo_manifests(output, demo_files, demo_changes)
     for canonical in (tokens, components):
         target = output / "assets" / canonical.name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -266,8 +339,10 @@ def stage(source: Path, output: Path) -> int:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--base-url", default=LEGACY_PAGES_BASE_URL,
+                        help="Public HTTPS base for the staged site.")
     args = parser.parse_args()
-    count = stage(Path(__file__).resolve().parents[1] / "docs", args.output)
+    count = stage(Path(__file__).resolve().parents[1] / "docs", args.output, base_url=args.base_url)
     print(f"Staged {count} public documentation files in {args.output}")
 
 

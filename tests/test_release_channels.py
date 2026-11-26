@@ -929,13 +929,14 @@ def test_doctor_rejects_old_gh_and_pending_release_notes(channels, candidate, mo
         channels.doctor(source, REPO, client, tag=TAG)
 
 
-def _setup_pages_stub(channels, monkeypatch, source):
+def _setup_pages_stub(channels, monkeypatch, source, *, expected_base=None):
     pages = {rel: f"<html><body>{rel}</body></html>".encode() for rel in channels.PAGES_VERIFY_FILES}
 
     class FakeStagePages:
         @staticmethod
-        def stage(docs_dir, output):
+        def stage(docs_dir, output, *, base_url):
             assert docs_dir == source / "docs"
+            assert base_url == (expected_base or channels.DEFAULT_PAGES_URL)
             for rel, body in pages.items():
                 target = output / rel
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -996,21 +997,22 @@ def test_verify_pages_validates_deployment_sha_and_staged_bytes(channels, candid
         channels.verify_pages(source, TAG, SHA, client, base_url=base)
 
 
+@pytest.mark.parametrize("base_arg", [[], ["--base-url", "https://lixity.de"]])
 def test_verify_pages_command_accepts_deployed_commit_without_release_tag(channels, candidate,
-                                                                    monkeypatch, capsys):
+                                                                    monkeypatch, capsys, base_arg):
     source, _dist = candidate
     fake_git(monkeypatch, channels)
-    pages = _setup_pages_stub(channels, monkeypatch, source)
-    base = channels.DEFAULT_PAGES_URL
+    base = "https://lixity.de/" if base_arg else channels.DEFAULT_PAGES_URL
+    pages = _setup_pages_stub(channels, monkeypatch, source, expected_base=base)
     opener = Responses({
         base + "deployment.json": {"schema_version": 1, "source_sha": SHA},
         base: pages["index.html"],
         **{base + rel: body for rel, body in pages.items()},
     })
-    client = channels.HttpClient(opener=opener)
-    monkeypatch.setattr(channels, "HttpClient", lambda **kwargs: client)
+    original_client = channels.HttpClient
+    monkeypatch.setattr(channels, "HttpClient", lambda **kwargs: original_client(opener=opener, **kwargs))
     monkeypatch.setattr(sys, "argv", [
-        "release_channels.py", "verify-pages", "--root", str(source), "--expected-commit", SHA,
+        "release_channels.py", "verify-pages", "--root", str(source), "--expected-commit", SHA, *base_arg,
     ])
     channels.main()
     result = json.loads(capsys.readouterr().out)

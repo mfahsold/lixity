@@ -8,6 +8,7 @@ use std::io::Read;
 use std::time::Duration;
 
 const CATALOG_URL: &str = "https://mfahsold.github.io/lixity/desktop-downloads.json";
+const MIGRATED_CATALOG_URL: &str = "https://lixity.de/desktop-downloads.json";
 const GUIDE_URL: &str = "https://mfahsold.github.io/lixity/guides/installation.html#desktop";
 const SCHEMA: &str = "lixity-desktop-downloads/1";
 const CATALOG_MAX_BYTES: u64 = 64 * 1024;
@@ -101,10 +102,21 @@ fn parse_catalog(bytes: &[u8]) -> Result<DesktopCatalog, CheckFailure> {
     serde_json::from_slice(bytes).map_err(|_| CheckFailure::Catalog)
 }
 
+fn is_catalog_redirect(destination: &reqwest::Url, previous: &[reqwest::Url]) -> bool {
+    matches!(previous, [source] if source.as_str() == CATALOG_URL)
+        && destination.as_str() == MIGRATED_CATALOG_URL
+}
+
 fn fetch_catalog() -> Result<DesktopCatalog, CheckFailure> {
     let client = reqwest::blocking::Client::builder()
         .https_only(true)
-        .redirect(reqwest::redirect::Policy::none())
+        .redirect(reqwest::redirect::Policy::custom(|attempt| {
+            if is_catalog_redirect(attempt.url(), attempt.previous()) {
+                attempt.follow()
+            } else {
+                attempt.stop()
+            }
+        }))
         .timeout(Duration::from_secs(10))
         .user_agent("Lixity-Desktop")
         .build()
@@ -205,6 +217,38 @@ pub fn check_latest_release(current_version: &str) -> Result<UpdateCheckResult, 
 mod tests {
     use super::*;
     use serde_json::{json, Value};
+
+    #[test]
+    fn follows_only_the_catalog_domain_migration() {
+        let source = reqwest::Url::parse(CATALOG_URL).unwrap();
+        let destination = reqwest::Url::parse(MIGRATED_CATALOG_URL).unwrap();
+        assert!(is_catalog_redirect(
+            &destination,
+            std::slice::from_ref(&source)
+        ));
+        assert!(!is_catalog_redirect(&destination, &[]));
+        assert!(!is_catalog_redirect(
+            &destination,
+            std::slice::from_ref(&destination)
+        ));
+        assert!(!is_catalog_redirect(
+            &destination,
+            &[source.clone(), destination.clone()]
+        ));
+        for wrong in [
+            "http://lixity.de/desktop-downloads.json",
+            "https://www.lixity.de/desktop-downloads.json",
+            "https://lixity.de:8443/desktop-downloads.json",
+            "https://test@lixity.de/desktop-downloads.json",
+            "https://lixity.de/lixity/desktop-downloads.json",
+            "https://lixity.de/desktop-downloads.json?channel=test",
+            "https://lixity.de/desktop-downloads.json#catalog",
+            CATALOG_URL,
+        ] {
+            let wrong = reqwest::Url::parse(wrong).unwrap();
+            assert!(!is_catalog_redirect(&wrong, std::slice::from_ref(&source)));
+        }
+    }
 
     fn mac_installer() -> Value {
         json!({

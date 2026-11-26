@@ -20,7 +20,7 @@ from urllib.parse import urljoin
 
 from desktop.scripts.verify_desktop_artifacts import DesktopArtifact, public_installer_inventory
 from scripts import desktop_downloads
-from scripts.stage_pages import stage
+from scripts.stage_pages import CUSTOM_PAGES_BASE_URL, stage
 
 SITE = "https://mfahsold.github.io/lixity/"
 BASH = shutil.which("bash")
@@ -496,6 +496,83 @@ class TestPagesStaging(unittest.TestCase):
                 (output / "sitemap.xml").read_bytes(), (output / "sitemap-alt.xml").read_bytes(),
                 "The fallback sitemap must stay identical to the submitted one",
             )
+
+    def test_custom_domain_uses_published_urls_and_preserves_reviewed_demo_content(self):
+        docs = Path(__file__).resolve().parents[1] / "docs"
+        with tempfile.TemporaryDirectory() as directory:
+            old_site = Path(directory) / "project"
+            new_site = Path(directory) / "apex"
+            self.assertEqual(stage(docs, old_site), stage(docs, new_site, base_url="https://lixity.de"))
+            for name in ("index.html", "blog/feed.xml", "robots.txt", "sitemap.xml", "demo/manifest.json"):
+                self.assertEqual((old_site / name).read_bytes(), (docs / name).read_bytes(), name)
+
+            new_base = CUSTOM_PAGES_BASE_URL
+            sitemap = (new_site / "sitemap.xml").read_bytes()
+            self.assertEqual(sitemap, (new_site / "sitemap-alt.xml").read_bytes())
+            old_urls = [(node.text or "") for node in ET.parse(old_site / "sitemap.xml").findall("{*}url/{*}loc")]  # noqa: S314
+            new_urls = [node.text for node in ET.fromstring(sitemap).findall("{*}url/{*}loc")]  # noqa: S314
+            self.assertEqual(new_urls, [url.replace(SITE, new_base, 1) for url in old_urls])
+            self.assertIn(new_base + "demo/report.html", new_urls)
+            self.assertNotIn(SITE.encode("utf-8"), sitemap)
+            self.assertEqual((new_site / "robots.txt").read_text(encoding="utf-8").splitlines()[-1],
+                             f"Sitemap: {new_base}sitemap.xml")
+            self.assertNotIn("policy template", (new_site / "robots.txt").read_text(encoding="utf-8"))
+
+            for relative, canonical in (
+                ("index.html", new_base),
+                ("index-de.html", new_base + "index-de.html"),
+                ("guides/support.html", new_base + "guides/support.html"),
+                ("sandbox/index.html", new_base + "sandbox/index.html"),
+                ("demo/report.html", new_base + "demo/report.html"),
+                ("demo/research.html", new_base + "demo/report.html"),
+            ):
+                head = PageHead()
+                head.feed((new_site / relative).read_text(encoding="utf-8").split("</head>", 1)[0])
+                self.assertEqual([link["href"] for link in head.links if link.get("rel") == "canonical"],
+                                 [canonical], relative)
+                self.assertTrue(all(link["href"].startswith(new_base) for link in head.links
+                                    if link.get("rel") == "alternate" and "hreflang" in link), relative)
+                if "og:url" in head.meta:
+                    self.assertEqual(head.meta["og:url"], [canonical], relative)
+
+            old_feed = ET.parse(old_site / "blog/feed.xml")  # noqa: S314
+            new_feed = ET.parse(new_site / "blog/feed.xml")  # noqa: S314
+            self.assertEqual([node.text for node in old_feed.iterfind(".//{*}id")],
+                             [node.text for node in new_feed.iterfind(".//{*}id")])
+            old_links = [link.attrib["href"] for link in old_feed.iterfind(".//{*}link")]
+            new_links = [link.attrib["href"] for link in new_feed.iterfind(".//{*}link")]
+            self.assertEqual(new_links, [url.replace(SITE, new_base, 1) for url in old_links])
+
+            for bundle in ("demo", "demo/reader", "demo/companion"):
+                default_bundle = old_site / bundle
+                custom_bundle = new_site / bundle
+                default_manifest = json.loads((default_bundle / "manifest.json").read_bytes())
+                custom_manifest = json.loads((custom_bundle / "manifest.json").read_bytes())
+                default_members = default_manifest.pop("files")
+                custom_members = custom_manifest.pop("files")
+                self.assertEqual(default_manifest, custom_manifest)
+                self.assertEqual(set(default_members), set(custom_members))
+                for name, record in custom_members.items():
+                    revised = (custom_bundle / name).read_bytes()
+                    self.assertEqual(record, {"sha256": hashlib.sha256(revised).hexdigest(),
+                                              "byte_length": len(revised)}, name)
+                    if name.endswith(".html"):
+                        original = (default_bundle / name).read_bytes()
+                        old_head, marker, body = original.partition(b"</head>")
+                        self.assertTrue(revised == old_head.replace(SITE.encode(), new_base.encode()) + marker + body,
+                                        name)
+                    else:
+                        self.assertEqual(default_members[name], record, name)
+
+    def test_pages_staging_rejects_other_base_urls(self):
+        docs = Path(__file__).resolve().parents[1] / "docs"
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "site"
+            for base in ("http://lixity.de/", "https://www.lixity.de/", "https://lixity.de/other/",
+                         "https://lixity.de/?other", "https://mfahsold.github.io/", "https://lixity.de//"):
+                with self.subTest(base=base), self.assertRaisesRegex(ValueError, "supported public site"):
+                    stage(docs, output, base_url=base)
+                self.assertFalse(output.exists())
 
     def test_only_product_paths_are_published(self):
         with tempfile.TemporaryDirectory() as directory:
