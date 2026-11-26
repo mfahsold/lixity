@@ -110,7 +110,7 @@ books with it, including through self-publishing. The first project funding is
 intended for public desktop installers and the Android and iOS / iPadOS ports.
 A separate commercial license is available for closed-source integrations.
 [Licensing guide](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md) ·
-[Project funding and payment status](https://github.com/mfahsold/lixity/blob/main/docs/FUNDING.md) ·
+[Support Lixity](https://mfahsold.github.io/lixity/guides/support.html) ·
 [Legal notice and contact](https://mfahsold.github.io/lixity/#impressum)
 
 Cite the software using [Zenodo](https://doi.org/10.5281/zenodo.23390297) or
