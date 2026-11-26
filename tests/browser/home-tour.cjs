@@ -39,7 +39,8 @@ const root = stagePages();
       await page.locator('#tour-share summary').click();
       await expect(page.locator('#tour-share a[download]')).toHaveCount(3);
       await page.locator('#tour-share summary').click();
-      assert.equal(await page.locator('h1').evaluate(node => getComputedStyle(node).hyphens), 'none');
+      await expect(page.locator('#intro-title br')).toHaveCount(0);
+      assert.equal(await page.locator('#intro-title').evaluate(node => getComputedStyle(node).hyphens), 'auto');
       const video = page.locator('#product-tour');
       assert.deepEqual(await page.locator('#tour-transcript li').evaluateAll(nodes =>
         nodes.map(node => Number(node.dataset.start))), [0, 8, 16, 24, 32, 40],

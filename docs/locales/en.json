@@ -75,5 +75,8 @@
   "tour_share_vertical": "Download the vertical clip",
   "tour_share_horizontal": "Download the landscape clip",
   "tour_share_image": "Download the sentence explanation screenshot",
+  "nav_docs": "Docs",
+  "funding_title": "Bring Lixity to more devices",
+  "funding_summary": "Initial funding supports signed desktop installers and work on Android and iOS.",
   "funding": "Support Lixity"
 }

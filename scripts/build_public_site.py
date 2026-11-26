@@ -67,7 +67,7 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
             f'<li data-start="{scene["start"]}">{fields["tour_" + scene["id"]]}</li>'
             for scene in tour['scenes']
         )
-        fields['headline'] = '<br/>'.join(html.escape(line) for line in content['headline'].splitlines())
+        fields['headline'] = html.escape(' '.join(content['headline'].splitlines()))
         fields['lang'] = lang
         fields['language_name'] = LANGUAGES[lang]
         fields['version'] = version

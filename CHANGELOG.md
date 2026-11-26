@@ -31,12 +31,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Keep the writing toolbar visible during pauses and scrolling. Open editing
   and formatting actions from the text or the toolbar, with keyboard access
   and selection restoration.
-- Show a support button in the header of all seven product homepages and a
-  support link in the welcome screen and project navigation. The support page
-  shows the funding status, installer plans and company contact.
+- Explain the first funding priorities in a dedicated section on all seven
+  product homepages. Keep the support link in the app welcome screen and project
+  navigation. The support page shows the funding status and company contact.
 
 ### Fixed
 
+- Keep the home navigation, language picker and blog index within the page at
+  narrow widths and enlarged text sizes. Let homepage titles wrap naturally.
 - Keep delayed editor requests from taking over a newer workspace or focus
   choice. Preserve the cursor across an unchanged return to Write and complete
   pending saves before leaving. Include draft edits in the comparison dialog

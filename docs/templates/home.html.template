@@ -49,15 +49,24 @@ $og_locales
 <a class="skip-link" href="#content">$skip</a>
 <header class="site-header"><div class="header-inner">
 <a class="brand" href="$home_path" aria-current="page"><img src="assets/mark.svg" width="32" height="32" alt=""/><span class="brand-name">Lixity</span></a>
-<nav aria-label="$product" class="home-nav"><a href="#features">$product</a><a href="#installation">$install</a><a href="#guides">$docs</a><a class="ctl ctl-sm" id="support-cta" href="$funding_url" hreflang="en">$funding</a></nav>
+<div class="home-preferences">
 <details class="language-picker"><summary>$language_name</summary><nav aria-label="$language">$language_links</nav></details>
 <button class="ctl theme-btn" id="themeToggle" type="button" hidden>Theme</button>
+</div>
+<nav aria-label="$product" class="home-nav"><a href="#features">$product</a><a href="#installation">$install</a><a href="#guides">$nav_docs</a></nav>
 </div></header>
 <main id="content">
 <aside id="language-suggestion" class="language-suggestion" aria-label="$language" hidden><p>$language_suggestion</p><a class="ctl primary" href="index.html"></a><button class="ctl" type="button">$language_stay</button></aside>
 <section class="home-hero" aria-labelledby="intro-title">
-<div class="home-intro"><p class="home-eyebrow">$eyebrow</p><h1 id="intro-title">$headline</h1><p class="home-lead">$intro</p>
+<div class="home-intro">
+<div class="home-title"><p class="home-eyebrow">$eyebrow</p><h1 id="intro-title">$headline</h1></div>
+<div class="home-intro-copy"><p class="home-lead">$intro</p>
 <div class="hero-cta"><a class="ctl primary" href="guides/installation.html" hreflang="en" id="download-cta">$install_link <span aria-hidden="true">→</span></a> <a class="ctl" href="sandbox/index.html?lang=$sandbox_language" hreflang="$sandbox_language" id="sandbox-cta" aria-describedby="sandbox-note">$sandbox_cta <span aria-hidden="true">→</span></a> <a class="ctl" href="#product-tour-preview" id="examples">$discover <span aria-hidden="true">↓</span></a></div><p class="home-note" id="sandbox-note">$demo_note</p></div>
+<aside class="home-support" id="support" aria-labelledby="support-title">
+<img src="assets/mark.svg" width="40" height="40" alt=""/>
+<div class="support-copy"><h2 id="support-title">$funding_title</h2><p>$funding_summary</p></div>
+<a class="ctl" id="support-cta" href="$funding_url" hreflang="en">$funding <span aria-hidden="true">→</span></a>
+</aside></div>
 <figure id="product-tour-preview" tabindex="-1" class="product-preview product-tour" aria-label="$tour_title">
 <div class="tour-screen">
 <video id="product-tour" width="1440" height="900" poster="videos/product-tour.webp" preload="none" muted playsinline controls aria-label="$tour_title" aria-describedby="tour-note">

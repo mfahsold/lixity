@@ -9,6 +9,58 @@ const {stagePages} = require('./support/staged-pages.cjs');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-pages-language-'));
 const docs = stagePages();
 const origin = 'https://pages.example';
+const homeWidths = [
+  {width: 320, height: 568, hasTouch: true},
+  {width: 1440, height: 900},
+];
+const extraHomeWidths = [
+  {width: 390, height: 844, hasTouch: true},
+  {width: 768, height: 1024, hasTouch: true},
+  {width: 1024, height: 768},
+  {width: 2560, height: 1440},
+];
+
+async function checkHomeGeometry(page, description) {
+  const geometryIssues = await page.evaluate(() => {
+    const issues = [];
+    if (document.documentElement.scrollWidth > innerWidth) issues.push('page');
+    const header = document.querySelector('.header-inner').getBoundingClientRect();
+    const intro = document.querySelector('.home-intro').getBoundingClientRect();
+    if (Math.abs(header.left - intro.left) > 1 || Math.abs(header.right - intro.right) > 1) {
+      issues.push('homepage gutters');
+    }
+    const actionable = '.header-inner .brand, .home-nav a, .language-picker summary, .header-inner button, .hero-cta a, #support-cta';
+    const actions = [...document.querySelectorAll(actionable)].filter(element => element.getClientRects().length);
+    const controls = [
+      ...actions,
+      ...document.querySelectorAll('.language-picker[open] nav, .language-picker[open] a, .home-intro h1, .home-support'),
+    ];
+    for (const element of controls) {
+      const {left, right} = element.getBoundingClientRect();
+      if (left < -1 || right > innerWidth + 1 || element.scrollWidth > element.clientWidth + 1) {
+        issues.push(element.textContent.trim());
+      }
+    }
+    const actionBoxes = actions.map(element => element.getBoundingClientRect());
+    for (const [index, a] of actionBoxes.entries()) {
+      const overlap = actionBoxes.slice(index + 1).some(b =>
+        Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 &&
+        Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1);
+      if (overlap) issues.push(`overlap at ${actions[index].textContent.trim()}`);
+    }
+    return issues;
+  });
+  assert.deepEqual(geometryIssues, [], `Clipping or overlapping controls in ${description}`);
+}
+
+async function checkSupportContact(page) {
+  await expect(page).toHaveURL(`${origin}/lixity/guides/support.html`);
+  const contact = page.getByRole('link', {name: 'info@rost-services.de'});
+  await expect(contact).toBeVisible();
+  await expect(contact).toHaveAttribute('href', 'mailto:info@rost-services.de');
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+}
+
 (async () => {
   const browser = await launchChromium();
   async function open({languages = ['de-DE', 'en'], saved, blocked = false, javaScriptEnabled = true, route = 'index.html', width = 390, height = 900, hasTouch = false} = {}) {
@@ -63,6 +115,8 @@ const origin = 'https://pages.example';
         await state.page.locator('.language-picker summary').click();
         await state.page.locator('.language-picker a[lang="de"]').click();
         await expect(state.page.locator('html')).toHaveAttribute('lang', 'de');
+        await state.page.locator('#support-cta').press('Enter');
+        await checkSupportContact(state.page);
       }
       assert.deepEqual(state.errors, []);
       await state.context.close();
@@ -99,40 +153,84 @@ const origin = 'https://pages.example';
       await state.context.close();
     }
     for (const language of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
-      for (const width of [320, 1440]) {
-        const hasTouch = width === 320;
+      const reviewLocale = language === 'en' || language === 'de';
+      const widths = reviewLocale ? [...homeWidths, ...extraHomeWidths] : homeWidths;
+      for (const viewport of widths) {
+        const {width, height, hasTouch} = viewport;
         state = await open({route: language === 'en' ? 'index.html' : `index-${language}.html`,
-          languages: ['de'], width, height: hasTouch ? 568 : 900, hasTouch});
-        assert.equal(await state.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${language} at ${width}px`);
-        await expect(state.page.locator('.language-picker a[aria-current="page"]')).toHaveAttribute('lang', language);
-        if (language === 'en' || language === 'de') {
-          await state.page.screenshot({path: path.join(artifacts, `${language}-${width}.png`), fullPage: true});
+          languages: [language], ...viewport});
+        const {page} = state;
+        const description = `${language} at ${width}×${height}`;
+        await checkHomeGeometry(page, description);
+        await expect(page.locator('.language-picker a[aria-current="page"]')).toHaveAttribute('lang', language);
+        if (width === 320) {
+          const preference = page.locator('.language-picker summary');
+          await page.locator('.header-inner .brand').press('Tab');
+          await expect(preference).toBeFocused();
+          await preference.press('Tab');
+          await expect(page.locator('#themeToggle')).toBeFocused();
+          await page.locator('#themeToggle').press('Tab');
+          await expect(page.locator('.home-nav a').first()).toBeFocused();
         }
-        const support = state.page.locator('.site-header #support-cta');
+        if (reviewLocale && (width === 320 || width === 1440)) {
+          await page.screenshot({path: path.join(artifacts, `${language}-${width}.png`), fullPage: true});
+        }
+        const support = page.locator('main #support-cta');
+        await expect(support).toBeVisible();
         await expect(support).toHaveAttribute('href', 'guides/support.html');
-        await expect(support).toBeInViewport({ratio: 1});
-        if (hasTouch) assert.ok((await support.boundingBox()).height >= 44, `${language} support touch target`);
-        await expect(state.page.locator('.home-footer a[href="guides/support.html"]')).toHaveCount(1);
+        const buttonBox = await support.boundingBox();
+        const videoBox = await page.locator('#product-tour-preview').boundingBox();
+        assert.ok(buttonBox.y + buttonBox.height <= videoBox.y, `Support precedes the tour in ${description}`);
+        assert.ok(buttonBox.y + buttonBox.height <= (width < 480 ? 2 * height : height),
+          `Support within the opening content in ${description}`);
+        if (hasTouch) assert.ok(buttonBox.height >= 44, `Support touch target in ${description}`);
+        await expect(page.locator('.home-footer a[href="guides/support.html"]')).toHaveCount(1);
+        if (width === 390 || width === 768) {
+          await page.locator('.language-picker summary').click();
+          await checkHomeGeometry(page, `${description} with the language menu open`);
+          await page.locator('.language-picker summary').click();
+        }
+        if (width === 390) {
+          await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+          await checkHomeGeometry(page, `${description} at 200% text size`);
+          await page.locator('.language-picker summary').click();
+          await checkHomeGeometry(page, `${description} with the language menu open at 200% text size`);
+          await page.locator('.language-picker summary').click();
+          await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+        }
+        await page.locator('#examples').press('Tab');
+        await expect(support).toBeFocused();
         await support.press('Enter');
-        await expect(state.page).toHaveURL(`${origin}/lixity/guides/support.html`);
-        const contact = state.page.getByRole('link', {name: 'info@rost-services.de'});
-        await expect(contact).toBeVisible();
-        await expect(contact).toHaveAttribute('href', 'mailto:info@rost-services.de');
-        assert.equal(await state.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-        await state.page.goBack();
-        const sandboxLanguage = language === 'de' ? 'de' : 'en';
-        const link = state.page.locator('#sandbox-cta');
-        await expect(link).toHaveAttribute('hreflang', sandboxLanguage);
-        await expect(state.page.locator('.tour-explore')).toHaveAttribute('hreflang', 'en');
-        await link.click();
-        await expect(state.page).toHaveURL(`${origin}/lixity/${sandbox}?lang=${sandboxLanguage}`);
-        await expect(state.page.locator('html')).toHaveAttribute('lang', sandboxLanguage);
-        await expect(state.page.locator('#nav-demo')).toHaveAttribute('hreflang', 'en');
+        await checkSupportContact(page);
+        if (homeWidths.includes(viewport)) {
+          await page.goBack();
+          const sandboxLanguage = language === 'de' ? 'de' : 'en';
+          const link = page.locator('#sandbox-cta');
+          await expect(link).toHaveAttribute('hreflang', sandboxLanguage);
+          await expect(page.locator('.tour-explore')).toHaveAttribute('hreflang', 'en');
+          await link.click();
+          await expect(page).toHaveURL(`${origin}/lixity/${sandbox}?lang=${sandboxLanguage}`);
+          await expect(page.locator('html')).toHaveAttribute('lang', sandboxLanguage);
+          await expect(page.locator('#nav-demo')).toHaveAttribute('hreflang', 'en');
+        }
         assert.deepEqual(state.errors, []);
         await state.context.close();
       }
     }
+    state = await open({route: 'blog/index.html', width: 768, height: 1024});
+    await state.page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+    const featuredArticle = state.page.locator('.blog-featured');
+    await expect(featuredArticle).toBeVisible();
+    const blogOverflow = await featuredArticle.evaluate(article => {
+      const card = article.getBoundingClientRect();
+      const grid = article.parentElement.getBoundingClientRect();
+      return Math.max(document.documentElement.scrollWidth - innerWidth,
+        grid.left - card.left, card.right - grid.right, article.scrollWidth - article.clientWidth);
+    });
+    assert.ok(blogOverflow <= 1, `Blog cards fit 768px at 200% text size (${blogOverflow}px overflow)`);
+    assert.deepEqual(state.errors, []);
+    await state.context.close();
     console.log(`Screenshots: ${artifacts}`);
-    console.log('Public language suggestions, Sandbox language and preset links, funding contact, storage failure and seven responsive pages passed.');
+    console.log('Public language suggestions, Sandbox presets, funding contact, storage failure and 320–2560px layouts passed, including enlarged blog text.');
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

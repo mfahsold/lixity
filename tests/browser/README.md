@@ -748,8 +748,10 @@ Python fixture children inherit `TMPDIR`.
 
 The `pages-language.cjs` suite exercises the staged seven-language product site:
 browser preference ordering and regional tags, saved manual choices, direct
-links, unavailable storage, English guides, JavaScript-disabled navigation and
-320/1440-pixel layouts. It serves local assets only and makes no production requests.
+links, unavailable storage, English guides and JavaScript-disabled navigation.
+It checks layouts from 320 to 2560 pixels, keyboard access to the support page,
+and enlarged text in the language menu and blog index. It serves local assets
+only and makes no production requests.
 
 The `home-tour` suite decodes the homepage video, checks localized captions after
 seeking, reduced-motion behavior, explicit and offscreen pauses, failure fallback
