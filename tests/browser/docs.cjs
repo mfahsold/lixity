@@ -9,7 +9,8 @@ const http = require('node:http');
 const assert = require('node:assert/strict');
 const {stagePages} = require('./support/staged-pages.cjs');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-public-docs-'));
-const root = stagePages();
+const canonicalBase = 'https://lixity.de/';
+const root = stagePages({baseUrl: canonicalBase});
 function htmlRoutes(directory, prefix = '') {
   return fs.readdirSync(directory, {withFileTypes: true}).flatMap(entry => {
     const relative = prefix + entry.name;
@@ -1167,7 +1168,7 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
   await page.goto(origin + '/lixity/demo/research.html');
   await expect(page).toHaveURL(origin + '/lixity/demo/report.html#research-manager');
   await expect(page.locator('h1')).toHaveText(demoTitle);
-  await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', 'https://mfahsold.github.io/lixity/demo/report.html');
+  await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', canonicalBase + 'demo/report.html');
   if (javaScriptEnabled) {
     await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('#research-manager')).toBeVisible();
@@ -1457,7 +1458,7 @@ async function checkSandboxQuotationPairs(page) {
             assert.ok((await page.locator('main').innerText()).length > 1000,
               `${route} has too little visible text`);
           }
-          assert.equal(await page.locator('link[rel=canonical]').getAttribute('href'), 'https://mfahsold.github.io/lixity/' + route);
+          assert.equal(await page.locator('link[rel=canonical]').getAttribute('href'), canonicalBase + route);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${route} overflows at ${width}px`);
           if (route === 'guides/installation.html') {
             const markWidth = await page.locator('.install-heading img').evaluate(img => img.getBoundingClientRect().width);
@@ -1612,7 +1613,7 @@ async function checkSandboxQuotationPairs(page) {
         await newestArticle.click();
         await expect(page).toHaveURL(articleURL.href);
         assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),
-          'https://mfahsold.github.io' + articleURL.pathname, 'Canonical URL matches the published page');
+          canonicalBase + articleURL.pathname.slice('/lixity/'.length), 'Canonical URL matches the published page');
         await page.locator('.site-breadcrumbs a[href="index.html"]').click();
         await expect(page).toHaveURL(origin + '/lixity/blog/index.html');
         await expect(page.locator('article h2 a').first()).toHaveAttribute('href', path.basename(articleURL.pathname));

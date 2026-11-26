@@ -6,13 +6,14 @@ const {spawnSync} = require('node:child_process');
 
 const repository = path.resolve(__dirname, '../../..');
 
-function stagePages() {
+function stagePages({baseUrl} = {}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-staged-pages-'));
   const output = path.join(directory, 'site');
   process.once('exit', () => fs.rmSync(directory, {recursive: true, force: true}));
   const python = process.env.PYTHON_BIN || path.join(repository, '.venv/bin/python');
-  const result = spawnSync(python, ['scripts/stage_pages.py', '--output', output],
-    {cwd: repository, encoding: 'utf8'});
+  const args = ['scripts/stage_pages.py', '--output', output];
+  if (baseUrl) args.push('--base-url', baseUrl);
+  const result = spawnSync(python, args, {cwd: repository, encoding: 'utf8'});
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`Pages staging exited ${result.status ?? result.signal}: ${result.stderr}`);
   return output;
