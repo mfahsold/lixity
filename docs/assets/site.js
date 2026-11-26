@@ -87,7 +87,7 @@ if (installerCheck && window.crypto?.subtle) {
     }
     const candidates = installers.filter(item => file.size === item.bytes);
     if (!candidates.length) {
-      status.textContent = 'This file does not match the expected installer sizes. Extract the ZIP and select its installer.';
+      status.textContent = 'This file does not match the expected installer sizes. Select the installer itself. If it came in a ZIP, extract it first.';
       return;
     }
     status.textContent = 'Checking the installer…';

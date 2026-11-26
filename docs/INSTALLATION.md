@@ -3,12 +3,14 @@
 ## Download the desktop app
 
 1. Open [Desktop downloads](guides/installation.html#desktop) and pick the
-   archive for your operating system and processor. Test archives are hosted by
-   GitHub Actions and require a GitHub sign-in.
-2. Extract the ZIP. Use the [installer checker](guides/installation.html#installer-check)
-   to compare the extracted installer with the reviewed build's SHA-256 on
-   your computer. The archive also includes the checksums. Then follow your
-   platform's setup steps.
+   installer for your operating system and processor. Direct preview downloads
+   from GitHub Releases are available without an account. GitHub Actions test
+   archives require a sign-in.
+2. If your download is a ZIP, extract it. Use the
+   [installer checker](guides/installation.html#installer-check) to verify the
+   installer on your computer. For a manual check, use the SHA-256 list linked
+   beside the direct downloads or included in the ZIP. Follow the setup steps
+   for your platform.
    [macOS](#macos-desktop-dmg) · [Windows](#windows-desktop-test) · [Linux](#linux-desktop-test)
 3. Open **Lixity** and choose **Try the example offline** in the welcome window.
    The app starts its bundled Python runtime. [First session](ONBOARDING.md)
@@ -25,8 +27,8 @@ an alternative.
 1. Open **Apple menu → About This Mac**. Choose **Apple Silicon** if it shows
    an Apple chip, or **Intel** if it shows an Intel processor.
    [macOS downloads](guides/installation.html#macos)
-2. Double-click the ZIP in Finder. Verify the extracted `.dmg` against the
-   companion SHA-256 list, then open the disk image. Drag **Lixity.app** onto the
+2. If the disk image came in a ZIP, extract it in Finder. Verify the `.dmg`
+   against the companion SHA-256 list, then open the disk image. Drag **Lixity.app** onto the
    **Applications** shortcut in the disk image window and wait for the copy
    to finish. Ad hoc images mount as **Lixity Test Build** and include
    **Start Here.html**.
@@ -43,14 +45,15 @@ with the maintainer. If the app is blocked, use the
 <details>
 <summary>Terminal checksum commands and clean-profile testing</summary>
 
-Run the matching command in the extracted archive folder and check for `OK`.
-Build artifact names use `aarch64` for Apple Silicon and `x64` or `x86_64` for Intel.
+Run the matching command in the installer folder. Use the actual filename
+and compare its SHA-256 with the matching entry in the download's checksum
+list. Filenames use `aarch64` for Apple Silicon and `x64` or `x86_64` for Intel.
 
 ```sh
 # Apple Silicon
-shasum -a 256 -c SHA256SUMS-aarch64-apple-darwin.txt
+shasum -a 256 ./Lixity_VERSION_aarch64.dmg
 # Intel
-shasum -a 256 -c SHA256SUMS-x86_64-apple-darwin.txt
+shasum -a 256 ./Lixity_VERSION_x64.dmg
 ```
 
 For a clean-profile test, use a separate macOS account and copy the app to a
@@ -65,8 +68,8 @@ test build.
 
 1. Open **Settings → System → About** and check that **System type** shows an
    x64-based processor. [Windows download](guides/installation.html#windows)
-2. In File Explorer, right-click the ZIP and choose **Extract All**. Verify
-   the installer against the SHA-256 list, then open the file ending in
+2. If the installer came in a ZIP, right-click it in File Explorer and choose
+   **Extract All**. Verify the installer against the SHA-256 list, then open the file ending in
    `-setup.exe` to install for your Windows account.
 3. Open **Lixity** from the Start menu. Setup can download the Microsoft Edge
    WebView2 Runtime if the machine lacks it, which requires internet access.
@@ -82,9 +85,9 @@ machine.
 <details>
 <summary>PowerShell checksum command and MSI deployment</summary>
 
-Open PowerShell in the extracted folder. Use the actual installer filename
-and compare its SHA-256 with the matching entry in
-`SHA256SUMS-x86_64-pc-windows-msvc.txt` from the same archive.
+Open PowerShell in the installer folder. Use the actual installer filename
+and compare its SHA-256 with the matching entry in the download's checksum
+list.
 
 ```powershell
 Get-FileHash -Algorithm SHA256 -LiteralPath '.\Lixity_VERSION_x64-setup.exe'
@@ -102,8 +105,8 @@ For offline setups, Microsoft provides a standalone WebView2 installer.
 
 ### Install a Linux x86-64 test build
 
-1. Choose the Linux x86-64 archive and extract it with your file manager.
-   Verify your chosen installer against the SHA-256 list in the folder.
+1. Choose a Linux x86-64 installer. If it came in a ZIP, extract it with your
+   file manager. Verify the chosen installer against the download's SHA-256 list.
    [Linux download](guides/installation.html#linux)
 2. On Debian or Ubuntu, open the `.deb` in your graphical package installer
    if available. Then open **Lixity** from the applications menu.
@@ -114,11 +117,13 @@ For offline setups, Microsoft provides a standalone WebView2 installer.
 <details>
 <summary>Terminal checksum and installation commands</summary>
 
-Check that `uname -m` reports `x86_64`. Run the checksum command from the
-extracted archive folder and check that both installer files report `OK`.
+Check that `uname -m` reports `x86_64`. Run the matching command from the
+installer folder. Use the actual filename and compare its SHA-256 with the
+matching entry in the download's checksum list.
 
 ```sh
-sha256sum -c SHA256SUMS-x86_64-unknown-linux-gnu.txt
+sha256sum ./Lixity_VERSION_amd64.deb
+sha256sum ./Lixity_VERSION_amd64.AppImage
 ```
 
 In a test system or VM, run `sudo apt install ./Lixity_VERSION_amd64.deb`
@@ -223,8 +228,8 @@ environments are [separate advanced routes](#python-api-project-environment).
 
 PyPI distributes the published browser app and CLI. GitHub Releases provides
 the wheel, source archive and checksums. The desktop download guide reads the
-verified installer catalog and links to platform-specific GitHub Actions test
-builds while public installers undergo qualification.
+verified installer catalog and offers preview installers while stable desktop
+installers undergo qualification.
 [Current release](https://github.com/mfahsold/lixity/releases/latest)
 [Desktop downloads](guides/installation.html#desktop)
 
@@ -320,8 +325,7 @@ and open a new terminal. `uv tool list` confirms which tools are installed.
 Use **Open a project folder** to reconnect an existing folder. Choose **Import
 a manuscript** to preview copying a file into a new local project. The
 [first-session guide](ONBOARDING.md) also covers writing from scratch and
-trying the read-only example. The published browser app can show the welcome
-actions as **Open Project** and **Analyze a manuscript**.
+trying the read-only example.
 
 In the desktop app, reopen a project with **File → Recent Projects**. In the
 browser app, start from the same app address in a new tab for each project.

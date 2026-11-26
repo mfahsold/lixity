@@ -997,6 +997,29 @@ def test_verify_pages_validates_deployment_sha_and_staged_bytes(channels, candid
         channels.verify_pages(source, TAG, SHA, client, base_url=base)
 
 
+def test_verify_pages_full_inventory_checks_assets_outside_the_default_selection(channels, candidate, monkeypatch):
+    source, _dist = candidate
+    fake_git(monkeypatch, channels)
+    pages = _setup_pages_stub(channels, monkeypatch, source)
+    asset = "assets/review sample.webp"
+    pages.update({asset: b"reviewed image", ".nojekyll": b""})
+    base = "https://lixity.de/"
+    values = {
+        base + "deployment.json": {"schema_version": 1, "source_sha": SHA},
+        base: pages["index.html"],
+        **{base + rel: body for rel, body in pages.items() if rel not in {asset, ".nojekyll"}},
+        base + "assets/review%20sample.webp": b"stale image",
+    }
+    client = channels.HttpClient(opener=Responses(values))
+    assert channels.verify_pages(source, TAG, SHA, client)["state"] == "verified"
+    with pytest.raises(ValueError, match=r"review sample\.webp"):
+        channels.verify_pages(source, TAG, SHA, client, all_files=True)
+
+    values[base + "assets/review%20sample.webp"] = pages[asset]
+    result = channels.verify_pages(source, TAG, SHA, client, all_files=True)
+    assert result["verified_paths"] == len(pages) - 1 + 2
+
+
 @pytest.mark.parametrize("base_arg", [[], ["--base-url", "https://lixity.de"]])
 def test_verify_pages_command_accepts_deployed_commit_without_release_tag(channels, candidate,
                                                                     monkeypatch, capsys, base_arg):

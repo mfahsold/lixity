@@ -25,8 +25,7 @@ app includes the local engine and opens from your application launcher.
 
 In the desktop app, new and imported manuscripts use a new folder under
 `~/Lixity` by default. Check the proposed folder in the form. You can enter
-a different folder before creating the project. The published browser app can
-show the welcome actions as **Open Project** and **Analyze a manuscript**.
+a different folder before creating the project.
 
 ## Session checklist
 

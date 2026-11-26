@@ -45,7 +45,7 @@
     "name": "Lixity",
     "url": "https://lixity.de/"
   },
-  "dateModified": "2026-11-25",
+  "dateModified": "2026-11-26",
   "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
   "mainEntityOfPage": "https://lixity.de/guides/installation.html",
   "image": {
@@ -100,7 +100,7 @@
 <a class="ctl" href="#install">Local browser app and CLI</a>
 <a class="ctl" href="../sandbox/index.html">Try a passage in the browser</a>
 </nav>
-<p class="updated">Updated <time datetime="2026-11-25">25 November 2026</time></p>
+<p class="updated">Updated <time datetime="2026-11-26">26 November 2026</time></p>
 
 <h2 id="desktop">Desktop downloads</h2>
 <nav class="install-platforms" aria-label="Desktop installation by operating system">
@@ -109,7 +109,7 @@
 <a class="ctl" href="#linux">Linux</a>
 </nav>
 <!-- desktop-downloads:start -->
-<p id="desktop-test-downloads">These v0.9.3 desktop preview builds are unsigned/ad-hoc installers you can download directly without a GitHub account. For the published release without OS security prompts, use the <a href="#install">published local browser app and CLI</a>.</p>
+<p id="desktop-test-downloads">These v0.9.3 desktop preview builds are available as direct downloads without a GitHub account. macOS builds use ad hoc signing, and Windows builds are unsigned. For a PyPI installation, use the <a href="#install">published local browser app and CLI</a>.</p>
 <div class="desktop-download-grid">
 <section class="desktop-download-card" aria-labelledby="macos">
 <h3 id="macos">Mac</h3>
@@ -150,7 +150,7 @@
 <p>Desktop builds require macOS 12 or later.</p>
 <ol>
 <li>In the Apple menu, open <strong>About This Mac</strong>. Match an Apple chip to the Apple Silicon DMG, or an Intel processor to the Intel DMG.</li>
-<li>Open the DMG in Finder, then drag <strong>Lixity.app</strong> onto <strong>Applications</strong>. Open the <strong>Start Here</strong> guide inside the image for offline instructions.</li>
+<li>If your DMG came in a ZIP, extract it first. Verify the downloaded DMG, open it in Finder and drag <strong>Lixity.app</strong> onto <strong>Applications</strong>. Preview disk images include a <strong>Start Here</strong> guide.</li>
 <li>After the copy completes, eject the disk image and open <strong>Applications → Lixity</strong>. Open the app there again for later sessions.</li>
 </ol>
 <p>Test builds use ad hoc signing. If macOS shows a security alert, check its wording and follow the <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg">macOS installation and security guidance</a>.</p>
@@ -158,20 +158,20 @@
 <h3 id="windows-setup">Install on Windows</h3>
 <ol>
 <li>Check <strong>Settings → System → About → System type</strong>. The current desktop builds target x64 PCs.</li>
-<li>In Downloads, extract the ZIP. Open the setup <code>.exe</code> to install for your account. <strong>Start Here - Windows.html</strong> accompanies test archives. The MSI is available in English and German for deployment testing.</li>
+<li>If the installer came in a ZIP, extract it first. Verify and open the downloaded setup <code>.exe</code> to install for your account. The MSI is available in English and German for deployment testing. GitHub Actions ZIPs include <strong>Start Here - Windows.html</strong>.</li>
 <li>Open <strong>Lixity</strong> from the Start menu. On systems missing WebView2, setup needs internet access to get the Microsoft runtime.</li>
 </ol>
 <p>Windows may flag an unsigned test build as an unknown publisher or unrecognized app. If system policy blocks installation, use the <a href="#install">published browser app and CLI</a>. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#windows-desktop-test">Windows verification and installation steps</a> and <a href="https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution">Microsoft’s WebView2 installation options</a>.</p>
 
 <h3 id="linux-setup">Install on Linux</h3>
 <ol>
-<li>Check the system information in your desktop settings for an x86-64 or AMD64 system. Extract the ZIP. <strong>Start Here - Linux.html</strong> accompanies test archives.</li>
+<li>Check the system information in your desktop settings for an x86-64 or AMD64 system. Verify the downloaded <code>.deb</code> or <code>.AppImage</code>. If it came in a ZIP, extract it before verification. GitHub Actions ZIPs include <strong>Start Here - Linux.html</strong>.</li>
 <li>On Debian or Ubuntu, open the verified <code>.deb</code> with your package installer and start <strong>Lixity</strong> from the applications menu. To run the verified <code>.AppImage</code> from its folder, allow it to execute in the file's properties and open it.</li>
 </ol>
 <p>For Linux testing, use a build whose workflow passed the installed-app runtime check. If an earlier DEB reports a missing ALSA library, see the <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#linux-desktop-test">Linux troubleshooting steps</a>. For an AppImage FUSE error, follow the <a href="https://docs.appimage.org/user-guide/troubleshooting/fuse.html">instructions for your distribution</a>.</p>
 
 <details><summary>SHA-256 verification instructions</summary>
-<p>Use the checksum file from the same archive. See the command for <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg">macOS</a>, <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#windows-desktop-test">Windows</a>, or <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#linux-desktop-test">Linux</a>.</p>
+<p>Compare your installer with the checksum for its filename. Use the linked SHA-256 list for direct downloads, or the checksum file included in your GitHub Actions ZIP. See the command for <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg">macOS</a>, <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#windows-desktop-test">Windows</a>, or <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#linux-desktop-test">Linux</a>.</p>
 </details>
 
 <h3 id="desktop-first-launch">First launch</h3>
@@ -210,7 +210,7 @@ lixity doctor</code></pre>
 <h2 id="first-dashboard">Start the workspace</h2>
 <p>The default browser address is <code>http://127.0.0.1:8765/</code>. A fresh start opens an empty workspace unless you supply a project path or set <code>LIXITY_DIR</code>. If Lixity is already running on that port, <code>start --open</code> opens the existing workspace.</p>
 <ol>
-<li>Choose <strong>Open Project</strong> to continue in an existing folder. To copy a manuscript into a new project, choose <strong>Analyze a manuscript</strong> and review the import preview. Confirm the analysis language.</li>
+<li>Choose <strong>Open a project folder</strong> to continue in an existing folder. To copy a manuscript into a new project, choose <strong>Import a manuscript</strong> and review the import preview. Confirm the analysis language.</li>
 <li>Read one paragraph in <strong>Manuscript</strong>. Turn on <strong>Analysis</strong>, choose <strong>Sentence length</strong>, then choose <strong>Text matches</strong> to read a counted sentence. <a href="https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#read-and-explore">First session</a></li>
 <li>Use <strong>Analysis overview</strong> for chapter comparisons, then <strong>Back to passage</strong> to return.</li>
 </ol>

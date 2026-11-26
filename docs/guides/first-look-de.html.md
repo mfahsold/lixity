@@ -108,7 +108,7 @@ Der Manuskriptimport unterstützt Markdown (`.md`, `.markdown`) und reinen Text 
 
 Lixity ist kostenlos und Open Source; auch ein kommerzielles Buchprojekt benötigt keine zusätzliche Erlaubnis. Besondere Bedingungen für Softwareintegrationen erläutert die [Lizenzübersicht](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md).
 
-Wähle **Projekt öffnen**, um in einem vorhandenen Ordner weiterzuarbeiten. Mit **Manuskript untersuchen** prüfst du die Importvorschau für ein neues Projekt. Bestätige **Deutsch** als Analysesprache. Englisch ist die Voreinstellung. Falls der Browser einen anderen Arbeitsbereich öffnet, prüfe Adresse und Port in der [Anleitung zum lokalen Dienst](installation.html#restart).
+Wähle **Projektordner öffnen**, um in einem vorhandenen Ordner weiterzuarbeiten. Mit **Manuskript importieren** prüfst du die Importvorschau für ein neues Projekt. Bestätige **Deutsch** als Analysesprache. Englisch ist die Voreinstellung. Falls der Browser einen anderen Arbeitsbereich öffnet, prüfe Adresse und Port in der [Anleitung zum lokalen Dienst](installation.html#restart).
 
 Die öffentliche Demo zeigt ein fiktives Projekt. Das installierte Paket und sein Funktionsumfang sind über `lixity --version` und die [Versionshinweise](https://github.com/mfahsold/lixity/releases/latest) prüfbar. Die Demo kann weder importieren noch Änderungen speichern.
 

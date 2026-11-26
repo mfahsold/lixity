@@ -45,7 +45,7 @@ print(json.dumps({"locales": {language: dashboard(text, language=language, title
   const results = [];
   page.on('pageerror', error => errors.push(error.message));
   const original = locales.en;
-  const payload = {threshold:2.5,axes:[{idx:1},{idx:2},{idx:3}],labels:{status_flagged:'flagged',not_flagged:'Not flagged'},points:[{ch:1,title:'<img src=x onerror="window.tooltipInjected=true">',x:0,y:0,z:0,flagged:false},{ch:2,title:'Second chapter',x:3,y:0,z:0,flagged:true}]};
+  const payload = {threshold:2.5,axes:[{idx:1},{idx:2},{idx:3}],labels:{status_flagged:'Deviation candidate',not_flagged:'Not a candidate'},points:[{ch:1,title:'<img src=x onerror="window.tooltipInjected=true">',x:0,y:0,z:0,flagged:false},{ch:2,title:'Second chapter',x:3,y:0,z:0,flagged:true}]};
   const encoded = JSON.stringify(payload).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
   const html = original.replace(/data-dim3d="[^"]*"/, () => `data-dim3d="${encoded}"`);
   await page.addInitScript(() => {
@@ -466,7 +466,8 @@ print(json.dumps({"locales": {language: dashboard(text, language=language, title
     assert.equal(await page.locator('#dim-scores caption').textContent(), 'Chapter scores');
     assert.equal(await page.locator('#dim-scores a[href="#ch-1"]').textContent(), '1. ' + payload.points[0].title);
     assert.equal(await page.locator('#dim-scores img, #dim-scores script').count(), 0);
-    assert.ok(await page.locator('#dim-scores').textContent().then(value => value.includes('Not flagged')));
+    const unselected = page.locator('#dim-scores').getByRole('cell', {name: payload.labels.not_flagged, exact: true});
+    assert.ok(await unselected.count() > 0);
     const scores = await page.locator('#dim-scores td.num').allTextContents();
     assert.equal(scores.length, 9);
     assert.ok(scores.every(score => /^[+-]?\d+\.\d{2}$/.test(score)), JSON.stringify(scores));

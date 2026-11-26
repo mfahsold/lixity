@@ -137,7 +137,8 @@ pages-deploy: docs-generated-check ## Trigger the GitHub Pages deployment workfl
 
 pages-verify: ## Verify that live Pages matches the checked-out commit and staged content
 	@commit=$$(git rev-parse --verify HEAD) && \
-		$(SCRIPT_PYTHON) scripts/release_channels.py verify-pages --root . --expected-commit "$$commit" $(if $(PAGES_BASE_URL),--base-url "$(PAGES_BASE_URL)")
+		$(SCRIPT_PYTHON) scripts/release_channels.py verify-pages --root . --expected-commit "$$commit" \
+		$(if $(PAGES_BASE_URL),--base-url "$(PAGES_BASE_URL)") $(if $(filter 1,$(PAGES_VERIFY_ALL)),--all-files)
 
 clean-caches: ## Remove default checkout test, lint and coverage caches
 	rm -rf -- .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage .coverage.* coverage.xml

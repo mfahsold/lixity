@@ -9,6 +9,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Add a full-inventory Pages verification mode for website and asset rollouts.
+  Compare every served file with the staged build for the deployed commit.
+- Explain direct desktop preview installation and per-file checksums on the
+  download page and in the installation manual. Keep the separate archive
+  instructions available for downloads from a workflow run. Match the welcome
+  actions to the installed package and the English and German tour captions to
+  the recorded actions.
 - Serve a 48-second portrait product tour alongside the landscape version.
   Reframe each of the six recorded scenes for 1080×1920 and include a 540×960
   poster. Keep the social clips at 12 seconds. Update the English and German

@@ -231,8 +231,9 @@ def render(catalog: dict[str, Any], test_build: dict[str, Any] | None = None) ->
                                   f'<a class="ctl primary" href="{RELEASES}/download/{preview_tag}/{filename}">'
                                   f'<strong>{label}</strong><span>Preview · {filename} · {size:.1f} MiB</span></a>'))
                 return (f'<p id="desktop-test-downloads">These {test_build["tag"]} desktop preview builds are '
-                        'unsigned/ad-hoc installers you can download directly without a GitHub account. '
-                        'For the published release without OS security prompts, use the '
+                        'available as direct downloads without a GitHub account. '
+                        'macOS builds use ad hoc signing, and Windows builds are unsigned. '
+                        'For a PyPI installation, use the '
                         '<a href="#install">published local browser app and CLI</a>.</p>\n'
                         f'{render_platforms(links)}\n'
                         f'{render_verification(installers)}\n'

@@ -110,7 +110,7 @@ Use the direct PDF links below or in the demo page; the exported website does no
 
 Manuscript input supports Markdown (`.md`, `.markdown`) and plain text (`.txt`). The file importer also accepts one Word/DOCX file. Export Scrivener documents to a supported file format first; inspect the import preview before creating a project. PDFs can be retained separately as Research sources.
 
-[Install the local app](installation.html) and launch the workspace. Choose **Open Project** to continue with an existing folder. Choose **Analyze a manuscript** to review a copy before creating a new project. Confirm the analysis language. See [running the local service](installation.html#restart) if the browser reopens an older workspace.
+[Install the local app](installation.html) and launch the workspace. Choose **Open a project folder** to continue with an existing folder. Choose **Import a manuscript** to review a copy before creating a new project. Confirm the analysis language. See [running the local service](installation.html#restart) if the browser reopens an older workspace.
 
 <a id="audio"></a>
 

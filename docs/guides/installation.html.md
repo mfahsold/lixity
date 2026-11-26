@@ -4,13 +4,13 @@
 
 The desktop app includes its runtime and opens from your applications menu. The published local browser app and CLI use Python. Built-in analysis runs on your computer in both editions.
 
-Updated 25 November 2026
+Updated 26 November 2026
 
 <a id="desktop"></a>
 
 ## Desktop downloads
 
-These v0.9.3 desktop preview builds are unsigned/ad-hoc installers you can download directly without a GitHub account. For the published release without OS security prompts, use the [published local browser app and CLI](#install).
+These v0.9.3 desktop preview builds are available as direct downloads without a GitHub account. macOS builds use ad hoc signing, and Windows builds are unsigned. For a PyPI installation, use the [published local browser app and CLI](#install).
 
 <a id="macos"></a>
 
@@ -70,7 +70,7 @@ Desktop builds require macOS 12 or later.
 
 1. In the Apple menu, open **About This Mac**. Match an Apple chip to the Apple Silicon DMG, or an Intel processor to the Intel DMG.
 
-2. Open the DMG in Finder, then drag **Lixity.app** onto **Applications**. Open the **Start Here** guide inside the image for offline instructions.
+2. If your DMG came in a ZIP, extract it first. Verify the downloaded DMG, open it in Finder and drag **Lixity.app** onto **Applications**. Preview disk images include a **Start Here** guide.
 
 3. After the copy completes, eject the disk image and open **Applications → Lixity**. Open the app there again for later sessions.
 
@@ -82,7 +82,7 @@ Test builds use ad hoc signing. If macOS shows a security alert, check its wordi
 
 1. Check **Settings → System → About → System type**. The current desktop builds target x64 PCs.
 
-2. In Downloads, extract the ZIP. Open the setup `.exe` to install for your account. **Start Here - Windows.html** accompanies test archives. The MSI is available in English and German for deployment testing.
+2. If the installer came in a ZIP, extract it first. Verify and open the downloaded setup `.exe` to install for your account. The MSI is available in English and German for deployment testing. GitHub Actions ZIPs include **Start Here - Windows.html**.
 
 3. Open **Lixity** from the Start menu. On systems missing WebView2, setup needs internet access to get the Microsoft runtime.
 
@@ -92,7 +92,7 @@ Windows may flag an unsigned test build as an unknown publisher or unrecognized 
 
 ### Install on Linux
 
-1. Check the system information in your desktop settings for an x86-64 or AMD64 system. Extract the ZIP. **Start Here - Linux.html** accompanies test archives.
+1. Check the system information in your desktop settings for an x86-64 or AMD64 system. Verify the downloaded `.deb` or `.AppImage`. If it came in a ZIP, extract it before verification. GitHub Actions ZIPs include **Start Here - Linux.html**.
 
 2. On Debian or Ubuntu, open the verified `.deb` with your package installer and start **Lixity** from the applications menu. To run the verified `.AppImage` from its folder, allow it to execute in the file's properties and open it.
 
@@ -100,7 +100,7 @@ For Linux testing, use a build whose workflow passed the installed-app runtime c
 
 **SHA-256 verification instructions**
 
-Use the checksum file from the same archive. See the command for [macOS](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg), [Windows](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#windows-desktop-test), or [Linux](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#linux-desktop-test).
+Compare your installer with the checksum for its filename. Use the linked SHA-256 list for direct downloads, or the checksum file included in your GitHub Actions ZIP. See the command for [macOS](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#macos-desktop-dmg), [Windows](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#windows-desktop-test), or [Linux](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#linux-desktop-test).
 
 <a id="desktop-first-launch"></a>
 
@@ -172,7 +172,7 @@ To run `lixity` directly in later terminals, run `uv tool update-shell` once and
 
 The default browser address is `http://127.0.0.1:8765/`. A fresh start opens an empty workspace unless you supply a project path or set `LIXITY_DIR`. If Lixity is already running on that port, `start --open` opens the existing workspace.
 
-1. Choose **Open Project** to continue in an existing folder. To copy a manuscript into a new project, choose **Analyze a manuscript** and review the import preview. Confirm the analysis language.
+1. Choose **Open a project folder** to continue in an existing folder. To copy a manuscript into a new project, choose **Import a manuscript** and review the import preview. Confirm the analysis language.
 
 2. Read one paragraph in **Manuscript**. Turn on **Analysis**, choose **Sentence length**, then choose **Text matches** to read a counted sentence. [First session](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#read-and-explore)
 

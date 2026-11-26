@@ -654,6 +654,12 @@ comparison covers the localized home pages and guides, crawl files, measurement
 assets, shared styles, demo, sandbox and reviewed video files. The check works
 for deployments from `main` and from release tags.
 
+After a broad website or asset update, run `make pages-verify PAGES_VERIFY_ALL=1`
+to compare the complete served staging inventory. This includes individual blog
+pages, fonts, screenshots and reader media. The verifier checks the deployment
+identity before and after the comparison. GitHub's `.nojekyll` control file is
+checked in the staged artifact.
+
 #### Move Pages to the verified custom domain
 
 The Pages workflow uses the base URL reported by GitHub. The staging script

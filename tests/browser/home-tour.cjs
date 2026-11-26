@@ -126,18 +126,21 @@ const root = stagePages();
       await button.click();
       await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);
       // Exercise real source exhaustion, not an invented media-element event.
-      await page.route('**/videos/product-tour.*', route => /\.(mp4|webm)$/.test(route.request().url())
-        ? route.abort() : route.fallback());
+      const tourSources = '**/videos/{product-tour.mp4,product-tour.webm,product-tour-portrait.mp4}';
+      await page.route(tourSources, route => route.abort());
       await page.goto('https://tour.test/');
       await video.scrollIntoViewIfNeeded();
       await expect(page.locator('.tour-error')).toBeVisible();
       await expect(page.locator('.tour-caption')).toBeHidden();
-      await page.unroute('**/videos/product-tour.*');
-      await page.route('**/videos/product-tour.webm', route => route.abort());
+      await page.unroute(tourSources);
+      const unavailable = width === 390 ? 'product-tour-portrait.mp4' : 'product-tour.webm';
+      await page.route(`**/videos/${unavailable}`, route => route.abort());
       await page.goto('https://tour.test/');
       await video.scrollIntoViewIfNeeded();
       await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(.2);
-      assert.ok((await video.evaluate(v => v.currentSrc)).endsWith('.mp4'), 'AV1 failure falls back to H.264');
+      const fallback = await video.evaluate(v => new URL(v.currentSrc).pathname);
+      assert.match(fallback, width === 390 ? /\/product-tour\.(mp4|webm)$/ : /\/product-tour\.mp4$/,
+        `Playback continues when ${unavailable} fails`);
       await expect(page.locator('.tour-error')).toBeHidden();
       // Every localized caption uses the same decoded media timeline.
       await page.emulateMedia({reducedMotion: 'reduce'});

@@ -837,7 +837,7 @@ def _normalize_pages_base(base_url):
     return normalized, urllib.parse.urlsplit(normalized).hostname
 
 
-def verify_pages(root, tag, expected_commit, client, *, base_url=DEFAULT_PAGES_URL):
+def verify_pages(root, tag, expected_commit, client, *, base_url=DEFAULT_PAGES_URL, all_files=False):
     """Verify live Pages deployment metadata and staged public resources."""
     _check_checkout_commit(root, expected_commit)
     if tag is not None:
@@ -859,9 +859,20 @@ def verify_pages(root, tag, expected_commit, client, *, base_url=DEFAULT_PAGES_U
         root_bytes = client.bytes(normalized_base, headers=headers)
         if root_bytes != (staged / "index.html").read_bytes():
             raise ValueError("public Pages canonical root differs from staged index.html")
-        for rel_path in PAGES_VERIFY_FILES:
+        paths = PAGES_VERIFY_FILES
+        if all_files:
+            paths = tuple(sorted(
+                path.relative_to(staged).as_posix()
+                for path in staged.rglob("*")
+                if path.is_file() and path.name != ".nojekyll"
+            ))
+        for rel_path in paths:
             expected_bytes = (staged / rel_path).read_bytes()
-            actual_bytes = client.bytes(urllib.parse.urljoin(normalized_base, rel_path), headers=headers)
+            resource_url = urllib.parse.urljoin(normalized_base, urllib.parse.quote(rel_path))
+            try:
+                actual_bytes = client.bytes(resource_url, headers=headers)
+            except ValueError as error:
+                raise ValueError(f"could not verify public Pages resource {rel_path}: {error}") from None
             if actual_bytes != expected_bytes:
                 raise ValueError(f"public Pages resource differs from staged build: {rel_path}")
     if client.json(deployment_url, headers=headers) != deployment:
@@ -871,7 +882,7 @@ def verify_pages(root, tag, expected_commit, client, *, base_url=DEFAULT_PAGES_U
         **({"tag": tag} if tag is not None else {}),
         "source_sha": expected_commit,
         "base_url": normalized_base,
-        "verified_paths": len(PAGES_VERIFY_FILES) + 2,
+        "verified_paths": len(paths) + 2,
     }
 
 
@@ -981,6 +992,8 @@ def main():
     parser.add_argument("--catalog-output", type=Path, help="Write the reviewed desktop download catalog here")
     parser.add_argument("--upload", type=Path, default=Path("upload"))
     parser.add_argument("--base-url", default=DEFAULT_PAGES_URL)
+    parser.add_argument("--all-files", action="store_true",
+                        help="Compare the full served inventory when running verify-pages")
     parser.add_argument("--use-keyring", action="store_true",
                         help="Unset GH_TOKEN/GITHUB_TOKEN for gh subprocesses so OS keyring is used")
     parser.add_argument("--check-zenodo", action="store_true",
@@ -1030,7 +1043,8 @@ def main():
                 desktop_signing=args.desktop_signing,
             )
         elif args.command == "verify-pages":
-            result = verify_pages(args.root, args.tag, args.expected_commit, client, base_url=args.base_url)
+            result = verify_pages(args.root, args.tag, args.expected_commit, client,
+                                  base_url=args.base_url, all_files=args.all_files)
         elif args.command == "verify-zenodo":
             result = {"tag": args.tag, **zenodo_status(args.repo, args.tag, client)}
         elif args.command == "verify-release":

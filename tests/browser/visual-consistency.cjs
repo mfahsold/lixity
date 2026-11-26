@@ -246,7 +246,22 @@ async function checkScale(page, label) {
     const sizes = Array.from(new Set(controlSizes.map(box => box.minHeight)));
     assert.equal(sizes.length, 1, `${label} default control minimum heights: ${JSON.stringify(controlSizes)}`);
   }
-  const compactSizes = await page.locator('.ctl-sm:visible')
+  // The funding link uses the compact button style on desktop and is an
+  // underlined metadata link in the narrow workspace.
+  const narrow = page.viewportSize().width < 1100;
+  const inlineSupport = '.workspace-product-details > a.workspace-support-link';
+  if (narrow) {
+    const link = page.locator(`${inlineSupport}:visible`);
+    if (await link.count()) {
+      const style = await link.evaluate(element => {
+        const css = getComputedStyle(element);
+        return {minimum: css.minHeight, decoration: css.textDecorationLine};
+      });
+      assert.deepEqual(style, {minimum: '0px', decoration: 'underline'}, `${label} inline support link`);
+    }
+  }
+  const compactSelector = narrow ? `.ctl-sm:not(${inlineSupport}):visible` : '.ctl-sm:visible';
+  const compactSizes = await page.locator(compactSelector)
     .evaluateAll(elements => elements.map(element => ({
       id: element.id || element.className, minHeight: getComputedStyle(element).minHeight})));
   if (compactSizes.length) {

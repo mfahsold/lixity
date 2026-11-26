@@ -197,8 +197,8 @@ async function textRole(locator) {
       });
       await page.goto('http://lixity.test/site/guides/installation.html');
       const terminal = page.locator('#install');
-      assert.equal(await terminal.getAttribute('open'), null, 'Desktop setup leads with terminal instructions collapsed');
-      await terminal.locator(':scope > summary').click();
+      assert.equal(await terminal.evaluate(details => details.open), true,
+        'Published local browser app and CLI instructions are visible on arrival');
       const commands = terminal.locator('pre:visible').first();
       await check(`Pages-${width} guide code size`, async () => {
         const pre = await textRole(commands);
