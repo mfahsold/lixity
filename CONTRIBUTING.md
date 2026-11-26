@@ -550,6 +550,11 @@ release. Keep `llms.txt` factual.
 The published guide and blog Markdown alternates are generated from HTML.
 Maintain section IDs and quoted examples in the HTML source. `make docs-sync`
 regenerates the Markdown and preserves those anchors and quotations.
+For a substantive public-page revision, update the visible date, structured
+`dateModified` and `sitemap.xml` entry together. Use midnight UTC for article
+timestamps. Keep the content date for changes limited to metadata or domain
+migration. Blog feed update dates come from the article's visible
+`<time datetime>` values.
 
 Maintain installation, CLI/API and contributor references in English. Preserve
 localized guides, metric explanations and public entry pages. Describe language

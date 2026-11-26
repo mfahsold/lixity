@@ -21,7 +21,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
 
-SELF_URL = "https://mfahsold.github.io/lixity/"
+SELF_URL = "https://lixity.de/"
 INDEX_URL = SELF_URL + "blog/index.html"
 FEED_URL = SELF_URL + "blog/feed.xml"
 ICON_URL = SELF_URL + "favicon.ico"

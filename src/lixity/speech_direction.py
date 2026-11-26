@@ -35,11 +35,13 @@ from .research.repository import Repository, ResearchConflictError
 from .speech_controls import (
     ExplicitPauseSeconds,
     SpeechProsody,
-    apply_pronunciation,
+    apply_pronunciation_spans,
     combine_delivery,
+    merge_pronunciation_spans,
+    phoneme_spans,
     phonetic_segments,
+    project_phoneme_spans,
     pronunciation_spans,
-    speech_control_support,
 )
 from .speech_profiles import EXTERNAL_ENGINES, AudioProfile, parse_audio_settings
 
@@ -65,7 +67,8 @@ class MLXDirectionConflict(ValueError):
     def __init__(self) -> None:
         super().__init__(
             "ZONOS3 cannot render free-text passage direction. Export the direction for another "
-            "engine, or use --no-direction for this render; pronunciation rules and explicit pauses remain active."
+            "engine, or clear the profile's instructions and use --no-direction to omit saved passage "
+            "direction, including voice assignments and pauses."
         )
 
 
@@ -119,20 +122,33 @@ class CoquiDirectionConflict(ValueError):
         )
 
 
-def _require_direction_support(profile: AudioProfile, instructions: str) -> None:
+class UnsupportedDirection(ValueError):
+    """The selected voice cannot apply the author's free-text direction."""
+
+
+def require_render_direction(profile: AudioProfile, instructions: str) -> None:
     """Reject free-text delivery instructions on engines that cannot interpret them."""
-    if not instructions:
+    if not instructions or profile.control_support.direction == 'model_interpreted':
         return
     if profile.engine == 'mlx-audio':
         raise MLXDirectionConflict()
     if profile.engine in ('coqui', 'coqui-reference'):
         raise CoquiDirectionConflict()
-    if profile.engine in ('qwen3-base', 'f5-tts'):
+    if profile.engine == 'qwen3-base':
         raise BaseDirectionConflict()
     if profile.engine == 'ims-toucan':
-        raise ValueError(
+        raise UnsupportedDirection(
             'IMS-Toucan cannot render free-text instructions; use structured prosody or export the direction'
         )
+    if profile.engine == 'openai-compatible':
+        raise UnsupportedDirection(
+            'The selected provider profile does not declare support for free-text instructions. '
+            'Use a profile that supports them, clear the instructions before rendering, or export the direction.'
+        )
+    raise UnsupportedDirection(
+        'The selected voice cannot render free-text instructions. '
+        'Choose a compatible profile, clear the instructions before rendering, or export the direction.'
+    )
 
 
 class _Strict(BaseModel):
@@ -203,6 +219,8 @@ class SpeechExportInfo:
     chapter: int
     left_context: str = ''
     right_context: str = ''
+    unsupported_phonemes: tuple[tuple[int, int, str], ...] = ()
+    lexicon_respelling_fallback: bool = False
 
 
 @dataclass(frozen=True)
@@ -279,6 +297,9 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
     from .speech import extract_audio_cues
     audio_settings = parse_audio_settings(project_config.get('audio'), language=profile.language) if project_config and project_config.get('audio') is not None else None
     common = audio_settings.pronunciations if audio_settings else {}
+    matching = audio_settings.pronunciation_matching if audio_settings else None
+    lexicon = audio_settings.pronunciation_lexicon.entries if audio_settings and audio_settings.pronunciation_lexicon else {}
+    lexicon_terms = {term: term for term in lexicon}
 
     def effective_profile(selected: AudioProfile) -> AudioProfile:
         if not common:
@@ -307,12 +328,12 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
             matched.add(key)
         default_pause = profile.scene_pause if cue.kind == 'scene_break' else profile.paragraph_pause if cue.kind != 'heading' and cue.pause_after else cue.pause_after
         cursor = 0
-        chunks: list[tuple[str, AudioProfile, float, float | None, Direction | None, str]] = []
+        chunks: list[tuple[int, int, AudioProfile, float, float | None, Direction | None, str]] = []
         for d in records:
             if cursor < d.start:
                 gap = cue.text[cursor:d.start]
                 if gap.strip():
-                    chunks.append((gap, profile, 0.0, None, None, profile.instructions))
+                    chunks.append((cursor, d.start, profile, 0.0, None, None, profile.instructions))
             selected = (profiles or {}).get(d.profile_id) if d.profile_id else profile
             if selected is None:
                 raise ValueError('A saved direction references an unavailable voice profile')
@@ -320,9 +341,9 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
             if not same_narrator(profile, selected):
                 raise NarratorConflict()
             if not for_export:
-                _require_direction_support(selected, d.instructions or selected.instructions)
+                require_render_direction(selected, d.instructions or selected.instructions)
             if d.prosody.model_dump():
-                if selected.engine != 'ims-toucan':
+                if not selected.control_support.structured_prosody:
                     if not for_export:
                         raise ValueError('Structured prosody requires IMS-Toucan; choose a compatible profile or export the direction')
                 else:
@@ -330,9 +351,7 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
                         **selected.prosody.model_dump(), **d.prosody.model_dump(),
                     }})
             instructions = combine_delivery(selected.instructions, d.instructions)
-            if not for_export or speech_control_support(
-                selected.engine, supports_instructions=selected.supports_instructions,
-            ).direction != 'unsupported':
+            if not for_export or selected.control_support.direction == 'model_interpreted':
                 try:
                     selected = AudioProfile.model_validate({**selected.model_dump(), 'instructions': instructions})
                 except ValidationError:
@@ -342,38 +361,72 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
                     # profile's combined length limit. Export retains both in
                     # metadata and keeps the original profile fully validated.
             end = d.end if d.end is not None else len(cue.text)
-            chunks.append((cue.text[d.start:end], selected, d.pause_before, d.pause_after, d, instructions))
+            chunks.append((d.start, end, selected, d.pause_before, d.pause_after, d, instructions))
             cursor = end
         if cursor < len(cue.text) or not chunks:
-            chunks.append((cue.text[cursor:], profile, 0.0, None, None, profile.instructions))
-        chunk_start = 0
-        for index, (raw_content, effective, before, after, direction, instructions) in enumerate(chunks):
+            chunks.append((cursor, len(cue.text), profile, 0.0, None, None, profile.instructions))
+        lexicon_matches = iter(phoneme_spans(cue.text, lexicon_terms))
+        lexicon_match = next(lexicon_matches, None)
+        for index, (start, end, chunk_profile, before, after, direction, instructions) in enumerate(chunks):
+            effective = chunk_profile
             if not for_export:
-                _require_direction_support(effective, effective.instructions)
-            content = raw_content
-            matching = audio_settings.pronunciation_matching if audio_settings else None
-            content = apply_pronunciation(content, effective.pronunciations,
-                                          case_sensitive=matching.case_sensitive if matching else True,
-                                          whole_words=matching.whole_words if matching else False,
-                                          left_context=cue.text[chunk_start - 1:chunk_start] if chunk_start else "",
-                                          right_context=cue.text[chunk_start + len(raw_content):chunk_start + len(raw_content) + 1])
+                require_render_direction(effective, effective.instructions)
+            raw_content = cue.text[start:end]
+            left_context, right_context = cue.text[start - 1:start] if start else '', cue.text[end:end + 1]
+            legacy = pronunciation_spans(
+                raw_content, effective.pronunciations,
+                case_sensitive=matching.case_sensitive if matching else True,
+                whole_words=matching.whole_words if matching else False,
+                left_context=left_context, right_context=right_context,
+            )
+            selected_spans: list[tuple[int, int, str]] = []
+            selected_phonemes: dict[str, str] = {}
+            expected_phonemes: dict[tuple[int, int], str] = {}
+            unsupported_phonemes: dict[tuple[int, int], str] = {}
+            respelling_fallback = False
+            while lexicon_match is not None and lexicon_match[0] < end:
+                term_start, term_end, term = lexicon_match
+                if term_start < start or term_end > end:
+                    raise ValueError('A passage direction splits a pronunciation term; select the whole term')
+                term_range = term_start - start, term_end - start
+                entry = lexicon[term]
+                spoken = term
+                if entry.ipa is not None and effective.control_support.phonemes:
+                    selected_phonemes[term] = entry.ipa
+                    expected_phonemes[term_range] = entry.ipa
+                elif entry.respelling is not None:
+                    spoken = entry.respelling
+                    respelling_fallback |= entry.ipa is not None
+                elif entry.ipa is not None:
+                    if not for_export:
+                        raise ValueError('The selected voice cannot use a pronunciation entry with only IPA; '
+                                         'choose an IPA-capable voice or supply an explicit respelling')
+                    unsupported_phonemes[term_range] = entry.ipa
+                selected_spans.append((*term_range, spoken))
+                lexicon_match = next(lexicon_matches, None)
+            if selected_phonemes:
+                effective = AudioProfile.model_validate({**effective.model_dump(),
+                    'phonemes': {**effective.phonemes, **selected_phonemes}})
+            substitutions = merge_pronunciation_spans(legacy, selected_spans)
+            content = apply_pronunciation_spans(raw_content, substitutions)
+            if expected_phonemes and not set(project_phoneme_spans(substitutions, expected_phonemes)).issubset(
+                phoneme_spans(content, effective.phonemes)
+            ):
+                raise ValueError('A profile pronunciation conflicts with the project IPA entry on this passage')
             info = None
             if for_export:
-                substitutions = pronunciation_spans(
-                    raw_content, effective.pronunciations,
-                    case_sensitive=matching.case_sensitive if matching else True,
-                    whole_words=matching.whole_words if matching else False,
-                    left_context=cue.text[chunk_start - 1:chunk_start] if chunk_start else '',
-                    right_context=cue.text[chunk_start + len(raw_content):chunk_start + len(raw_content) + 1],
-                )
+                previous_spans = set(legacy)
                 info = SpeechExportInfo(
-                    original_text=raw_content, start=chunk_start, end=chunk_start + len(raw_content),
+                    original_text=raw_content, start=start, end=end,
                     instructions=instructions,
-                    direction=direction, substitutions=tuple(substitutions), kind=cue.kind, chapter=cue.chapter_num,
-                    left_context=cue.text[chunk_start - 1:chunk_start] if chunk_start else '',
-                    right_context=cue.text[chunk_start + len(raw_content):chunk_start + len(raw_content) + 1],
+                    direction=direction, substitutions=tuple(
+                        (left, right, replacement) for left, right, replacement in substitutions
+                        if (left, right, replacement) in previous_spans or raw_content[left:right] != replacement
+                    ), kind=cue.kind, chapter=cue.chapter_num,
+                    left_context=left_context, right_context=right_context,
+                    unsupported_phonemes=project_phoneme_spans(substitutions, unsupported_phonemes),
+                    lexicon_respelling_fallback=respelling_fallback,
                 )
-            chunk_start += len(raw_content)
             pieces = [content] if for_export else segment_speech_text(content, effective)
             for n, piece in enumerate(pieces):
                 pause = after if after is not None else (effective.paragraph_pause if cue.kind not in ('heading', 'scene_break') else default_pause) if index == len(chunks)-1 else 0.0
@@ -399,8 +452,11 @@ def segment_speech_text(text: str, profile: AudioProfile) -> list[str]:
 
 def has_extended_controls(row: SpeechSegment) -> bool:
     """Whether serialization needs the phonetic/structured-controls contract."""
-    return bool(row.profile.engine == 'ims-toucan' or row.profile.phonemes or row.profile.prosody.model_dump()
-                or (row.export_info and row.export_info.direction and row.export_info.direction.prosody.model_dump()))
+    support = row.profile.control_support
+    return bool(support.phonemes or support.structured_prosody
+                or row.profile.phonemes or row.profile.prosody.model_dump()
+                or (row.export_info and (row.export_info.unsupported_phonemes or
+                    (row.export_info.direction and row.export_info.direction.prosody.model_dump()))))
 
 
 def segment_prosody(row: SpeechSegment) -> dict[str, float]:
@@ -413,7 +469,7 @@ def segment_prosody(row: SpeechSegment) -> dict[str, float]:
 
 def plan_json(plan: list[SpeechSegment]) -> dict[str, Any]:
     """Keep legacy plans unchanged; version explicit phonetic/structured controls."""
-    support = speech_control_support('qwen3-base' if any(speech_control_support(row.profile.engine, supports_instructions=row.profile.supports_instructions).direction == 'unsupported' for row in plan) else 'qwen3')
+    support = [row.profile.control_support for row in plan]
     extended = any(has_extended_controls(row) for row in plan)
     segments = []
     for row in plan:
@@ -426,9 +482,10 @@ def plan_json(plan: list[SpeechSegment]) -> dict[str, Any]:
                              **({'prosody': segment_prosody(row)} if segment_prosody(row) else {}),
                              **({'instructions': row.export_info.instructions}
                                 if row.export_info and row.export_info.instructions != row.profile.instructions else {})})
-    return {'schema_version': 'lixity-speech-plan/2' if extended else POLICY, 'controls': {'instructions': support.direction.replace('_', '-'),
-            'pauses': support.pauses.replace('_', '-'),
-            'phonemes': any(speech_control_support(row.profile.engine).phonemes for row in plan), 'ssml': support.ssml},
+    instructions = 'model-interpreted' if all(item.direction == 'model_interpreted' for item in support) else 'unsupported'
+    return {'schema_version': 'lixity-speech-plan/2' if extended else POLICY,
+            'controls': {'instructions': instructions, 'pauses': 'explicit-silence',
+                         'phonemes': any(item.phonemes for item in support), 'ssml': False},
             'segments': segments}
 
 

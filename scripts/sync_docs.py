@@ -26,7 +26,8 @@ def get_version() -> str:
 
 
 _README_RELEASE_DIR = (
-    r"(?:docs/releases/|https://mfahsold\.github\.io/lixity/releases/|"
+    r"(?:docs/releases/|https://lixity\.de/releases/|"
+    r"https://mfahsold\.github\.io/lixity/releases/|"
     r"https://github\.com/mfahsold/lixity/blob/main/docs/releases/)"
 )
 
@@ -106,8 +107,8 @@ def check_or_sync_files(
                  f"Documentation source version: {version}"),
                 (r"release history \(current: \d+\.\d+\.\d+\)",
                  f"release history (current: {version})"),
-                (r"\[Release notes\]\(https://mfahsold\.github\.io/lixity/releases/v\d+\.\d+\.\d+\.md\)",
-                 f"[Release notes](https://mfahsold.github.io/lixity/releases/v{version}.md)"),
+                (r"\[Release notes\]\(https://(?:mfahsold\.github\.io/lixity|lixity\.de)/releases/v\d+\.\d+\.\d+\.md\)",
+                 f"[Release notes](https://lixity.de/releases/v{version}.md)"),
             ],
         ),
         (
@@ -257,7 +258,7 @@ CURRENT_NOTE_CLAIMS: dict[Path, tuple[tuple[str, re.Pattern[str]], ...]] = {
     ),
     Path("docs/llms.txt"): (
         ("current release-note target",
-         re.compile(r"\[Release notes\]\(https://mfahsold\.github\.io/lixity/releases/v(\d+\.\d+\.\d+)\.md\)")),
+         re.compile(r"\[Release notes\]\(https://(?:mfahsold\.github\.io/lixity|lixity\.de)/releases/v(\d+\.\d+\.\d+)\.md\)")),
     ),
     Path("docs/guides/installation.html"): (
         ("current release-note target",

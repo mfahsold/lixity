@@ -123,6 +123,13 @@
         return typeof window.uiLabel === "function" ? window.uiLabel(resolvedKey) : _uiLabel(resolvedKey);
       };
     },
+    setControlLabel: function (control, name) {
+      // Icon controls share one name with accessibility and keyboard/pointer help.
+      // Leave the attributes in place when a playback or status update repeats them.
+      if (control.getAttribute("aria-label") !== name) control.setAttribute("aria-label", name);
+      if (control.dataset.help !== name) control.dataset.help = name;
+      if (control.hasAttribute("title")) control.removeAttribute("title");
+    },
     setStatus: function (elOrId, message, state, options) {
       var el = typeof elOrId === "string" ? document.getElementById(elOrId) : elOrId;
       if (!el) return null;

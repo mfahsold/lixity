@@ -33,7 +33,7 @@ Full formulas live in [Methods](METHODS.md); empirical bounds and known failure 
 | Decide whether to revise a passage | Compare the draft with the saved text in **Write** under the same settings. Check which version was saved and how to recover earlier text. [Writing and recovery](WORKSPACE.md#write-a-manuscript) |
 | Revisit the research behind a scene | Open **Research for this passage** and follow a quotation or dossier to its retained version. [Dossiers beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript) |
 | Try a different reveal order | Write an intended beat in **Story rehearsal** and try another order for the cards. Review a card again after the associated text changes. [Story rehearsal](WORKSPACE.md#compare-scene-evidence-and-rehearse-an-intent) |
-| Hear how a passage reads | Rehearse in the **Teleprompter** or record a short reading. Set up the selected speech service to generate audio. [Audio guide](AUDIO.md) |
+| Hear how a passage reads | Rehearse in the **Teleprompter** and record a short take. With a configured speech service, preview the same passage in the chosen voice and listen for the intended delivery before rendering a chapter. [Audio workflow](AUDIO.md#getting-started) |
 | Share the material a reader needs | Prepare a manuscript PDF, a saved dossier PDF or a reading website with the chapters and background you select. Check the prepared copy before sharing. [Reading website](WORKSPACE.md#export-a-reading-website) |
 
 The [Warehouse 4 demo](demo/report.html) is a fixed example for close reading.
@@ -53,8 +53,12 @@ new exports. Use the same passage and task when assessing other tools.
   [Research guide](research/USAGE.md) · [Project backup](PROJECT_BACKUP.md)
 - **Recording and generated speech have distinct setup needs.** Recording
   needs access to the selected microphone. Synthesis needs the chosen optional
-  runtime or a configured provider. An explicitly selected remote provider
-  receives the text required for rendering. [Audio guide](AUDIO.md)
+  runtime or a configured provider. The selected engine determines which
+  pronunciation and delivery controls apply. Preview the export to see which
+  instructions it carries and listen to the rendered passage to judge the
+  result. An explicitly selected remote provider receives the text required
+  for rendering. [Audio workflow](AUDIO.md#getting-started) ·
+  [Validation and limits](STABILITY.md)
 
 <a id="implementation-and-release-status"></a>
 
@@ -80,7 +84,7 @@ iPadOS ports. [Project funding and payment status](guides/support.html)
 | Chapter comparison | Ask a writer or editor to explain a difference between two chapters, find the contributing text and return to the reading position. Repeat when the comparison is unavailable and check whether they can still find measured passages. Record where they needed help. [Analysis marks and limits](guides/interpretation.html#analysis-marks) |
 | Desktop distribution | Verify the exact candidate files and their hashes. Exercise a fresh installation, first launch, upgrade and rollback on each supported system. Open the sample in the installed app. [Installer qualification](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#review-and-publish-one-candidate) |
 | Revision and research | Ask an author or editor to make a recoverable change and open a dossier with a pinned source. Check the saved result after reopening, including interruption, conflict or restore when relevant. [Writing and recovery](WORKSPACE.md#write-a-manuscript) |
-| Audio | Observe a real capture and playback, including permission handling and microphone selection. Record which runtime was used for any synthesis result. [Author voice](AUDIO.md#author-voice-recording-and-listening) |
+| Audio | Capture and replay a short take, including microphone permission and selection. Check the pronunciation route and preview the same passage with the selected engine. Record the runtime, model and saved direction for synthesis checks. Inspect word accuracy, voice consistency and audible joins when listening to a chapter. [Author voice](AUDIO.md#author-voice-recording-and-listening) · [Audio methods](METHODS.md) |
 | Large projects | Time readiness, readable text, the first evidence jump and return on the same input. Measure archive validation separately from index queries. Keep evidence, saved project data and recovery in the checks when changing implementation. [Desktop and large-project priorities](RUST_EVALUATION_RFC.md#desktop-and-large-project-priorities) |
 
 Keep observation records free of private manuscript text and search terms. Use

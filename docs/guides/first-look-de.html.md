@@ -2,7 +2,7 @@
 
 Mit Lixity liest du dein Manuskript, vergleichst Sprachmuster und findest die Quellen zu einem Szenendetail wieder. Die lokale Browser-App verbindet Textstellen, Recherche und eigene Entscheidungen. Ihre Sprachhinweise sind Heuristiken zur Prüfung; sie bewerten weder literarische Qualität noch die Wahrheit einer Aussage.
 
-Aktualisiert am 25. November 2026
+Aktualisiert am 26. November 2026
 
 <a id="frage"></a>
 
@@ -116,17 +116,15 @@ Die öffentliche Demo zeigt ein fiktives Projekt. Das installierte Paket und sei
 
 ## Die eigene Textstelle hören und einsprechen
 
-In der lokalen Anwendung führt **Projekt → Einstellungen → Audio und Dienste** zu Aufnahmen, Stimmprofilen, Mikrofon und Dienststatus. **Anhören und Regie** öffnet sich auch aus der Manuskriptleiste. Die öffentliche Demo kann keine Stimmprobe speichern oder Sprachsynthese starten.
+Im lokalen Projekt kannst du die Textstelle im **Teleprompter** (`P`) laut lesen. In der öffentlichen Demo kannst du vorhandene Kapitelaufnahmen anhören. Für eine eigene Aufnahme, Stimmreferenz oder Vertonung brauchst du die lokale Anwendung.
 
-Seit 0.8.1 gliedert sich der lokale Audiodialog in vier Reiter: **Autorenstimme** für Aufnahme, WAV-Upload und gespeicherte Stimmproben, **Stimmprofile** für Stimme und Sprachdienst, **Hörprobe & Regie** für Textregie, Ausgabe, Export und Aufnahmeprüfung sowie **Mikrofon & Pegel** für die lokale Hardware. Hilfetexte erklären die Bedienelemente. Der kompakte Player zeigt Laufzeit, Suchleiste, Lautstärke und ein laufendes Frequenzspektrum. Für eine Browseraufnahme musst du das Mikrofon für die aktuelle lokale Adresse freigeben; der Hardwarepegel ersetzt diese Freigabe nicht.
+1. Öffne **Projekt → Einstellungen → Audio und Dienste → Autorenstimme einsprechen**. Gib das Mikrofon frei, lies eine kurze Textstelle und höre dir die Aufnahme an. Prüfe die tatsächlich gesprochenen Wörter und wähle **Als Autorenstimme für dieses Buch speichern**. Die [Aufnahmeanleitung](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening) erklärt Mikrofonfreigabe und Import auf Englisch.
 
-Der Zustand direkt neben dem Aufnahmebutton zeigt, ob die Freigabe aussteht, die Aufnahme läuft oder der Start fehlgeschlagen ist. Eine gespeicherte Mikrofon-Sperre entfernst du im Browser über das Symbol neben der Adresse; starte danach erneut und erlaube den Zugriff. Fehlgeschlagene Starts werden in der Browserkonsole protokolliert. Solange der Browser den Zugriff blockiert, gibt es dazu keinen Serveraufruf und keinen Eintrag im Dienstprotokoll. Mehr zur [Aufnahme und Fehlerdiagnose](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening).
+2. Öffne **Stimmprofile**. Falls die Aufnahme noch nicht aktiv ist, wähle ein Profil mit **Referenzaufnahme**, ordne ihm die Aufnahme zu und speichere. Prüfe unter **Sprachdienst** die Einrichtung. Wähle anschließend im Manuskript **Anhören und Regie → Absatz anhören**. Die [Übersicht der Sprachdienste](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#choose-a-synthesis-route) zeigt die möglichen Einstellungen.
 
-Unter **Hörprobe & Regie → Regie exportieren** wählst du eine Textstelle, ein Kapitel oder das ganze Manuskript. **Exportvorschau öffnen** bereitet die Downloads als JSON und SSML vor. Dafür ist kein Sprachdienst nötig. JSON erhält Stimmen und Regie; SSML nennt Grenzen der Übertragbarkeit. Mit **Audio erzeugen** startest du die Vertonung mit einem eingerichteten Sprachdienst. Externe WAV-, FLAC- oder MP3-Aufnahmen lassen sich lokal prüfen; der Textvergleich benötigt zusätzlich ein zeitlich zugeordnetes Transkript. Die [Audioanleitung](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#audio-export-and-external-providers-unreleased) beschreibt Einrichtung und Dateiformate.
+3. Unter **Regie exportieren → Exportvorschau öffnen** kannst du den geplanten Sprechtext und die Regie als JSON oder SSML prüfen und herunterladen. Das funktioniert offline ohne Sprachdienst. Wenn du die Hörprobe geprüft hast, wähle **Kapitel-Audio → Kapitel vertonen**.
 
-Im **Teleprompter** (`P`) liest du den geplanten Sprechtext mit Regiehinweisen und nimmst einen Take auf. Ergänze die tatsächlich gesprochenen Wörter und bestätige das Transkript. WAV und passende JSON-Datei bewahren Audio-Prüfsumme und Prüfstatus; die Übergabe ins Autorenstimmen-Studio speichert noch keine Referenz.
-
-**Optionales IMS-Toucan, verfügbar in 0.8.1:** Eine eigene Referenzstimme lässt sich für Deutsch oder Englisch mit getrennten IPA-Ausspracheangaben und strukturierten Reglern für Dauer und Prosodie kombinieren. Freie Schauspielanweisungen setzt dieses Modell nicht um. Andere Sprachdienste unterstützen andere Möglichkeiten; höre zuerst eine kurze Vorschau. [Einrichtung und Modellgrenzen](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction).
+Mit [IMS-Toucan](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction) kannst du für Deutsch und Englisch eine Stimmreferenz mit IPA-Lautschrift und konkreten Angaben zu Dauer, Tonhöhe und Energie verbinden. In v0.9.3 speicherst du Ausspracheangaben im Stimmprofil. Der Entwicklungsstand ergänzt ein [Aussprachewörterbuch für das Projekt](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#project-pronunciations) mit IPA-Lautschrift und alternativer Schreibweise.
 
 [English tour with more controls](first-look.html) · [Praxisbeispiel zu Wiederholungen (Englisch)](../blog/local-word-echoes.html)
 

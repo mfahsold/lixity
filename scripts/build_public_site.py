@@ -14,7 +14,7 @@ LANGUAGES = {'en': 'English', 'de': 'Deutsch', 'fr': 'Français', 'es': 'Españo
              'it': 'Italiano', 'pt': 'Português', 'nl': 'Nederlands'}
 OG_LOCALES = {'en': 'en_US', 'de': 'de_DE', 'fr': 'fr_FR', 'es': 'es_ES',
               'it': 'it_IT', 'pt': 'pt_PT', 'nl': 'nl_NL'}
-BASE = 'https://mfahsold.github.io/lixity/'
+BASE = 'https://lixity.de/'
 
 
 def page_path(language: str) -> str:
@@ -95,6 +95,7 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
             '@context': 'https://schema.org', '@type': 'SoftwareApplication',
             'name': 'Lixity', 'applicationCategory': 'WritingApplication',
             'operatingSystem': 'Windows, macOS, Linux', 'url': page_url(lang),
+            'image': f'{BASE}screenshots/dashboard-light.png',
             'description': content['description'], 'inLanguage': list(LANGUAGES),
             'license': 'https://github.com/mfahsold/lixity/blob/main/LICENSE',
             'offers': {'@type': 'Offer', 'price': '0', 'priceCurrency': 'EUR'},

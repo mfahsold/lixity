@@ -5,6 +5,7 @@ import json
 
 import pytest
 
+from lixity.config import prepare_project_settings, read_explicit_project_config
 from lixity.speech_direction import (
     Direction,
     build_speech_plan,
@@ -44,6 +45,86 @@ def test_toucan_plan_reports_phonetic_support_without_requiring_an_override():
     plan = plan_json(build_speech_plan("Der Fluss ist still.", toucan()))
     assert plan["schema_version"] == "lixity-speech-plan/2"
     assert plan["controls"]["phonemes"] is True
+
+
+def project_lexicon(profile, entries):
+    return {"audio": {
+        "schema_version": "lixity-audio-settings/5", "selected": "n",
+        "profiles": {"n": profile.model_dump()},
+        "pronunciations": {"New York": "Niu York", "river": "rivver"},
+        "pronunciation_lexicon": {"schema_version": "lixity-pronunciation-lexicon/1", "entries": entries},
+    }}
+
+
+def test_project_entry_compiles_ipa_or_explicit_respelling():
+    text = "New York is where the river winds."
+    entries = {"New York": {"ipa": "nuː jɔʁk", "respelling": "Neu Jork"}}
+    actor = toucan(phonemes={"New York": "njuː jɔːk"})
+    phonetic_plan = build_speech_plan(text, actor, project_config=project_lexicon(actor, entries))
+    assert phonetic_plan[0].text == "New York is where the rivver winds."
+    assert phonetic_plan[0].profile.phonemes == {"New York": "nuː jɔʁk"}
+    assert actor.phonemes == {"New York": "njuː jɔːk"}
+    mlx = AudioProfile(engine="mlx-audio")
+    fallback_plan = build_speech_plan(text, mlx, project_config=project_lexicon(mlx, entries), for_export=True)
+    assert fallback_plan[0].text == "Neu Jork is where the rivver winds."
+    assert not fallback_plan[0].profile.phonemes
+    timeline = timeline_json(fallback_plan)
+    assert timeline["warnings"][0]["code"] == "pronunciation_respelling_used"
+    assert timeline["segments"][0]["substitutions"][0] == {
+        "start": 0, "end": 8, "original": "New York", "replacement": "Neu Jork",
+    }
+
+
+def test_project_entry_without_respelling_preserves_export_and_blocks_unsupported_render():
+    profile = AudioProfile(engine="mlx-audio")
+    config = project_lexicon(profile, {"New York": {"ipa": "nuː jɔʁk"}})
+    with pytest.raises(ValueError, match="explicit respelling"):
+        build_speech_plan("New York.", profile, project_config=config)
+    plan = build_speech_plan("New York.", profile, project_config=config, for_export=True)
+    timeline = timeline_json(plan)
+    assert timeline["warnings"][0]["code"] == "pronunciation_ipa_unsupported"
+    assert timeline["segments"][0]["phonemes"] == [{"start": 0, "end": 8, "text": "New York", "ipa": "nuː jɔʁk"}]
+    assert '<phoneme alphabet="ipa" ph="nuː jɔʁk">New York</phoneme>' in ssml_export(plan)["ssml"]
+    assert build_speech_plan("New Yorkshire.", profile, project_config=config)[0].text == "Niu Yorkshire."
+
+
+def test_project_ipa_rejects_a_longer_profile_phoneme_that_masks_it():
+    profile = toucan(phonemes={"in New York": "ɪn njuː jɔːk"})
+    config = project_lexicon(profile, {"New York": {"ipa": "nuː jɔʁk"}})
+    with pytest.raises(ValueError, match="conflicts with the project IPA"):
+        build_speech_plan("She lives in New York.", profile, project_config=config)
+
+
+def test_pronunciation_offsets_survive_skipped_whitespace_between_directions():
+    profile = AudioProfile(engine="mlx-audio")
+    text = "The day a river crosses New York."
+    anchor = speech_passages(text, "en")[0]["anchor"]
+    directions = [Direction(anchor=anchor, start=0, end=3), Direction(anchor=anchor, start=4, end=7)]
+    config = project_lexicon(profile, {"New York": {"ipa": "nuː jɔʁk"}})
+    timeline = timeline_json(build_speech_plan(text, profile, directions=directions,
+                                             project_config=config, for_export=True))
+    first, second, tail = timeline["segments"]
+    assert (first["source_range"]["end"], second["source_range"]["start"]) == (3, 4)
+    assert second["source_range"]["end"] == tail["source_range"]["start"] == 7
+    phone = tail["phonemes"][0]
+    assert tail["spoken_text"][phone["start"]:phone["end"]] == "New York"
+    assert phone["start"] == tail["original_text"].index("New York") + 1
+    assert tail["substitutions"] == [{"start": 3, "end": 8, "original": "river", "replacement": "rivver"}]
+
+
+def test_project_entry_rejects_split_range_and_roundtrips_other_setting_edits(tmp_path):
+    profile = toucan()
+    config = project_lexicon(profile, {"New York": {"ipa": "nuː jɔʁk"}})
+    text = "New York remains still."
+    direction = Direction(anchor=speech_passages(text, "de")[0]["anchor"], start=4)
+    with pytest.raises(ValueError, match="splits a pronunciation term"):
+        build_speech_plan(text, profile, directions=[direction], project_config=config)
+    (tmp_path / "lixity.toml").write_text('language = "de"\n', encoding="utf-8")
+    prepare_project_settings(tmp_path, config).commit()
+    saved = read_explicit_project_config(tmp_path)["audio"]
+    saved["profiles"]["n"]["name"] = "A different name"
+    prepare_project_settings(tmp_path, {"audio": saved}).commit()
+    assert read_explicit_project_config(tmp_path)["audio"]["pronunciation_lexicon"] == config["audio"]["pronunciation_lexicon"]
 
 
 @pytest.mark.parametrize("changes", [

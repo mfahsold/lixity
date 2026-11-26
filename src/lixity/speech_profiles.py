@@ -19,6 +19,7 @@ from pydantic import (
 
 from .speech_controls import (
     ExplicitPauseSeconds,
+    SpeechControlSupport,
     SpeechProsody,
     speech_control_support,
     validate_pronunciation_keys,
@@ -209,7 +210,9 @@ class AudioProfile(BaseModel):
 
     @model_validator(mode="after")
     def supported_controls(self) -> AudioProfile:
-        if self.engine != "ims-toucan" and (self.phonemes or self.prosody.model_dump()):
+        support = self.control_support
+        if ((self.phonemes and not support.phonemes)
+                or (self.prosody.model_dump() and not support.structured_prosody)):
             raise ValueError("Phonetic overrides and structured prosody require IMS-Toucan")
         if self.engine in EXTERNAL_ENGINES:
             from .speech_providers import speech_endpoint
@@ -227,6 +230,8 @@ class AudioProfile(BaseModel):
                 raise ValueError("ZONOS3 reference identity requires voice='reference'")
             if self.engine == "mlx-audio" and self.language not in MLX_AUDIO_LANGUAGES:
                 raise ValueError("MLX-Audio ZONOS3 supports the configured Lixity languages de, en, fr, es, it, pt and nl")
+            # Legacy custom MLX bindings can retain authored text for export.
+            # The shared synthesis check uses the effective adapter capability.
             if self.instructions and (not self.supports_instructions
                                       or (self.engine == "mlx-audio"
                                           and self.model == MLX_AUDIO_TTS_MODEL)):
@@ -273,6 +278,11 @@ class AudioProfile(BaseModel):
             raise ValueError("VoiceDesign requires voice='design' and a voice description")
         return self
 
+    @property
+    def control_support(self) -> SpeechControlSupport:
+        """Resolve synthesis controls for this engine and provider declaration."""
+        return speech_control_support(self.engine, supports_instructions=self.supports_instructions)
+
 
 class PronunciationMatching(BaseModel):
     """Explicit project-wide matching policy for schema /2."""
@@ -280,6 +290,44 @@ class PronunciationMatching(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
     case_sensitive: bool = True
     whole_words: bool = False
+
+
+class PronunciationEntry(BaseModel):
+    """Author-supplied IPA, a spoken spelling, or both."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True)
+    ipa: str | None = Field(default=None, min_length=1, max_length=300)
+    respelling: str | None = Field(default=None, min_length=1, max_length=300)
+
+    @field_validator("ipa", "respelling")
+    @classmethod
+    def valid_form(cls, value: str | None) -> str | None:
+        return _text(value) if value is not None else None
+
+    @model_validator(mode="after")
+    def require_form(self) -> PronunciationEntry:
+        if self.ipa is None and self.respelling is None:
+            raise ValueError("A pronunciation entry requires IPA, a respelling, or both")
+        return self
+
+    @model_serializer(mode="wrap")
+    def serialize_entry(self, handler: SerializerFunctionWrapHandler) -> dict[str, str]:
+        return {key: value for key, value in handler(self).items() if value is not None}
+
+
+class PronunciationLexicon(BaseModel):
+    """Optional, independently versioned project-wide pronunciation table."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, hide_input_in_errors=True)
+    schema_version: Literal["lixity-pronunciation-lexicon/1"]
+    entries: dict[Annotated[str, Field(min_length=1, max_length=100)], PronunciationEntry] = Field(max_length=200)
+
+    @field_validator("entries")
+    @classmethod
+    def valid_terms(cls, entries: dict[str, PronunciationEntry]) -> dict[str, PronunciationEntry]:
+        for term in entries:
+            _text(term)
+        return entries
 
 
 class AudioSettings(BaseModel):
@@ -291,10 +339,13 @@ class AudioSettings(BaseModel):
     profiles: dict[str, AudioProfile] = Field(max_length=MAX_AUDIO_PROFILES)
     pronunciations: PronunciationMap = Field(default_factory=dict, max_length=200)
     pronunciation_matching: PronunciationMatching = Field(default_factory=PronunciationMatching)
+    pronunciation_lexicon: PronunciationLexicon | None = None
 
     @model_serializer(mode="wrap")
     def serialize_settings(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
         data: dict[str, Any] = handler(self)
+        if self.pronunciation_lexicon is None:
+            data.pop("pronunciation_lexicon", None)
         if self.schema_name == "lixity-audio-settings/1":
             data.pop("pronunciations", None)
             data.pop("pronunciation_matching", None)
@@ -325,6 +376,8 @@ class AudioSettings(BaseModel):
 
     @model_validator(mode="after")
     def valid_selection(self) -> AudioSettings:
+        if self.pronunciation_lexicon is not None and self.schema_name != "lixity-audio-settings/5":
+            raise ValueError("The project pronunciation lexicon requires audio schema lixity-audio-settings/5")
         if not self.profiles:
             if self.schema_name not in ("lixity-audio-settings/4", "lixity-audio-settings/5") or self.selected:
                 raise ValueError("Empty audio profiles require schema /4 or later and an empty selection")
@@ -379,7 +432,7 @@ def audio_capabilities() -> dict[str, Any]:
 
     Qwen timbres are multilingual; native-language quality requires auditioning.
     """
-    return {
+    capabilities: dict[str, Any] = {
         "mlx-audio": {
             "name": "MLX-Audio ZONOS3 TTS", "short_name": "ZONOS3", "tier": "recommended", "targets": ["local"],
             "languages": list(MLX_AUDIO_LANGUAGES),
@@ -392,8 +445,7 @@ def audio_capabilities() -> dict[str, Any]:
             "configurable_model": True, "provider_fields": False,
             "configurable_voice": True, "configurable_language": True,
             "reference_supported": True, "local_worker": "isolated-mlx-audio",
-            "instructions": False, "configurable_instructions": False,
-            "control_support": speech_control_support("mlx-audio").as_dict(),
+            "configurable_instructions": False,
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": MLX_AUDIO_DEFAULT_MODEL_SPEED, "implementation": "model-condition"},
             "model": MLX_AUDIO_TTS_MODEL, "default_base_url": MLX_AUDIO_BASE_URL,
@@ -403,8 +455,7 @@ def audio_capabilities() -> dict[str, Any]:
             "tier": "recommended", "targets": ["local"],
             "languages": [], "voices": {}, "configurable_model": True,
             "configurable_voice": True, "configurable_language": True,
-            "instructions": False, "configurable_instructions": True,
-            "control_support": speech_control_support("openai-compatible").as_dict(),
+            "configurable_instructions": True,
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": None,
@@ -414,8 +465,6 @@ def audio_capabilities() -> dict[str, Any]:
             "targets": ["local", "jetson"], "languages": list(QWEN_LANGUAGES),
             "voices": {voice: {"name": voice, "languages": list(QWEN_LANGUAGES)} for voice in QWEN_VOICES},
             "default_voice": QWEN_DEFAULT_VOICE,
-            "instructions": True,
-            "control_support": speech_control_support("qwen3").as_dict(),
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": QWEN_MODEL,
@@ -424,8 +473,7 @@ def audio_capabilities() -> dict[str, Any]:
             "name": "IMS-Toucan", "tier": "advanced", "targets": ["local"], "languages": ["de", "en"],
             "guide_url": "https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction",
             "voices": {"reference": {"name": "Reference", "languages": ["de", "en"]}},
-            "reference_required": True, "instructions": False,
-            "control_support": speech_control_support("ims-toucan").as_dict(),
+            "reference_required": True,
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": TOUCAN_MODEL,
@@ -433,8 +481,7 @@ def audio_capabilities() -> dict[str, Any]:
         **{engine: {
             "name": name, "short_name": short_name, "tier": "advanced", "targets": ["local"], "languages": ["de"],
             "voices": {voice: {"name": voice_name, "languages": ["de"]}},
-            "reference_required": engine == "coqui-reference", "instructions": False,
-            "control_support": speech_control_support(engine).as_dict(),
+            "reference_required": engine == "coqui-reference",
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": model,
@@ -447,8 +494,7 @@ def audio_capabilities() -> dict[str, Any]:
             "creation_enabled": False, "runtime_status": "unavailable",
             "runtime_reason": "The bundled F5-TTS runtime is unavailable; existing profiles remain readable for export and cached audio.",
             "voices": {"reference": {"name": "Reference", "languages": ["de", "en"]}},
-            "reference_required": True, "instructions": False,
-            "control_support": speech_control_support("f5-tts").as_dict(),
+            "reference_required": True,
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": F5_MODEL,
@@ -456,8 +502,6 @@ def audio_capabilities() -> dict[str, Any]:
         "qwen3-design": {
             "name": "Qwen3-TTS 1.7B VoiceDesign", "short_name": "Qwen3 VoiceDesign", "tier": "advanced",
             "targets": ["local", "jetson"], "languages": list(QWEN_LANGUAGES), "voices": {}, "voice_design": True,
-            "instructions": True,
-            "control_support": speech_control_support("qwen3-design").as_dict(),
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": QWEN_DESIGN_MODEL,
@@ -466,13 +510,17 @@ def audio_capabilities() -> dict[str, Any]:
             "name": "Qwen3-TTS 1.7B Base", "short_name": "Qwen3 Base", "tier": "advanced",
             "targets": ["local", "jetson"], "languages": list(QWEN_LANGUAGES),
             "voices": {"reference": {"name": "Reference", "languages": list(QWEN_LANGUAGES)}},
-            "reference_required": True, "instructions": False,
-            "control_support": speech_control_support("qwen3-base").as_dict(),
+            "reference_required": True,
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": QWEN_BASE_MODEL,
         },
     }
+    for engine, capability in capabilities.items():
+        support = speech_control_support(engine)
+        capability["instructions"] = support.direction == "model_interpreted"
+        capability["control_support"] = support.as_dict()
+    return capabilities
 
 
 def requires_audio_migration(raw: object) -> bool:

@@ -226,10 +226,27 @@ owns setup, refresh, migration and paired backup. Capture enables no background 
 
 ## Record or share a reading
 
-For a short recording, the teleprompter, an author's voice or generated narration,
-follow the [audio manual](AUDIO.md). Recording permission, voice-reference
-eligibility and speech-worker readiness are different checks. Start with a short
-preview before generating a chapter; choosing a model does not start its worker.
+Open **Teleprompter** in **Manuscript** to rehearse a passage. To generate a
+preview with your own voice in a writable project, use one paragraph first.
+
+1. In **Project → Settings → Audio and services**, choose **Record author's voice**.
+   Select the microphone, review your take and transcript, then choose **Save as
+   author voice for this book**. A recording can be played as soon as it is ready.
+   Using it as a voice reference also requires a suitable take and transcript.
+2. Open **Voice profiles**. If saving the take did not activate it, select a
+   profile that accepts a **Reference recording**, select the take and choose
+   **Save profiles**. Use **Speech service** to check the engine setup. Recording
+   works with microphone access. Generation requires a separate
+   [runtime or provider](INSTALLATION.md#speech-synthesis-setup).
+3. Return to **Manuscript → Listen and direct**, select a paragraph and choose
+   **Preview paragraph** to hear the selected voice. To correct a recurring
+   name, v0.9.3 stores pronunciation in the voice profile. The development
+   checkout adds **Voice profiles → Pronunciation → Whole project**.
+   [Project pronunciations](AUDIO.md#project-pronunciations)
+4. Use **Save passage direction** to keep the delivery for that paragraph.
+   In **Export direction**, use **Preview export** to check which instructions
+   the chosen target can carry. When the preview sounds right, open **Chapter
+   audio** and choose **Render chapter**. [Full audio workflow](AUDIO.md)
 
 Choose **Project actions → Reading website** to share a review workspace, curated
 novel or companion. The [workspace export instructions](WORKSPACE.md#export-a-reading-website)

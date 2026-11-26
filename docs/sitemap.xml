@@ -3,189 +3,189 @@
         xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
         xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
   <url>
-    <loc>https://mfahsold.github.io/lixity/</loc>
+    <loc>https://lixity.de/</loc>
     <lastmod>2026-11-23</lastmod>
     <image:image>
-      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-light.png</image:loc>
+      <image:loc>https://lixity.de/screenshots/dashboard-light.png</image:loc>
       <image:title>Lixity continuous manuscript reader with chapter navigation and contextual tools</image:title>
     </image:image>
     <image:image>
-      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png</image:loc>
+      <image:loc>https://lixity.de/screenshots/dashboard-heatmap.png</image:loc>
       <image:title>Chapter comparison map showing differences from the manuscript's own style</image:title>
     </image:image>
     <image:image>
-      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-measurement-focus.png</image:loc>
+      <image:loc>https://lixity.de/screenshots/dashboard-measurement-focus.png</image:loc>
       <image:title>Sentence-length explanation with literal count and separate paragraph comparison</image:title>
     </image:image>
     <image:image>
-      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-dossier-image.png</image:loc>
+      <image:loc>https://lixity.de/screenshots/dashboard-dossier-image.png</image:loc>
       <image:title>A local visual reference in a dossier section with a description and source caption</image:title>
     </image:image>
     <image:image>
-      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-project-settings.png</image:loc>
+      <image:loc>https://lixity.de/screenshots/dashboard-project-settings.png</image:loc>
       <image:title>Unsaved example chapter register draft with range and assignment</image:title>
     </image:image>
     <video:video>
-      <video:thumbnail_loc>https://mfahsold.github.io/lixity/videos/product-tour.webp</video:thumbnail_loc>
+      <video:thumbnail_loc>https://lixity.de/videos/product-tour.webp</video:thumbnail_loc>
       <video:title>Lixity in 48 seconds: reading, measuring and reporting one chapter</video:title>
       <video:description>Six eight-second scenes: open an analysis suggestion, see the exact counted words, compare an unsaved draft, read a chapter measurement, open a saved dossier and download its PDF.</video:description>
-      <video:content_loc>https://mfahsold.github.io/lixity/videos/product-tour.mp4</video:content_loc>
+      <video:content_loc>https://lixity.de/videos/product-tour.mp4</video:content_loc>
       <video:duration>48</video:duration>
       <video:publication_date>2026-11-24</video:publication_date>
     </video:video>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/guides/first-look.html</loc>
-    <lastmod>2026-11-25</lastmod>
+    <loc>https://lixity.de/guides/first-look.html</loc>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/guides/first-look-de.html</loc>
-    <lastmod>2026-11-25</lastmod>
+    <loc>https://lixity.de/guides/first-look-de.html</loc>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/sandbox/index.html</loc>
+    <loc>https://lixity.de/sandbox/index.html</loc>
     <lastmod>2026-11-13</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/demo/report.html</loc>
+    <loc>https://lixity.de/demo/report.html</loc>
     <lastmod>2026-11-23</lastmod>
     <image:image>
-      <image:loc>https://mfahsold.github.io/lixity/assets/research/hamburg-free-port-1900.jpg</image:loc>
+      <image:loc>https://lixity.de/assets/research/hamburg-free-port-1900.jpg</image:loc>
       <image:title>Historical Hamburg free-port plan by Richard Krause, circa 1900</image:title>
     </image:image>
     <image:image>
-      <image:loc>https://mfahsold.github.io/lixity/assets/research/hamburg-harbour-1890-1900.jpg</image:loc>
+      <image:loc>https://lixity.de/assets/research/hamburg-harbour-1890-1900.jpg</image:loc>
       <image:title>Hamburg harbour photochrom print, 1890-1900, Library of Congress</image:title>
     </image:image>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/demo/reader/index.html</loc>
+    <loc>https://lixity.de/demo/reader/index.html</loc>
     <lastmod>2026-11-10</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/demo/reader/analysis.html</loc>
+    <loc>https://lixity.de/demo/reader/analysis.html</loc>
     <lastmod>2026-11-02</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/demo/companion/index.html</loc>
+    <loc>https://lixity.de/demo/companion/index.html</loc>
     <lastmod>2026-11-10</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/examples/effi-briest.html</loc>
+    <loc>https://lixity.de/examples/effi-briest.html</loc>
     <lastmod>2026-11-02</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html</loc>
+    <loc>https://lixity.de/examples/pride-and-prejudice.html</loc>
     <lastmod>2026-11-02</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/guides/installation.html</loc>
+    <loc>https://lixity.de/guides/installation.html</loc>
     <lastmod>2026-11-25</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/guides/support.html</loc>
+    <loc>https://lixity.de/guides/support.html</loc>
     <lastmod>2026-11-26</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/guides/interpretation.html</loc>
+    <loc>https://lixity.de/guides/interpretation.html</loc>
     <lastmod>2026-11-20</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/guides/manuscript-analysis-tools.html</loc>
+    <loc>https://lixity.de/guides/manuscript-analysis-tools.html</loc>
     <lastmod>2026-11-26</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/guides/research-pdf.html</loc>
+    <loc>https://lixity.de/guides/research-pdf.html</loc>
     <lastmod>2026-11-23</lastmod>
     <image:image>
-      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-research-timeline.png</image:loc>
+      <image:loc>https://lixity.de/screenshots/dashboard-research-timeline.png</image:loc>
       <image:title>Claims timeline with a shared axis, placed period badges and a placement hint</image:title>
     </image:image>
     <video:video>
-      <video:thumbnail_loc>https://mfahsold.github.io/lixity/videos/research-timeline.png</video:thumbnail_loc>
+      <video:thumbnail_loc>https://lixity.de/videos/research-timeline.png</video:thumbnail_loc>
       <video:title>Lixity claims timeline walkthrough</video:title>
       <video:description>Open Claims, switch to Timeline, follow a placed row to its claim card and see where free-text periods stay unplaced.</video:description>
-      <video:content_loc>https://mfahsold.github.io/lixity/videos/research-timeline.mp4</video:content_loc>
+      <video:content_loc>https://lixity.de/videos/research-timeline.mp4</video:content_loc>
       <video:duration>9</video:duration>
       <video:publication_date>2026-10-12</video:publication_date>
     </video:video>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/lixity-093-manuscript-revision.html</loc>
+    <loc>https://lixity.de/blog/lixity-093-manuscript-revision.html</loc>
     <lastmod>2026-11-26</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/lixity-093-one-passage-revision.html</loc>
+    <loc>https://lixity.de/blog/lixity-093-one-passage-revision.html</loc>
     <lastmod>2026-11-26</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/romankapitel-pruefen-de.html</loc>
+    <loc>https://lixity.de/blog/romankapitel-pruefen-de.html</loc>
     <lastmod>2026-11-20</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/review-a-chapter.html</loc>
+    <loc>https://lixity.de/blog/review-a-chapter.html</loc>
     <lastmod>2026-11-20</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/revision-aware-workspace.html</loc>
+    <loc>https://lixity.de/blog/revision-aware-workspace.html</loc>
     <lastmod>2026-11-20</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/literary-quality-and-editorial-metrics.html</loc>
+    <loc>https://lixity.de/blog/literary-quality-and-editorial-metrics.html</loc>
     <lastmod>2026-11-02</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/leseguete-und-lektoratsmetriken-de.html</loc>
+    <loc>https://lixity.de/blog/leseguete-und-lektoratsmetriken-de.html</loc>
     <lastmod>2026-11-02</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/speech-direction-and-style-space.html</loc>
-    <lastmod>2026-11-25</lastmod>
+    <loc>https://lixity.de/blog/speech-direction-and-style-space.html</loc>
+    <lastmod>2026-11-26</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/why-this-passage.html</loc>
+    <loc>https://lixity.de/blog/why-this-passage.html</loc>
     <lastmod>2026-11-05</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/index.html</loc>
+    <loc>https://lixity.de/blog/index.html</loc>
     <lastmod>2026-11-26</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/manuscript-reading-workbench.html</loc>
+    <loc>https://lixity.de/blog/manuscript-reading-workbench.html</loc>
     <lastmod>2026-11-05</lastmod>
     <image:image>
-      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-dark.png</image:loc>
+      <image:loc>https://lixity.de/screenshots/dashboard-dark.png</image:loc>
       <image:title>Lixity continuous manuscript reader with chapter navigation and contextual tools</image:title>
     </image:image>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/intentional-registers.html</loc>
+    <loc>https://lixity.de/blog/intentional-registers.html</loc>
     <lastmod>2026-10-19</lastmod>
     <image:image>
-      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-project-settings.png</image:loc>
+      <image:loc>https://lixity.de/screenshots/dashboard-project-settings.png</image:loc>
       <image:title>Project settings with the chapter registers disclosure</image:title>
     </image:image>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/local-word-echoes.html</loc>
+    <loc>https://lixity.de/blog/local-word-echoes.html</loc>
     <lastmod>2026-10-19</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/whats-new-lixity.html</loc>
+    <loc>https://lixity.de/blog/whats-new-lixity.html</loc>
     <lastmod>2026-11-05</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/tense-switches.html</loc>
+    <loc>https://lixity.de/blog/tense-switches.html</loc>
     <lastmod>2026-11-05</lastmod>
   </url>
   <url>
-    <loc>https://mfahsold.github.io/lixity/blog/effi-briest-case-study.html</loc>
+    <loc>https://lixity.de/blog/effi-briest-case-study.html</loc>
     <lastmod>2026-11-05</lastmod>
   </url>
-  <url><loc>https://mfahsold.github.io/lixity/index-de.html</loc><lastmod>2026-11-20</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/index-fr.html</loc><lastmod>2026-11-20</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/index-es.html</loc><lastmod>2026-11-20</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/index-it.html</loc><lastmod>2026-11-20</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/index-pt.html</loc><lastmod>2026-11-20</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/index-nl.html</loc><lastmod>2026-11-20</lastmod></url>
+  <url><loc>https://lixity.de/index-de.html</loc><lastmod>2026-11-20</lastmod></url>
+  <url><loc>https://lixity.de/index-fr.html</loc><lastmod>2026-11-20</lastmod></url>
+  <url><loc>https://lixity.de/index-es.html</loc><lastmod>2026-11-20</lastmod></url>
+  <url><loc>https://lixity.de/index-it.html</loc><lastmod>2026-11-20</lastmod></url>
+  <url><loc>https://lixity.de/index-pt.html</loc><lastmod>2026-11-20</lastmod></url>
+  <url><loc>https://lixity.de/index-nl.html</loc><lastmod>2026-11-20</lastmod></url>
 </urlset>

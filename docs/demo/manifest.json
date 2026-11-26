@@ -18,7 +18,7 @@
     "research": true,
     "source_files": true
   },
-  "created_at": "2026-11-26T16:56:32.909662+00:00",
+  "created_at": "2026-11-26T18:20:57.018140+00:00",
   "disclosures": [
     "Contains manuscript prose, analysis and work-marker notes.",
     "Contains accessible authored research history, notes, source metadata and cited excerpts; local Zotero identities are omitted.",
@@ -94,12 +94,12 @@
       "sha256": "1fe6958409c8c257a70c587a18b6f7f412b179b456630790d30b2ec9a8e4b7d4"
     },
     "report.html": {
-      "byte_length": 6550994,
-      "sha256": "0bf779b659093be08009ba3f4c92e0b4526a174e58d314e112082e6933cafcc9"
+      "byte_length": 6552814,
+      "sha256": "46bee8ae177d9dc0ac9aebc0e2470bc7be0caacfbdf1ee004da782d5d0ffc630"
     },
     "research.html": {
-      "byte_length": 490,
-      "sha256": "70ae94240099650341521d1c85a8938be6d24c3952d2b69337b45d4ea73a8d6a"
+      "byte_length": 474,
+      "sha256": "27a8848885c9b6a841df3517329b3bf22b8b0557f57b260778df129a709e6b92"
     },
     "warehouse-4-book.pdf": {
       "byte_length": 85432,
@@ -133,14 +133,14 @@
   "mode": "review",
   "product_version": "0.9.3",
   "project": {
-    "id": "urn:uuid:11949021-9bf8-402f-b8f9-cff6253f3c50",
+    "id": "urn:uuid:347a2cc6-a061-4704-8873-66751836603f",
     "language": "en",
     "title": "The Crate at Warehouse 4"
   },
   "research": {
     "included": true,
     "revision_count": 100,
-    "snapshot": "2450f3106fd8c7afcc84c3a3cc5a9dddc47477abe41c8c98551b55e913b127e3"
+    "snapshot": "5094f92a1830c8540a8126fa443d7aaa3d795f032f002f7d3a897a28a67a2a4d"
   },
   "schema_version": "lixity-read-only-site/1"
 }

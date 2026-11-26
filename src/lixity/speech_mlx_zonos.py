@@ -8,6 +8,7 @@ Security boundaries:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -18,6 +19,7 @@ from typing import Any, TextIO
 
 ALLOWED_MODEL = "mlx-community/ZONOS3-Mini"
 MAX_STDIN_BYTES = 65536
+_MAX_REFERENCE_BYTES = 3 * 1024 * 1024  # Matches the validated project WAV limit.
 _ALLOWED_KWARGS = frozenset({"lang_code", "speed", "temperature", "voice", "ref_audio"})
 
 
@@ -68,6 +70,26 @@ def _drain_truncated_line(first_chunk: str) -> None:
             return
 
 
+def _reuse_speaker_embedding(model: Any, kwargs: dict[str, Any], cache: dict[bytes, Any]) -> None:
+    """Reuse one embedding across temporary WAV copies within the warm worker."""
+    reference = kwargs.get("ref_audio")
+    if reference is None:
+        return
+    # The caller uses a private temporary path per segment. Match immutable bytes
+    # and let the process lifetime scope the cache to the materialized model.
+    with Path(reference).open("rb") as stream:
+        audio = stream.read(_MAX_REFERENCE_BYTES + 1)
+    if len(audio) > _MAX_REFERENCE_BYTES:
+        raise ValueError("ZONOS3 reference exceeds the project WAV size limit")
+    key = hashlib.sha256(audio).digest()
+    if key not in cache:
+        embedding = model.extract_speaker_embedding(reference)
+        cache.clear()
+        cache[key] = embedding
+    kwargs["speaker_embedding"] = cache[key]
+    del kwargs["ref_audio"]
+
+
 def _serve_persistent(protocol: TextIO, parent_pid: int) -> int:
     threading.Thread(target=_exit_with_parent, args=(parent_pid,), daemon=True).start()
     os.environ["HF_HUB_OFFLINE"] = "1"
@@ -77,6 +99,7 @@ def _serve_persistent(protocol: TextIO, parent_pid: int) -> int:
     from mlx_audio.tts import load
 
     model = load(ALLOWED_MODEL)
+    embeddings: dict[bytes, Any] = {}
     protocol.write(json.dumps({"ready": True, "model": ALLOWED_MODEL}) + "\n")
     protocol.flush()
     while True:
@@ -92,6 +115,7 @@ def _serve_persistent(protocol: TextIO, parent_pid: int) -> int:
             continue
         try:
             text, output_path, kwargs = _parse_request(raw)
+            _reuse_speaker_embedding(model, kwargs, embeddings)
             result = next(model.generate(text, **kwargs))
             write(str(output_path), result.audio, result.sample_rate, format="wav")
             protocol.write('{"ok":true}\n')

@@ -31,9 +31,20 @@ except ModuleNotFoundError:
 
 LEGACY_PAGES_BASE_URL = "https://mfahsold.github.io/lixity/"
 CUSTOM_PAGES_BASE_URL = "https://lixity.de/"
+CANONICAL_PAGES_BASE_URL = CUSTOM_PAGES_BASE_URL
 PAGES_BASE_URLS = frozenset({LEGACY_PAGES_BASE_URL, CUSTOM_PAGES_BASE_URL})
 _LEGACY_SITE_LINK = re.compile(
     re.escape(LEGACY_PAGES_BASE_URL.rstrip("/")) + r"""(?:/|(?=$|[\s"'<>?#)\]`]))"""
+)
+_APEX_SITE_LINK = re.compile(
+    re.escape(CUSTOM_PAGES_BASE_URL.rstrip("/")) + r"""(?:/|(?=$|[\s"'<>?#)\]`]))"""
+)
+_ANY_SITE_LINK = re.compile(
+    r"(?:"
+    + re.escape(LEGACY_PAGES_BASE_URL.rstrip("/"))
+    + r"|"
+    + re.escape(CUSTOM_PAGES_BASE_URL.rstrip("/"))
+    + r""")(?:/|(?=$|[\s"'<>?#)\]`]))"""
 )
 _SITE_TEXT_SUFFIXES = frozenset({".html", ".md", ".txt", ".xml"})
 
@@ -221,13 +232,16 @@ def _site_text(content: str, relative_path: Path, base_url: str) -> str:
     """Use the deployment base for public links and preserve Atom identifiers."""
     if relative_path.as_posix() == "blog/feed.xml":
         return "".join(
-            line if line.lstrip().startswith("<id>") else _LEGACY_SITE_LINK.sub(base_url, line)
+            line if line.lstrip().startswith("<id>") else _ANY_SITE_LINK.sub(base_url, line)
             for line in content.splitlines(keepends=True)
         )
     if relative_path.as_posix() == "robots.txt":
         content = "".join(line for line in content.splitlines(keepends=True)
                           if not line.startswith(("# Deployment note:", "# Only /robots.txt")))
-    return _LEGACY_SITE_LINK.sub(base_url, content)
+    # Canonical source is apex; rewrite either known host to the deployment base
+    # so legacy staging still verifies old deep links and apex staging is a copy.
+    rewritten = _ANY_SITE_LINK.sub(base_url, content)
+    return rewritten
 
 
 def _demo_html_for_base(content: bytes, base_url: str) -> bytes:
@@ -235,7 +249,7 @@ def _demo_html_for_base(content: bytes, base_url: str) -> bytes:
     head, closing_tag, body = content.partition(b"</head>")
     if not closing_tag:
         return content
-    metadata = _LEGACY_SITE_LINK.sub(base_url, head.decode("utf-8"))
+    metadata = _ANY_SITE_LINK.sub(base_url, head.decode("utf-8"))
     return metadata.encode("utf-8") + closing_tag + body
 
 
@@ -257,7 +271,7 @@ def _update_demo_manifests(
             manifest.write_bytes((json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8"))
 
 
-def stage(source: Path, output: Path, *, base_url: str = LEGACY_PAGES_BASE_URL) -> int:
+def stage(source: Path, output: Path, *, base_url: str = CUSTOM_PAGES_BASE_URL) -> int:
     """Stage approved public paths and metadata for the selected deployment base."""
     base_url = normalize_pages_base_url(base_url)
     if not source.is_dir():
@@ -317,7 +331,7 @@ def stage(source: Path, output: Path, *, base_url: str = LEGACY_PAGES_BASE_URL) 
         relative = path.relative_to(source)
         target = output / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        if (relative.as_posix() == "BingSiteAuth.xml" or base_url == LEGACY_PAGES_BASE_URL
+        if (relative.as_posix() == "BingSiteAuth.xml"
                 or path.suffix not in _SITE_TEXT_SUFFIXES):
             shutil.copyfile(path, target)
         elif relative.as_posix() not in demo_files:
@@ -350,7 +364,7 @@ def stage(source: Path, output: Path, *, base_url: str = LEGACY_PAGES_BASE_URL) 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--base-url", default=LEGACY_PAGES_BASE_URL,
+    parser.add_argument("--base-url", default=CUSTOM_PAGES_BASE_URL,
                         help="Public HTTPS base for the staged site.")
     args = parser.parse_args()
     count = stage(Path(__file__).resolve().parents[1] / "docs", args.output, base_url=args.base_url)

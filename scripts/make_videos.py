@@ -2,9 +2,9 @@
 
 Recordings come from ``scripts/make_screenshots.py --video`` (Playwright WebM in
 ``.artifacts/screenshots/videos/``). The guide outputs use MP4, GIF and PNG.
-The homepage tour uses MP4 and WebM with a WebP poster, and its validated MP4
-is the input for both social clips. See ``docs/videos/README.md`` for encoding
-prerequisites and review steps.
+The homepage tour uses landscape MP4 and WebM and a portrait MP4. The validated
+landscape MP4 is the input for both social clips. See ``docs/videos/README.md``
+for encoding prerequisites and review steps.
 """
 
 from __future__ import annotations
@@ -29,6 +29,18 @@ SOCIAL_CLIPS = (
     ("social-hook-16x9.mp4", 1600, 900, 3_500_000),
     ("social-hook-9x16.mp4", 1080, 1920, 4_000_000),
 )
+PORTRAIT_MASTER = "product-tour-portrait.mp4"
+PORTRAIT_POSTER = "product-tour-portrait.png"
+#: Portrait crop windows per scene (x offset in the 1440-wide source, 506 px
+#: wide -> 1080 out). Passage keeps the evidence detail (x=874..1248) in frame.
+PORTRAIT_WINDOWS = {
+    "read": 467,
+    "passage": 800,
+    "compare": 528,
+    "chapters": 302,
+    "dossier": 300,
+    "pdf": 300,
+}
 
 #: name, poster timestamp, max MP4 bytes, max GIF bytes
 WALKTHROUGHS: tuple[tuple[str, str, int, int], ...] = (
@@ -38,6 +50,7 @@ WALKTHROUGHS: tuple[tuple[str, str, int, int], ...] = (
 )
 PUBLIC_VIDEO_FILES = {
     "README.md", "product-tour.mp4", "product-tour.webm", "product-tour.webp",
+    PORTRAIT_MASTER, PORTRAIT_POSTER,
     *(name for name, _, _, _ in SOCIAL_CLIPS),
     *(f"{name}.{suffix}" for name, _, _, _ in WALKTHROUGHS for suffix in ("mp4", "gif", "png")),
 }
@@ -236,6 +249,77 @@ def convert_product_tour() -> None:
             target.replace(OUT_DIR / target.name)
 
 
+def convert_product_portrait() -> None:
+    """Reframe the six landscape tour segments to a 1080x1920 master.
+
+    Single generation from the camera raws (no crop of the published master):
+    each 8 s scene keeps its action window (see PORTRAIT_WINDOWS), scaled with
+    lanczos to phone width. Silent, no burned captions; the homepage transcript
+    stays localized. The camera windows follow the reviewed scene content.
+    """
+    plan = _tour_plan()
+    recording = json.loads((RAW_DIR / "product-tour.json").read_text(encoding="utf-8"))
+    if (recording.get("schema_version") != "lixity-product-tour-recording/1" or
+            recording.get("fps") != plan["fps"] or recording.get("duration") != plan["duration"]):
+        raise SystemExit("Recording metadata does not match the product-tour timing plan")
+    segments = recording.get("segments", [])
+    if [segment["id"] for segment in segments] != [scene["id"] for scene in plan["scenes"]]:
+        raise SystemExit("The recording needs one ordered segment per tour scene")
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise SystemExit("ffmpeg is required to publish walkthrough videos.")
+    inputs: list[str] = []
+    filters: list[str] = []
+    for index, (scene, segment) in enumerate(zip(plan["scenes"], segments, strict=True)):
+        filename = segment["file"]
+        if Path(filename).name != filename:
+            raise SystemExit("Tour segment filenames must stay in the raw recordings directory")
+        source = RAW_DIR / filename
+        if not source.is_file():
+            raise SystemExit(f"Missing video: {source}")
+        if hashlib.sha256(source.read_bytes()).hexdigest() != segment.get("sha256"):
+            raise SystemExit(f"{filename}: source hash mismatch; record the complete tour again")
+        video, _ = _video_info(source)
+        if (video["width"], video["height"]) != (1440, 900):
+            raise SystemExit(f"{filename}: portrait windows require a 1440x900 recording")
+        start = segment["startFrame"]
+        frames = (scene["end"] - scene["start"]) * plan["fps"]
+        if (not isinstance(start, int) or start < 0 or segment["frames"] != frames or
+                Fraction(video["avg_frame_rate"]) != plan["fps"]):
+            raise SystemExit(f"{filename} has an invalid frame anchor, count or recording fps")
+        if int(video["nb_read_frames"]) < start + frames:
+            raise SystemExit(f"{filename} needs {start + frames} frames including its anchor; "
+                             f"only {video['nb_read_frames']} were recorded")
+        x = PORTRAIT_WINDOWS[scene["id"]]
+        if not 0 <= x <= 1440 - 506:
+            raise SystemExit(f"Portrait window out of frame for scene {scene['id']}")
+        inputs.extend(["-i", str(source)])
+        filters.append(
+            f"[{index}:v]trim=start_frame={start}:end_frame={start + frames},"
+            f"setpts=PTS-STARTPTS,crop=506:900:{x}:0,"
+            f"scale=1080:1920:flags=lanczos,setsar=1,"
+            f"format=yuv420p[s{index}]"
+        )
+    filters.append("".join(f"[s{index}]" for index in range(len(segments))) +
+                   f"concat=n={len(segments)}:v=1:a=0[out]")
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    frames = plan["duration"] * plan["fps"]
+    with tempfile.TemporaryDirectory(prefix=".tour-portrait-", dir=OUT_DIR) as pending:
+        staging = Path(pending)
+        target = staging / PORTRAIT_MASTER
+        run([ffmpeg, "-y", "-loglevel", "error", *inputs,
+             "-filter_complex", ";".join(filters), "-map", "[out]", "-an", "-map_metadata", "-1",
+             "-frames:v", str(frames), "-r", str(plan["fps"]), "-fps_mode", "cfr",
+             "-c:v", "libx264", "-preset", "slow", "-crf", "25", "-pix_fmt", "yuv420p",
+             "-movflags", "+faststart", str(target)])
+        _verify_export(target, fps=plan["fps"], frames=frames, width=1080, height=1920)
+        run([ffmpeg, "-y", "-loglevel", "error", "-ss", "10", "-i", str(target),
+             "-frames:v", "1", "-vf", "scale=540:960:flags=lanczos",
+             str(staging / PORTRAIT_POSTER)])
+        for target in staging.iterdir():
+            target.replace(OUT_DIR / target.name)
+
+
 def _escape_drawtext(text: str) -> str:
     return text.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\u2019")
 
@@ -321,11 +405,13 @@ def convert_social_cuts() -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--only", choices=["product-tour", "social", *(item[0] for item in WALKTHROUGHS)])
+    parser.add_argument("--only", choices=["product-tour", "portrait", "social", *(item[0] for item in WALKTHROUGHS)])
     args = parser.parse_args()
     jobs = []
     if args.only in (None, "product-tour"):
         jobs.append((convert_product_tour, ()))
+    if args.only in (None, "product-tour", "portrait"):
+        jobs.append((convert_product_portrait, ()))
     for name, poster_at, max_mp4, max_gif in WALKTHROUGHS:
         if args.only in (None, name):
             jobs.append((convert, (name, poster_at, max_mp4, max_gif)))

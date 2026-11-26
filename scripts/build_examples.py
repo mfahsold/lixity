@@ -83,6 +83,7 @@ class ClassicExample:
     chapters: int
     gutenberg: str
     description: str
+    preview_image: tuple[str, str] | None = None
 
 
 EXAMPLES = (
@@ -99,6 +100,10 @@ EXAMPLES = (
             "Effi Briest: sentence rhythm, vocabulary, tense flags and dialogue measures, "
             "computed offline without an account."
         ),
+        preview_image=(
+            "screenshots/dashboard-heatmap.png",
+            "Chapter comparison map showing differences from the manuscript's own style",
+        ),
     ),
     ClassicExample(
         slug="pride-and-prejudice",
@@ -112,6 +117,10 @@ EXAMPLES = (
             "A read-only Lixity analysis of the opening chapters of Jane Austen's "
             "Pride and Prejudice: sentence rhythm, vocabulary, tense flags and dialogue "
             "measures, computed offline without an account."
+        ),
+        preview_image=(
+            "screenshots/dashboard-dark.png",
+            "Lixity continuous manuscript reader with chapter navigation and contextual tools",
         ),
     ),
 )
@@ -160,6 +169,7 @@ def build_classic(root: Path, example: ClassicExample) -> tuple[Path, Path]:
         description=example.description,
         language=example.language,
         about=(example.title, example.author),
+        preview_image=example.preview_image,
     )
     report = report.replace("</head>", head + "</head>", 1)
     version = source_version(root)

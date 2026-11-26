@@ -229,9 +229,11 @@ reference before launch. The isolated worker receives a temporary audio copy and
 the effective synthesis text only for an explicit render. `speed` is sent as a
 model condition, while free-text direction is unsupported by this adapter. The
 isolated worker is reused across renders in the same Lixity process and closes
-after five idle minutes. Plan and timeline export remain available without
-loading the runtime. Other MLX or
-OpenAI-compatible HTTP bindings retain unknown provider readiness until render.
+after five idle minutes. Unreleased worker behavior retains one speaker
+embedding keyed by the reference WAV's SHA-256 for that worker's lifetime.
+Status, plan and timeline output contain neither the embedding nor its key.
+Other MLX or OpenAI-compatible HTTP bindings report unknown provider readiness
+before render. Plan and timeline export remain available without the runtime.
 
 Structured editorial prompts include `manuscript_pacing_audit`,
 `manuscript_dialogue_review` and `manuscript_showing_triage`. Discover them with
@@ -658,7 +660,7 @@ Analysis Off and Focus hide both displays without resetting their preferences.
 | `#style-layer` / `#layer-clear` | select/clear one paragraph metric; None hides both indicator types without changing their preferences. Local Values remains independent |
 | `#analysis-scope-register` / `#analysis-scope-pov` | optional author-declared groups filter only heatmap rows; the full-book reference and numerical outputs stay unchanged |
 | `[data-section-nav]` / `[data-section-link]` | shared active-heading presentation over real targets; dossier IDs are local to an accepted rendering, not durable record references |
-| `[data-help]` / `#lixity-tooltip` | supplemental action/measurement explanation on hover or focus; inspect visible control names/states for operation, not tooltip visibility. Help does not authorize a write or retention |
+| `[data-help]` / `#lixity-tooltip` | supplemental action and measurement explanations on hover or focus. Equivalent visible help may suppress a hint. Inspect the control's name, state and linked field description to identify the operation |
 | `#project-actions > summary` | open or close Project actions before using its existing New/Open, guidance and PDF controls; loaded workspaces start collapsed, empty workspaces expanded |
 | `.reader-structural[data-start][data-end]` | readable source structure without a paragraph profile; inclusive source lines are presentation anchors, not a new research-anchor format |
 | `#research-tab-<key>` / `#rtab-<key>` | named research tab and labelled tabpanel; `data-rtab` and selected-state hooks remain unchanged |
@@ -2168,25 +2170,25 @@ access fails with a migration requirement. Portable exports remain canonical
 
 ## External audio exchange and inspection
 
-`audio-export-plan --project PATH [--chapter N]` emits
-`lixity-audio-timeline/1`; add `--ssml` for the SSML projection. `read-aloud
---timeline` and `--ssml` imply plan-only behavior, while `--plan-only` alone
-retains `lixity-speech-plan/1`. Export does not invoke synthesis, read local
+`audio-export-plan --project PATH [--chapter N]` emits the versioned audio
+timeline. Add `--ssml` for the SSML projection. `read-aloud --timeline` and
+`--ssml` imply plan-only behavior. `--plan-only` alone emits the versioned
+speech plan. Export does not invoke synthesis, read local
 voice-reference bytes or inspect credential values. JSON retains effective
 spoken text and source/substitution provenance, direction, voice-profile choices
 and pause values. Unmeasured speech timing is null/unknown. SSML limitations are
 explicit; a provider voice name is not a portable voice identity, and free-form
 direction and reference recordings do not have a standard SSML equivalent.
 
-`lixity-audio-settings/4` adds `engine="openai-compatible"` with required
+`lixity-audio-settings/4` supports `engine="openai-compatible"` with required
 `base_url`, `model`, `voice`, optional `api_key_env` and boolean
 `supports_instructions` (default false). `api_key_env` is an environment-variable
-name, never a secret value. Existing schemas `/1`–`/3` and native serialization
-remain valid; adding an external profile requires an explicit schema `/4`
-upgrade through `audio-migrate --to-schema-4` and the existing snapshot/backup
-apply contract. Retained references are not migrated or deleted.
+name. Fixed ZONOS3 uses `engine="mlx-audio"` and the default local binding
+for project reference voices. Both engine IDs require schema `/4` or `/5`
+when stored in a project. Older projects can preview an upgrade through
+`audio-migrate --to-schema-4` and apply the reviewed snapshot with a backup.
 
-**Available in 0.8.0:** `lixity-audio-settings/5` adds `engine="ims-toucan"` with
+`lixity-audio-settings/5` supports `engine="ims-toucan"` with
 `voice="reference"`, a saved `reference_id`, language `de|en`, separate `phonemes`
 (term→IPA mapping) and sparse `prosody` scalars. `audio-migrate --to-schema-5`
 uses the same reviewed snapshot and external backup contract. Existing profiles
@@ -2198,15 +2200,16 @@ No natural-language acting interpretation or absolute pitch calibration is
 implemented. Free instructions can be retained/exported but fail Toucan rendering.
 Unsupported engines reject phonetic and structured controls.
 
-Structured direction records use `lixity-audio-directions/2`. Plans/timelines
-containing new phonetic or prosody data use `lixity-speech-plan/2` and
-`lixity-audio-timeline/2`; older data retains its previous representation. Audio
-verification accepts both versions. SSML carries IPA elements with explicit
-warnings for unrepresentable numeric controls. All render/cache/reference paths
-share native-engine metadata: Qwen/Coqui local 8769 (Qwen Jetson tunnel 8770),
-F5 local 8771, Toucan local 8772. Worker inventory rows add `engines` listing the
-engine identities sharing that socket, so repeated `target="local"` rows are
-not interchangeable. A ready worker is still checked for the exact selected model.
+Structured direction records use `lixity-audio-directions/2`. Plans and timelines
+use `lixity-speech-plan/2` and `lixity-audio-timeline/2` when a segment has
+phonetic or structured controls, including an adapter advertising that support
+or an IPA-only match retained for export. Otherwise they use
+`lixity-speech-plan/1` and `lixity-audio-timeline/1`. Audio verification accepts
+both versions. SSML carries IPA elements with explicit warnings for numeric
+controls that cannot be represented in SSML. Native engine metadata binds Qwen
+and Coqui locally to 8769, the Qwen Jetson tunnel to 8770, retained F5 to 8771,
+and Toucan to 8772. Identify inventory rows by `engines` as well as `target`.
+A ready worker is still checked for the exact selected model.
 
 Only an explicit render sends a bounded JSON request to `/v1/audio/speech`.
 The payload is `model`, `input`, `voice`, `response_format="wav"`, plus
@@ -2250,7 +2253,9 @@ Warnings use stable codes such as `voice_binding_required`,
 `pronunciation_markup_unavailable`. CLI SSML output stays on stdout; limitation
 messages go to stderr. Timeline segment `start_seconds`, `end_seconds` and
 `duration_seconds` are null with a reason. `substitutions` address original spoken
-projection text with Unicode-codepoint offsets, not raw Markdown byte offsets.
+projection text with Unicode-codepoint offsets. In timeline `/2`, `phonemes`
+address each segment's effective `spoken_text` after substitution. Neither
+offset space addresses raw Markdown bytes.
 
 `POST <prefix>/audio-audit` accepts the usual `project_token` and `source_sha256`,
 base64 `audio`, a `filename` supplying only its supported extension, `mode`
@@ -2279,18 +2284,19 @@ CLI or HTTP draft profiles do not need a valid implicit native narrator.
 
 ## Native speech
 
-`audio` is a project-only setting with schema `lixity-audio-settings/1`, selected
-profile ID and a bounded profile map. The installed configuration schema exposes
+`audio` is a project-only setting with a schema version, selected profile ID
+and a bounded profile map. The installed configuration schema exposes
 its validation contract. `read-aloud --profile` and the native dialog share it;
 explicit CLI control overrides are per invocation, not project writes. In the
 published 0.7.6 release the engine is `qwen3`, pinned to `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`, with nine
 preset voices and ten explicit speech languages. Dutch analysis projects need
 an explicit supported speech language. In 0.7.7 `speed` is a 0.5–2.0
-FFmpeg postprocessing factor, not native Qwen rate control; a new implicit
-profile uses 1.2. Existing explicit and omitted saved values preserve 1.0 where
-applicable. CLI `--speed` overrides all profiles for that run without saving.
-Non-1.0 factors require FFmpeg on the render host. Structural pauses stay unchanged.
-Style instructions do not implement precise speed control.
+FFmpeg postprocessing factor. The current implicit speed is 1.1. Explicit
+saved values and the legacy default for omitted saved values are retained. CLI
+`--speed` overrides all profiles for that run without saving. Non-1.0 factors
+require FFmpeg for postprocessing adapters. The pinned ZONOS3 model consumes
+speed as a synthesis condition. Structural pauses stay unchanged and delivery
+instructions do not establish an exact rate.
 
 Version 0.8.0 retains `f5-tts` profile/transport support (port 8771), with its
 bundled loader unavailable, and adds `coqui` (German Thorsten VITS) and
@@ -2306,17 +2312,34 @@ Version 0.8.0 additionally accepts schema `lixity-audio-settings/2`, which adds
 optional project-wide `pronunciations`. Each profile's same-key entries override
 the project map when a speech plan is compiled; profile settings remain raw.
 Matching defaults to case-sensitive literal substitution, including within words.
-Schemas `/2`–`/4` accept optional `pronunciation_matching` with boolean `case_sensitive`
+Schemas `/2`–`/5` accept optional `pronunciation_matching` with boolean `case_sensitive`
 (default true) and `whole_words` (default false), applying to both project and
 profile terms. Case-insensitive matching follows Python Unicode regex semantics;
 regex-equivalent distinct keys within an effective profile are rejected. Whole
 terms require no adjacent Unicode word character or combining mark, including
 across directed-range boundaries. No normalization, language-specific tokenization
 or automatic capitalization is applied. Exact-key profile overrides remain valid.
-The merged map is limited to 200 unique entries per profile. The profile editor
-preserves the global map but does not edit it. Changed synthesized text changes
-the segment cache key. `/1` remains unchanged; 0.7.7 cannot read `/2`, so opt in
-only after backing up and updating the installation.
+The merged map is limited to 200 unique entries per profile. The pronunciation
+editor preserves the older global map. Changed synthesized text changes the
+segment cache key. Schema `/1` remains valid on current versions. Versions
+that predate `/2` require updating before opting into the newer settings.
+
+Unreleased builds can also store the optional
+`pronunciation_lexicon` table, with its own
+`schema_version = "lixity-pronunciation-lexicon/1"` and up to 200 `entries`,
+in audio settings `/5`. Each term (1–100 characters) keys an object with
+`ipa`, `respelling`, or both (1–300 characters each).
+Terms match case-sensitive whole words in the spoken projection before
+text substitution. The paired rule wins over overlapping older text
+substitutions. Conflicting effective phonetic rules and direction ranges that
+split a matching term fail validation.
+For an IPA-capable profile, the selected segment receives an IPA override.
+Other profiles synthesize only an explicitly supplied respelling. An
+unsupported IPA-only match blocks synthesis and remains portable in a
+timeline or SSML export. Export warning codes
+`pronunciation_ipa_unsupported` and `pronunciation_respelling_used` describe
+the effective route. Projects without the optional table retain their
+previous configuration and output contracts.
 
 Version 0.7.7 also supports `qwen3-base` profiles with `voice=reference` and a
 project-local `reference_id`. `audio-reference create --project PATH --audio WAV
@@ -2421,10 +2444,14 @@ key is `[audio_recording] reference_seconds` in `lixity.toml`. Use the existing
 `"audio_recording": {"reference_seconds": 45}` to save the preference. An empty
 recording object restores the built-in default. See
 [author voice recording](AUDIO.md#author-voice-recording-and-listening).
-A `control_support` object per engine identifies literal text substitution,
-model-interpreted delivery, explicit silence, IPA and structured prosody support.
-It also reports unsupported controls. It describes the Lixity adapter rather than
-promising model compliance. Existing speech-plan version 1 remains unchanged.
+A `control_support` object per engine reports `pronunciation: "text_substitution"`,
+`direction: "model_interpreted" | "unsupported"`, `pauses: "explicit_silence"`,
+`pause_seconds` bounds, and boolean `phonemes`, `ssml` and `precise_rate`.
+When present, `prosody` describes each supported field's bounds, default and
+implementation. This is adapter support. If an engine advertises
+`configurable_instructions`, resolve direction against the selected profile's
+`supports_instructions` declaration, as the server does when compiling a
+render plan. Model-interpreted delivery still requires listening review.
 For native profiles, the additive `workers` list probes each distinct registered
 native endpoint once. Entries identify supported `engines`, a readable `service_name`, `target`, `state`
 (`ready`, `starting` or `unavailable`), `transport` (`loopback` or `ssh`),
@@ -2507,28 +2534,34 @@ WAV bytes. At most one render is active; completed temporary jobs expire after
 results, including an earlier selection revisited later. No manuscript bytes or
 research archive records are changed.
 
-The optional Qwen worker listens on 127.0.0.1:8769 only. The adapter selects either
-that local worker or the fixed loopback port 8770 for an externally configured
-SSH forward to a Jetson worker. Browser payloads cannot set an endpoint URL.
-The worker accepts bounded requests for its configured model at `/v1/audio/speech`;
-the Lixity adapter checks model, voice,
-format and response size and rejects redirects. No external provider endpoint or
-automatic backend fallback is supported. Heavy model dependencies and weights
-are separately installed machine resources. See the read-aloud usage for setup.
+The optional Qwen worker listens on 127.0.0.1:8769. Its adapter can also select
+the fixed loopback port 8770 for an externally configured Jetson SSH forward.
+The worker accepts bounded requests for its configured model at
+`/v1/audio/speech`. The native adapter checks model, voice, format and response
+size, and rejects redirects. To use another endpoint, explicitly configure an
+eligible provider profile. Heavy dependencies and weights are separate machine
+resources. There is no automatic backend fallback. See the
+[native worker setup](INSTALLATION.md#native-audio-model-lifecycle-unreleased).
 Worker-only `--codec-device cpu` explicitly places decoding on CPU while a CUDA
 talker remains on GPU. Its default `model` follows `--device`; browser payloads
 and portable voice profiles cannot change this machine configuration. The same
 boundary applies to `--attention auto|eager|sdpa`: `auto` selects eager on CPU
 and SDPA on CUDA; operator overrides need actual workload measurements.
 
-Qwen chapter jobs retain verified derived PCM in a private project-keyed user
-cache (`$XDG_CACHE_HOME/lixity/speech/<project-hash>/`, default `~/.cache`,
-2 GiB per project), without requiring a writable source folder. The CLI uses the same implementation;
-`--fresh-audio` recomputes entries. Previews remain uncached. Restarting a chapter
-creates a new context-bound job and reuses matching segments; it does not revive
-an old job ID or stale download. Cache contents are private generated audio, not
-retained source evidence. The named model/profile/text key does not fingerprint
-local checkpoint bytes; clear or refresh the cache after changing those bytes.
+Chapter jobs retain verified raw PCM in a private project-keyed user cache
+(`$XDG_CACHE_HOME/lixity/speech/<project-hash>/`, default `~/.cache`, 2 GiB per
+project). The CLI uses the same store. `--fresh-audio` recomputes entries and
+previews remain uncached. A chapter retry starts a new context-bound job and
+can reuse matching segments. Cache identity includes effective synthesis inputs,
+including the external endpoint or reference identity when applicable. It does
+not fingerprint local checkpoint bytes. Clear or refresh the cache after those
+assets change.
+
+Unreleased PCM assembly applies bounded internal 5 ms edge fades after any
+per-segment tempo conversion. Frame counts and explicit pause lengths stay
+unchanged. The raw cache is stored before tempo, fades and pauses so reads can
+reuse the same synthesis in a different sequence. Audio cache entries remain
+distinct from retained references and from generated chapter artifacts.
 
 ## Optional grammatical tense contract
 
@@ -2561,11 +2594,12 @@ runtime and composition policy. See [limits and measured errors](STABILITY.md#gr
 It emits `lixity-audio-direction-view/1`: `source_path`, source/settings/direction
 SHA-256 snapshots, `passages` with exact `anchor`, `chapter`, spoken `text`, and
 `directions` with stable `id` and `stale`. Offsets are Unicode code points in
-that spoken projection, not Markdown bytes or browser UTF-16 positions.
+that spoken projection rather than Markdown bytes or browser UTF-16 positions.
 `save --input FILE` and `remove --id ID` require all three observed hashes via
 `--expected-source`, `--expected-settings`, `--expected-direction`. JSON input is
-bounded to 4 MiB; output contains private text. The ledger wire version is
-`lixity-audio-directions/1`, bounded to 4 MiB and 10,000 source-scoped entries.
+bounded to 4 MiB. Output contains private text. The ledger uses
+`lixity-audio-directions/1` or `/2` with structured prosody, with a 4 MiB and
+10,000-entry limit.
 
 In 0.8.0, `add --chapter N --line N` resolves one spoken passage and
 captures its three snapshots internally. Supply at least `--instruction`,
@@ -2578,9 +2612,9 @@ selected passage. This does not infer or assign speakers.
 Direction object: `anchor={start_line,end_line,paragraph_sha256}`, `start=0`,
 nullable `end` (whole remaining passage), nullable saved `profile_id`,
 `instructions` (maximum 2,000 characters), `pause_before=0.0`, nullable
-`pause_after` (each explicit pause 0–10 seconds). Unknown fields, invalid ranges,
-combining/joiner splits, overlaps and missing profiles fail. Stale records are
-retained for explicit review and must not be silently remapped.
+`pause_after` (each explicit pause 0–10 seconds) and optional sparse `prosody`.
+Unknown fields, invalid ranges, combining or joiner splits, overlaps and
+missing profiles fail. Stale records remain available for explicit review.
 
 Native `GET <prefix>/speech` adds `direction` with that view. POST
 `<prefix>/speech-direction` accepts the existing project/source binding,
@@ -2589,13 +2623,12 @@ Native `GET <prefix>/speech` adds `direction` with that view. POST
 `replace_id` when adjusting range bounds. Guarded conflicts return 409, invalid requests 400.
 POST `<prefix>/speech-plan` accepts the existing render scope and returns
 `ok`, `plan`, `context` without inference, a job, audio caching or file creation.
-The plan uses `lixity-speech-plan/1`, with effective text/profile/pauses/anchor per
-segment and explicit model-interpreted/exact-silence/unsupported capabilities.
-In 0.8.0, POST `<prefix>/speech-plan` also provides the exchange
-timeline and SSML projection with explicit limitations. Export supports passage,
-chapter and manuscript scope; render remains preview/chapter. `read-aloud --ssml`
-outputs markup directly to stdout without synthesis; `--timeline` outputs the
-exchange JSON. The existing `plan` field retains its version 1 contract.
+Each plan segment carries effective text, profile, pauses and an anchor when
+available. Read the returned `schema_version` and `controls`; extended plans
+use `/2`. The same endpoint returns the exchange timeline and SSML projection
+with explicit limitations. Export supports passage, chapter and manuscript
+scope. Render supports preview and chapter scope. `read-aloud --ssml` outputs
+markup to stdout without synthesis. `--timeline` outputs the exchange JSON.
 
 Render/plan accept `draft_direction` and optional original `draft_replace_id`
 only for preview, never chapter output;
@@ -2604,8 +2637,15 @@ No browser-supplied synthesis text or manuscript filename is accepted. External
 provider URLs belong only to validated, explicitly selected profile bindings.
 Saving direction changes its ledger snapshot and makes pending/completed jobs
 from the old snapshot stale. Profile-only drafts and per-render hardware targets
-remain distinct. CLI `--no-direction` ignores saved direction for that render,
-without deleting it. No native SSML/IPA/control-tag support is implied.
+remain distinct. CLI `--no-direction` ignores saved direction for that render.
+Adapters consume validated typed controls. SSML is an exchange export.
+
+When an adapter lacks free-text direction, the compiler retains the instruction
+for export with an `unsupported_instructions` warning and rejects a render
+that tries to execute it. Supported text direction remains model-interpreted.
+For ZONOS3, a passage profile must keep the same model, binding, voice and
+reference identity as the narrator. Toucan allows reviewable delivery takes of
+the same narrator. The check cannot establish who speaks in a recording.
 
 Version 0.7.7 includes an experimental `qwen3-design` profile variant with
 `voice="design"` and a required `voice_description`. The existing `instructions`

@@ -49,6 +49,9 @@ const comparisonAction = 'Explain measurement';
         </div>
         <dialog id="modal"><span class="help" id="modal-help" tabindex="0" data-help="Synthetic native dialog help.">Help</span>
           <input id="modal-input" aria-label="Synthetic field" data-help="Synthetic field guidance.">
+          <input id="modal-described" aria-label="Voice" aria-describedby="modal-description" data-help="Choose a saved voice.">
+          <p id="modal-description">Choose a saved voice.</p>
+          <button id="modal-icon" type="button"><span aria-hidden="true">▶</span></button>
           <button id="modal-close" class="modal-close" aria-keyshortcuts="Escape" title="Close dialog">Close</button></dialog>
         <div id="role-modal" role="dialog" aria-modal="true" aria-label="Synthetic dialog" hidden style="position:fixed;inset:20px">
           <button id="role-modal-close" type="button" aria-keyshortcuts="Escape" data-help="Close the synthetic dialog.">Close</button></div>
@@ -348,6 +351,40 @@ const comparisonAction = 'Explain measurement';
       await page.keyboard.press('Escape');
 
       await page.evaluate(() => document.querySelector('#modal').showModal());
+      const described = page.locator('#modal-described');
+      await described.focus();
+      await expect(described).toHaveAccessibleDescription('Choose a saved voice.');
+      await expect(tip).toHaveAttribute('aria-hidden', 'true');
+      assert.equal(await described.getAttribute('aria-describedby'), 'modal-description');
+      // Visually hidden referenced help still needs a visual explanation.
+      await page.locator('#modal-description').evaluate(el => { el.hidden = true; });
+      await page.locator('#modal-help').focus();
+      await described.focus();
+      await expect(copy).toHaveText('Choose a saved voice.');
+      await expect(described).toHaveAccessibleDescription('Choose a saved voice.');
+      assert.equal(await described.getAttribute('aria-describedby'), 'modal-description');
+      await page.locator('#modal-description').evaluate(el => { el.hidden = false; });
+
+      const icon = page.locator('#modal-icon');
+      const updates = await icon.evaluate(el => {
+        LixityComponents.setControlLabel(el, 'Play');
+        const observer = new MutationObserver(() => {});
+        observer.observe(el, {attributes: true});
+        LixityComponents.setControlLabel(el, 'Play');
+        const changes = observer.takeRecords();
+        observer.disconnect();
+        return changes.length;
+      });
+      assert.equal(updates, 0, 'Repeating the same control name keeps the tooltip stable');
+      await icon.focus();
+      await expect(copy).toHaveText('Play');
+      await expect(icon).toHaveAccessibleName('Play');
+      await expect(icon).toHaveAccessibleDescription('');
+      assert.equal(await icon.getAttribute('title'), null);
+      await icon.evaluate(el => LixityComponents.setControlLabel(el, 'Pause'));
+      await expect(copy).toHaveText('Pause');
+      await expect(icon).toHaveAccessibleName('Pause');
+
       await page.locator('#modal-help').focus();
       await expect(page.locator('#modal #lixity-tooltip')).toBeVisible();
       await page.keyboard.press('Enter');

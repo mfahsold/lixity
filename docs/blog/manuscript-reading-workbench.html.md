@@ -16,7 +16,7 @@ Lixity keeps the manuscript at the centre of that review. The interactive worksp
 
 ## Start with a scene
 
-Open the [Warehouse 4 demo](https://mfahsold.github.io/lixity/demo/report.html). Its six short English chapters follow Mara through an invented harbour incident. Read the opening setting, then use the chapter control to move to chapter 2's action. You can compare their pace before opening a single measurement.
+Open the [Warehouse 4 demo](https://lixity.de/demo/report.html). Its six short English chapters follow Mara through an invented harbour incident. Read the opening setting, then use the chapter control to move to chapter 2's action. You can compare their pace before opening a single measurement.
 
 The reader uses ordinary scrolling and text selection. **A−** and **A+** change text size; **Reading settings** adjusts width and line spacing. Those preferences stay in your browser and leave the manuscript unchanged. **Focus reading** hides the surrounding navigation, side tools and both analysis displays temporarily. Its return control, or Escape, restores the workspace and previous display choices.
 
@@ -90,10 +90,10 @@ Unzip the copy and open `index.html`, or host its folder as a static website. Th
 
 ## Know which document you are reading
 
-The browser reader now retains source structure around the same measured paragraphs: preface, subheadings, quotations, code, notes, dividers and excluded appendix material. Unmeasured text is labeled as reading-only. Paragraph quotation anchors still use the established exact analysis text; inline link or code syntax and pipe tables remain literal where present in that text. This is a reading surface, not a Markdown editor or a complete typesetting engine. Structured [book PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html#manuscript-export) keep their existing output behavior.
+The browser reader now retains source structure around the same measured paragraphs: preface, subheadings, quotations, code, notes, dividers and excluded appendix material. Unmeasured text is labeled as reading-only. Paragraph quotation anchors still use the established exact analysis text; inline link or code syntax and pipe tables remain literal where present in that text. This is a reading surface, not a Markdown editor or a complete typesetting engine. Structured [book PDFs](https://lixity.de/guides/research-pdf.html#manuscript-export) keep their existing output behavior.
 
 Built-in manuscript analysis runs locally without uploading the manuscript. Optional external workers have separate data boundaries, and retaining research sources requires permission. Measurements remain heuristic aids to human review.
 
-Try one small loop in the demo: read the opening, inspect one paragraph, then follow the saved warehouse quotation into research and back. The [first-look guide](https://mfahsold.github.io/lixity/guides/first-look.html) walks through the same project. When you return from a research note, which context do you need to resume reading the sentence?
+Try one small loop in the demo: read the opening, inspect one paragraph, then follow the saved warehouse quotation into research and back. The [first-look guide](https://lixity.de/guides/first-look.html) walks through the same project. When you return from a research note, which context do you need to resume reading the sentence?
 
 [All guides](../#guides)[Articles](../blog/index.html)[Source code](https://github.com/mfahsold/lixity)[License](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)[Website measurement](../#website-measurement)[Legal notice](../#impressum)

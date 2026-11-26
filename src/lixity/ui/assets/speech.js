@@ -7,9 +7,17 @@
   var dialog, fields = {}, settings, capabilities, workers, generation = 0, openSequence = 0, job = null, timer, openedContext, paragraph;
   var migrationRequired = false, profileSettingsAvailable = false, schemaReviewAvailable = false;
   var direction, savedDirectionView, lastPreset = "", mode = "reference", editingPronunciation = null;
+  var surfaces = {
+    reference: {tab: "reference", label: "tab_voice", title: "record_author_title", playbackAfter: "active_voice_badge"},
+    profiles: {tab: "profiles", label: "tab_profiles", title: "profiles_title", playbackAfter: "profile_voice_card"},
+    microphone: {tab: "microphone", label: "tab_microphone", title: "microphone_title"},
+    reader: {tab: "direction", label: "tab_reader", title: "reader_title", playbackAfter: "render_section", manuscript: true},
+    output: {tab: "output", label: "chapter_output", title: "chapter_output", playbackAfter: "render_section", manuscript: true}
+  };
   var savedSettings = null, profilesDirty = false, profileSaving = false, auditAudioUrl = null;
   var speechReady = false, speechLoadMessage = "";
   var specialPronunciations = Object.create(null);
+  var pronunciationScope = "profile";
   var profileProsody;
   var currentAudioSchema = "lixity-audio-settings/5";
   var allReferences = [], calibrationTexts = null, profileConstraints = null;
@@ -213,7 +221,7 @@
       var cap = capabilities[option.value];
       var category = !cap || cap.creation_enabled === false ? "retained" :
         providerFields(cap) ? "provider" : cap.voice_design ? "design" :
-        cap.reference_required ? "reference" : "presets";
+        referenceSupported(cap) ? "reference" : "presets";
       if (!groups.has(category)) {
         var group = node("optgroup", fields.engine);
         group.label = label("engine_group_" + category);
@@ -224,7 +232,7 @@
     fields.engine.value = selected;
   }
   function profileCapability() { return capabilities && capabilities[fields.engine.value] || {}; }
-  function externalEngine(engine) { return !!(capabilities && capabilities[engine] && capabilities[engine].configurable_model); }
+  function usesProviderBinding(engine) { return Boolean(capabilities?.[engine]?.configurable_model); }
   function providerFields(cap) { return !!(cap && cap.configurable_model && cap.provider_fields !== false); }
   function referenceSupported(cap) { return !!(cap && (cap.reference_required || cap.reference_supported)); }
   function selectedReference() {
@@ -233,7 +241,7 @@
     return !!cap.reference_required || (referenceSupported(cap) && voice === "reference");
   }
   function profileSupport(profile) {
-    var cap = profile ? capabilities[profile.engine] || {} : profileCapability();
+    var cap = profile ? capabilities?.[profile.engine] || {} : profileCapability();
     var support = Object.assign({}, cap.control_support || {});
     var instructionsSupported = profile ? profile.supports_instructions : fields.supports_instructions.checked;
     if (cap.configurable_instructions) support.direction = instructionsSupported ? "model_interpreted" : "unsupported";
@@ -300,7 +308,7 @@
     return result;
   }
   function status(message) { fields.status.textContent = message || ""; fields.status.hidden = !message; }
-  function inReader() { return mode === "reader" || mode === "output"; }
+  function inReader() { return Boolean(surfaces[mode].manuscript); }
   function sourcePanel(anchor) {
     if (!anchor || !Number.isInteger(anchor.start_line) || !Number.isInteger(anchor.end_line)) return null;
     var selector = `#chapters .ptext[data-start="${anchor.start_line}"][data-end="${anchor.end_line}"]`;
@@ -411,7 +419,7 @@
   function addHelp(el, key) {
     var aliases = {engine:"service_help", voice:"voice_hint", voice_description:"design_hint", reference_id:"reference_hint",
       record_author_title:"reference_hint", profiles_title:"profile_help", output_title:"export_hint",
-      pronunciations:"pronunciation_hint", pronunciation_term:"pronunciation_hint", pronunciation_spoken:"pronunciation_hint",
+      pronunciations:"pronunciation_hint",
       direction_instructions:"direction_hint", instructions:"direction_hint", audit_audio:"audit_hint", audit_transcript:"audit_hint",
       export_scope:"export_hint", direction_plan:"export_hint", worker_refresh:"service_help", profile:"profile_help",
       name:"profile_help", language:"language_help", paragraph_pause:"pause_help", scene_pause:"pause_help",
@@ -429,8 +437,11 @@
     fields.project_audio_tabs.hidden = reading;
     fields.reader_audio_tabs.hidden = !reading;
     fields.reader_shortcut.hidden = reading;
-    fields.project_profile_summary.hidden = !reading;
+    fields.reader_context.hidden = !reading;
+    fields.reference_section.hidden = mode !== "reference";
+    direction.section.hidden = mode !== "reader";
     fields.run_options.hidden = !reading;
+    fields.ignore_note.hidden = !fields.ignore_direction.checked;
     fields.target.closest("label").hidden = !reading || !canRender || fields.target.disabled;
     fields.worker_target.closest("label").hidden = fields.worker_target.disabled;
     fields.chapter_audio_section.hidden = !output;
@@ -442,13 +453,16 @@
     fields.profile_footer.hidden = !profiles || !canSaveProfiles();
     fields.phonemes_section.hidden = !selected || (!profileSupport().phonemes && !fields.phonemes.value.trim());
     fields.microphone_section.hidden = mode !== "microphone";
-    fields.render_heading.textContent = label("render_title");
+    fields.render_heading.textContent = label(output ? "render_title" : "preview_title");
+    fields.preview.hidden = !reading || !canRender;
+    fields.chapter_render.hidden = !output || !canRender;
+    fields.preview.classList.toggle("primary", !output);
+    fields.chapter_render.classList.toggle("primary", output);
+    fields.cancel.hidden = !reading || !canRender;
+    fields.reuseLabel.hidden = !output || !canRender;
     fields.playback_section.hidden = mode === "microphone";
-    if (mode === "reference") fields.active_voice_badge.after(fields.playback_section);
-    else if (mode === "profiles") fields.service_section.after(fields.playback_section);
-    else fields.audit_section.after(fields.playback_section);
-    fields.audit_section.before(...(mode === "reader" ? [fields.render_section, fields.export_section] : [fields.export_section, fields.render_section]));
-    fields.export_section.after(fields.chapter_audio_section);
+    var playbackAfter = fields[surfaces[mode].playbackAfter];
+    if (playbackAfter && playbackAfter.nextElementSibling !== fields.playback_section) playbackAfter.after(fields.playback_section);
     fields.schema_section.hidden = mode !== "profiles" || !schemaReviewAvailable;
     fields.schema_preview.hidden = fields.schema_section.hidden;
     if (mode !== "profiles") fields.schema_review.hidden = fields.schema_apply.hidden = true;
@@ -661,25 +675,32 @@
     }).concat(inventory);
     updateWorkerStatus(); updateRuntimeHint();
   }
+  function workerFor(engine, target) {
+    return Array.isArray(workers) ? workers.find(function(item) {
+      return item.target === target && (!item.engines || item.engines.includes(engine));
+    }) : null;
+  }
+  function workerGuide(engine, cap) {
+    return cap.guide_url || (engine?.startsWith("coqui") ? settingsForm.dataset.speechCoquiGuide : settingsForm.dataset.speechQwenGuide);
+  }
   function updateWorkerStatus() {
     if (!fields.worker_status || !fields.engine || !capabilities) return;
     var selectedCap = profileCapability();
-    var external = fields.engine.value === "openai-compatible" ||
-      !!(selectedCap.configurable_model && selectedCap.provider_fields !== false);
+    var engine = fields.engine.value;
+    var external = providerFields(selectedCap);
     fields.worker_guide.hidden = external || selectedCap.runtime_status === "unavailable";
-    fields.worker_guide.href = profileCapability().guide_url || (fields.engine.value.startsWith("coqui") ? settingsForm.dataset.speechCoquiGuide : settingsForm.dataset.speechQwenGuide);
+    fields.worker_guide.href = workerGuide(engine, selectedCap);
     if (external) { fields.worker_status.textContent = label("provider_status"); return; }
-    if (profileCapability().runtime_status === "unavailable") { fields.worker_status.textContent = label("engine_unavailable"); return; }
-    var target = fields.worker_target.value || "local", cap = capabilities[fields.engine.value];
-    var worker = Array.isArray(workers) ? workers.find(function(item) { return item.target === target && (!item.engines || item.engines.includes(fields.engine.value)); }) : null;
+    if (selectedCap.runtime_status === "unavailable") { fields.worker_status.textContent = label("engine_unavailable"); return; }
+    var target = fields.worker_target.value || "local", worker = workerFor(engine, target);
     var args = {target: label("target_" + target)};
     var knownModel = worker && worker.model && Object.values(capabilities).find(function(item) { return item.model === worker.model; });
     var key = "unknown";
     if (worker && worker.state === "starting") key = "starting";
     else if (worker && worker.state === "unavailable") key = "unavailable";
-    else if (worker && worker.state === "ready" && knownModel && cap) {
+    else if (worker && worker.state === "ready" && knownModel && selectedCap.model) {
       args.model = knownModel.name;
-      key = worker.model === cap.model ? "match" : "mismatch";
+      key = worker.model === selectedCap.model ? "match" : "mismatch";
       if (key === "match" && ["unloaded", "loading", "loaded", "failed"].includes(worker.model_state)) {
         key = "model_" + (worker.model_state === "loaded" && worker.active ? "active" : worker.model_state);
       }
@@ -695,16 +716,14 @@
     var engine = savedSettings?.profiles[savedSettings.selected]?.engine;
     var cap = capabilities?.[engine] || {};
     var target = fields.target.value || "local";
-    var worker = Array.isArray(workers) && workers.find(function(item) { return item.target === target && item.engines?.includes(engine); });
+    var worker = engine && workerFor(engine, target);
     var unavailable = worker?.state === "unavailable";
     var key = cap.runtime_status === "unavailable" ? "engine_unavailable" : cap.local_worker ? "zonos_runtime_hint" :
       cap.configurable_model ? "provider_hint" : "runtime_hint";
-    fields.runtime_hint.textContent = unavailable && !cap.configurable_model
+    fields.runtime_hint.textContent = unavailable && !providerFields(cap)
       ? uiFormat("speech_worker_unavailable", {target: label("target_" + target)}) : label(key);
     fields.runtime_guide.hidden = !unavailable || cap.runtime_status === "unavailable" || providerFields(cap);
-    if (!fields.runtime_guide.hidden) {
-      fields.runtime_guide.href = cap.guide_url || (engine.startsWith("coqui") ? settingsForm.dataset.speechCoquiGuide : settingsForm.dataset.speechQwenGuide);
-    }
+    if (!fields.runtime_guide.hidden) fields.runtime_guide.href = workerGuide(engine, cap);
   }
   function updateModelFields() {
     var cap = profileCapability(), support = profileSupport();
@@ -771,7 +790,7 @@
     fields.speed.dataset.help = tempoHelp;
     var support = profileSupport();
     applyPauseBounds([fields.paragraph_pause, fields.scene_pause], support);
-    direction.setCapabilities(capabilities, fields.engine.value, support);
+    direction.updateCapabilities();
     var targets = cap.targets.map(function(value) { return [value, label("target_" + value)]; });
     [fields.target, fields.worker_target].forEach(function(select) {
       options(select, targets, cap.targets.includes(select.value) ? select.value : cap.targets[0]);
@@ -795,7 +814,7 @@
     engineOptions(profile.engine);
     fields.base_url.value = profile.base_url || ""; fields.provider_model.value = profile.model || "";
     fields.api_key_env.value = profile.api_key_env || ""; fields.supports_instructions.checked = !!profile.supports_instructions;
-    fields.provider_voice.value = externalEngine(profile.engine) ? profile.voice : "";
+    fields.provider_voice.value = usesProviderBinding(profile.engine) ? profile.voice : "";
     fields.provider_language.value = profile.language;
     fields.voice_description.value = profile.voice_description || "";
     fields.phonemes.value = Object.entries(profile.phonemes || {}).map(function(pair) { return pair.join("="); }).join("\n");
@@ -803,7 +822,7 @@
     referenceOptions(profile.reference_id || "");
     options(fields.language, [], profile.language); options(fields.voice, [], profile.voice); voiceControls();
     setPronunciations(profile.pronunciations);
-    editingPronunciation = null; fields.pronunciation_term.value = fields.pronunciation_spoken.value = "";
+    clearPronunciationDraft();
     fields.pronunciation_search.value = ""; renderPronunciations();
     setEditorDisabled(false); fields.save.disabled = false;
     arrangeSections();
@@ -877,7 +896,7 @@
     var phonemes = phonemeEntries(), prosody = profileProsody.read();
     if (Object.keys(phonemes).length) profile.phonemes = phonemes;
     if (Object.keys(prosody).length) profile.prosody = prosody;
-    if (externalEngine(profile.engine)) {
+    if (usesProviderBinding(profile.engine)) {
       profile.base_url = fields.base_url.value.trim() || profileCapability().default_base_url || "";
       profile.model = fields.provider_model.value.trim() || profileCapability().model || "";
       profile.api_key_env = fields.api_key_env.value.trim() || null;
@@ -889,49 +908,93 @@
     return profile;
   }
   function pronunciationPending() {
-    return Boolean(fields.pronunciation_term.value.trim() || fields.pronunciation_spoken.value.trim());
+    return Boolean(editingPronunciation !== null || fields.pronunciation_term.value.trim() ||
+      fields.pronunciation_spoken.value.trim() || fields.pronunciation_ipa.value.trim());
+  }
+  function clearPronunciationDraft() {
+    editingPronunciation = null;
+    fields.pronunciation_term.value = fields.pronunciation_spoken.value = fields.pronunciation_ipa.value = "";
+  }
+  function editablePronunciations() {
+    if (pronunciationScope === "profile") return pronunciationEntries();
+    return Object.assign(Object.create(null), settings?.pronunciation_lexicon?.entries);
+  }
+  function storePronunciations(entries) {
+    if (pronunciationScope === "profile") setPronunciations(entries);
+    else if (Object.keys(entries).length) settings.pronunciation_lexicon = {
+      schema_version: "lixity-pronunciation-lexicon/1", entries: entries,
+    };
+    else delete settings.pronunciation_lexicon;
+    profilesDirty = true;
+    invalidate();
+    renderPronunciations();
+    status(label("profiles_unsaved"));
   }
   function renderPronunciations() {
-    var replacements;
+    var shared = pronunciationScope === "project";
+    var needsUpgrade = shared && settings?.schema_version !== currentAudioSchema;
+    fields.pronunciation_scope.value = pronunciationScope;
+    fields.pronunciation_upgrade.hidden = !needsUpgrade;
+    fields.pronunciation_controls.hidden = needsUpgrade;
+    fields.pronunciation_project_hint.hidden = !shared;
+    fields.pronunciation_bulk.hidden = shared;
+    fields.pronunciation_ipa.closest("label").hidden = !shared;
+    fields.pronunciation_list.setAttribute("aria-label", label(shared ? "pronunciation_scope_project" : "pronunciation_scope_profile"));
     fields.pronunciation_list.replaceChildren();
-    try { replacements = pronunciationEntries(); }
+    if (needsUpgrade) return;
+    var replacements;
+    try { replacements = editablePronunciations(); }
     catch (_) { return; }
     var query = fields.pronunciation_search.value.trim().toLocaleLowerCase();
     var matches = 0;
-    Object.entries(replacements).forEach(function(pair) {
-      if (query && !pair.join(" ").toLocaleLowerCase().includes(query)) return;
+    Object.entries(replacements).forEach(function([term, value]) {
+      var ipa = shared ? value.ipa || "" : "";
+      var spoken = shared ? value.respelling || "" : value;
+      if (query && ![term, spoken, ipa].join(" ").toLocaleLowerCase().includes(query)) return;
       matches++;
       var row = node("li", fields.pronunciation_list, "row"); row.dataset.pronunciationRow = "true";
-      node("span", row, "", pair[0] + " → " + pair[1]);
+      node("span", row, "", term + " → " + [ipa && "/" + ipa + "/", spoken].filter(Boolean).join(" · "));
       var edit = button(row, "pronunciation_edit", function() {
         if (pronunciationPending()) { status(label("pronunciation_pending")); return; }
-        editingPronunciation = pair[0]; fields.pronunciation_term.value = pair[0];
-        fields.pronunciation_spoken.value = pair[1]; fields.pronunciation_spoken.focus();
+        editingPronunciation = term;
+        fields.pronunciation_term.value = term;
+        fields.pronunciation_spoken.value = spoken;
+        fields.pronunciation_ipa.value = ipa;
+        (shared && ipa ? fields.pronunciation_ipa : fields.pronunciation_spoken).focus();
       });
-      edit.setAttribute("aria-label", label("pronunciation_edit") + ": " + pair[0]);
+      edit.setAttribute("aria-label", label("pronunciation_edit") + ": " + term);
       var remove = button(row, "pronunciation_remove", function() {
         if (pronunciationPending()) { status(label("pronunciation_pending")); return; }
         try {
-          var current = pronunciationEntries(); delete current[pair[0]];
-          setPronunciations(current);
-          if (editingPronunciation === pair[0]) { editingPronunciation = null; fields.pronunciation_term.value = fields.pronunciation_spoken.value = ""; }
-          profilesDirty = true; invalidate(); renderPronunciations(); status(label("profiles_unsaved"));
+          var current = editablePronunciations();
+          delete current[term];
+          storePronunciations(current);
+          fields.pronunciation_search.focus();
         } catch (error) { status(error.message); }
       });
-      remove.setAttribute("aria-label", label("pronunciation_remove") + ": " + pair[0]);
+      remove.setAttribute("aria-label", label("pronunciation_remove") + ": " + term);
     });
-    fields.pronunciation_empty.hidden = !query || matches > 0;
+    fields.pronunciation_empty.hidden = matches > 0;
+    fields.pronunciation_empty.textContent = label(query ? "pronunciation_not_found" : "pronunciation_empty");
   }
   function applyPronunciation() {
     try {
-      var entries = pronunciationEntries(), term = fields.pronunciation_term.value.trim(), spoken = fields.pronunciation_spoken.value.trim();
-      if (!term || !spoken || /[\r\n]/.test(term) || /[\r\n]/.test(spoken) ||
-          (Object.hasOwn(entries, term) && term !== editingPronunciation)) throw new Error(label("pronunciation_error"));
+      var shared = pronunciationScope === "project";
+      var entries = editablePronunciations(), term = fields.pronunciation_term.value.trim();
+      var spoken = fields.pronunciation_spoken.value.trim(), ipa = fields.pronunciation_ipa.value.trim();
+      if (shared && settings.schema_version !== currentAudioSchema) {
+        guideToSchemaReview("pronunciation_schema_required"); return;
+      }
+      if (!term || (!spoken && !(shared && ipa)) ||
+          [term, spoken, ipa].some(function(value) { return /[\u0000-\u001f\u007f]/.test(value); }) ||
+          (Object.hasOwn(entries, term) && term !== editingPronunciation)) {
+        throw new Error(label(shared ? "pronunciation_project_error" : "pronunciation_error"));
+      }
       if (editingPronunciation !== null && editingPronunciation !== term) delete entries[editingPronunciation];
-      entries[term] = spoken;
-      setPronunciations(entries);
-      editingPronunciation = null; fields.pronunciation_term.value = fields.pronunciation_spoken.value = "";
-      profilesDirty = true; invalidate(); renderPronunciations(); status(label("profiles_unsaved"));
+      entries[term] = shared ? Object.assign({}, ipa ? {ipa: ipa} : null, spoken ? {respelling: spoken} : null) : spoken;
+      clearPronunciationDraft();
+      storePronunciations(entries);
+      fields.pronunciation_term.focus();
     } catch (error) { status(error.message); }
   }
   function stash() { if (settings && settings.selected) settings.profiles[settings.selected] = readProfile(); }
@@ -976,12 +1039,14 @@
     // Preserve languages that require an explicitly configured external provider.
     var projectLanguage = document.getElementById("set-language");
     var language = fields.language.value || (projectLanguage && projectLanguage.value) || document.documentElement.lang;
-    var mlxPreset = Object.entries(capabilities["mlx-audio"]?.voices || {}).find(function(pair) {
+    var mlx = capabilities["mlx-audio"];
+    var mlxPreset = Object.entries(mlx?.voices || {}).find(function(pair) {
       return pair[0] !== "reference" && pair[1].languages.includes(language);
     })?.[0];
     var mlxReady = Array.isArray(workers) &&
       workers.some(function(item) { return item.engines?.includes("mlx-audio") && item.state === "ready"; });
-    var authorEngine = mlxReady && mlxPreset ? "mlx-audio" : "ims-toucan", cap = capabilities[authorEngine];
+    var mlxReference = referenceSupported(mlx) && mlx.languages.includes(language);
+    var authorEngine = mlxReady && (mlxReference || mlxPreset) ? "mlx-audio" : "ims-toucan", cap = capabilities[authorEngine];
     var engine = cap && cap.creation_enabled !== false && cap.languages.includes(language) ? authorEngine : Object.keys(capabilities).find(function(key) {
       return key !== "mlx-audio" && capabilities[key].creation_enabled !== false && capabilities[key].languages.includes(language) && !capabilities[key].reference_required && !capabilities[key].voice_design;
     }) || "openai-compatible";
@@ -989,7 +1054,7 @@
     var external = !!cap.configurable_model;
     if (external && !["lixity-audio-settings/4", currentAudioSchema].includes(settings.schema_version)) { guideToSchemaReview("provider_schema_required"); return; }
     if (engine === "ims-toucan" && settings.schema_version !== currentAudioSchema) { guideToSchemaReview("phonemes_schema_required"); return; }
-    var voice = engine === "mlx-audio" ? mlxPreset : cap.reference_required ? "reference" :
+    var voice = engine === "mlx-audio" ? (allReferences.length || !mlxPreset ? "reference" : mlxPreset) : cap.reference_required ? "reference" :
       external ? "" : cap.default_voice || Object.keys(cap.voices)[0];
     var created = {name: label("new_profile"), engine: engine, language: language, voice: voice, speed: cap.speed.default,
       instructions: "", paragraph_pause: profileConstraints.default_paragraph_pause,
@@ -1053,7 +1118,7 @@
     fields.chapter_audio_status.textContent = entry ? label("chapter_audio_ready") + " · " + entry.duration_seconds.toFixed(1) + " s" : label("chapter_audio_missing");
   }
   async function refreshChapterAudio() {
-    if (!speechReady || chapterAudioBusy || (mode !== "reader" && mode !== "output")) return;
+    if (!speechReady || chapterAudioBusy || mode !== "output") return;
     var sequence = ++chapterAudioSequence, opening = openSequence, bound = context();
     chapterAudio = null;
     updateChapterAudioActions();
@@ -1139,7 +1204,9 @@
       } else if (!fields.ignore_direction.checked) {
         var draft = direction.draft(); if (draft) { payload.draft_direction = draft; var replacement=direction.replacement(); if (replacement) payload.draft_replace_id=replacement; }
       }
-      fields.context.textContent = (planOnly ? label("direction_plan") : externalEngine(profile.engine) ? label("provider_model") : label("target_" + payload.target)) + " · " + (mode === "manuscript" ? label("scope_manuscript") : fields.chapter.selectedOptions[0].textContent) +
+      var cap = capabilities[profile.engine];
+      var execution = providerFields(cap) ? cap.short_name || cap.name : label("target_" + payload.target);
+      fields.context.textContent = (planOnly ? label("direction_plan") : execution) + " · " + (mode === "manuscript" ? label("scope_manuscript") : fields.chapter.selectedOptions[0].textContent) +
         (mode === "preview" ? " · " + label(paragraph ? "paragraph_preview" : "first_preview") : "") +
         (mode === "preview" && paragraph ? " · " + paragraph.identity.start_line + "–" + paragraph.identity.end_line : "");
       var data = await request(planOnly ? "speech-plan" : "speech-render", payload);
@@ -1197,7 +1264,7 @@
       if (!["lixity-audio-settings/3", "lixity-audio-settings/4", currentAudioSchema].includes(settings.schema_version) && Object.values(settings.profiles).some(function(profile) { return profile.engine.startsWith("coqui"); })) {
         guideToSchemaReview("coqui_schema_required"); return false;
       }
-      if (!["lixity-audio-settings/4", currentAudioSchema].includes(settings.schema_version) && Object.values(settings.profiles).some(function(profile) { return externalEngine(profile.engine); })) {
+      if (!["lixity-audio-settings/4", currentAudioSchema].includes(settings.schema_version) && Object.values(settings.profiles).some(function(profile) { return usesProviderBinding(profile.engine); })) {
         guideToSchemaReview("provider_schema_required"); return false;
       }
       if (settings.schema_version !== currentAudioSchema && Object.values(settings.profiles).some(function(profile) {
@@ -1258,6 +1325,15 @@
       return [reference.id, referenceLabel(reference.id)];
     })), selected, label("reference_unavailable"));
   }
+  function playReference(referenceId) {
+    clearAudio();
+    var source = url("speech-audio", {reference_id: referenceId});
+    fields.audio.src = source;
+    fields.audio.hidden = false;
+    fields.audio.play().catch(function(error) {
+      if (fields.audio.getAttribute("src") === source && error.name !== "AbortError") status(error.message);
+    });
+  }
   function updateVoiceCard() {
     if (!fields.profile_voice_card) return;
     var cap = capabilities && capabilities[fields.engine.value];
@@ -1270,11 +1346,7 @@
     if (match) {
       var playBtn = node("button", fields.profile_voice_card, "ctl", "▶ " + label("listen_reference"));
       playBtn.type = "button";
-      playBtn.addEventListener("click", function() {
-        fields.audio.src = url("speech-audio", {reference_id: curId});
-        fields.audio.hidden = false;
-        fields.audio.play().catch(function(error) { status(error.message); });
-      });
+      playBtn.addEventListener("click", function() { playReference(curId); });
     } else {
       node("span", fields.profile_voice_card, "voice-card-info", label(curId ? "reference_unavailable_help" : "no_voice_yet"));
     }
@@ -1295,11 +1367,7 @@
       if (!match) return;
       var prevBtn = node("button", fields.active_voice_badge, "ctl", "▶ " + label("listen_reference"));
       prevBtn.type = "button";
-      prevBtn.addEventListener("click", function() {
-        fields.audio.src = url("speech-audio", {reference_id: activeId});
-        fields.audio.hidden = false;
-        fields.audio.play().catch(function(error) { status(error.message); });
-      });
+      prevBtn.addEventListener("click", function() { playReference(activeId); });
     } else {
       node("em", span, "", label("no_voice_yet"));
     }
@@ -1351,12 +1419,9 @@
       if (duration) node("div", info, "voice-ref-meta", label("audit_duration") + ": " + duration);
       var actions = node("div", item, "row");
       var play = node("button", actions, "ctl", "▶");
-      play.type = "button"; play.setAttribute("aria-label", label("listen_reference")); addHelp(play, "listen_reference");
-      play.addEventListener("click", function() {
-        fields.audio.src = url("speech-audio", {reference_id: ref.id});
-        fields.audio.hidden = false;
-        fields.audio.play().catch(function(error) { status(error.message); });
-      });
+      play.type = "button";
+      window.LixityComponents.setControlLabel(play, label("listen_reference"));
+      play.addEventListener("click", function() { playReference(ref.id); });
       var isCurrent = activeProfile && activeProfile.reference_id === ref.id;
       if (isCurrent) {
         node("span", actions, "badge", "✓ " + label("active_voice"));
@@ -1803,28 +1868,16 @@
       if (isRecordingVoice) stopVoiceRecording(); else releaseRecording();
     }
     fields.audio.pause(); fields.takePlayer.pause();
+    if (!initializing && inReader() !== Boolean(surfaces[newMode].manuscript)) clearAudio();
     mode = newMode;
-    if (fields.tabs) {
-      Object.keys(fields.tabs).forEach(function(k) {
-        if (fields.tabs[k]) {
-          var active = k === mode;
-          fields.tabs[k].classList.toggle("active", active);
-          fields.tabs[k].setAttribute("aria-selected", String(active));
-          if (active) fields.panel.setAttribute("aria-labelledby", fields.tabs[k].id);
-        }
-      });
-    }
-    fields.heading.textContent = label(mode === "reference" ? "record_author_title" : mode === "profiles" ? "profiles_title" : mode === "output" ? "chapter_output" : mode === "microphone" ? "microphone_title" : "reader_title");
-    if (fields.reference_section) fields.reference_section.hidden = mode !== "reference";
+    Object.entries(fields.tabs).forEach(function([key, tab]) {
+      var active = key === mode;
+      tab.classList.toggle("active", active);
+      tab.setAttribute("aria-selected", String(active));
+    });
+    fields.panel.setAttribute("aria-labelledby", fields.tabs[mode].id);
+    fields.heading.textContent = label(surfaces[mode].title);
     updateRecordingDuration();
-    if (direction && direction.section) direction.section.hidden = mode !== "reader";
-    fields.chapter.closest("label").hidden = !inReader();
-    fields.runtime_hint.hidden = !inReader();
-    fields.preview.hidden = !inReader() || !canRender;
-    fields.chapter_render.hidden = mode !== "output" || !canRender;
-    fields.cancel.hidden = !inReader() || !canRender;
-    fields.reuseLabel.hidden = mode !== "output" || !canRender;
-    fields.context.hidden = !inReader();
     arrangeSections();
     if (!initializing) presentSpeechSurface();
     refreshChapterAudio();
@@ -1853,27 +1906,28 @@
     fields.status = node("p", card, "ctl-status modal-intro"); fields.status.id = "speech-status"; fields.status.setAttribute("role", "status"); fields.status.setAttribute("aria-live", "polite");
     var content = node("div", card, "modal-body"); fields.panel = content;
     content.id = "speech-panel"; content.setAttribute("role", "tabpanel");
-    function setupTabs(container, tabs) {
+    function setupTabs(container, manuscript) {
       container.setAttribute("role", "tablist");
       container.setAttribute("aria-label", label("action_title"));
-      tabs.forEach(function([key, id, text]) {
-        var tab = node("button", container, "modal-tab-btn", label(text));
-        tab.type = "button"; tab.id = "speech-tab-" + id;
+      Object.entries(surfaces).forEach(function([key, surface]) {
+        if (Boolean(surface.manuscript) !== manuscript) return;
+        var tab = node("button", container, "modal-tab-btn", label(surface.label));
+        tab.type = "button"; tab.id = "speech-tab-" + surface.tab;
         tab.setAttribute("role", "tab"); tab.setAttribute("aria-controls", content.id);
         tab.addEventListener("click", function() { switchMode(key); });
         fields.tabs[key] = tab;
       });
       initKeyboardTabs(container, '[role="tab"]', false);
     }
-    setupTabs(fields.project_audio_tabs, [["reference", "reference", "tab_voice"],
-      ["profiles", "profiles", "tab_profiles"], ["microphone", "microphone", "tab_microphone"]]);
-    setupTabs(fields.reader_audio_tabs, [["reader", "direction", "direction_title"], ["output", "output", "chapter_output"]]);
+    setupTabs(fields.project_audio_tabs, false);
+    setupTabs(fields.reader_audio_tabs, true);
     fields.tabs.output.dataset.speechAction = "output_title";
     fields.reader_shortcut = node("div", content, "row speech-project-shortcut");
     button(fields.reader_shortcut, "go_to_manuscript_audio", function() {
       if (switchMode("reader")) fields.export_scope.value = "preview";
     }).id = "speech-tab-reader";
-    fields.project_profile_summary = node("div", content, "row speech-profile-summary");
+    fields.reader_context = node("div", content, "ctl-group speech-reader-context");
+    fields.project_profile_summary = node("div", fields.reader_context, "row speech-profile-summary");
     fields.project_profile_name = node("p", fields.project_profile_summary, "ctl-note");
     fields.project_profile_name.id = "speech-project-profile";
     button(fields.project_profile_summary, "profiles_title", function() {
@@ -2086,6 +2140,7 @@
         schemaReviewAvailable = false;
         fields.schema_review.hidden = fields.schema_apply.hidden = true;
         arrangeSections();
+        renderPronunciations();
         status(label("schema_applied_draft"));
         applied = true;
       } catch (error) {
@@ -2171,20 +2226,55 @@
     var lexicon = node("details", content, "settings-section panel-disclosure speech-profile-utilities"); lexicon.id = "speech-lexicon";
     fields.lexicon_section = lexicon;
     node("summary", lexicon, "", label("pronunciations"));
-    var searchRow = node("div", lexicon, "row"), search = field(searchRow, "pronunciation_search", "search");
-    search.addEventListener("input", renderPronunciations);
-    fields.pronunciation_list = node("ul", lexicon, "pronunciation-list");
-    fields.pronunciation_list.setAttribute("aria-label", label("pronunciations"));
-    fields.pronunciation_empty = node("p", lexicon, "ctl-note pronunciation-empty", label("pronunciation_not_found"));
-    fields.pronunciation_empty.hidden = true; fields.pronunciation_empty.setAttribute("aria-live", "polite");
-    var pronunciationEditor = node("div", lexicon, "settings-grid");
-    field(pronunciationEditor, "pronunciation_term").maxLength = 100;
-    field(pronunciationEditor, "pronunciation_spoken").maxLength = 300;
-    button(lexicon, "pronunciation_apply", applyPronunciation);
-    button(lexicon, "pronunciation_discard", function() {
-      editingPronunciation = null; fields.pronunciation_term.value = fields.pronunciation_spoken.value = ""; status("");
+    var scope = field(lexicon, "pronunciation_scope", "select");
+    options(scope, [["project", label("pronunciation_scope_project")], ["profile", label("pronunciation_scope_profile")]], pronunciationScope);
+    scope.addEventListener("change", function() {
+      if (pronunciationPending()) {
+        scope.value = pronunciationScope;
+        status(label("pronunciation_pending")); return;
+      }
+      pronunciationScope = scope.value;
+      fields.pronunciation_search.value = "";
+      renderPronunciations();
     });
-    var rawList = node("details", lexicon, "settings-advanced");
+    fields.pronunciation_upgrade = node("div", lexicon, "row");
+    fields.pronunciation_upgrade.hidden = true;
+    node("p", fields.pronunciation_upgrade, "ctl-note", label("pronunciation_schema_required"));
+    button(fields.pronunciation_upgrade, "pronunciation_schema_review", function() {
+      fields.schema_preview.focus();
+      fields.schema_preview.click();
+    });
+    var pronunciationControls = node("div", lexicon);
+    fields.pronunciation_controls = pronunciationControls;
+    fields.pronunciation_project_hint = node("p", pronunciationControls, "ctl-note", label("pronunciation_project_hint"));
+    fields.pronunciation_project_hint.id = "speech-pronunciation-project-hint";
+    var searchRow = node("div", pronunciationControls, "row"), search = field(searchRow, "pronunciation_search", "search");
+    search.addEventListener("input", renderPronunciations);
+    fields.pronunciation_list = node("ul", pronunciationControls, "pronunciation-list");
+    fields.pronunciation_list.setAttribute("aria-label", label("pronunciations"));
+    fields.pronunciation_empty = node("p", pronunciationControls, "ctl-note pronunciation-empty");
+    fields.pronunciation_empty.hidden = true; fields.pronunciation_empty.setAttribute("aria-live", "polite");
+    var pronunciationEditor = node("div", pronunciationControls, "settings-grid");
+    var termInput = field(pronunciationEditor, "pronunciation_term");
+    termInput.maxLength = 100;
+    var spokenInput = field(pronunciationEditor, "pronunciation_spoken");
+    spokenInput.maxLength = 300;
+    var ipaInput = field(pronunciationEditor, "pronunciation_ipa");
+    ipaInput.maxLength = 300;
+    ipaInput.setAttribute("aria-describedby", fields.pronunciation_project_hint.id);
+    [termInput, spokenInput, ipaInput].forEach(function(input) {
+      input.spellcheck = false;
+      input.setAttribute("autocapitalize", "off");
+    });
+    var pronunciationActions = node("div", pronunciationControls, "row");
+    button(pronunciationActions, "pronunciation_apply", applyPronunciation);
+    button(pronunciationActions, "pronunciation_discard", function() {
+      clearPronunciationDraft();
+      fields.pronunciation_term.focus();
+      status(profilesDirty ? label("profiles_unsaved") : "");
+    });
+    var rawList = node("details", pronunciationControls, "settings-advanced");
+    fields.pronunciation_bulk = rawList;
     node("summary", rawList, "", label("pronunciation_bulk"));
     field(rawList, "pronunciations", "textarea").addEventListener("input", renderPronunciations);
     node("p", rawList, "ctl-note", label("pronunciation_hint"));
@@ -2196,10 +2286,11 @@
     var phonemeHelp = node("p", fields.phonemes_section, "ctl-note", label("phonemes_help"));
     phonemeHelp.id = "speech-phonemes-help"; fields.phonemes.setAttribute("aria-describedby", phonemeHelp.id);
     fields.phonemes.addEventListener("input", updateModelFields);
-    field(content, "chapter", "select");
+    field(fields.reader_context, "chapter", "select");
     direction = window.LixitySpeechDirection(content, {
       node:node, field:field, button:button, options:options, label:label, request:request,
       status:status, invalidate:invalidate, tokens:tokens, createProsody:createProsody, applyPauseBounds:applyPauseBounds,
+      profileSupport:profileSupport,
       current:function() { return dialog.open && openedContext === context(); },
       selected:function(p) {
         paragraph={identity:p.anchor,chapter:p.chapter}; fields.chapter.value=String(p.chapter);
@@ -2211,10 +2302,17 @@
     fields.runtime_guide.target = "_blank"; fields.runtime_guide.rel = "noopener noreferrer"; fields.runtime_guide.hidden = true;
     var ignore = node("label", content, "form-checkbox");
     fields.ignore_direction = node("input", ignore); fields.ignore_direction.type = "checkbox"; fields.ignore_direction.id = "speech-ignore-direction";
-    node("span", ignore, "", label("ignore_direction"));
-    fields.ignore_direction.addEventListener("change", invalidate);
-    fields.run_options = node("div", content, "ctl-group");
+    node("span", ignore, "", label("ignore_direction_label"));
+    fields.ignore_direction.dataset.help = label("ignore_direction");
+    fields.run_options = node("div", content, "ctl-group speech-run-options");
     fields.run_options.append(fields.target.closest("label"), ignore);
+    fields.ignore_note = node("p", fields.run_options, "ctl-note", label("ignore_direction"));
+    fields.ignore_note.id = "speech-ignore-direction-note";
+    fields.ignore_direction.setAttribute("aria-describedby", fields.ignore_note.id);
+    fields.ignore_direction.addEventListener("change", function() {
+      fields.ignore_note.hidden = !fields.ignore_direction.checked;
+      invalidate();
+    });
     var reuse = node("label", content, "form-checkbox"); reuse.hidden = true;
     fields.reuse = node("input", reuse); fields.reuse.type = "checkbox"; fields.reuse.id = "speech-reuse"; fields.reuse.checked = true;
     node("span", reuse, "", label("reuse"));
@@ -2379,9 +2477,12 @@
     fields.audioWidget = window.createSpeechPlayer(fields.audio, {label: label, onError: status});
     fields.player_controls = node("div", content, "speech-player-controls"); fields.player_controls.hidden = true;
     var skipBack = button(fields.player_controls, "skip_back", function() { fields.audio.currentTime = Math.max(0, fields.audio.currentTime - 5); });
-    skipBack.textContent = "−5s"; skipBack.title = label("audio_skip_back") || "5s back";
+    skipBack.textContent = "−5 s";
+    window.LixityComponents.setControlLabel(skipBack, label("playback_back"));
     var skipForward = button(fields.player_controls, "skip_forward", function() { fields.audio.currentTime = Math.min(fields.audio.duration || 0, fields.audio.currentTime + 5); });
-    skipForward.textContent = "+5s"; skipForward.title = label("audio_skip_forward") || "5s forward";
+    skipForward.textContent = "+5 s";
+    window.LixityComponents.setControlLabel(skipForward, label("playback_forward"));
+    var rateFormat = new Intl.NumberFormat(document.documentElement.lang || undefined);
     [0.8, 1.0, 1.25, 1.5].forEach(function(rate) {
       var rateBtn = button(fields.player_controls, "rate_" + rate, function() {
         fields.audio.playbackRate = rate;
@@ -2392,7 +2493,9 @@
         rateBtn.classList.add("active");
         rateBtn.setAttribute("aria-pressed", "true");
       });
-      rateBtn.textContent = rate + "×";
+      var rateText = rateFormat.format(rate) + "×";
+      rateBtn.textContent = rateText;
+      window.LixityComponents.setControlLabel(rateBtn, uiFormat("speech_playback_rate", {rate:rateText}));
       rateBtn.classList.add("speech-rate-btn");
       var isDefaultRate = rate === 1.0;
       if (isDefaultRate) rateBtn.classList.add("active");
@@ -2440,17 +2543,18 @@
     var serviceActions = node("div", null, "row");
     serviceActions.append(fields.worker_guide, fields.worker_refresh);
     fields.service_section.append(fields.worker_target.closest("label"), fields.worker_status, serviceActions);
-    fields.render_section.append(fields.runtime_hint, fields.runtime_guide, reuse, actions, fields.context, fields.progress);
+    actions.prepend(fields.chapter_render);
+    fields.render_section.append(fields.runtime_hint, fields.runtime_guide, actions, reuse, fields.context, fields.progress);
     fields.playback_section.append(fields.player_controls, fields.download);
     fields.profile_row.before(fields.schema_section);
     fields.profile_row.after(fields.editor, fields.lexicon_section, fields.phonemes_section, fields.service_section);
-    fields.audit_section.before(fields.render_section, fields.export_section);
-    fields.export_section.after(fields.chapter_audio_section);
-    content.append(fields.playback_section, fields.reader_shortcut);
-    arrangeSections();
     fields.reuseLabel = reuse;
+    content.append(fields.reader_context, direction.section, fields.run_options, fields.render_section, fields.playback_section,
+      fields.chapter_audio_section, fields.export_section, fields.audit_section, fields.reader_shortcut);
+    arrangeSections();
     function markProfileDirty(event) {
-      if (mode === "profiles" && ![fields.pronunciation_search, fields.pronunciation_term, fields.pronunciation_spoken].includes(event.target)) profilesDirty = true;
+      if (mode === "profiles" && ![fields.pronunciation_search, fields.pronunciation_term, fields.pronunciation_spoken,
+        fields.pronunciation_ipa, fields.pronunciation_scope].includes(event.target)) profilesDirty = true;
       invalidate();
     }
     [fields.editor, fields.lexicon_section, fields.phonemes_section].forEach(function(section) {
@@ -2515,7 +2619,7 @@
     fields.microphone_device.setAttribute("aria-label", label("microphone_device"));
     fields.microphone_gain.setAttribute("aria-label", label("microphone_gain"));
     fields.microphone_gain_range.setAttribute("aria-label", label("microphone_gain"));
-    fields.ignore_direction.dataset.help = label("ignore_help"); fields.reuse.dataset.help = label("reuse_help");
+    fields.reuse.dataset.help = label("reuse_help");
   }
   async function open(entry, requestedPanel, opener) {
     if (dialog?.open && speechDocked && entry === "reader") {
@@ -2533,7 +2637,7 @@
     }
     if (dialog?.open && speechDocked && (direction.busy() || direction.dirty())) showReaderDocument();
     if (dialog?.open && !closeAudioSurface()) return;
-    mode = entry || "reference";
+    mode = Object.hasOwn(surfaces, entry) ? entry : "reference";
     speechOpener = mode === "reader" ? opener || document.getElementById("reader-speech") : null;
     speechReady = false; speechLoadMessage = label("loading"); trimLimitSeconds = 0; referenceFormat = null; referenceRecording = null; profileConstraints = null;
     profileSettingsAvailable = schemaReviewAvailable = migrationRequired = false;
@@ -2577,6 +2681,7 @@
     fields.export_scope.value = mode === "reader" ? "preview" : "chapter";
     fields.audit_scope.value = "chapter";
     fields.ignore_direction.checked = false;
+    fields.ignore_note.hidden = true;
     fields.reuse.checked = true;
     fields.reuse.disabled = false;
     calibrationTexts = null; sampleVariant = "short"; fields.customTextarea.value = "";
@@ -2599,6 +2704,7 @@
       schemaReviewAvailable = !migrationRequired && (data.settings ?
         data.settings.schema_version !== currentAudioSchema : data.audio_settings_present === false);
       settings = data.settings || {schema_version: "lixity-audio-settings/1", selected: "", profiles: {}}; capabilities = data.capabilities; workers = data.workers;
+      pronunciationScope = settings.schema_version === currentAudioSchema ? "project" : "profile";
       allReferences = data.references || [];
       renderReferenceList(allReferences);
       calibrationTexts = data.calibration_texts || null; fields.updatePromptText();
@@ -2614,7 +2720,7 @@
       savedSettings = JSON.parse(JSON.stringify(settings));
       var savedProfile = savedSettings.profiles[savedSettings.selected];
       fields.project_profile_name.textContent = savedProfile ? uiFormat("speech_project_profile_summary", {
-        profile:savedProfile.name, engine:capabilities[savedProfile.engine]?.name || savedProfile.engine
+        profile:savedProfile.name, engine:capabilities[savedProfile.engine]?.short_name || capabilities[savedProfile.engine]?.name || savedProfile.engine
       }) : label("profile_required");
       var matchedChapter = paragraph && data.chapters.find(function(chapter) {
         return paragraph.identity.start_line >= chapter.start_line && paragraph.identity.end_line <= chapter.end_line;

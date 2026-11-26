@@ -38,7 +38,7 @@ from desktop.scripts.verify_desktop_artifacts import (
 )
 from desktop.scripts.windows_artifact_signing import AZURE_CREDENTIALS, AZURE_FIELDS
 from scripts import desktop_downloads
-from scripts.stage_pages import LEGACY_PAGES_BASE_URL, normalize_pages_base_url
+from scripts.stage_pages import CUSTOM_PAGES_BASE_URL, normalize_pages_base_url
 
 JSON_LIMIT = 2 * 1024 * 1024
 ASSET_LIMIT = 256 * 1024 * 1024
@@ -48,7 +48,7 @@ RELEASE_TAG = re.compile(r"v[0-9]+\.[0-9]+\.[0-9]+")
 REPOSITORY = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
 RC_WORKFLOW = "rc.yml"
 RC_ARTIFACT = "verified-release-candidate"
-DEFAULT_PAGES_URL = LEGACY_PAGES_BASE_URL
+DEFAULT_PAGES_URL = CUSTOM_PAGES_BASE_URL
 PAGES_VERIFY_FILES = (
     *(page_path(language) for language in LANGUAGES),
     *(f"guides/metrics/{language}.html" for language in LANGUAGES),

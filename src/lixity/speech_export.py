@@ -39,6 +39,28 @@ def _warning(code: str, message: str, **context: Any) -> dict[str, Any]:
     return {'code': code, 'message': message, **context}
 
 
+def _export_phoneme_spans(row: SpeechSegment) -> list[tuple[int, int, str]]:
+    applied = phoneme_spans(row.text, row.profile.phonemes)
+    return applied + list(row.export_info.unsupported_phonemes) if row.export_info else applied
+
+
+def _pronunciation_warnings(row: SpeechSegment, index: int) -> list[dict[str, Any]]:
+    warnings = []
+    if row.export_info and row.export_info.unsupported_phonemes:
+        warnings.append(_warning(
+            'pronunciation_ipa_unsupported',
+            'The selected voice cannot render the requested IPA. Export retains it for a compatible engine.',
+            segment=index,
+        ))
+    if row.export_info and row.export_info.lexicon_respelling_fallback:
+        warnings.append(_warning(
+            'pronunciation_respelling_used',
+            'The selected voice receives your alternate spelling as text.',
+            segment=index,
+        ))
+    return warnings
+
+
 def timeline_json(plan: Sequence[SpeechSegment]) -> dict[str, Any]:
     """Serialize authored choices without requiring a worker or reference bytes.
 
@@ -59,6 +81,7 @@ def timeline_json(plan: Sequence[SpeechSegment]) -> dict[str, Any]:
         if info is None:
             warnings.append(_warning('source_provenance_unavailable',
                                      'This render segment has no retained pre-substitution source range.', segment=index))
+        warnings.extend(_pronunciation_warnings(row, index))
         segments.append({
             'id': f'segment-{index}', 'speaker_id': speaker_id,
             'text': row.text, 'spoken_text': row.text,
@@ -75,7 +98,7 @@ def timeline_json(plan: Sequence[SpeechSegment]) -> dict[str, Any]:
             'substitutions': [{'start': start, 'end': end, 'original': info.original_text[start:end],
                                'replacement': replacement} for start, end, replacement in info.substitutions] if info else [],
             **({'phonemes': [{'start': start, 'end': end, 'text': row.text[start:end], 'ipa': ipa}
-                             for start, end, ipa in phoneme_spans(row.text, row.profile.phonemes)],
+                             for start, end, ipa in _export_phoneme_spans(row)],
                 'prosody': segment_prosody(row)} if has_extended_controls(row) else {}),
             'pause_before': row.pause_before, 'pause_after': row.pause_after,
             'start_seconds': None, 'end_seconds': None, 'duration_seconds': None,
@@ -114,7 +137,7 @@ def _word_character(value: str) -> bool:
 
 def _content(row: SpeechSegment, index: int, warnings: list[dict[str, Any]]) -> str:
     info = row.export_info
-    phones = phoneme_spans(row.text, row.profile.phonemes)
+    phones = _export_phoneme_spans(row)
     if phones:
         # IPA addresses the prepared spoken text. Retain the earlier textual
         # substitution mapping in the timeline instead of nesting incompatible
@@ -191,6 +214,7 @@ def ssml_export(plan: Sequence[SpeechSegment], *, default_lang: str = 'en') -> d
         if row.pause_before > 0:
             lines.append('  ' + before)
         if row.text.strip():
+            warnings.extend(_pronunciation_warnings(row, index))
             speaker_id, _identity = _speaker(row)
             voice_name = (speaker_id if row.profile.voice in ('design', 'reference') or
                           any(char.isspace() for char in row.profile.voice) or

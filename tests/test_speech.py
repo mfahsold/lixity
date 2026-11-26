@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import shutil
+import struct
 import wave
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -224,6 +225,51 @@ def test_render_uses_one_selected_qwen_profile_and_sample_rate(tmp_path, monkeyp
     with wave.open(str(output), "rb") as audio:
         assert audio.getframerate() == 24000
         assert audio.getnframes() > 0
+
+
+@pytest.mark.parametrize("pause", [0.0, 0.25])
+def test_render_smooths_joins_and_keeps_pause_frames_and_cached_audio(tmp_path, monkeypatch, pause):
+    from lixity.speech_direction import SpeechSegment
+    from lixity.speech_profiles import AudioProfile
+
+    speech, source, _calls = _fake_renderer(tmp_path, monkeypatch)
+    profile = AudioProfile(speed=1.0)
+    rate, segment_frames = 24000, 480
+    calls = []
+
+    def synthesize(text, *_args, **_kwargs):
+        calls.append(text)
+        value = 10000 if text == "First." else -10000
+        output = io.BytesIO()
+        with wave.open(output, "wb") as audio:
+            audio.setparams((1, 2, rate, 0, "NONE", "not compressed"))
+            audio.writeframes(struct.pack("<h", value) * segment_frames)
+        return output.getvalue()
+
+    monkeypatch.setattr(speech, "_synthesize_segment", synthesize)
+    first = SpeechSegment("First.", profile)
+    plan = [first, SpeechSegment("Second.", profile, pause_before=pause),
+            SpeechSegment("", profile, pause_after=0.1)]
+    cache = tmp_path / "cache"
+    output = speech.render_speech_audio(source, tmp_path / "chapter.wav", profile=profile, plan=plan, cache_dir=cache)
+    pause_frames = int(rate * pause)
+    second_start = segment_frames + pause_frames
+    second_end = second_start + segment_frames
+    with wave.open(str(output), "rb") as audio:
+        assert audio.getnframes() == second_end + 2400
+        samples = tuple(value for value, in struct.iter_unpack("<h", audio.readframes(audio.getnframes())))
+    assert samples[:segment_frames - 120] == (10000,) * (segment_frames - 120)
+    assert 0 < samples[segment_frames - 60] < 10000
+    assert samples[segment_frames - 1:second_start + 1] == (0,) * (pause_frames + 2)
+    assert -10000 < samples[second_start + 60] < 0
+    assert samples[second_start + 120:second_end - 120] == (-10000,) * (segment_frames - 240)
+    assert samples[second_end - 1:] == (0,) * 2401
+
+    pickup = speech.render_speech_audio(source, tmp_path / "pickup.wav", profile=profile,
+                                        plan=[first], cache_dir=cache)
+    with wave.open(str(pickup), "rb") as audio:
+        assert audio.readframes(audio.getnframes()) == struct.pack("<h", 10000) * segment_frames
+    assert calls == ["First.", "Second."]
 
 
 @pytest.mark.parametrize("data", [b"", b"not a WAV", generate_silence_wav(.01, 24000)[:-2],

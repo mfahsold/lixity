@@ -32,12 +32,16 @@ $og_locales
 <meta property="og:description" content="$description"/>
 <meta property="og:url" content="$canonical"/>
 <meta property="og:image" content="https://lixity.de/screenshots/dashboard-light.png"/>
+<meta property="og:image:secure_url" content="https://lixity.de/screenshots/dashboard-light.png"/>
+<meta property="og:image:type" content="image/png"/>
 <meta property="og:image:width" content="$image_width"/>
 <meta property="og:image:height" content="$image_height"/>
 <meta property="og:video" content="https://lixity.de/videos/product-tour.mp4"/>
+<meta property="og:video:secure_url" content="https://lixity.de/videos/product-tour.mp4"/>
 <meta property="og:video:type" content="video/mp4"/>
 <meta property="og:video:width" content="1440"/>
 <meta property="og:video:height" content="900"/>
+<meta property="og:video:alt" content="$tour_title"/>
 <meta property="og:image:alt" content="$preview"/>
 <meta name="twitter:image:alt" content="$preview"/>
 <meta name="twitter:card" content="summary_large_image"/>
@@ -70,7 +74,8 @@ $og_locales
 </aside></div>
 <figure id="product-tour-preview" tabindex="-1" class="product-preview product-tour" aria-label="$tour_title">
 <div class="tour-screen">
-<video id="product-tour" width="1440" height="900" poster="screenshots/dashboard-light.png" preload="none" muted playsinline controls aria-label="$tour_title" aria-describedby="tour-note">
+<video id="product-tour" width="1440" height="900" poster="screenshots/dashboard-light.png" data-portrait-poster="videos/product-tour-portrait.png" preload="none" muted playsinline controls aria-label="$tour_title" aria-describedby="tour-note">
+<source src="videos/product-tour-portrait.mp4" type="video/mp4" media="(orientation: portrait)"/>
 <source src="videos/product-tour.webm" type='video/webm; codecs="av01.0.08M.08"'/>
 <source src="videos/product-tour.mp4" type="video/mp4"/>
 <a href="demo/report.html" hreflang="en">$demo</a>

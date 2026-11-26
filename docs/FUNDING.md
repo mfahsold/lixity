@@ -1,6 +1,6 @@
 # Project funding and use of funds
 
-Read the current [funding status, priorities and allocation log](https://mfahsold.github.io/lixity/guides/support.html).
+Read the current [funding status, priorities and allocation log](https://lixity.de/guides/support.html).
 The first funding priorities are public desktop installers and ports for
 Android and iOS / iPadOS.
 

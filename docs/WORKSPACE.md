@@ -590,18 +590,14 @@ keys from the corresponding view or control.
 | Format in the writing editor | `Cmd/Ctrl+B` for bold or `Cmd/Ctrl+I` for italics |
 | Import a manuscript in the desktop app | `Cmd/Ctrl+Shift+I` from the native File menu |
 
-Hovering or focusing a control shows its explanation and any declared shortcut
-for the current platform. Escape dismisses a tooltip. Mouse hints wait
-briefly for deliberate hovering, then switch faster between neighboring tools.
-They appear beside the hovered control near the pointer;
-keyboard and touch hints keep room for adjacent toolbar actions. They show the control name, its explanation and any declared
-shortcut. Moving away or starting an action cancels a pending hint. Keyboard
-focus and explicit touch explanations do not wait for mouse dwell. An open hint
-stays available while its trigger retains focus or the pointer remains over
-the trigger or hint; Escape dismisses it. Essential actions
-remain labeled and work without hovering. In manuscript search, `Enter` selects
-the next match, `Shift+Enter` selects the previous match and Escape clears the
-query. These keys apply in the search field, not throughout the application.
+Where a control provides help, its tooltip shows the name, explanation or
+shortcut as needed for the current platform. Text already visible in a field's
+help or button label can serve the same purpose on its own. Mouse hints wait
+briefly for deliberate hovering and switch faster between neighboring controls.
+Keyboard focus and explicit touch explanations show help immediately. An open
+hint stays available while its trigger retains focus or the pointer stays over
+the trigger or hint. Press `Escape` to dismiss it. Moving away or starting an
+action cancels a pending hint. All essential actions have accessible names.
 Passage jumps wait for their scrolling area to settle before a brief destination
 cue; reduced-motion preferences keep navigation immediate.
 
@@ -1126,8 +1122,12 @@ in the [automation contract](AGENTS.md).
 Open **Project** to see the selected manuscript, matching research workspace and
 existing outputs. **Outputs** groups eligible files directly under `exports/`;
 **Check again** repeats the read-only metadata inspection without rebuilding
-analysis. **Project → Settings → Audio and services** groups recording, profiles,
-microphone settings and service/queue controls in 0.8.0.
+analysis. **Project → Settings → Audio and services** groups recording, voice
+profiles, microphone settings and the service queue. In **Manuscript**, **Listen
+and direct** opens passage controls. They appear in a side panel when there is
+room and beneath the paragraph on narrower screens. **Chapter audio** holds
+rendering, playback and recording management for the selected chapter.
+[Audio workflow](AUDIO.md#getting-started)
 
 **Available** means filesystem metadata is accessible, not that an output is
 fresh or the archive is valid. Existing outputs state **Source and generation
@@ -1154,6 +1154,12 @@ They do not change project files. Project settings currently require **Apply**;
 typing into that form does not save it automatically. Applying settings rebuilds
 the dashboard and can reload the view. Exporting a file or saving a research
 revision remains a separate, explicit action.
+
+Audio has dedicated save actions. Use **Save profiles** to apply the voice
+profiles and pronunciation edits, and **Save passage direction** to apply a
+paragraph's delivery. **Preview paragraph** lets you hear the current delivery
+draft. Check the saved directions before planning or rendering a chapter.
+[Save and check audio settings](AUDIO.md#getting-started)
 
 See the [configuration reference](USAGE.md#configuration-corpusconfig) for the
 complete persistence rules, root-local TOML examples and configuration discovery.

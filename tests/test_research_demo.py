@@ -411,7 +411,7 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(publi
     legacy = target.with_name("research.html").read_text(encoding="utf-8")
     assert 'http-equiv="refresh" content="0; url=report.html#research-manager"' in legacy
     assert 'href="report.html#research-manager"' in legacy
-    assert 'rel="canonical" href="https://mfahsold.github.io/lixity/demo/report.html"' in legacy
+    assert 'rel="canonical" href="https://lixity.de/demo/report.html"' in legacy
     assert "research-demo-adapter" not in legacy
     assert "content_base64" not in json.dumps(data)
     assert all(url.startswith("/api/research/") for url in fixture)
@@ -548,7 +548,7 @@ def test_public_reader_and_companion_use_the_production_scope_and_assets(public_
         assert site_data(page) == site_data(native.files['index.html'].decode())
         assert 'src="../assets/analytics.js"' not in page
         assert 'src="../../assets/analytics.js"' not in page
-        assert f'rel="canonical" href="https://mfahsold.github.io/lixity/demo/{mode}/index.html"' in page
+        assert f'rel="canonical" href="https://lixity.de/demo/{mode}/index.html"' in page
         assert 'href="../report.html"' in page
         assert 'href="../../guides/first-look.html"' in page
         assert 'href="../../assets/research/sources.json"' in page
@@ -572,7 +572,7 @@ def test_public_reader_and_companion_use_the_production_scope_and_assets(public_
             analysis = target.with_name('analysis.html').read_text(encoding='utf-8')
             assert 'analysis-section-chapters' in analysis
             assert 'analysis-section-language' not in analysis
-            assert 'rel="canonical" href="https://mfahsold.github.io/lixity/demo/reader/analysis.html"' in analysis
+            assert 'rel="canonical" href="https://lixity.de/demo/reader/analysis.html"' in analysis
             assert 'src="../assets/analytics.js"' not in analysis
             assert 'rel="canonical"' not in native.files['analysis.html'].decode()
         assert manifest['research']['included'] is False

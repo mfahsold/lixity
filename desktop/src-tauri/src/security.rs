@@ -289,7 +289,7 @@ mod tests {
 
     #[test]
     fn filters_external_urls() {
-        assert!(is_allowed_external_url("https://mfahsold.github.io/lixity/").is_ok());
+        assert!(is_allowed_external_url("https://lixity.de/").is_ok());
         assert!(is_allowed_external_url("mailto:mfahsold@googlemail.com").is_ok());
         assert!(is_allowed_external_url("file:///etc/passwd").is_err());
         assert!(is_allowed_external_url("javascript:alert(1)").is_err());

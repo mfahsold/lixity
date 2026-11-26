@@ -1118,9 +1118,11 @@ silent duration remain complete, and a truncation flag marks the omitted list.
 These thresholds are uncalibrated and do not classify natural pauses.
 
 Comparison requires a transcript tied by SHA-256 to the exact input audio bytes.
-The companion command `lixity audio-import-transcript` converts external word-timestamped
-ASR representations (e.g., OpenAI Whisper segments/words or arbitrary timestamped word lists)
-into validated `lixity-audio-transcript/1` documents while computing the cryptographic binding.
+`lixity audio-import-transcript` converts word-timestamped ASR output (such as
+Whisper segments and words) or a timestamped word list into a validated
+`lixity-audio-transcript/1` document with that binding. `lixity audio-transcribe`
+can prepare evidence separately with a configured transcription runtime. The
+audit itself never starts a recognizer.
 Plan and transcript words use the explicitly selected language's word tokenizer,
 with NFC normalization and lowercase matching. `SequenceMatcher(autojunk=False)` compares
 token sequences after equal prefix/suffix trimming; its alignment is not a
@@ -1220,6 +1222,56 @@ separation. The band is not a universal optimum, an inter-sample peak guarantee
 or a certificate of recording quality. Review clipping, background noise and
 intelligibility in the actual take. Browser permission and operating-system
 capture access are separate from hardware gain.
+
+### 14.3. Pronunciation and delivery planning
+
+Project pronunciation entries match the spoken-text projection with literal,
+case-sensitive whole-word matching. Longer terms take priority at the same
+start position. Planning applies the selected form to the original matches
+once, without looking for more terms in replacement text. Changes apply to the
+speech plan and leave the manuscript wording intact. A passage direction that
+splits a matched term must be corrected before planning can continue.
+
+- **IPA.** With an IPA-capable profile, the planner takes the IPA entry over a
+  respelling. The IMS-Toucan worker phonemizes the text between overrides and
+  inserts the specified phones for the matched spans. It validates the phones
+  and their modifier order against its frontend before sending them to the
+  acoustic model. Adapter and model support constrain the usable inventory.
+- **Spoken spelling.** With a text-input profile, the planner uses the author's
+  explicit respelling when supplied. The model decides how to pronounce that
+  text. An IPA-only entry requires an IPA-capable profile for synthesis. Export
+  can retain that entry and disclose the unsupported control. The planner does
+  not convert IPA to respelling automatically.
+- **Delivery.** Supported structured prosody values are adapter inputs. Passage
+  values override the corresponding profile values. Free-text instructions are
+  model-interpreted on profiles that accept them. Plans can retain instructions
+  for handoff when the selected renderer cannot use them. Capability metadata
+  describes the adapter's available inputs and does not measure their effect on
+  the output.
+
+### 14.4. PCM assembly and explicit pauses
+
+The local assembler writes mono 16-bit PCM at 24 kHz. For each explicit pause
+of $p \ge 0$ seconds, it writes $\lfloor rp\rfloor$ zero-valued frames at sample
+rate $r$. Before and after pauses are quantized separately. Rate adjustments
+apply to the spoken segments, either as a model input for supported profiles or
+as per-segment FFmpeg tempo processing. Explicit pauses retain their planned
+length on the PCM sample grid. For example, 0.25 seconds inserts 6,000 frames.
+
+At an internal boundary, the assembler tapers the adjoining segment edges in
+place. For a segment of $N$ frames, the fade width is
+$w = \min(\lfloor 0.005r\rfloor, \lfloor N/2\rfloor)$. If $w$ is at least two,
+the gain for frame $k$ counted inward from the edge is
+$(1 - \cos(\pi k/(w-1)))/2$ for $k$ from $0$ to $w-1$. Samples are rounded to
+integers. At 24 kHz the width is at most 120 frames per edge. The taper does
+not overlap segments, change the frame count or modify cached synthesis.
+MP3 output encodes the assembled PCM separately.
+
+Timeline exports contain planned pauses and set speech start, end and duration
+to `null`. Measured timing comes from separate evidence. Model-generated
+silence and breath can extend the observed gap between successive words.
+[Chapter audio audit](#13-chapter-audio-audit-unreleased) uses supplied word
+timings for that gap and reports level-based silence separately.
 
 References:
 

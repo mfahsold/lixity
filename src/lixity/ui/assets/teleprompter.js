@@ -40,6 +40,15 @@
   var activeDossierKey = null, dossierSequence = 0;
   var spokenParagraphs = new WeakMap();
 
+  function labelIcon(control, key) {
+    var name = label(key), components = window.LixityComponents;
+    if (components?.setControlLabel) components.setControlLabel(control, name);
+    else {
+      control.setAttribute("aria-label", name);
+      control.title = name;
+    }
+  }
+
   function label(key) {
     return typeof window.uiLabel === "function" ? window.uiLabel(key) : key;
   }
@@ -271,8 +280,7 @@
     var folderIcon = window.LixityIcons && typeof window.LixityIcons.svg === "function" ?
       window.LixityIcons.svg("folder-open", { size: 15 }) : "📂";
     takeImportBtn.className = "teleprompter-btn"; takeImportBtn.innerHTML = folderIcon;
-    takeImportBtn.setAttribute("aria-label", label("teleprompter_take_import"));
-    takeImportBtn.title = label("teleprompter_take_import");
+    labelIcon(takeImportBtn, "teleprompter_take_import");
     takeImportBtn.addEventListener("click", function() { takeFiles.click(); });
     rightGroup.appendChild(takeImportBtn);
     takeFiles = document.createElement("input"); takeFiles.type = "file"; takeFiles.multiple = true;
@@ -325,8 +333,7 @@
     sidebarClose.type = "button";
     sidebarClose.className = "teleprompter-btn teleprompter-btn-close";
     sidebarClose.innerHTML = '<span aria-hidden="true">✕</span>';
-    sidebarClose.title = label("modal_close");
-    sidebarClose.setAttribute("aria-label", label("modal_close"));
+    labelIcon(sidebarClose, "modal_close");
     sidebarClose.addEventListener("click", function() {
       sidebar.classList.remove("is-open");
       if (sidebarToggleBtn) {

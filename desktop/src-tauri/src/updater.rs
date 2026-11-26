@@ -7,9 +7,8 @@ use std::collections::HashSet;
 use std::io::Read;
 use std::time::Duration;
 
-const CATALOG_URL: &str = "https://mfahsold.github.io/lixity/desktop-downloads.json";
-const MIGRATED_CATALOG_URL: &str = "https://lixity.de/desktop-downloads.json";
-const GUIDE_URL: &str = "https://mfahsold.github.io/lixity/guides/installation.html#desktop";
+const CATALOG_URL: &str = "https://lixity.de/desktop-downloads.json";
+const GUIDE_URL: &str = "https://lixity.de/guides/installation.html#desktop";
 const SCHEMA: &str = "lixity-desktop-downloads/1";
 const CATALOG_MAX_BYTES: u64 = 64 * 1024;
 
@@ -102,9 +101,10 @@ fn parse_catalog(bytes: &[u8]) -> Result<DesktopCatalog, CheckFailure> {
     serde_json::from_slice(bytes).map_err(|_| CheckFailure::Catalog)
 }
 
-fn is_catalog_redirect(destination: &reqwest::Url, previous: &[reqwest::Url]) -> bool {
-    matches!(previous, [source] if source.as_str() == CATALOG_URL)
-        && destination.as_str() == MIGRATED_CATALOG_URL
+fn is_catalog_redirect(_destination: &reqwest::Url, _previous: &[reqwest::Url]) -> bool {
+    // Apex is canonical; the catalog is fetched directly with no redirect.
+    // Legacy project URLs redirect server-side to the same path on the apex.
+    false
 }
 
 fn fetch_catalog() -> Result<DesktopCatalog, CheckFailure> {
@@ -220,21 +220,17 @@ mod tests {
 
     #[test]
     fn follows_only_the_catalog_domain_migration() {
-        let source = reqwest::Url::parse(CATALOG_URL).unwrap();
-        let destination = reqwest::Url::parse(MIGRATED_CATALOG_URL).unwrap();
-        assert!(is_catalog_redirect(
-            &destination,
-            std::slice::from_ref(&source)
-        ));
-        assert!(!is_catalog_redirect(&destination, &[]));
+        // Apex catalog is fetched directly; no client redirect is followed.
+        // Legacy `mfahsold.github.io/lixity` deep links redirect server-side
+        // to the same apex path.
+        let apex = reqwest::Url::parse(CATALOG_URL).unwrap();
         assert!(!is_catalog_redirect(
-            &destination,
-            std::slice::from_ref(&destination)
+            &apex,
+            std::slice::from_ref(&apex)
         ));
-        assert!(!is_catalog_redirect(
-            &destination,
-            &[source.clone(), destination.clone()]
-        ));
+        assert!(!is_catalog_redirect(&apex, &[]));
+        let legacy = reqwest::Url::parse("https://mfahsold.github.io/lixity/desktop-downloads.json").unwrap();
+        assert!(!is_catalog_redirect(&apex, std::slice::from_ref(&legacy)));
         for wrong in [
             "http://lixity.de/desktop-downloads.json",
             "https://www.lixity.de/desktop-downloads.json",
@@ -243,10 +239,10 @@ mod tests {
             "https://lixity.de/lixity/desktop-downloads.json",
             "https://lixity.de/desktop-downloads.json?channel=test",
             "https://lixity.de/desktop-downloads.json#catalog",
-            CATALOG_URL,
+            "https://mfahsold.github.io/lixity/desktop-downloads.json",
         ] {
             let wrong = reqwest::Url::parse(wrong).unwrap();
-            assert!(!is_catalog_redirect(&wrong, std::slice::from_ref(&source)));
+            assert!(!is_catalog_redirect(&wrong, std::slice::from_ref(&apex)));
         }
     }
 

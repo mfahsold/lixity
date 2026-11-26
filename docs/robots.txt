@@ -1,6 +1,6 @@
 # Deployment note: this file is under /lixity/ on GitHub Pages.
 # Only /robots.txt at the host root controls crawlers. This is a policy template.
-# Lixity – https://mfahsold.github.io/lixity/
+# Lixity – https://lixity.de/
 User-agent: *
 Allow: /
 
@@ -27,4 +27,4 @@ Allow: /
 User-agent: CCBot
 Allow: /
 
-Sitemap: https://mfahsold.github.io/lixity/sitemap.xml
+Sitemap: https://lixity.de/sitemap.xml

@@ -7,7 +7,7 @@
 
 Documentation source version: 0.9.3. Check the [latest GitHub release](https://github.com/mfahsold/lixity/releases/latest)
 and [PyPI](https://pypi.org/project/lixity/) for published packages.
-[Release notes](https://mfahsold.github.io/lixity/releases/v0.9.3.md) describe this
+[Release notes](https://lixity.de/releases/v0.9.3.md) describe this
 source version. Product versions, response schemas and archive schemas are separate.
 
 ## Choose which version to evaluate
@@ -42,28 +42,28 @@ source version. Product versions, response schemas and archive schemas are separ
 
 ## Choose a maintained reference
 
-- [Documentation map](https://mfahsold.github.io/lixity/README.md): tasks, manual ownership and historical records.
-- [Installation](https://mfahsold.github.io/lixity/INSTALLATION.md): environments, service lifecycle, updates and optional workers.
-- [First session](https://mfahsold.github.io/lixity/ONBOARDING.md) and [Workspace](https://mfahsold.github.io/lixity/WORKSPACE.md): open, write, review, recover and share.
-- [CLI and configuration](https://mfahsold.github.io/lixity/USAGE.md): commands, settings, scoped analysis and exports.
-- [Automation contracts](https://mfahsold.github.io/lixity/AGENTS.md): JSON versions, MCP, Python, HTTP, guarded writes and error semantics.
-- [Audio](https://mfahsold.github.io/lixity/AUDIO.md): planning, synthesis, recordings, teleprompter and audio exchange.
-- [Research usage](https://mfahsold.github.io/lixity/research/USAGE.md) and [data model](https://mfahsold.github.io/lixity/research/DATA_MODEL.md): retained evidence, Zotero, dossiers, archival formats and recovery.
-- [Project backup and restore](https://mfahsold.github.io/lixity/PROJECT_BACKUP.md): included files, separate audio preservation and fresh-directory restoration.
-- [Measurement reference](https://mfahsold.github.io/lixity/guides/metrics/en.html), [Methods](https://mfahsold.github.io/lixity/METHODS.md) and [Stability](https://mfahsold.github.io/lixity/STABILITY.md): measured scope, formulas and limits.
-- [Localization](https://mfahsold.github.io/lixity/LOCALIZATION.md) and [Architecture](https://mfahsold.github.io/lixity/ARCHITECTURE.md): language coverage, state ownership and integration boundaries.
-- [Product direction](https://mfahsold.github.io/lixity/PRODUCT.md): promise, primary audience and capability boundaries.
-- [Reading the results](https://mfahsold.github.io/lixity/guides/interpretation.html), [installation walkthrough](https://mfahsold.github.io/lixity/guides/installation.html), [research and PDF export](https://mfahsold.github.io/lixity/guides/research-pdf.html) and [comparison with other manuscript tools](https://mfahsold.github.io/lixity/guides/manuscript-analysis-tools.html): task-oriented guides with screenshots.
-- [Operational reference bundle](https://mfahsold.github.io/lixity/llms-full.txt): generated full text of the active operational references. Setup, storage internals and design history are linked.
+- [Documentation map](https://lixity.de/README.md): tasks, manual ownership and historical records.
+- [Installation](https://lixity.de/INSTALLATION.md): environments, service lifecycle, updates and optional workers.
+- [First session](https://lixity.de/ONBOARDING.md) and [Workspace](https://lixity.de/WORKSPACE.md): open, write, review, recover and share.
+- [CLI and configuration](https://lixity.de/USAGE.md): commands, settings, scoped analysis and exports.
+- [Automation contracts](https://lixity.de/AGENTS.md): JSON versions, MCP, Python, HTTP, guarded writes and error semantics.
+- [Audio](https://lixity.de/AUDIO.md): planning, synthesis, recordings, teleprompter and audio exchange.
+- [Research usage](https://lixity.de/research/USAGE.md) and [data model](https://lixity.de/research/DATA_MODEL.md): retained evidence, Zotero, dossiers, archival formats and recovery.
+- [Project backup and restore](https://lixity.de/PROJECT_BACKUP.md): included files, separate audio preservation and fresh-directory restoration.
+- [Measurement reference](https://lixity.de/guides/metrics/en.html), [Methods](https://lixity.de/METHODS.md) and [Stability](https://lixity.de/STABILITY.md): measured scope, formulas and limits.
+- [Localization](https://lixity.de/LOCALIZATION.md) and [Architecture](https://lixity.de/ARCHITECTURE.md): language coverage, state ownership and integration boundaries.
+- [Product direction](https://lixity.de/PRODUCT.md): promise, primary audience and capability boundaries.
+- [Reading the results](https://lixity.de/guides/interpretation.html), [installation walkthrough](https://lixity.de/guides/installation.html), [research and PDF export](https://lixity.de/guides/research-pdf.html) and [comparison with other manuscript tools](https://lixity.de/guides/manuscript-analysis-tools.html): task-oriented guides with screenshots.
+- [Operational reference bundle](https://lixity.de/llms-full.txt): generated full text of the active operational references. Setup, storage internals and design history are linked.
 
 ## Browse the published material
 
-- [Blog](https://mfahsold.github.io/lixity/blog/index.html): articles on revision, measurement, research workflow and the example project; every page has a Markdown twin at the same path plus `.md`. The [Atom feed](https://mfahsold.github.io/lixity/blog/feed.xml) carries the same articles.
-- Interactive examples from [Effi Briest](https://mfahsold.github.io/lixity/examples/effi-briest.html) and [Pride and Prejudice](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html): selected chapters, with PDF analysis of each novel.
-- [Screenshots](https://mfahsold.github.io/lixity/screenshots/README.md) and [recorded tours](https://mfahsold.github.io/lixity/videos/README.md): checked stills, a 48-second product tour and two social clips with their review notes.
+- [Blog](https://lixity.de/blog/index.html): articles on revision, measurement, research workflow and the example project; every page has a Markdown twin at the same path plus `.md`. The [Atom feed](https://lixity.de/blog/feed.xml) carries the same articles.
+- Interactive examples from [Effi Briest](https://lixity.de/examples/effi-briest.html) and [Pride and Prejudice](https://lixity.de/examples/pride-and-prejudice.html): selected chapters, with PDF analysis of each novel.
+- [Screenshots](https://lixity.de/screenshots/README.md) and [recorded tours](https://lixity.de/videos/README.md): checked stills, a 48-second product tour and two social clips with their review notes.
 - [Changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): released changes and the unreleased section, kept outside the published site root.
-- Localized homepages: [Deutsch](https://mfahsold.github.io/lixity/index-de.html), [Español](https://mfahsold.github.io/lixity/index-es.html), [Français](https://mfahsold.github.io/lixity/index-fr.html), [Italiano](https://mfahsold.github.io/lixity/index-it.html), [Nederlands](https://mfahsold.github.io/lixity/index-nl.html), [Português](https://mfahsold.github.io/lixity/index-pt.html).
-- Measurement reference in all seven languages: [de](https://mfahsold.github.io/lixity/guides/metrics/de.html), [en](https://mfahsold.github.io/lixity/guides/metrics/en.html), [es](https://mfahsold.github.io/lixity/guides/metrics/es.html), [fr](https://mfahsold.github.io/lixity/guides/metrics/fr.html), [it](https://mfahsold.github.io/lixity/guides/metrics/it.html), [nl](https://mfahsold.github.io/lixity/guides/metrics/nl.html), [pt](https://mfahsold.github.io/lixity/guides/metrics/pt.html). These reference pages use `noindex,follow` and are linked from the product website and the workspace.
+- Localized homepages: [Deutsch](https://lixity.de/index-de.html), [Español](https://lixity.de/index-es.html), [Français](https://lixity.de/index-fr.html), [Italiano](https://lixity.de/index-it.html), [Nederlands](https://lixity.de/index-nl.html), [Português](https://lixity.de/index-pt.html).
+- Measurement reference in all seven languages: [de](https://lixity.de/guides/metrics/de.html), [en](https://lixity.de/guides/metrics/en.html), [es](https://lixity.de/guides/metrics/es.html), [fr](https://lixity.de/guides/metrics/fr.html), [it](https://lixity.de/guides/metrics/it.html), [nl](https://lixity.de/guides/metrics/nl.html), [pt](https://lixity.de/guides/metrics/pt.html). These reference pages use `noindex,follow` and are linked from the product website and the workspace.
 
 ## Interpret and handle data
 
@@ -83,12 +83,12 @@ separate network boundaries.
 
 ## Human entrypoints
 
-- [Product website](https://mfahsold.github.io/lixity/), [read-only demo](https://mfahsold.github.io/lixity/demo/report.html) and [browser sandbox](https://mfahsold.github.io/lixity/sandbox/index.html): explore with synthetic material.
-- [Illustrated tour](https://mfahsold.github.io/lixity/guides/first-look.html) · [Deutscher Rundgang](https://mfahsold.github.io/lixity/guides/first-look-de.html) · [GitHub Wiki](https://github.com/mfahsold/lixity/wiki).
+- [Product website](https://lixity.de/), [read-only demo](https://lixity.de/demo/report.html) and [browser sandbox](https://lixity.de/sandbox/index.html): explore with synthetic material.
+- [Illustrated tour](https://lixity.de/guides/first-look.html) · [Deutscher Rundgang](https://lixity.de/guides/first-look-de.html) · [GitHub Wiki](https://github.com/mfahsold/lixity/wiki).
 - [Repository guidance](https://github.com/mfahsold/lixity/blob/main/AGENTS.md) and [contributor operations](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md): working on the Lixity source.
 
 Lixity is AGPL-3.0-or-later. Writing, research and self-publishing are covered.
-The [project funding page](https://mfahsold.github.io/lixity/guides/support.html) records
+The [project funding page](https://lixity.de/guides/support.html) records
 payment status and the priorities for desktop and mobile installers.
 A separate commercial license is available for integrations that cannot meet
-the AGPL. See the [licensing guide](https://mfahsold.github.io/lixity/LICENSING.md).
+the AGPL. See the [licensing guide](https://lixity.de/LICENSING.md).

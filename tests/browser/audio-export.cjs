@@ -67,9 +67,10 @@ server.serve_forever()
         assert.equal(await page.locator('#settings-form #settings-speech-output').count(), 0,
           'Audio actions are separate from applying project settings');
         assert.equal(await page.locator('.speech-export-section [data-speech-action=direction_plan]').isVisible(), true);
-        assert.equal(await page.evaluate(() => Boolean(document.querySelector('.speech-export-section')
-          .compareDocumentPosition(document.querySelector('.speech-render-section')) & Node.DOCUMENT_POSITION_FOLLOWING)), true,
-          'The export entry presents portable direction before synthesis controls');
+        assert.equal(await page.evaluate(() => Boolean(document.querySelector('.speech-render-section')
+          .compareDocumentPosition(document.querySelector('.speech-export-section')) & Node.DOCUMENT_POSITION_FOLLOWING)), true,
+          'Chapter output places synthesis before portable export');
+        assert.equal(await page.locator('[data-speech-action=chapter_render]').evaluate(button => button.classList.contains('primary')), true);
         assert.equal(await page.locator('#speech-export_scope').inputValue(), 'chapter');
         await page.locator('[data-speech-action=direction_plan]').click();
         await page.waitForSelector('[data-speech-action=export_json]');

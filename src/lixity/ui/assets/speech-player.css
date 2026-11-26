@@ -30,6 +30,9 @@
 #modal-speech .modal-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .25rem; flex: none; }
 #modal-speech .speech-reader-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 #modal-speech .speech-profile-summary { justify-content: space-between; overflow-wrap: anywhere; }
+#modal-speech .speech-direction-selection { align-items: center; }
+#modal-speech .speech-direction-selection > .ctl-note { flex: 1 1 9rem; overflow-wrap: anywhere; }
+#modal-speech .speech-render-section > progress { width: 100%; }
 #modal-speech .speech-profile-picker {
   display: flex;
   flex-wrap: wrap;

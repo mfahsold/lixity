@@ -4,7 +4,7 @@
 set -euo pipefail
 
 if ! command -v lixity >/dev/null 2>&1; then
-    echo "[ERR] lixity is not on PATH. Follow https://mfahsold.github.io/lixity/guides/installation.html" >&2
+    echo "[ERR] lixity is not on PATH. Follow https://lixity.de/guides/installation.html" >&2
     exit 1
 fi
 if [ "$#" -eq 0 ]; then

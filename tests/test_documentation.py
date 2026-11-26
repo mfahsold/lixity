@@ -110,9 +110,13 @@ class TestDocumentation(unittest.TestCase):
             stage(ROOT / "docs", output)
             for target in targets:
                 url = urlsplit(target)
-                if url.netloc == "mfahsold.github.io" and url.path.startswith("/lixity/"):
-                    path = output / url.path.removeprefix("/lixity/")
+                if url.netloc == "lixity.de":
+                    path = output / url.path.lstrip("/")
                     self.assertTrue(path.exists(), f"README target is not published: {target}")
+                elif url.netloc == "mfahsold.github.io" and url.path.startswith("/lixity/"):
+                    # Legacy deep links redirect path-preserving to the apex; verify the apex target.
+                    path = output / url.path.removeprefix("/lixity/")
+                    self.assertTrue(path.exists(), f"README legacy target is not published: {target}")
                 elif target.startswith("https://github.com/mfahsold/lixity/blob/main/"):
                     path = ROOT / url.path.removeprefix("/mfahsold/lixity/blob/main/")
                     self.assertTrue(path.exists(), f"README repository target is missing: {target}")

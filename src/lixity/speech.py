@@ -15,6 +15,7 @@ import math
 import os
 import re
 import shutil
+import struct
 import subprocess
 import tempfile
 import textwrap
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
     from .speech_references import SpeechReference
 
 MAX_SEGMENT_CHARS = 600
+_EDGE_FADE_MS = 5
 # Conservative per-invocation bound; this does not interrupt in-process inference.
 SUBPROCESS_TIMEOUT_SECONDS = 3600
 
@@ -330,6 +332,25 @@ def _read_pcm(data: bytes, *, allow_empty: bool = False) -> tuple[tuple[int, int
         raise ValueError("Invalid WAV audio segment") from exc
 
 
+def _fade_pcm_edges(frames: bytes, rate: int, *, fade_in: bool, fade_out: bool) -> bytes:
+    """Fade adjoining mono PCM16 edges without shifting any sample."""
+    width = min(rate * _EDGE_FADE_MS // 1000, len(frames) // 4)
+    if width < 2 or not (fade_in or fade_out):
+        return frames
+    filtered = bytearray(frames)
+    for index in range(width - 1):
+        gain = (1 - math.cos(math.pi * index / (width - 1))) / 2
+        if fade_in:
+            offset = 2 * index
+            sample, = struct.unpack_from("<h", frames, offset)
+            struct.pack_into("<h", filtered, offset, round(sample * gain))
+        if fade_out:
+            offset = len(frames) - 2 * (index + 1)
+            sample, = struct.unpack_from("<h", frames, offset)
+            struct.pack_into("<h", filtered, offset, round(sample * gain))
+    return bytes(filtered)
+
+
 def concatenate_wavs(wav_bytes_list: list[bytes]) -> bytes:
     """Join complete PCM streams; never reinterpret a mismatched sample format."""
     if not wav_bytes_list:
@@ -430,7 +451,7 @@ def render_speech_audio(
     if output.suffix.lower() not in (".wav", ".mp3"):
         raise ValueError("Audio output must use .wav or .mp3")
     rate = 24000
-    from .speech_direction import build_speech_plan
+    from .speech_direction import build_speech_plan, require_render_direction
 
     cues = plan if plan is not None else build_speech_plan(
         source.read_text(encoding="utf-8"), profile, chapter=chapter, skip_markers=skip_markers)
@@ -442,10 +463,11 @@ def render_speech_audio(
     from .speech_profiles import mlx_audio_uses_model_speed, profile_uses_reference
 
     for cue in cues:
-        if cue.text and cue.profile.engine not in EXTERNAL_ENGINES:
+        if not cue.text:
+            continue
+        if cue.profile.engine not in EXTERNAL_ENGINES:
             native_endpoint(cue.profile.engine, target)
-        if cue.text and cue.profile.engine == "ims-toucan" and cue.profile.instructions:
-            raise ValueError("IMS-Toucan requires structured prosody; free-form instructions can only be exported")
+        require_render_direction(cue.profile, cue.profile.instructions)
     if target != "local" and any(cue.text and cue.profile.engine in EXTERNAL_ENGINES for cue in cues):
         raise ValueError("External speech uses its configured provider URL, not the Jetson execution target")
     from .speech_references import validate_reference
@@ -511,7 +533,7 @@ def render_speech_audio(
                 written += len(frames)
 
             previous_profile: AudioProfile | None = None
-            for cue in cues:
+            for index, cue in enumerate(cues):
                 _check_cancelled(cancelled)
                 if cue.pause_before:
                     write_frames(bytes(int(rate * cue.pause_before) * 2))
@@ -566,7 +588,14 @@ def render_speech_audio(
                         elif len(frames) > rate * 2 // 10:
                             raise RuntimeError("FFmpeg produced empty tempo-adjusted audio")
                         _check_cancelled(cancelled)
-                    write_frames(frames)
+                    # Smooth joins in the assembly only. The cache holds the
+                    # original synthesis for reuse with different neighbors.
+                    follows_audio = writer.getnframes() > 0
+                    precedes_audio = (done + 1 < total or int(rate * cue.pause_after) > 0
+                                      or any(int(rate * following.pause_before) > 0
+                                             or int(rate * following.pause_after) > 0
+                                             for following in cues[index + 1:]))
+                    write_frames(_fade_pcm_edges(frames, rate, fade_in=follows_audio, fade_out=precedes_audio))
                     diagnostic["pcm_end_ms"] = writer.getnframes() * 1000 // rate
                     _check_cancelled(cancelled)
                 done += 1

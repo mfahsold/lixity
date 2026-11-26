@@ -9,6 +9,42 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Serve a 48-second portrait product tour alongside the landscape version.
+  Reframe each of the six recorded scenes for 1080×1920 and include a 540×960
+  poster. Keep the social clips at 12 seconds. Update the English and German
+  captions to cover baseline comparisons, matched analysis settings and pinned
+  source versions. Encode the portrait video directly from the recorded scenes
+  and verify its frame count, dimensions and byte limit.
+- Give every shareable page its own landscape preview (all under 1 MB with
+  `og:image:secure_url`/`type`, matching Twitter image/alt and JSON-LD image).
+  Guides, blog posts, demo, reader, companion and examples no longer share one
+  generic fallback: installation uses the CLI screenshot, first-look and
+  passage reviews use the reader, interpretation uses the editorial note,
+  tool comparison and style posts use the heatmap, research PDF uses dossiers,
+  support uses the brand card, and Effi Briest / Pride and Prejudice use
+  heatmap / dark-reader views. Demo no longer points at the 3.2 MB Hamburg
+  map. Blog posts carry `article:published_time`/`modified_time`/`author`/
+  `section`; support is a large card; sandbox Twitter copy matches OG.
+  `tests/test_pages.py` enforces canonical `og:url`, large cards, matching
+  Twitter copy, landscape dimensions, existing sub-1 MB previews and distinct
+  images across sections.
+- Organize manuscript audio around passage direction, listening and chapter
+  output. Use provider capabilities to label the available voice controls and
+  share playback control names between tooltips and assistive technology.
+  Suppress help popups that repeat visible labels or field descriptions.
+- Make `https://lixity.de/` the canonical source for all product docs, guides,
+  blog canonicals, sitemap, feed, `llms.txt`, installers and desktop update
+  checks. The Pages build still verifies the legacy
+  `https://mfahsold.github.io/lixity/` deep links via path-preserving
+  redirects, but new staging defaults to the apex and rewrites either host.
+  Feed entry IDs move to apex canonicals (one-time reader churn documented
+  here); live Atom `<id>` values stay stable afterwards.
+- Add an optional project pronunciation lexicon with IPA and explicit
+  respellings. Edit it in Voice profiles, keep voice-specific spellings, and
+  inspect the selected pronunciation route in direction exports.
+- Document the first recording, passage preview and chapter render as one
+  workflow. Explain speech service setup, engine-specific direction and
+  pronunciation, the CLI and local API contracts, and audio verification.
 - De-escalate narratological and inferential UI display labels across all seven
   locales (`Deviation candidate` / `Abweichungskandidat`, `Surface signals` /
   `Oberflächensignale`, `Closing cues (rule)` / `Schlussmerkmale (Regel)`, and
@@ -51,10 +87,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   citation links. The earlier GitHub Pages address redirects to the same path
   on the new domain. The Pages build rewrites site links for the selected base.
 - Keep the local ZONOS3 speech worker warm between segments and release it
-  after 300 seconds of inactivity, instead of reloading the model per segment.
-  New voice profiles prefer ZONOS3 when it is ready. The default preset voice
-  is always sent to the worker; reference cloning continues to use the saved
-  reference audio.
+  after 300 seconds of inactivity. Reuse the latest speaker embedding for the
+  same reference. New voice profiles prefer ZONOS3 when it is ready. Smooth
+  the joins between rendered speech segments without changing output frame
+  counts or explicit pauses.
 - Remove the obsolete single-book export, sync, audit, prune and gdrive
   controls from unconfigured workspaces. Hosts that explicitly provide these
   capabilities can still render their controls. The standalone server keeps

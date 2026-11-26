@@ -14,8 +14,7 @@
       target.addEventListener(event, callback); listeners.push([target, event, callback]);
     }
     function namedControl(tag, parent, key) {
-      var item = node(tag, parent, "ctl"); item.setAttribute("aria-label", label(key));
-      item.dataset.help = label(key); item.title = label(key); return item;
+      var item = node(tag, parent, "ctl"); name(item, key); return item;
     }
     function time(value) {
       if (!Number.isFinite(value) || value < 0) return "–:––";
@@ -26,8 +25,8 @@
     audio.after(element); audio.controls = false; audio.classList.add("speech-player-native");
     var spectrum = node("div", element, "speech-player-spectrum");
     var spectrumHeader = node("div", spectrum, "speech-player-spectrum-label");
-    var spectrumTitle = node("span", spectrumHeader); spectrumTitle.textContent = label("player_spectrum");
-    spectrumTitle.title = label("player_spectrum_help"); spectrumTitle.dataset.help = label("player_spectrum_help");
+    var spectrumTitle = node("span", spectrumHeader, "help"); spectrumTitle.textContent = label("player_spectrum");
+    spectrumTitle.dataset.help = label("player_spectrum_help");
     spectrumTitle.tabIndex = 0;
     var spectrumState = node("span", spectrumHeader, "speech-player-spectrum-state");
     var canvas = node("canvas", spectrum, "speech-player-canvas"); canvas.setAttribute("aria-hidden", "true");
@@ -44,7 +43,12 @@
     var volume = namedControl("input", volumeGroup, "player_volume"); volume.type = "range";
     volume.min = "0"; volume.max = "1"; volume.step = "0.01";
     function name(control, key) {
-      control.setAttribute("aria-label", label(key)); control.title = label(key); control.dataset.help = label(key);
+      var text = label(key), components = window.LixityComponents;
+      if (components?.setControlLabel) components.setControlLabel(control, text);
+      else {
+        if (control.getAttribute("aria-label") !== text) control.setAttribute("aria-label", text);
+        if (control.title !== text) control.title = text;
+      }
     }
     function update() {
       if (destroyed) return;

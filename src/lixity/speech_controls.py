@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from bisect import bisect_right
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from functools import lru_cache
@@ -62,11 +63,13 @@ class SpeechControlSupport:
     phonemes: bool
     ssml: bool
     precise_rate: bool
+    structured_prosody: bool = False
 
     def as_dict(self) -> dict[str, object]:
         result: dict[str, object] = asdict(self)
+        result.pop("structured_prosody")
         result["pause_seconds"] = {"minimum": MIN_EXPLICIT_PAUSE_SECONDS, "maximum": MAX_EXPLICIT_PAUSE_SECONDS}
-        if self.phonemes:
+        if self.structured_prosody:
             result["prosody"] = prosody_capabilities()
         return result
 
@@ -81,7 +84,7 @@ _QWEN_BASE_SUPPORT = SpeechControlSupport(
 )
 _TOUCAN_SUPPORT = SpeechControlSupport(
     pronunciation="text_substitution", direction="unsupported", pauses="explicit_silence",
-    phonemes=True, ssml=False, precise_rate=False,
+    phonemes=True, ssml=False, precise_rate=False, structured_prosody=True,
 )
 
 
@@ -156,14 +159,48 @@ def apply_pronunciation(text: str, substitutions: Mapping[str, str], *,
                         case_sensitive: bool = True, whole_words: bool = False,
                         left_context: str = "", right_context: str = "") -> str:
     """Apply longest-first literal replacements without recursively matching replacements."""
+    return apply_pronunciation_spans(text, pronunciation_spans(
+        text, substitutions, case_sensitive=case_sensitive, whole_words=whole_words,
+        left_context=left_context, right_context=right_context,
+    ))
+
+
+def apply_pronunciation_spans(text: str, spans: list[tuple[int, int, str]]) -> str:
+    """Project ordered, nonoverlapping source spans into spoken text."""
     pieces: list[str] = []
     previous = 0
-    for start, end, replacement in pronunciation_spans(text, substitutions, case_sensitive=case_sensitive,
-            whole_words=whole_words, left_context=left_context, right_context=right_context):
+    for start, end, replacement in spans:
         pieces.extend((text[previous:start], replacement))
         previous = end
     pieces.append(text[previous:])
     return "".join(pieces)
+
+
+def merge_pronunciation_spans(legacy: list[tuple[int, int, str]],
+                              selected: list[tuple[int, int, str]]) -> list[tuple[int, int, str]]:
+    """Prefer explicit lexicon terms where a legacy text replacement overlaps."""
+    if not selected:
+        return legacy
+    ends = [end for _, end, _ in selected]
+    spans = list(selected)
+    for start, end, replacement in legacy:
+        candidate = bisect_right(ends, start)
+        if candidate == len(selected) or end <= selected[candidate][0]:
+            spans.append((start, end, replacement))
+    return sorted(spans)
+
+
+def project_phoneme_spans(replacements: list[tuple[int, int, str]],
+                          overrides: Mapping[tuple[int, int], str]) -> tuple[tuple[int, int, str], ...]:
+    """Translate source offsets for explicitly selected terms to prepared text."""
+    delta = 0
+    result = []
+    for start, end, replacement in replacements:
+        length = len(replacement)
+        if (start, end) in overrides:
+            result.append((start + delta, start + delta + length, overrides[start, end]))
+        delta += length - (end - start)
+    return tuple(result)
 
 
 def phoneme_spans(text: str, overrides: Mapping[str, str]) -> list[tuple[int, int, str]]:

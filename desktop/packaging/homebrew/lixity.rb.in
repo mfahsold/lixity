@@ -6,7 +6,7 @@ cask "lixity" do
       verified: "github.com/mfahsold/lixity/"
   name "Lixity"
   desc "Offline manuscript analysis, close reading and traceable research workspace"
-  homepage "https://mfahsold.github.io/lixity/"
+  homepage "https://lixity.de/"
 
 @ARCH_DEPENDENCY@  depends_on macos: ">= :monterey"
 

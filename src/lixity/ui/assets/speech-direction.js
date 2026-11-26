@@ -2,52 +2,57 @@
 window.LixitySpeechDirection = function(parent, h) {
   "use strict";
   var view, profiles, selected, selectedPassage, dirty = false, pending = false, revision = 0;
-  var capabilities = {}, engine = "", defaultSupport = {};
-  var section = h.node("fieldset", parent, "settings-section");
+  var section = h.node("fieldset", parent, "settings-section speech-direction-section");
   h.node("legend", section, "", h.label("direction_title"));
-  var hint = h.node("p", section, "ctl-note", h.label("direction_hint")); hint.id = "speech-direction-hint";
   function updateControls() {
-    var profile = profiles && profiles[voice.value], cap = capabilities[profile && profile.engine || engine] || {};
-    var support = profile ? Object.assign({}, cap.control_support || {}) : defaultSupport;
-    if (profile && cap.configurable_instructions) support.direction = profile.supports_instructions ? "model_interpreted" : "unsupported";
-    hint.textContent = h.label(support.direction === "model_interpreted" ? "direction_hint" : "instructions_export_only");
+    var support = h.profileSupport(profiles && profiles[voice.value]);
+    hint.textContent = h.label(support.direction === "model_interpreted" ? "direction_hint" : "direction_export_hint");
     style.closest("label").hidden = support.direction !== "model_interpreted";
     style.disabled = support.direction !== "model_interpreted";
     h.applyPauseBounds([before, after], support);
     prosody.update(support.prosody);
   }
-  function setCapabilities(available, activeEngine, support) {
-    capabilities = available || {}; engine = activeEngine; defaultSupport = support || {};
-    updateControls();
-  }
-  var passage = h.field(section, "direction_passage", "select");
-  var entries = h.field(section, "direction_entries", "select");
+  var source = h.node("div", section, "settings-grid");
+  var passage = h.field(source, "direction_passage", "select");
+  var entries = h.field(source, "direction_entries", "select");
   var text = h.field(section, "direction_text", "textarea"); text.readOnly = true; text.rows = 4;
-  var range = h.node("p", section, "ctl-note");
+  var selection = h.node("div", section, "row speech-direction-selection");
   var start = 0, end = null;
-  var select = h.button(h.node("div", section, "row"), "direction_selection", function() {
+  var select = h.button(selection, "direction_selection", function() {
     start = Array.from(text.value.slice(0, text.selectionStart)).length;
     end = Array.from(text.value.slice(0, text.selectionEnd)).length;
     if (start === end) { start = 0; end = null; }
     changed(); showRange();
   });
-  var voice = h.field(section, "direction_profile", "select");
-  var style = h.field(section, "direction_style", "select");
+  var range = h.node("p", selection, "ctl-note");
+  range.id = "speech-direction-range";
+  range.setAttribute("role", "status");
+  select.setAttribute("aria-describedby", range.id);
+  var delivery = h.node("div", section, "settings-grid");
+  var voice = h.field(delivery, "direction_profile", "select");
+  var style = h.field(delivery, "direction_style", "select");
   h.options(style, [["", h.label("direction_custom")], ["calm", h.label("direction_calm")], ["tense", h.label("direction_tense")], ["whisper", h.label("direction_whisper")]], "");
   var instructions = h.field(section, "direction_instructions", "textarea"); instructions.maxLength = 2000;
+  var hint = h.node("p", section, "ctl-note", h.label("direction_hint"));
+  hint.id = "speech-direction-hint";
   instructions.setAttribute("aria-describedby", hint.id);
-  section.insertBefore(style.closest("label"), text.closest("label"));
-  section.insertBefore(instructions.closest("label"), text.closest("label"));
-  var prosody = h.createProsody(section, "direction-prosody-", changed, true);
+  delete instructions.dataset.help;
   var grid = h.node("div", section, "settings-grid");
   var before = h.field(grid, "direction_before", "number"), after = h.field(grid, "direction_after", "number");
+  var prosody = h.createProsody(section, "direction-prosody-", changed, true);
   var actions = h.node("div", section, "row");
   var save = h.button(actions, "direction_save", function() { mutate(false); });
+  save.classList.add("primary");
   var remove = h.button(actions, "direction_remove", function() { mutate(true); });
   h.button(actions, "direction_discard", function() { loadEntry(); h.invalidate(); });
   var warning = h.node("details", section, "speech-stale-directions"); warning.hidden = true;
   function changed() { dirty = true; h.invalidate(); h.status(h.label("direction_unsaved")); }
-  function showRange() { range.textContent = (start || end != null) ? start + "–" + (end == null ? Array.from(text.value).length : end) : h.label("direction_whole"); }
+  function showRange() {
+    if (!start && end == null) { range.textContent = h.label("direction_whole"); return; }
+    var points = Array.from(text.value), limit = end == null ? points.length : end;
+    var snippet = points.slice(start, Math.min(limit, start + 64)).join("").trim();
+    range.textContent = snippet ? snippet + (limit > start + 64 ? "…" : "") : start + "–" + limit;
+  }
   function current() { return view && view.passages.find(function(p) { return JSON.stringify(p.anchor) === passage.value; }); }
   function read() {
     var p = current(); if (!p) return null;
@@ -149,7 +154,7 @@ window.LixitySpeechDirection = function(parent, h) {
     loadPassage(); h.invalidate();
     return true;
   }
-  return {section:section, open:open, selectAnchor:selectAnchor, setCapabilities:setCapabilities, draft:function() { return dirty ? read() : null; },
+  return {section:section, open:open, selectAnchor:selectAnchor, updateCapabilities:updateControls, draft:function() { return dirty ? read() : null; },
     dirty:function() { return dirty; }, busy:function() { return pending; }, replacement:function() { return dirty && selected ? selected.id : null; },
     stale:function() { ++revision; pending = false; section.disabled = false; save.disabled = remove.disabled = true; if (chapter) chapter.disabled = true; },
     disable:function() { pending = false; section.disabled = true; if (chapter) chapter.disabled = false; }};

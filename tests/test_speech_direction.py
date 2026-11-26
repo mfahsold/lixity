@@ -44,6 +44,50 @@ def test_mlx_render_explains_unsupported_saved_direction():
         build_speech_plan(TEXT, profile, directions=[direction], chapter=1)
 
 
+def test_provider_direction_support_follows_the_profile_and_export_preserves_text():
+    from lixity.speech_direction import (
+        Direction,
+        UnsupportedDirection,
+        build_speech_plan,
+        plan_json,
+        speech_passages,
+    )
+
+    profile = AudioProfile(engine='openai-compatible', base_url='http://127.0.0.1:8768/v1',
+                           model='test-model', voice='narrator')
+    anchor = speech_passages(TEXT, 'en')[0]['anchor']
+    direction = Direction(anchor=anchor, instructions='Read quietly.')
+    with pytest.raises(UnsupportedDirection, match='does not declare support'):
+        build_speech_plan(TEXT, profile, directions=[direction], chapter=1)
+
+    plan = plan_json(build_speech_plan(TEXT, profile, directions=[direction], chapter=1, for_export=True))
+    assert plan['controls']['instructions'] == 'unsupported'
+    assert next(row for row in plan['segments'] if row['anchor'] == anchor)['instructions'] == 'Read quietly.'
+
+    supported = AudioProfile.model_validate({**profile.model_dump(), 'supports_instructions': True})
+    render_plan = build_speech_plan(TEXT, supported, directions=[direction], chapter=1)
+    assert next(row for row in render_plan if row.anchor == anchor).profile.instructions == 'Read quietly.'
+    assert plan_json(render_plan)['controls']['instructions'] == 'model-interpreted'
+
+
+def test_prepared_mlx_render_does_not_drop_legacy_profile_direction(tmp_path):
+    from lixity.speech import render_speech_audio
+    from lixity.speech_direction import MLXDirectionConflict, SpeechSegment
+    from lixity.speech_providers import external_speech_request
+
+    profile = AudioProfile(engine='mlx-audio', language='de', model='custom-mlx-model',
+                           supports_instructions=True, instructions='Knappe Spannung.')
+    manuscript = tmp_path / 'synthetic.md'
+    manuscript.write_text('Wasser fliesst.')
+    output = tmp_path / 'test.wav'
+    plan = [SpeechSegment('Wasser fliesst.', profile)]
+    with pytest.raises(MLXDirectionConflict, match='cannot render'):
+        render_speech_audio(manuscript, output, profile=profile, plan=plan)
+    assert not output.exists()
+    with pytest.raises(MLXDirectionConflict, match='cannot render'):
+        external_speech_request('Wasser fliesst.', profile)
+
+
 def test_adjacent_directions_do_not_emit_whitespace_segments():
     from lixity.speech_direction import Direction, build_speech_plan, speech_passages
     text = '## First\n\nEins. Zwei. Drei.\n'

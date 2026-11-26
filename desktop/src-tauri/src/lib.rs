@@ -255,7 +255,7 @@ fn handle_menu_event(app: &AppHandle, id: &str) {
         "help-documentation" => {
             let _ = app
                 .opener()
-                .open_url("https://mfahsold.github.io/lixity/", None::<&str>);
+                .open_url("https://lixity.de/", None::<&str>);
         }
         "tools-open-logs" => {
             let _ = commands::open_logs_folder(app.clone());

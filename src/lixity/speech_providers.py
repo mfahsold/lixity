@@ -229,8 +229,10 @@ def _normalize_wav(data: bytes) -> bytes:
 
 def external_speech_request(text: str, profile: AudioProfile) -> dict[str, str | float]:
     """Build the adapter-specific speech JSON from one validated profile."""
+    from .speech_direction import require_render_direction
     from .speech_profiles import MLX_AUDIO_TEMPERATURE
 
+    require_render_direction(profile, profile.instructions)
     request_data: dict[str, str | float] = {
         "model": profile.model, "input": text, "response_format": "wav",
     }

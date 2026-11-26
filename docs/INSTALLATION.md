@@ -191,8 +191,8 @@ writing. A separate written commercial license covers closed-source integrations
 | Start, stop, restart, inspect logs or change ports | [Running the server](#running-the-server) |
 | Start automatically after login | [Optional login startup](#optional-startup-at-login) |
 | Add PDF/OCR or Zotero support | [Research prerequisites](#optional-research-prerequisites) · [Server access](#server-environment-and-project-access) |
-| Configure speech generation | [Qwen](#optional-qwen-audio-worker) · [Coqui/OpenVoice](#experimental-coqui-and-openvoice-audio) · [IMS-Toucan](#ims-toucan-author-voice-and-phonetic-direction) · [External providers](#external-speech-providers-and-local-audio-inspection) |
-| Set up ZONOS3 synthesis or transcription on Apple Silicon | [MLX-Audio](#mlx-audio-on-apple-silicon) |
+| Configure an author voice or speech provider | [Speech synthesis setup](#speech-synthesis-setup) |
+| Set up transcription on Apple Silicon | [MLX-Audio](#mlx-audio-on-apple-silicon) |
 | Check a native speech worker | [Model lifecycle and health](#native-audio-model-lifecycle) |
 | Use a separate Jetson worker | [Authenticated forward](#jetson-audio-worker) |
 | Use Lixity from Python or develop it | [Python API environment](#python-api-project-environment) · [Editable checkout](#editable-checkout) |
@@ -383,6 +383,24 @@ for all readers and writers. Installing Lixity does not download an OCR model.
 
 <a id="external-speech-providers-and-local-audio-inspection-unreleased"></a>
 
+### Speech synthesis setup
+
+Choose the runtime for the audio controls you need. Recording an author take,
+editing direction and exporting a plan work without installing a synthesis
+model.
+
+| Need | Setup |
+| --- | --- |
+| Use a local reference voice on Apple Silicon | [MLX-Audio ZONOS3](#mlx-audio-on-apple-silicon) |
+| Use a local reference voice with IPA and structured delivery in German or English | [IMS-Toucan](#ims-toucan-author-voice-and-phonetic-direction) |
+| Send free-text instructions to a compatible local or remote service | [OpenAI-compatible provider](#external-speech-providers-and-local-audio-inspection) |
+| Use another existing profile | [Qwen](#optional-qwen-audio-worker) · [Coqui/OpenVoice](#experimental-coqui-and-openvoice-audio) · [Jetson worker](#jetson-audio-worker) |
+
+Then [save a reference and hear a short preview](AUDIO.md#author-voice-recording-and-listening).
+The three listed adapters are in v0.9.3. The checkout adds
+[project-wide IPA and alternate spellings](AUDIO.md#project-pronunciations).
+Use profile pronunciation controls when working with v0.9.3.
+
 ### External speech providers and local audio inspection
 
 Speech-plan and SSML export work without a model, worker or API key. To render
@@ -393,7 +411,10 @@ Lixity accepts HTTPS and explicitly configured local HTTP addresses
 environment variable. Supply the secret to the process that will render. The
 managed systemd launcher forwards variables with the `LIXITY_` prefix by name,
 so use a name such as `LIXITY_SPEECH_API_KEY` when launching that service.
-A running app keeps the environment it received at startup.
+A running app keeps the environment it received at startup. Enable **Provider
+accepts delivery instructions** in **Voice profiles** after confirming the
+endpoint and model can use the `instructions` field. Rendering sends the
+effective spoken text to the configured address.
 [Provider configuration](AUDIO.md#audio-export-and-external-providers)
 
 Install FFmpeg for audio workflows that use WAV normalization, MP3 export or
@@ -402,7 +423,7 @@ FLAC/MP3 inspection. [Audio formats and limits](AUDIO.md#troubleshooting-and-lim
 ### MLX-Audio on Apple Silicon
 
 For local ZONOS3 synthesis or optional transcription, create a separate Python
-3.11+ environment:
+3.11+ environment.
 
 ```sh
 uv venv --python 3.11 "$HOME/.local/share/lixity/runtimes/mlx-audio"
@@ -410,23 +431,33 @@ uv pip install --python "$HOME/.local/share/lixity/runtimes/mlx-audio/bin/python
   'mlx-audio[stt,tts,server]'
 ```
 
-Lixity uses that environment to start an isolated ZONOS3 worker for synthesis.
-The `mlx-audio` profile uses local model files and offers the model's speed
-control. Check the executable and cached checkpoint before rendering:
+Lixity uses that environment to start an isolated worker for synthesis with
+`mlx-community/ZONOS3-Mini`. The `mlx-audio` profile supports a saved project
+reference or a fixed voice and uses the model's pace control. For a first
+setup, fetch the model into the Hugging Face cache used by the app. This
+download is a separate step so the synthesis worker can run offline. If you
+set `HF_HOME`, `HF_HUB_CACHE` or `XDG_CACHE_HOME`, use the same values for the
+download and the Lixity process.
 
 ```sh
+"$HOME/.local/share/lixity/runtimes/mlx-audio/bin/hf" download mlx-community/ZONOS3-Mini
 lixity audio-status --project ./novel --engine mlx-audio --json
 ```
 
-For optional transcription, run the MLX-Audio HTTP service in that environment:
+Confirm `runtime_available` and `model_cached` are true before starting a
+preview. These checks inspect prerequisites. A preview tests model loading
+and inference.
+
+For optional transcription, run the MLX-Audio HTTP service in that environment.
 
 ```sh
 "$HOME/.local/share/lixity/runtimes/mlx-audio/bin/python" -m mlx_audio.server \
   --host 127.0.0.1 --port 8000
 ```
 
-The audio manual covers model downloads, licensing, and examples for render and
-transcription. [MLX-Audio workflow](AUDIO.md#mlx-audio-on-apple-silicon)
+Try a [reference voice preview](AUDIO.md#use-a-reference-with-zonos3) to check
+word fidelity and timbre. The [MLX-Audio workflow](AUDIO.md#mlx-audio-on-apple-silicon)
+covers fixed voices, render examples and transcription.
 
 <a id="native-audio-model-lifecycle-unreleased"></a>
 
@@ -616,10 +647,9 @@ For settings migration, recording requirements and a first preview, continue wit
 
 The optional `ims-toucan` worker supports German and English with
 an explicitly saved author reference, IPA overrides and structured prosody. It
-uses local loopback port **8772**, independently of Qwen/Coqui (8769) and F5 (8771).
-The worker is separate from the normal Lixity environment; no inference dependency
-is added to the core package. CPU inference is supported; speed and speaker
-similarity must be measured on the actual computer and reference recording.
+runs in its own environment on local loopback port **8772**. CPU inference is
+supported. Check speed and speaker similarity on the intended computer with
+the intended recording.
 
 Use a separate Python 3.11 environment and an eSpeak-NG shared library. The
 previous inference recipe used PyTorch 2.4.1, which is affected by CVE-2025-32434
@@ -635,9 +665,17 @@ The previously tested upstream IMS-Toucan checkout used revision
 `ToucanTTS.pt` and `Vocoder.pt` from `Flux9665/ToucanTTS` at revision
 `e0afe0ef703d2178dd7dc74ec298693ddb10e720`. Its speaker assets came from
 `speechbrain/spkrec-ecapa-voxceleb` at revision
-`0f99f2d0ebe89ac095bcc5903c4dd8f72b367286`. Verify the provenance of your local
-source, model and speaker configuration before use. The worker requires all
-files locally and disables Hugging Face network access during startup.
+`0f99f2d0ebe89ac095bcc5903c4dd8f72b367286`. Keep `hyperparams.yaml`,
+`embedding_model.ckpt`, `classifier.ckpt`, `mean_var_norm_emb.ckpt` and
+`label_encoder.txt` together in the speaker directory. A macOS Apple Silicon
+CPU check used Python 3.11, PyTorch and TorchAudio 2.8.0 and SpeechBrain 1.1.2
+with these assets. Verify the provenance of your local source, model and
+speaker configuration before use. The worker expects a local copy of every
+file and disables Hugging Face network access during startup.
+
+Install the Lixity package or the checkout in the isolated environment so
+that its Python can run `lixity.speech_toucan`. Point the worker at the prepared
+source tree, acoustic directory and complete speaker directory.
 
 ```sh
 TOUCAN_ENV="$HOME/.local/share/lixity/runtimes/toucan-venv"
@@ -656,13 +694,12 @@ The reference acoustic and speaker assets total approximately 395 MiB,
 excluding Python packages.
 Check the service with `lixity audio-status --engine ims-toucan`.
 
-In the audio dialog, review and apply the backed-up settings upgrade to schema
-`/5`, then create a reference profile and choose a named recording. Existing
-profiles are retained. See the
-[phonetics and direction workflow](AUDIO.md#ims-toucan-phonetics-and-structured-direction).
-Free-text acting instructions remain export metadata and cannot be rendered by
-this adapter. The structured controls scale duration and prosodic variation;
-they do not prescribe an exact emotion, calibrated pitch or words per minute.
+In **Voice profiles**, review and apply the backed-up settings upgrade if the
+project uses a schema before `/5`. Create an IMS-Toucan reference profile, choose a
+saved recording and listen to a paragraph. Use the [phonetics and direction
+workflow](AUDIO.md#ims-toucan-phonetics-and-structured-direction) to set
+pronunciation, duration or prosodic variation. Export free-text acting
+instructions for a service that supports them.
 
 The upstream code and published Toucan/ECAPA weights are labeled Apache-2.0.
 The Toucan maintainers discuss a training-data provenance question in
@@ -844,9 +881,8 @@ exercise the changed feature in the running browser app. An existing scoped
 view URL belongs to the earlier process.
 Optional audio workers retain their own environments; verify the selected
 engine using `lixity audio-status --project ./my-novel --json` and perform a short
-explicit synthesis check. A healthy app service does not establish worker readiness.
-See [experimental Coqui/OpenVoice setup](#experimental-coqui-and-openvoice-audio)
-for the separate German synthesis and reference-conversion dependencies.
+explicit synthesis check. For the separate runtime and model prerequisites,
+see [speech synthesis setup](#speech-synthesis-setup).
 
 Remove only specifically identified unused build/test environments or old
 unreferenced candidate wheels after verification. Do not use `make clean` as a

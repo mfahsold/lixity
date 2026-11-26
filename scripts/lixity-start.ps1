@@ -14,7 +14,7 @@ param(
 $ErrorActionPreference = "Stop"
 $executable = Get-Command lixity -CommandType Application -ErrorAction SilentlyContinue
 if (-not $executable) {
-    Write-Error "lixity is not on PATH. Follow https://mfahsold.github.io/lixity/guides/installation.html"
+    Write-Error "lixity is not on PATH. Follow https://lixity.de/guides/installation.html"
     exit 1
 }
 $arguments = @("service", $Command)

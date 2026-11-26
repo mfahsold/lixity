@@ -422,16 +422,14 @@ spaCy/Stanza models) is evaluated here.
 ### Voice-reference diagnostics limits
 
 `audio-reference inspect` measures level, noise floor, clipping and spectral
-bandwidth of a saved reference (formulas in [METHODS](METHODS.md)). The
-thresholds behind its notes were not calibrated on a corpus of recordings. They
-only flag recordings that are likely to limit a cloned voice. Absence of a note
-does not mean the reference is suitable, and a note does not prove audible
-harm: only listening decides. In one local check, the OpenVoice V2 converter
-kept content up to about 11 kHz when given a wideband target and lost all
-content above about 8 kHz when given a reference that had none; this is one
-reference and one converter, not a general result. Transcript accuracy, accent
-and speaker identity are not measured. The converter mainly changes timbre; the
-phrasing and intonation of the base voice, here Thorsten VITS, largely carry over.
+bandwidth of a saved reference. Its notes use fixed engineering thresholds
+without corpus calibration. Listen to the reference and a rendered passage to
+assess suitability, including transcript accuracy, accent and resemblance to
+the speaker. These qualities are outside the diagnostic's measurements.
+A prior local OpenVoice V2 check used one target reference and one converter.
+The render retained content up to about 11 kHz with a wideband reference and
+lost content above about 8 kHz with a reference lacking those frequencies.
+See the [voice-reference methods](METHODS.md#12-voice-reference-signal-diagnostics-audio-reference-inspect).
 
 <a id="chapter-audio-comparison-limits-unreleased"></a>
 
@@ -448,8 +446,10 @@ below it, and breath or room noise can remain above it. Bandwidth and noise floo
 are explicitly unknown for this audit. Zero-amplitude dBFS is negative infinity,
 represented as null, not a finite noise-floor estimate.
 
-There is no automatic speech recognition. An audio hash binds a supplied
-transcript to a file but cannot establish that its words or timestamps are true.
+The audit takes supplied word timestamps as evidence. They may come from manual
+annotation or a separate recognizer, including the optional `audio-transcribe`
+workflow. The SHA-256 binding checks file identity. Transcript correctness and
+timing accuracy still depend on how the evidence was produced.
 Comparison misses may be recognizer errors, tokenization differences or actual
 speech differences. Coverage is alignment coverage, not an accuracy probability.
 Repeated wording can create alternative alignments. Missing expected words have
@@ -459,13 +459,29 @@ word timing. A time gap may contain breath or noise. Absence of a discrepancy is
 not proof that every spoken word or pause matches the plan. Missing transcript,
 unanchored boundaries and exhausted measurement scope remain unknown.
 
-External synthesis is an explicit configured operation, while analysis and audio
-inspection remain local. Provider instruction support is declared by the operator;
-Lixity does not establish that a model obeys it. SSML syntax does not establish
-portable voice identity or exact rate, and exported delivery instructions can
-require provider-specific handling. Neither cached output nor a successful HTTP
-response certifies audio quality. Existing native synthesis implementations remain
-optional and require listening review.
+### Speech control evidence
+
+Pronunciation and delivery support describe the inputs an adapter can take.
+A respelling changes the text passed to the model. An IPA-capable adapter routes
+the author's validated phone sequence into the model. Structured prosody routes
+numeric controls into the acoustic model. Listen for the target pronunciation,
+prosody and continuity of the author's voice in the rendered passage. A valid
+sequence or a successful request leaves those outcomes unmeasured.
+
+External synthesis uses an explicitly configured provider. The operator declares
+whether its adapter accepts free-text delivery instructions. How a model follows
+them depends on the runtime, checkpoint, language and passage. JSON retains the
+authored instructions. SSML projects the controls it can represent and warns
+when a control needs a separate handoff. A receiving engine may interpret voice,
+rate and delivery differently. Local analysis and audio inspection stay local.
+
+Explicit pauses and edge fades can be verified at the PCM sample level. The
+pause audible between words also depends on synthesized silence and breath.
+The taper smooths the waveform at a join over a short fixed window. It has no
+perceptual calibration or validation for long-form speaker consistency. Browser
+and synthetic fixture checks verify operation and contract behavior. They supply
+no blinded listening evidence about model or recording quality.
+See the [pronunciation, delivery and PCM methods](METHODS.md#143-pronunciation-and-delivery-planning).
 
 ### Continuous Flow-Matching diffusion synthesis limits (`f5-tts`)
 

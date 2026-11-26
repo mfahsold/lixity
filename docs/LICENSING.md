@@ -39,7 +39,7 @@ your book under either option.
 Access to Lixity under **AGPL-3.0-or-later** is independent of project support.
 The funding page records payment availability, planned priorities and actual
 allocations. Commercial licenses use a separate written agreement.
-[Project funding and use of funds](https://mfahsold.github.io/lixity/guides/support.html)
+[Project funding and use of funds](https://lixity.de/guides/support.html)
 
 ## When to talk to the maintainer
 

@@ -206,7 +206,7 @@ or equivalent validation across languages. See [Stability](STABILITY.md) and
 | Which files are sources or outputs, and are their locations usable? | [`lixity project --project PATH`](#lixity-project) | read-only roles, existing outputs and bounded structure findings |
 | I want to manage and cite research sources | [`lixity research`](#lixity-research) | immutable archives, citations, dossiers, manuscript grounding |
 | I want a printable document, report or reading copy | [`lixity pdf`](#lixity-pdf) | neutral/editorial A4, A4 report, A5 book, 30×60 sheet |
-| I want a planned or rendered listening copy | [`lixity read-aloud`](AUDIO.md#lixity-read-aloud) | project voice profiles, explicit direction and optional native/external speech engines; capabilities and setup in the audio manual |
+| I want a listening copy or a handoff to a speech engine | [`lixity read-aloud`](AUDIO.md#lixity-read-aloud) | plan the saved passage directions, export the planned instructions or render with an optional speech engine |
 | I want to share a browsable reading copy | [`lixity export-site`](#lixity-export-site) | static website, optional research and original sources |
 | I want a reproducible artifact set | [`lixity build`](#lixity-build) | `exports/`, archive rotation |
 | What can the engine do? | [`lixity about --json`](#lixity-about-and-lixity-completion) | languages, features, thresholds, commands |
@@ -1058,9 +1058,10 @@ startup view. Expired URLs return HTTP 410. Open the project again from home
 after an app restart. New views use the selected project's settings. Explicit
 launch overrides apply to the startup view.
 
-Manage open views and inspect worker status in **Project → Audio and services →
-Services & audio queue**. See the [audio guide](AUDIO.md) for queued jobs and
-engine readiness.
+Use **Project → Settings → Audio and services → Services & audio queue** to
+inspect queued jobs and worker status. Use **Voice profiles → Speech service**
+for the selected engine's readiness. See [Audio status](AUDIO.md#audio-status)
+for inspection from the terminal.
 
 Start the installed workspace without keeping a terminal open:
 
@@ -1868,8 +1869,10 @@ See [Style-space navigation](WORKSPACE.md#style-space-navigation).
 
 ## Audio commands and workflows
 
-The [audio manual](AUDIO.md) owns recording, voice profiles, direction, synthesis,
-playback and audio verification. Setup remains in [Installation](INSTALLATION.md).
+The [audio manual](AUDIO.md#getting-started) covers recording, voice profiles,
+direction, synthesis and playback. See [Project pronunciations](AUDIO.md#project-pronunciations)
+for the saved dictionary and engine-specific routes, and
+[Audio status](AUDIO.md#audio-status) for runtime checks before rendering.
 
 <a id="audio-export-and-external-providers-unreleased"></a>
 

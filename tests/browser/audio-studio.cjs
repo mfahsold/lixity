@@ -61,7 +61,7 @@ server.serve_forever()
   const axe = resolveAxe();
   if (!axe) console.log('axe-core unavailable; full audio dialog accessibility audit not run');
   try {
-    for (const width of [1440, 320]) {
+    for (const width of [2560, 1440, 900, 320]) {
       const page = await browser.newPage({viewport: {width, height: 900}});
       page.setDefaultTimeout(15000);
       const errors = [];
@@ -210,6 +210,10 @@ server.serve_forever()
         assert.equal(await page.locator('#speech-microphone-section').isVisible(), false);
         assert.equal(await page.locator('#speech-chapter_audio_file').isVisible(), false);
         assert.match(await page.locator('#speech-project-profile').textContent(), /Narrator/);
+        assert.equal(await page.locator('#speech-direction_text').evaluate(text => Boolean(
+          text.compareDocumentPosition(document.getElementById('speech-target')) & Node.DOCUMENT_POSITION_FOLLOWING
+        )), true, 'The manuscript passage comes before optional render settings');
+        assert.equal(await page.locator('[data-speech-action=preview]').evaluate(button => button.classList.contains('primary')), true);
         await assertPauseBounds(['direction_before', 'direction_after'], false);
         assert.equal(await page.locator('#speech-direction_after').inputValue(), '',
           'A blank direction override inherits the profile pause');

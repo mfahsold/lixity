@@ -5329,25 +5329,27 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
   .project-overview-heading { align-items: flex-start; flex-wrap: wrap; }
 }
 </style>
-<link rel="canonical" href="https://mfahsold.github.io/lixity/examples/effi-briest.html"/>
+<link rel="canonical" href="https://lixity.de/examples/effi-briest.html"/>
 <script defer src="../assets/analytics.js"></script>
 <meta name="description" content="A read-only Lixity analysis of the opening chapters of Theodor Fontane&#x27;s Effi Briest: sentence rhythm, vocabulary, tense flags and dialogue measures, computed offline without an account."/>
 <meta property="og:type" content="article"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:title" content="Lixity example report — Effi Briest"/>
 <meta property="og:description" content="A read-only Lixity analysis of the opening chapters of Theodor Fontane&#x27;s Effi Briest: sentence rhythm, vocabulary, tense flags and dialogue measures, computed offline without an account."/>
-<meta property="og:url" content="https://mfahsold.github.io/lixity/examples/effi-briest.html"/>
-<meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
-<meta property="og:image:width" content="2960"/>
-<meta property="og:image:height" content="1926"/>
-<meta property="og:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
+<meta property="og:url" content="https://lixity.de/examples/effi-briest.html"/>
+<meta property="og:image" content="https://lixity.de/screenshots/dashboard-heatmap.png"/>
+<meta property="og:image:secure_url" content="https://lixity.de/screenshots/dashboard-heatmap.png"/>
+<meta property="og:image:type" content="image/png"/>
+<meta property="og:image:width" content="2642"/>
+<meta property="og:image:height" content="1240"/>
+<meta property="og:image:alt" content="Chapter comparison map showing differences from the manuscript&#x27;s own style"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity example report — Effi Briest"/>
 <meta name="twitter:description" content="A read-only Lixity analysis of the opening chapters of Theodor Fontane&#x27;s Effi Briest: sentence rhythm, vocabulary, tense flags and dialogue measures, computed offline without an account."/>
-<meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
-<meta name="twitter:image:alt" content="Lixity continuous manuscript reader with chapter navigation and contextual tools"/>
+<meta name="twitter:image" content="https://lixity.de/screenshots/dashboard-heatmap.png"/>
+<meta name="twitter:image:alt" content="Chapter comparison map showing differences from the manuscript&#x27;s own style"/>
 <script type="application/ld+json">
-{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Lixity example report — Effi Briest", "description": "A read-only Lixity analysis of the opening chapters of Theodor Fontane's Effi Briest: sentence rhythm, vocabulary, tense flags and dialogue measures, computed offline without an account.", "url": "https://mfahsold.github.io/lixity/examples/effi-briest.html", "mainEntityOfPage": "https://mfahsold.github.io/lixity/examples/effi-briest.html", "image": {"@type": "ImageObject", "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png", "width": 2960, "height": 1926, "caption": "Lixity continuous manuscript reader with chapter navigation and contextual tools"}, "inLanguage": "de", "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}, "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}, "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE", "about": {"@type": "Book", "name": "Effi Briest", "author": {"@type": "Person", "name": "Theodor Fontane"}}}
+{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Lixity example report — Effi Briest", "description": "A read-only Lixity analysis of the opening chapters of Theodor Fontane's Effi Briest: sentence rhythm, vocabulary, tense flags and dialogue measures, computed offline without an account.", "url": "https://lixity.de/examples/effi-briest.html", "mainEntityOfPage": "https://lixity.de/examples/effi-briest.html", "image": {"@type": "ImageObject", "url": "https://lixity.de/screenshots/dashboard-heatmap.png", "width": 2642, "height": 1240, "caption": "Chapter comparison map showing differences from the manuscript's own style"}, "inLanguage": "de", "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}, "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://lixity.de/"}, "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE", "about": {"@type": "Book", "name": "Effi Briest", "author": {"@type": "Person", "name": "Theodor Fontane"}}}
 </script>
 <style>
 .site-page {
@@ -6119,6 +6121,13 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
         var resolvedKey = mapped || (prefix ? prefix + key : key);
         return typeof window.uiLabel === "function" ? window.uiLabel(resolvedKey) : _uiLabel(resolvedKey);
       };
+    },
+    setControlLabel: function (control, name) {
+      // Icon controls share one name with accessibility and keyboard/pointer help.
+      // Leave the attributes in place when a playback or status update repeats them.
+      if (control.getAttribute("aria-label") !== name) control.setAttribute("aria-label", name);
+      if (control.dataset.help !== name) control.dataset.help = name;
+      if (control.hasAttribute("title")) control.removeAttribute("title");
     },
     setStatus: function (elOrId, message, state, options) {
       var el = typeof elOrId === "string" ? document.getElementById(elOrId) : elOrId;
@@ -7062,6 +7071,37 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
     return parts.join(" ").replace(/\s+/g, " ").trim();
   }
 
+  function descriptionIds(el) {
+    return (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
+  }
+
+  function normalizeCopy(text) {
+    return (text || "").replace(/\s+/g, " ").trim().toLowerCase();
+  }
+
+  function matchesDescription(el, text, visibleOnly) {
+    var wanted = normalizeCopy(text);
+    return descriptionIds(el).some(function(id) {
+      if (id === tip.id) return false;
+      var note = document.getElementById(id);
+      if (!note) return false;
+      if (!visibleOnly) return normalizeCopy(note.textContent) === wanted;
+      var rect = note.getBoundingClientRect();
+      return rect.width > 1 && rect.height > 1 && rect.bottom > 0 && rect.top < innerHeight &&
+        rect.right > 0 && rect.left < innerWidth && getComputedStyle(note).visibility === "visible" &&
+        !note.closest('[aria-hidden="true"]') && normalizeCopy(note.innerText) === wanted;
+    });
+  }
+
+  function describeWithTooltip(el, enabled) {
+    var ids = descriptionIds(el), present = ids.includes(tip.id);
+    if (enabled === present) return;
+    if (enabled) ids.push(tip.id);
+    else ids = ids.filter(function(id) { return id !== tip.id; });
+    if (ids.length) el.setAttribute("aria-describedby", ids.join(" "));
+    else el.removeAttribute("aria-describedby");
+  }
+
   function helpText(el) {
     var text = el.getAttribute("data-help") || el.getAttribute("title") || el.getAttribute("data-tip");
     // Suppress the browser's separate title bubble even during dwell.
@@ -7074,6 +7114,8 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
           el.matches("button, a, summary, .help") ? el.textContent : "");
     }
     text = text ? text.trim() : "";
+    if (text && !el.hasAttribute("aria-keyshortcuts") && !SHORTCUT_SUFFIX_RE.test(text) &&
+        matchesDescription(el, text, true)) return "";
     if (text && el.matches("button, a, summary") && !el.hasAttribute("aria-keyshortcuts") && !SHORTCUT_SUFFIX_RE.test(text)) {
       var visibleText = visibleControlText(el);
       if (visibleText && visibleText.toLowerCase() === text.replace(/\s+/g, " ").toLowerCase()) {
@@ -7136,9 +7178,6 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
     // Keep help in the native dialog's top layer when its control is inside one.
     var host = el.closest('dialog[open], [role="dialog"][aria-modal="true"]:not([hidden])') || document.body;
     if (tip.parentElement !== host) host.appendChild(tip);
-    var descriptions = (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
-    if (descriptions.indexOf(tip.id) === -1) descriptions.push(tip.id);
-    el.setAttribute("aria-describedby", descriptions.join(" "));
     var name = el.getAttribute("aria-label") ||
       (el.labels && el.labels.length ? el.labels[0].textContent :
         el.matches("button, a, summary, .help") ? el.textContent : "");
@@ -7155,6 +7194,9 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
     }
 
     var hasShortcut = Boolean(shortcut && shortcut.trim());
+    // The popup also labels icon-only controls visually. Their accessible
+    // names already carry that copy, while genuine explanations remain linked.
+    describeWithTooltip(el, normalizeCopy(text) !== normalizeCopy(name) && !matchesDescription(el, text, false));
     // A measurement's accessible name can include its help followed by an
     // action. Keep the action as the heading and the measurement in the copy.
     var helpPrefix = text + ". ";
@@ -7199,9 +7241,7 @@ body:not(.workbench-overview) #view-pane-analysis .analysis-outline-layout { dis
     textObserver.disconnect();
     if (activeEl) {
       warmUntil = Date.now() + 1000;
-      var descriptions = (activeEl.getAttribute("aria-describedby") || "").split(/\s+/).filter(function(id) { return id && id !== tip.id; });
-      if (descriptions.length) activeEl.setAttribute("aria-describedby", descriptions.join(" "));
-      else activeEl.removeAttribute("aria-describedby");
+      describeWithTooltip(activeEl, false);
     }
     activeEl = null;
     pointerHelp = false;

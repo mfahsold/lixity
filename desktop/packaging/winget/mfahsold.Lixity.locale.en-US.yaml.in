@@ -3,10 +3,10 @@ PackageIdentifier: mfahsold.Lixity
 PackageVersion: @VERSION@
 PackageLocale: en-US
 Publisher: Matthias Fahsold
-PublisherUrl: https://mfahsold.github.io/lixity/
+PublisherUrl: https://lixity.de/
 PublisherSupportUrl: https://github.com/mfahsold/lixity/issues
 PackageName: Lixity
-PackageUrl: https://mfahsold.github.io/lixity/
+PackageUrl: https://lixity.de/
 License: AGPL-3.0-or-later
 LicenseUrl: https://github.com/mfahsold/lixity/blob/main/LICENSE
 ShortDescription: Offline manuscript analysis, close reading and traceable research workspace.

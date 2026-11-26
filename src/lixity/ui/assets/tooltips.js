@@ -90,6 +90,37 @@
     return parts.join(" ").replace(/\s+/g, " ").trim();
   }
 
+  function descriptionIds(el) {
+    return (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
+  }
+
+  function normalizeCopy(text) {
+    return (text || "").replace(/\s+/g, " ").trim().toLowerCase();
+  }
+
+  function matchesDescription(el, text, visibleOnly) {
+    var wanted = normalizeCopy(text);
+    return descriptionIds(el).some(function(id) {
+      if (id === tip.id) return false;
+      var note = document.getElementById(id);
+      if (!note) return false;
+      if (!visibleOnly) return normalizeCopy(note.textContent) === wanted;
+      var rect = note.getBoundingClientRect();
+      return rect.width > 1 && rect.height > 1 && rect.bottom > 0 && rect.top < innerHeight &&
+        rect.right > 0 && rect.left < innerWidth && getComputedStyle(note).visibility === "visible" &&
+        !note.closest('[aria-hidden="true"]') && normalizeCopy(note.innerText) === wanted;
+    });
+  }
+
+  function describeWithTooltip(el, enabled) {
+    var ids = descriptionIds(el), present = ids.includes(tip.id);
+    if (enabled === present) return;
+    if (enabled) ids.push(tip.id);
+    else ids = ids.filter(function(id) { return id !== tip.id; });
+    if (ids.length) el.setAttribute("aria-describedby", ids.join(" "));
+    else el.removeAttribute("aria-describedby");
+  }
+
   function helpText(el) {
     var text = el.getAttribute("data-help") || el.getAttribute("title") || el.getAttribute("data-tip");
     // Suppress the browser's separate title bubble even during dwell.
@@ -102,6 +133,8 @@
           el.matches("button, a, summary, .help") ? el.textContent : "");
     }
     text = text ? text.trim() : "";
+    if (text && !el.hasAttribute("aria-keyshortcuts") && !SHORTCUT_SUFFIX_RE.test(text) &&
+        matchesDescription(el, text, true)) return "";
     if (text && el.matches("button, a, summary") && !el.hasAttribute("aria-keyshortcuts") && !SHORTCUT_SUFFIX_RE.test(text)) {
       var visibleText = visibleControlText(el);
       if (visibleText && visibleText.toLowerCase() === text.replace(/\s+/g, " ").toLowerCase()) {
@@ -164,9 +197,6 @@
     // Keep help in the native dialog's top layer when its control is inside one.
     var host = el.closest('dialog[open], [role="dialog"][aria-modal="true"]:not([hidden])') || document.body;
     if (tip.parentElement !== host) host.appendChild(tip);
-    var descriptions = (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
-    if (descriptions.indexOf(tip.id) === -1) descriptions.push(tip.id);
-    el.setAttribute("aria-describedby", descriptions.join(" "));
     var name = el.getAttribute("aria-label") ||
       (el.labels && el.labels.length ? el.labels[0].textContent :
         el.matches("button, a, summary, .help") ? el.textContent : "");
@@ -183,6 +213,9 @@
     }
 
     var hasShortcut = Boolean(shortcut && shortcut.trim());
+    // The popup also labels icon-only controls visually. Their accessible
+    // names already carry that copy, while genuine explanations remain linked.
+    describeWithTooltip(el, normalizeCopy(text) !== normalizeCopy(name) && !matchesDescription(el, text, false));
     // A measurement's accessible name can include its help followed by an
     // action. Keep the action as the heading and the measurement in the copy.
     var helpPrefix = text + ". ";
@@ -227,9 +260,7 @@
     textObserver.disconnect();
     if (activeEl) {
       warmUntil = Date.now() + 1000;
-      var descriptions = (activeEl.getAttribute("aria-describedby") || "").split(/\s+/).filter(function(id) { return id && id !== tip.id; });
-      if (descriptions.length) activeEl.setAttribute("aria-describedby", descriptions.join(" "));
-      else activeEl.removeAttribute("aria-describedby");
+      describeWithTooltip(activeEl, false);
     }
     activeEl = null;
     pointerHelp = false;

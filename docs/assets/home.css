@@ -117,13 +117,19 @@
   box-shadow: var(--shadow-lift);
 }
 .tour-screen { container: tour-player / inline-size; position: relative; overflow: hidden; border-radius: var(--radius-sm); background: var(--surface-alt); }
-.product-tour video { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; }
+.product-tour video { display: block; width: 100%; height: auto; aspect-ratio: var(--tour-aspect, 8 / 5); object-fit: contain; }
+@media (orientation: portrait) {
+  .product-tour { max-inline-size: min(var(--site-width), 50svh); }
+  .product-tour video { aspect-ratio: var(--tour-aspect, 9 / 16); }
+}
 .tour-caption { text-align: center; }
 .tour-caption > span { display: block; padding: var(--space-2) var(--space-3); background: rgb(13 19 34 / .94); color: #fff; font-size: var(--text-control); font-weight: var(--weight-medium); line-height: var(--line-tight); letter-spacing: -.015em; text-wrap: balance; }
-/* Keep small or enlarged players in normal flow so captions can wrap freely. */
-@container tour-player (inline-size > 25rem) {
-  .tour-caption { position: absolute; inset-block-end: clamp(2.5rem, 7%, 4.5rem); left: 50%; transform: translateX(-50%); inline-size: max-content; max-inline-size: 86%; pointer-events: none; }
-  .tour-caption > span { padding: .6em 1.05em; border-radius: var(--radius-sm); box-shadow: 0 .3rem 1.5rem rgb(0 0 0 / .16); font-size: clamp(var(--text-control), 1.5vw, 1.25rem); }
+/* Overlay captions only when the landscape player has enough room. */
+@media (orientation: landscape) {
+  @container tour-player (inline-size > 25rem) {
+    .tour-caption { position: absolute; inset-block-end: clamp(2.5rem, 7%, 4.5rem); left: 50%; transform: translateX(-50%); inline-size: max-content; max-inline-size: 86%; pointer-events: none; }
+    .tour-caption > span { padding: .6em 1.05em; border-radius: var(--radius-sm); box-shadow: 0 .3rem 1.5rem rgb(0 0 0 / .16); font-size: clamp(var(--text-control), 1.5vw, 1.25rem); }
+  }
 }
 .product-tour figcaption { padding: var(--space-3) var(--space-4); color: var(--fg-secondary); font-size: var(--text-control); line-height: var(--line-compact); }
 .tour-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }

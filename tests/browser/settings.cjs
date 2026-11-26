@@ -389,7 +389,7 @@ server.serve_forever()
         'Fixed language and voice are readable without artificial choices');
       assert.equal(await page.locator('#speech-instructions').isVisible(),false);
       assert.equal(await page.locator('#speech-runtime-hint').textContent(),labels.speech_runtime_hint);
-      assert.equal(await page.locator('#speech-direction-hint').textContent(),labels.speech_instructions_export_only);
+      assert.equal(await page.locator('#speech-direction-hint').textContent(),labels.speech_direction_export_hint);
       await page.locator('#speech-engine').selectOption('coqui-reference');
       assert.equal(await page.locator('#speech-voice').inputValue(),'reference');
       assert.equal(await page.locator('#speech-reference_id').isVisible(),true);
@@ -552,7 +552,9 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-direction_instructions').getAttribute('aria-describedby'),'speech-direction-hint');
       assert.equal(await page.locator('#speech-direction-hint').textContent(), labels.speech_direction_hint);
       assert.equal(await page.locator('#speech-ignore-direction').isChecked(),false, 'Saved direction applies by default');
-      assert.ok((await page.locator('#speech-ignore-direction').locator('..').textContent()).includes(labels.speech_ignore_direction));
+      assert.equal(await page.locator('#speech-ignore-direction').locator('..').textContent(), labels.speech_ignore_direction_label);
+      assert.equal(await page.locator('#speech-ignore-direction').getAttribute('data-help'), labels.speech_ignore_direction);
+      assert.equal(await page.locator('#speech-ignore-direction-note').isVisible(), false);
       assert.equal(await page.locator('[data-speech-action=chapter_render]').isVisible(),false);
       assert.equal(await dialog.locator('[data-speech-action=output_title]').textContent(), labels.speech_chapter_output, 'Opening chapter output is labeled as navigation');
       assert.notEqual(labels.speech_chapter_output, labels.speech_chapter_render, 'Navigation and rendering have distinct labels');
@@ -712,8 +714,9 @@ server.serve_forever()
       assert.ok((await page.locator('#modal-speech').textContent()).includes(labels.speech_paragraph_preview));
       await renderTarget.selectOption('jetson');
       assert.equal(await audio.evaluate(element => element.hidden),true,'Changing execution target removes audio from the previous target');
-      assert.equal(await page.locator('#speech-runtime-hint').textContent(), labels.speech_runtime_hint,
-        'The render hint stays capability-neutral while the explicit execution target changes');
+      assert.equal(await page.locator('#speech-runtime-hint').textContent(),
+        labels.speech_worker_unavailable.replace('{target}', labels.speech_target_jetson),
+        'The hint reports availability for the selected execution target');
       const jetsonRequest=page.waitForRequest(request=>request.url().endsWith('/api/speech-render'));
       await page.locator('[data-speech-action=preview]').click();
       const jetsonPayload=(await jetsonRequest).postDataJSON();
@@ -964,7 +967,8 @@ server.serve_forever()
     await savedPage.locator('#speech-language').selectOption('de');
     await savedPage.locator('[data-speech-action=create]').click();
     assert.equal(await savedPage.locator('#speech-engine').inputValue(),'mlx-audio');
-    assert.equal(await savedPage.locator('#speech-voice').inputValue(),'liesel', 'The preset matches the draft language');
+    assert.equal(await savedPage.locator('#speech-voice').inputValue(),'reference', 'An existing recording makes the author voice the first choice');
+    assert.equal(await savedPage.locator('#speech-voice option[value=liesel]').count(),1,'The German preset remains available');
     assert.equal(await savedPage.locator('#speech-reference_id').inputValue(),'', 'A new profile does not bind a saved recording');
     await savedPage.locator('#speech-service > summary').click();
     const draftProbe=savedPage.waitForResponse(response=>new URL(response.url()).searchParams.get('engine')==='mlx-audio');

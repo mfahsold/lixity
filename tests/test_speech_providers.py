@@ -528,11 +528,19 @@ def test_zonos_worker_keeps_dependency_output_off_its_response_pipe(tmp_path):
     package.mkdir()
     (package / 'tts.py').write_text(
         "import os\n"
+        "from pathlib import Path\n"
         "from types import SimpleNamespace\n"
         "class Model:\n"
+        "    def extract_speaker_embedding(self, reference):\n"
+        "        embedding = Path(reference).read_bytes()\n"
+        "        with Path(__file__).with_name('encoded').open('ab') as output:\n"
+        "            output.write(embedding + b'\\n')\n"
+        "        return embedding\n"
         "    def generate(self, text, **kwargs):\n"
         "        os.write(1, b'native generation progress\\n')\n"
-        "        yield SimpleNamespace(audio=text.encode(), sample_rate=24000)\n"
+        "        assert 'ref_audio' not in kwargs\n"
+        "        audio = text.encode() + kwargs.get('speaker_embedding', b'')\n"
+        "        yield SimpleNamespace(audio=audio, sample_rate=24000)\n"
         "def load(model):\n"
         "    print('loading local weights', flush=True)\n"
         "    return Model()\n",
@@ -547,12 +555,25 @@ def test_zonos_worker_keeps_dependency_output_off_its_response_pipe(tmp_path):
     )
     session = _ZonosWorkerSession(startup_timeout_seconds=5, request_timeout_seconds=5)
     try:
-        for segment in ('Die Sonne scheint.', 'On continue.'):
+        cases = (
+            ('Die Sonne scheint.', None, b''),
+            ('On continue.', 'reference-first.wav', b'first'),
+            ('And back.', 'reference-copy.wav', b'first'),
+            ('Der Mond geht auf.', 'reference-copy.wav', b'second'),
+            ('Encore.', None, b''),
+        )
+        for segment, reference_name, reference_audio in cases:
             output = tmp_path / 'speech.wav'
-            session.synthesize(Path(sys.executable), worker, {
+            request = {
                 'model': worker_module.ALLOWED_MODEL, 'input': segment, 'output_path': str(output),
-            })
-            assert output.read_bytes() == segment.encode()
+            }
+            if reference_name is not None:
+                reference = tmp_path / reference_name
+                reference.write_bytes(reference_audio)
+                request['ref_audio'] = str(reference)
+            session.synthesize(Path(sys.executable), worker, request)
+            assert output.read_bytes() == segment.encode() + reference_audio
+        assert (package / 'encoded').read_bytes().splitlines() == [b'first', b'second']
     finally:
         session.close()
 

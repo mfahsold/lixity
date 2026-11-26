@@ -84,6 +84,52 @@ async function ensureImageDecoded(image) {
   }
 }
 
+async function checkHomepageTourPlayback(page, portrait) {
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  try {
+    await page.goto(origin + '/lixity/#product-tour-preview');
+    const video = page.locator('#product-tour');
+    const toggle = page.locator('.tour-toggle');
+    await expect(toggle).toBeVisible();
+    assert.equal(await video.evaluate(clip => clip.paused), true, 'Reduced motion keeps the tour paused initially');
+    await toggle.focus();
+    await page.keyboard.press('Enter');
+    await expect.poll(() => video.evaluate(clip => clip.currentTime)).toBeGreaterThan(0);
+    const played = await video.evaluate(clip => ({
+      file: new URL(clip.currentSrc).pathname.split('/').pop(),
+      width: clip.videoWidth, height: clip.videoHeight,
+      aspect: clip.clientWidth / clip.clientHeight,
+    }));
+    assert.match(played.file, portrait ? /^product-tour-portrait\.mp4$/ : /^product-tour\.(mp4|webm)$/);
+    assert.deepEqual([played.width, played.height], portrait ? [1080, 1920] : [1440, 900]);
+    assert.ok(Math.abs(played.aspect - played.width / played.height) < .01, 'The video fills its player at its own aspect ratio');
+    const firstCue = await page.locator('#tour-transcript li').first().textContent();
+    await expect(page.locator('.tour-caption')).toBeVisible();
+    await expect(page.locator('.tour-caption span')).toHaveText(firstCue);
+    if (portrait) {
+      await expect(page.locator('.tour-caption')).toHaveCSS('position', 'static');
+    }
+    await page.keyboard.press('Enter');
+    await expect.poll(() => video.evaluate(clip => clip.paused)).toBe(true);
+    if (!portrait) {
+      const landscapeSources = /\/videos\/product-tour\.(mp4|webm)$/;
+      await page.route(landscapeSources, route => route.fulfill({contentType: 'application/octet-stream', body: ''}));
+      try {
+        await page.reload();
+        await toggle.focus();
+        await page.keyboard.press('Enter');
+        const fallback = page.locator('.tour-error');
+        await expect(fallback).toBeVisible();
+        await expect(fallback.locator('a')).toHaveAttribute('href', 'demo/report.html');
+      } finally {
+        await page.unroute(landscapeSources);
+      }
+    }
+  } finally {
+    await page.emulateMedia({reducedMotion: null});
+  }
+}
+
 async function checkLazyPreviewStability(page) {
   let release;
   const held = new Promise(resolve => { release = resolve; });
@@ -1518,9 +1564,13 @@ async function checkSandboxQuotationPairs(page) {
             await expect(page.locator('h1')).toHaveText(germanHeadline, {useInnerText: true});
             await page.goto(origin + '/lixity/' + route);
             const video = page.locator('.product-preview video');
-            await expect(video).toHaveAttribute('poster', 'screenshots/dashboard-light.png');
+            const portrait = width <= page.viewportSize().height;
+            const poster = javaScriptEnabled && portrait
+              ? 'videos/product-tour-portrait.png' : 'screenshots/dashboard-light.png';
+            await expect(video).toHaveAttribute('poster', poster);
             await expect(video).toHaveAttribute('preload', 'none');
-            assert.ok(await video.evaluate(el => Math.abs(el.clientWidth / el.clientHeight - 1.6) < .01));
+            await expect.poll(() => video.evaluate(el => el.clientWidth / el.clientHeight))
+              .toBeCloseTo(portrait ? 9 / 16 : 8 / 5, 2);
             await expect(page.locator('#tour-transcript li')).toHaveCount(6);
             await page.locator('#impressum > summary').click();
             await expect(page.locator('#impressum address')).toContainText('ROST Services GmbH');
@@ -1559,6 +1609,9 @@ async function checkSandboxQuotationPairs(page) {
         await page.locator('#examples').click();
         await expect(page).toHaveURL(origin + '/lixity/#product-tour-preview');
         await expect(page.locator('#product-tour-preview')).toBeInViewport();
+        if (javaScriptEnabled && colorScheme === 'light' && !hasTouch && width !== 320) {
+          await checkHomepageTourPlayback(page, width <= page.viewportSize().height);
+        }
         await page.locator('#guides a[href="guides/first-look.html"]').click();
         await expect(page, 'Written guidance remains available in documentation')
           .toHaveURL(origin + '/lixity/guides/first-look.html');

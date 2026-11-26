@@ -19,7 +19,8 @@ def _status(worker: dict[str, object], *, engine: str = "qwen3", language: str =
     if node is None:
         pytest.skip("Node is required to exercise speech status JavaScript")
     source = SOURCE.read_text(encoding="utf-8")
-    function = source.split("  function updateWorkerStatus() {", 1)[1].split("  function updateRuntimeHint()", 1)[0]
+    worker_status = source[source.index("  function workerFor("):source.index("  function updateRuntimeHint()")]
+    provider_fields = next(line for line in source.splitlines() if line.startswith("  function providerFields("))
     script = r"""
 const worker = WORKER, engine = ENGINE;
 const labels = LABELS;
@@ -29,13 +30,14 @@ const settingsForm = {dataset: {}};
 const capabilities = {
     qwen3: {model: "qwen", name: "Qwen"},
     coqui: {model: "coqui", name: "Coqui"},
-    "mlx-audio": {model: "zonos", name: "ZONOS3", configurable_model: true, provider_fields: false}
+    "mlx-audio": {model: "zonos", name: "ZONOS3", configurable_model: true, provider_fields: false},
+    "openai-compatible": {configurable_model: true}
 };
 const workers = [worker];
 function profileCapability() { return capabilities[engine] || {}; }
 function label(key) { return labels["speech_" + key] || key; }
 function uiFormat(key, args) { return (labels[key] || key).replace(/\{(\w+)\}/g, (_, name) => args[name]); }
-function updateWorkerStatus() { FUNCTION
+FUNCTIONS
 updateWorkerStatus();
 process.stdout.write(fields.worker_status.textContent);
 """
@@ -43,7 +45,7 @@ process.stdout.write(fields.worker_status.textContent);
                        "LABELS": json.dumps({key: value for key, value in WORKSPACE_LABELS[language].items()
                                              if key.startswith("speech_worker_") or key in
                                              ("speech_target_local", "speech_provider_status")}),
-                       "LANGUAGE": json.dumps(language), "FUNCTION": function}.items():
+                       "LANGUAGE": json.dumps(language), "FUNCTIONS": provider_fields + "\n" + worker_status}.items():
         script = script.replace(key, value)
     # Execute only checked-in JavaScript with synthetic worker fixtures.
     return subprocess.run([node, "-e", script], capture_output=True, text=True, check=True).stdout  # noqa: S603

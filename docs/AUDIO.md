@@ -8,10 +8,14 @@ the audio workflow in both the local browser app and the CLI. The
 [speech setup options](INSTALLATION.md#find-your-setup-task) for separately
 installed workers and the optional Apple Silicon runtime.
 
-The published application includes recording, direction, the teleprompter and
-commands for optional speech runtimes and providers. Use `lixity --version` and
-the installed command's `--help` to check your build. Audio settings, direction,
-timeline and transcript schemas have independent versions.
+The published v0.9.3 includes recording, passage direction, the teleprompter,
+and the ZONOS3, IMS-Toucan and OpenAI-compatible adapters described below.
+This manual follows the checkout. The shared IPA and alternate-spelling lexicon,
+reorganized audio panels and reviewed upgrade that keeps a profile draft open
+are unreleased. In v0.9.3, use profile spelling replacements or the IMS-Toucan
+profile's IPA dictionary. Audio settings, direction, timeline and transcript
+schemas have independent versions. Check your installation with
+`lixity --version` and the relevant command's `--help`.
 
 | I want to… | Start here | CLI route |
 | --- | --- | --- |
@@ -19,7 +23,7 @@ timeline and transcript schemas have independent versions.
 | Record, import or clone my own voice | [Author voice](#author-voice-recording-and-listening) and [ZONOS3 reference](#use-a-reference-with-zonos3) | `audio-reference`, `read-aloud` |
 | Set the recording level | [Microphone and calibration](#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record) | `audio-microphone`, `audio-calibrate` |
 | Read and record with cues | [Teleprompter](#manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images) | Browser workflow |
-| Correct spoken names or use IPA | [Spelling substitutions](#pronunciation-substitutions) and [Toucan phonetics](#ims-toucan-phonetics-and-structured-direction) | Project profile configuration |
+| Correct spoken names or use IPA | [Project pronunciations](#project-pronunciations) and [Toucan phonetics](#ims-toucan-phonetics-and-structured-direction) | Project audio settings |
 | Shape delivery for a passage | [Passage direction](#passage-direction) | `audio-direction` |
 | Export direction without synthesis | [JSON/SSML and providers](#audio-export-and-external-providers) | `audio-export-plan` |
 | Inspect a recording against a plan | [Audio inspection](#inspect-and-compare-externally-generated-audio) | `audio-inspect`, `audio-verify`, `audio-import-transcript` |
@@ -36,22 +40,32 @@ synthesizes audio.
 1. Open the intended project and manuscript in the
    [local workspace](WORKSPACE.md). Audio profiles and saved references belong to
    that explicit project. For command-line work, use `--project ./novel`.
-2. Open **Project → Settings → Audio and services → Voice profiles** to select
-   the engine, language, voice or recording and pauses. Save the profile, then
-   open **Listen and direct** in the manuscript view.
-3. Inspect a plan first. **Export direction → Preview export** works without a
-   running synthesis service. It still needs valid project/profile settings.
-4. For synthesis, install the runtime for your selected engine or configure its
-   explicit provider. Review the selected engine in **Services & audio queue**
-   or with `audio-status`.
-   [Speech setup options](INSTALLATION.md#find-your-setup-task)
-5. Choose **Preview paragraph** for a short passage, listen to its actual words
-   and delivery, then render the chapter. Save a download when needed. The
-   [chapter recording rules](#retain-or-import-chapter-audio) explain
-   what is retained for reader exports.
+2. Open **Project → Settings → Audio and services → Voice profiles**. Choose the
+   model, language, voice or reference recording and select **Save profiles**.
+   For your own voice, first [record or import a reference](#author-voice-recording-and-listening).
+3. In the manuscript, open **Listen and direct** from the headphones control.
+   Choose a passage and use **Export direction → Preview export** to inspect
+   the effective words, delivery and pauses. Only project audio settings are
+   required for a plan. Keep exported plans private when they contain manuscript
+   text or directions.
+4. Set up the selected runtime or explicit provider for synthesis. Check **Speech
+   service** in **Voice profiles** or use `lixity audio-status`. Audition a
+   **Preview paragraph** before you choose **Chapter audio → Render chapter**.
+   [Chapter recordings and downloads](#retain-or-import-chapter-audio)
 
-Inspect the plan and worker status before synthesis. The plan JSON includes
-manuscript text and private direction.
+### Choose a synthesis route
+
+| What you want to hear | Choose | Controls available in Lixity |
+| --- | --- | --- |
+| Your own voice on Apple Silicon | [Local ZONOS3 through MLX-Audio](INSTALLATION.md#mlx-audio-on-apple-silicon) | A saved reference, explicit pauses, model pace, and alternate spellings |
+| Your own voice with specific IPA or structured delivery in German or English | [Local IMS-Toucan](INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction) | A saved reference, IPA, duration, intonation and energy variation, and explicit pauses |
+| Free-text direction through a service you choose | [OpenAI-compatible endpoint](INSTALLATION.md#external-speech-providers-and-local-audio-inspection) | The provider's voice and model, with documented and explicitly enabled instruction support |
+
+These are starting points for author voice and direction. Qwen and experimental
+Coqui/OpenVoice profiles remain available. See the [full profile table](#voice-profiles)
+for their controls and for retained F5-TTS settings.
+
+For the CLI, inspect the plan and worker status before synthesis.
 
 ```sh
 lixity read-aloud --project ./novel --preview --plan-only
@@ -69,7 +83,7 @@ Synthesis sends the effective spoken text to the selected runtime. A configured
 Jetson receives it through the operator's SSH forward. An explicitly selected
 remote provider receives it during rendering.
 
-Prerequisites depend on the task:
+Check the prerequisites for the controls you use.
 
 - Planning, direction editing and JSON/SSML export need no model or worker.
 - Synthesis needs the exact engine's optional runtime and local model files, or
@@ -143,19 +157,19 @@ engine. For Base, clear inherited profile instructions with `--instructions ''`;
 
 ### Voice profiles
 
-Choose the engine for its supported controls before choosing a model or recording.
-The following describes Lixity's current adapters, not every upstream model:
+Choose an engine that supports the controls you need. This table describes the
+adapters available in Lixity.
 
 | Profile engine | Voice choice | Free-text delivery | IPA and structured prosody |
 | --- | --- | --- | --- |
+| `mlx-audio` | ZONOS3 fixed voice or saved project reference | Unsupported | Unsupported. Pace uses a model condition |
+| `ims-toucan` | Saved recording, German or English | Unsupported | Supported |
+| `openai-compatible` | Explicit provider model and voice | Requires declared `supports_instructions` and endpoint support | Unsupported |
 | `qwen3` | CustomVoice preset | Model-interpreted | Unsupported |
 | `qwen3-design` | Voice description | Model-interpreted | Unsupported |
 | `qwen3-base` | Saved recording with exact transcript | Unsupported | Unsupported |
 | `coqui` | German Thorsten VITS | Unsupported | Unsupported |
 | `coqui-reference` | Thorsten plus OpenVoice reference conversion | Unsupported | Unsupported |
-| `ims-toucan` | Saved recording, German or English | Unsupported | Supported |
-| `mlx-audio` | ZONOS3 fixed voice or saved project reference | Unsupported | Unsupported; speed uses a model condition |
-| `openai-compatible` | Explicit provider model and voice | Only with declared `supports_instructions` | Unsupported |
 | `f5-tts` | Retained profile and compatible external local worker | Unsupported | Unsupported; bundled loader retired |
 
 Every engine uses Lixity's literal spelling substitutions and explicit external
@@ -163,26 +177,14 @@ pauses. Tempo is FFmpeg postprocessing except for the fixed local ZONOS3 binding
 which passes `speed` into the model. These controls do not establish word fidelity,
 calibrated emotion or speaker similarity.
 
-Saved project audio profiles are shared with the CLI. In the current
-native interface, open **Project → Settings → Audio and services → Voice profiles**
-to create or edit a profile,
-including its model, delivery, standard pauses and pronunciation replacements.
-The pronunciation editor can be expanded and searched. Filter and edit individual
-entries, or open the text editor for bulk changes. Apply or discard an individual
-entry draft before saving. Terms containing `=` are edited individually rather
-than in the bulk editor. **Save project audio settings** stores the selected profile
-and its controls through the normal atomic project settings path. A profile can be
-removed as a draft before saving; the last profile cannot
-be removed. A profile referenced by saved passage direction cannot be removed,
-including references in stale direction entries or other manuscript sources.
-Review or remove those references first. Use **Listen and direct** in the
-manuscript to audition and direct a passage; the active project profile is shown
-there. **Audio export and recordings** in the same settings section opens chapter
-selection, generation progress and the resulting download. The
-passage dialog also links directly to chapter output and retains the selected
-chapter; save or discard any direction draft before switching. Draft
-previews do not save settings. Read-only exports do not offer synthesis or expose
-audio settings.
+Saved project audio profiles are shared with the CLI. **Save profiles** stores
+the selected profile and its controls through the atomic project settings path.
+Keep a profile selected for synthesis and plan export. Removing the last
+profile requires audio settings schema `/4` or later. To remove a profile used
+by a saved direction, first review or remove every reference to it, including
+stale entries and directions attached to other manuscripts in the project.
+Draft previews leave settings untouched. Interactive synthesis and profile
+settings require a writable workspace.
 
 The preview and chapter controls offer an explicit option to ignore passage
 direction. It is off when the dialog opens. Enabling it omits
@@ -280,20 +282,21 @@ extremely short segment, the original segment is kept. ZONOS3 instead receives
 precise linear duration ratio; compare short previews and ASR evidence when pacing
 and word fidelity matter. Delivery instructions do not guarantee a speaking rate.
 
-A root `lixity.toml` can contain:
+A root `lixity.toml` can define a local Apple Silicon reference profile. Use the
+ID returned by `lixity audio-reference create`.
 
 ```toml
 [audio]
-schema_version = "lixity-audio-settings/1"
+schema_version = "lixity-audio-settings/4"
 selected = "narrator"
 
 [audio.profiles.narrator]
-name = "Narrator"
-engine = "qwen3"
+name = "Author voice"
+engine = "mlx-audio"
 language = "de"
-voice = "Ryan"
-speed = 1.2
-instructions = "Read calmly and clearly, without whispering."
+voice = "reference"
+reference_id = "REPLACE_WITH_SAVED_REFERENCE_ID"
+speed = 1.1
 paragraph_pause = 0.45
 scene_pause = 1.2
 ```
@@ -305,8 +308,50 @@ A voice profile does not infer character identities or turn words such as “qui
 
 ### Pronunciation substitutions
 
-Version 0.8.0 also supports an optional project-wide lexicon. To opt in, change
-the audio schema to `/2` and add a table shared by every profile:
+The [shared lexicon](#project-pronunciations) covers recurring words across
+voices. Use **This voice profile** in **Pronunciation** for a spelling that only
+one voice needs. Expand the editor to search or edit individual entries, or use
+**Edit list as text** for bulk spelling replacements. Edit terms containing
+`=` individually. Apply or discard the individual edit before choosing
+**Save profiles**. The [IMS-Toucan IPA dictionary](#ims-toucan-phonetics-and-structured-direction)
+holds phonetics specific to that voice.
+
+#### Project pronunciations
+
+In the checkout, open **Project → Settings → Audio and services → Voice profiles
+→ Pronunciation** and choose **Whole project**. Enter the term, an **IPA
+transcription**, an **Alternate spelling**, or both. Choose **Add or update
+entry**, then **Save profiles**. If the project uses an earlier audio schema,
+complete **Review audio settings update** first. The new lexicon uses audio
+settings schema `/5`. Keep this field out of projects that still need to open in
+v0.9.3, which reads profile IPA and literal spelling replacements.
+
+These are the equivalent entries under audio schema `/5` in the project file.
+
+```toml
+[audio.pronunciation_lexicon]
+schema_version = "lixity-pronunciation-lexicon/1"
+
+[audio.pronunciation_lexicon.entries]
+"Vogel" = { ipa = "ˈfoːɡəl", respelling = "Fohgel" }
+```
+
+Entries match whole terms with the same capitalization and take precedence over
+overlapping literal spelling replacements. The shared lexicon accepts up to
+200 terms, 100 characters per term and 300 per IPA or spelling value. IMS-Toucan
+receives the IPA when available. For text-only voices, supply an alternate
+spelling to use as input.
+If an IPA-only term occurs with one of those voices, the render stops with an
+explanation. The timeline and SSML retain the requested IPA with a warning in
+that case. When the voice receives the alternate spelling, the export shows the
+effective substitution. Use **Export direction → Preview export** to check
+which form will be used, then audition a short preview. Enclose each complete
+dictionary term within one direction range.
+
+#### Literal spelling replacements
+
+The original text-only project map also remains available. Audio schema
+`/2` introduced this table shared by every profile:
 
 ```toml
 [audio]
@@ -341,46 +386,37 @@ text changes. Existing `/1` projects retain their behavior and need no migration
 Once a project uses `/2`, Lixity 0.7.7 and older installations do not accept its
 audio settings: keep a backup and use a current version to render or edit them.
 
-`qwen3` uses the
-`Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` checkpoint and its nine presets.
-Qwen lists the presets' native languages as Chinese, English, Japanese or Korean;
-none is listed as a native German voice. They can still synthesize German, and
-individual pronunciation and accent must be assessed by listening. See Qwen's
-[speaker descriptions](https://github.com/QwenLM/Qwen3-TTS#custom-voice-generate).
-Explicit style instructions, structural pauses and pronunciation settings are
-shared by CLI and UI. Version 0.7.7 also offers separate experimental
-VoiceDesign and reference-based Base checkpoints described below.
-There is no automatic backend fallback.
-
-The shared control model separates literal spoken-form substitutions, free-text
-delivery direction and explicit PCM silence. Qwen receives substituted text;
-CustomVoice and VoiceDesign interpret direction while Base rejects it. Neither
-pronunciation nor acting is guaranteed. The
-adapter advertises these capabilities in `control_support` and explicitly reports
-that IPA/phoneme input, SSML and native model speed control are unsupported. This describes
-Lixity's implementation, not every capability of every Qwen-derived model.
-For comparison, [W3C SSML](https://www.w3.org/TR/speech-synthesis11/) and
-[PLS lexicons](https://www.w3.org/TR/pronunciation-lexicon/) define structured
-speech and pronunciation controls, while implementations vary by voice and model
-([Amazon Polly](https://docs.aws.amazon.com/polly/latest/dg/supportedtags.html),
-[Azure Speech](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/speech-synthesis-markup-pronunciation),
-[ElevenLabs](https://elevenlabs.io/docs/eleven-api/guides/how-to/text-to-speech/pronunciation-dictionaries)).
-Lixity does not silently translate unsupported phonemes or markup into text.
-
 ## Author voice recording and listening
 
 | Where to work | Controls and scope |
 | --- | --- |
 | **Project → Settings → Audio and services → Voice profiles** | Choose a profile and edit its voice, model, delivery and pronunciation. A project with one profile displays its name. Models group by the input they use. Open **Speech service** for worker diagnostics. The inspection target applies to this check. |
 | **Author's voice** | Read a sample or custom text, record or import a take, review it, and explicitly save it as a project voice reference. The project recording limit is available beside the recording controls. |
-| **Mic & levels** | Inspect the recording inputs and run a level check. Desktop capture uses the chosen input during the current project session. Browser recording uses the browser's input and site permission. Available mixer controls apply to the server computer. |
-| **Manuscript → Listen and direct** | Keep the selected paragraph and its surrounding prose available while editing a direction, listening to a short preview or exporting a plan. The panel shows the saved narrator and links to the project profile. |
-| **Manuscript → Chapter audio** | Generate or import chapter audio, discard a pending file selection, or delete the current project recording after confirmation. Export a plan or inspect a recording with a timestamped transcript. Plan export and transcript comparison each have their own text scope. |
+| **Microphone and levels** (tab **Mic & levels**) | Inspect the recording inputs and run a level check. Desktop capture uses the chosen input during the current project session. Browser recording uses the browser's input and site permission. Available mixer controls apply to the server computer. |
+| **Manuscript → Listen and direct → Listen & direct** | Select the passage, check which words the direction covers, then edit, audition or export a plan. The panel shows the saved narrator and links to **Voice profiles**. |
+| **Manuscript → Listen and direct → Chapter audio** | Render the selected chapter and manage its recording. Use **Export direction** for a plan and **Inspect external recording** for a recording check. Each has its own text scope. |
 
-The project settings and manuscript each link to the other entry point. Chapter
-audio and Listen and direct share the current passage, playback controls and
-render options. Reopening the panel starts a new run with saved defaults. Plan
-export remains available without synthesis.
+To use your own voice:
+
+1. In **Project → Settings → Audio and services**, choose **Record author's
+   voice**. Record a short passage or [import a reviewed take](#experimental-reference-voices).
+2. Listen to the take and correct the transcript to the words you actually
+   spoke. Confirm **I checked that this transcript matches the recording**,
+   then choose **Save as author voice for this book**.
+3. In **Voice profiles**, select **MLX-Audio ZONOS3 TTS** for a local reference
+   on Apple Silicon, or **IMS-Toucan** for German or English with IPA and
+   structured delivery. For ZONOS3 set **Voice preset** to **Project voice
+   reference**. Choose the saved take in **Reference recording** and select
+   **Save profiles**.
+4. Check **Speech service**, then choose **Preview paragraph** in the manuscript
+   and listen for omitted or repeated words, pronunciation, and voice
+   continuity. Set [project pronunciations](#project-pronunciations) or
+   [passage direction](#passage-direction) as needed, and audition again before
+   rendering a chapter.
+
+The manuscript audio tabs share the current selection and playback. Save or
+discard a direction draft before you render the chapter. Reopening the panel
+starts a new run with saved defaults.
 
 **Delete chapter recording** applies to the exact recording shown for the
 selected chapter. It affects audio available to future exports. Existing
@@ -397,13 +433,10 @@ The short sample is selected initially. Choose the phonetic sample for a longer
 read. Recordings use 24 kHz mono 16-bit PCM. Stop when you finish, or let the
 recorder stop at the project's recording limit. The timer shows elapsed time and
 the limit. Press Enter or Space with the record button focused to start or stop.
-Saving requires at least one second. Review the transcript in the take card and
-retain only words actually spoken.
-Check **I checked that this transcript matches the recording** before saving;
-editing the text clears that confirmation. **Save as author voice for this book**
-retains the reference explicitly. Saving and activating are separate outcomes:
-if activation fails, the recording may already be saved. Read the result before
-retrying, and select a valid reference profile from the recordings list.
+Saving requires at least one second. Editing the transcript clears its
+confirmation. Saving and activating are separate outcomes. If activation fails,
+read the result before retrying. A saved recording can be selected in a
+compatible profile.
 A successful activation refreshes the project view; reload if the UI reports
 that the saved settings could not be refreshed.
 
@@ -576,11 +609,12 @@ model samples acoustic output; compare otherwise identical previews when duratio
 is part of the acceptance criterion. Explicit paragraph and scene pauses remain in
 Lixity and are not changed by the model's speed value.
 
-ZONOS3 does not interpret Lixity's free-text passage instructions in the MLX
-implementation. Saved directions remain exportable for another engine, but a
-synthetic ZONOS3 render should use `--no-direction` or omit free-text direction.
-Pronunciation substitutions and explicit Lixity pauses still apply. Do not infer
-speaker identity, consent, accent accuracy or naturalness from a successful render.
+For a ZONOS3 render, use pronunciation substitutions and explicit pauses.
+Keep the profile and active ranges free of text instructions, or export those
+instructions for another engine. To omit all saved passage settings for one
+render, including passage pauses and voice assignments, use `--no-direction`
+and clear any unsupported profile instructions. Judge accent and naturalness
+by listening with the author's consent.
 
 ### Use a reference with Qwen Base
 
@@ -925,14 +959,14 @@ worker requires the [separate installation](INSTALLATION.md#ims-toucan-author-vo
 It does not interpret free natural-language acting prompts. Existing instructions
 remain available in plan exports; synthesis rejects them rather than ignoring them.
 
-The audio dialog uses one profile/direction workflow with capability-specific
-controls. Upgrade existing settings to `/5` through the reviewed backup dialog
-before adding Toucan. In **Voice profiles**, choose the saved recording,
-open **Pronunciation dictionary (IPA)** for one `term=IPA` entry per line and
-use **Structured delivery** for numeric controls. The dictionary permits at
-most 200 unique terms, with 100 characters per term and 300 per IPA value.
-**Clear delivery overrides** restores inheritance/defaults rather than guessing
-new values. Profile and passage controls have separate save actions.
+Upgrade earlier audio settings to `/5` through the reviewed backup dialog.
+In **Voice profiles**, choose the saved recording and use **Structured
+delivery** for narrator defaults. Under **Pronunciation dictionary (IPA)**, enter
+one `term=IPA` line per voice-specific term. Write recurring terms in the
+[project lexicon](#project-pronunciations) when they should apply across voices.
+The profile dictionary permits up to 200 unique terms, with 100 characters per
+term and 300 per IPA value. Use **Save profiles** for defaults and **Save passage
+direction** for overrides. **Clear delivery overrides** restores inheritance.
 
 For the same reviewed migration from the CLI:
 
@@ -1008,19 +1042,21 @@ It does not infer characters or cast an audiobook from dialogue.
 
 - `qwen3` uses the same preset; `qwen3-design` uses the same voice description.
   Their free-text delivery instructions can still change perceived voice.
+- ZONOS3 keeps the same fixed voice or saved reference throughout a render.
+  Use a separate short preview to compare other takes.
 - `openai-compatible` requires the same endpoint, model and provider voice.
   Delivery instructions also require explicitly declared provider support.
-- Reference engines (`qwen3-base`, `coqui-reference`, `ims-toucan`, retained
-  `f5-tts`) accept a different reference as a delivery recording of the same
-  speaker. Lixity cannot verify who speaks in a recording; keeping the speaker
-  consistent remains the author's responsibility. Free-text acting prompts are
-  unsupported by these engines; Toucan instead supports structured prosody.
+- `ims-toucan`, `qwen3-base`, `coqui-reference` and retained `f5-tts`
+  accept a different reference as a delivery recording of the same speaker.
+  Check the speaker when selecting each take. These profiles support explicit
+  pauses, and IMS-Toucan also supports structured prosody.
 - Different engine/language combinations, presets, voice descriptions or provider
   identities are rejected with `NarratorConflict` when they change the configured
   narrator. That check does not guarantee acoustic continuity between segments.
 
-Record calm and urgent delivery references of the same narrator if needed, and
-listen to transitions before choosing them for passage profiles.
+With IMS-Toucan, you can create a second profile from another recording of the
+same narrator. Assign it explicitly in **Voice profile for this range** and
+listen to the transition. Choose the delivery profile separately for each range.
 
 ## Check narration continuity before a chapter render
 
@@ -1034,7 +1070,7 @@ lixity read-aloud --project ./novel --chapter 1 --preview-line 12 --speech-targe
 lixity read-aloud --project ./novel --chapter 1 --preview-line 12 --speech-target local --no-direction -o preview-without-direction.wav
 ```
 
-Both commands need a reachable local worker serving the selected profile's model;
+Both commands need the selected local runtime and its model available.
 CPU synthesis can be slow. The comparison keeps the selected profile, its
 pronunciation rules, speed and default pauses. `--no-direction` excludes all saved
 passage directions, including their voice assignments and custom pauses; it does
@@ -1052,30 +1088,33 @@ renders; an existing WAV is not changed automatically.
 
 ## Passage direction
 
-In the manuscript reader, open a paragraph's action menu and choose **Passage
-direction**. The editor opens beside the manuscript in a wide window and just
-below the chosen paragraph in a narrow window. The selected paragraph has a
-visible marker. Read and scroll the surrounding prose while editing or checking
-a preview. The headphones button also opens **Listen and direct**, using the
-selected passage or chapter. Switch to **Chapter audio** for chapter delivery
-and recording comparison. A draft stays open across those two tabs.
+1. In the manuscript reader, open a paragraph's action menu and choose
+   **Passage direction**, or open **Listen and direct** with the headphones.
+   The editor sits beside the paragraph on a wide screen and below it on a
+   narrow screen.
+2. To direct part of the paragraph, select words in **Spoken text** and choose
+   **Use selected text / whole passage**. Check the displayed scope before
+   editing. With no selection, this action restores the whole passage.
+3. Keep the current narrator or choose a compatible delivery profile
+   ([single narrator rules](#single-narrator-and-delivery-variation)). Set silence
+   before or after the selection. IMS-Toucan exposes **Structured delivery**.
+   For free-text direction, read the status beside the text field. When that
+   engine cannot apply it, export the written instruction or clear it for
+   synthesis. Calm, tension and whisper are editable starting prompts whose
+   acoustic effect depends on the model.
+4. Under **Export direction**, choose **Selected passage** and **Preview
+   export** to inspect spoken text, voice choice, instructions and silence
+   without sending text to a model. Use **Preview paragraph** to audition
+   the draft. Choose **Save passage direction** to apply the change to
+   future renders.
+5. Save or discard the draft before directing another passage, closing the
+   panel, or exporting or rendering a chapter. Switch to **Chapter audio**
+   for chapter playback, retention or comparison. Profile defaults are saved
+   separately in **Voice profiles**.
 
-Select text in the read-only **Spoken text** field for a smaller range, then
-choose **Use selected text / whole passage**. With no selection, this action
-restores the whole passage. Choose a compatible delivery profile or inherit the current narrator
-(see [single narrator rules](#single-narrator-and-delivery-variation)),
-write local direction, and optionally set silence before/after in seconds.
-The calm/tension/whisper choices are editable English prompt starting points,
-not measured emotion controls. Under **Export direction**, choose **Selected passage** and **Preview export**
-to inspect spoken text, voice choice, combined instructions and silence without
-calling a model. A passage preview uses the draft; chapter/manuscript export or
-generation requires saving or discarding it first. Save or discard before
-editing another passage or closing the editor. **Save passage direction** updates
-the direction record for the selected source.
-Profile settings and passage direction have separate save actions. A chapter
-operation can explicitly omit passage directions for that run. Saving the profile
-sets defaults for later runs. The current render target, export scope, comparison
-scope and cache reuse choice are temporary controls.
+The current render target, export scope, comparison scope and cache reuse
+choice apply to the current operation. The chapter panel can explicitly omit
+saved passage direction for one run.
 
 **Services & audio queue** in Project settings reports the actual model identity advertised by each available
 local or Jetson worker; an unknown identity is shown as unknown. The dialog also
@@ -1106,17 +1145,14 @@ instructions. CLI voice/language/instruction overrides affect the invocation's
 default profile; explicitly referenced profiles keep their own settings. Newlines
 in instructions become spaces. Silence after a range is inherited at paragraph
 end or zero inside the paragraph unless supplied explicitly; supplied silence
-replaces that boundary's default rather than adding a second pause. Pauses are
-inserted as PCM silence by Lixity, not requested probabilistically from Qwen.
+replaces that boundary's default. Lixity inserts the pause as PCM silence.
 
-This data model takes separation of voice, pronunciation and pauses from SSML,
-without claiming SSML compliance. Qwen receives ordinary `text`, `speaker`,
-`language` and a separate `instruct`. Tone, emphasis and pace are model-interpreted;
-there is no calibrated emotion intensity, exact speaking-rate/pitch control,
-IPA phoneme input, guaranteed nonverbal effect or automatic character assignment.
-Very short directed spans can sound disconnected. No cross-segment dramatic
-memory or seamless multi-character performance is promised. Audio must be heard
-and checked for word fidelity, pronunciation, voice continuity and delivery.
+Supported controls depend on the [selected adapter](#voice-profiles). For
+example, Qwen CustomVoice receives prepared text, preset speaker, language
+and a separate instruction. IMS-Toucan can receive IPA and numeric prosody
+controls. External endpoints receive the documented adapter fields. Listen
+for word fidelity, pronunciation, continuity and delivery, especially where
+a very short directed span joins the surrounding narration.
 
 CLI observation and plan inspection need no running worker:
 
@@ -1181,12 +1217,10 @@ SSML. `read-aloud --timeline` and `--ssml` imply export-only behavior;
 `read-aloud --plan-only` keeps the native speech-plan contract (`/1`, or `/2`
 when those controls require it).
 The browser offers JSON/SSML downloads for a passage, chapter or manuscript.
-Open **Listen and direct** or **Chapter audio** in the manuscript, and choose
-**Export direction → Preview export**. Synthesis and chapter audio import have
-their own actions. Export can run offline with the saved voice profile. Choose
-voice profiles, author recordings, microphone configuration and service settings
-in Project settings. Recording references are selected by reading text and
-duration. Their internal identifiers remain in stored settings and machine exports.
+From the manuscript, open **Listen and direct** and choose **Export direction
+→ Preview export** in either audio tab. Choose the plan scope, review the text
+and controls, then download the timeline or SSML. This can run offline with the
+saved voice profile. Exports identify saved references by an internal ID.
 JSON retains effective text, original spoken text, pronunciation substitutions,
 direction, profile choices and pause values. Speech start times and durations
 are unknown before synthesis; planned pauses are not measured timestamps.
@@ -1208,7 +1242,7 @@ lixity audio-migrate --project ./novel --to-schema-4 --apply \
   --expected-snapshot TOKEN_FROM_PREVIEW --backup ../novel-audio-schema4.zip
 ```
 
-The browser offers the same review/apply step in voice profiles. Its preview
+The browser offers the same review/apply step in **Voice profiles**. Its preview
 identifies retained profiles and whether an implicit narrator will become saved.
 Keep the backup and follow the [audio configuration recovery procedure](#audio-configuration-recovery)
 on a project copy before relying on a rollback. An older application may not read
@@ -1258,9 +1292,11 @@ lixity read-aloud --project ./novel --engine openai-compatible \
 ```
 
 The adapter sends standard `model`, `input`, `voice` and `response_format="wav"`
-fields. It sends `instructions` only when the profile explicitly declares
-`supports_instructions=true`; this is an operator declaration, not a verified
-provider capability. Unsupported direction, local reference identities and
+fields. In **Voice profiles**, enable **Provider accepts delivery instructions**
+only after confirming support for the endpoint and model. This sets
+`supports_instructions = true` and allows Lixity to send the `instructions`
+field. Verify the result by auditioning a preview. Unsupported direction, local
+reference identities and
 voice descriptions fail explicitly. Voice names and model IDs are provider
 values; Qwen's preset/language restrictions do not apply. The selected language
 still controls Lixity's text planning; provider pronunciation support requires
@@ -1298,8 +1334,10 @@ These are the intersection of the official voice groups and Lixity's complete
 workspace languages, not a claim that only seven languages exist upstream. A
 reference is resolved by its opaque content identity, validated and copied to a
 private temporary directory for each segment. The temp copy is removed when the
-worker returns. ZONOS3 itself does not need a transcript for cloning; Lixity still
-stores the exact reviewed transcript as part of the shared reference record.
+worker returns. In the checkout the warm worker can reuse its most recent
+speaker embedding when the reference WAV bytes match and the model exposes the
+embedding interface. Lixity stores the exact reviewed transcript in the reference
+record. The ZONOS3 binding sends the audio itself for voice conditioning.
 
 ```bash
 lixity read-aloud --project ./novel --engine mlx-audio --language de \
@@ -1308,15 +1346,11 @@ lixity read-aloud --project ./novel --engine mlx-audio --language de \
   --preview --speed 1.1 -o preview.wav
 ```
 
-For ZONOS3, Lixity sends `speed` directly to the model. It is a trained
-`speaking_rate` condition rather than an FFmpeg `atempo` step; `1.1` is the
-profile default. The implementation's only acoustic condition fields are
-`loudness`, `fmax` and `speaking_rate`. Pauses and cache reuse remain in Lixity.
-This MLX checkpoint does not expose text direction, accent adapters, hidden-state
-steering or raw reference-code editing through Lixity's adapter. Existing passage
-directions remain saved and exportable; use `--no-direction` for synthesis.
-Test short previews before chapter rendering. Fixed-voice choice, speaker cloning,
-exact duration and accent remain auditioned properties rather than guarantees.
+For ZONOS3, Lixity sends `speed` directly to the model as its `speaking_rate`
+condition. The profile default is `1.1`. Lixity assembles explicit pauses
+separately. The supported controls in this adapter are listed under
+[Voice profiles](#voice-profiles). Test short previews before chapter rendering
+to check duration, accent and continuity.
 
 For German speech recognition, send one selected audio file to the same local
 service with Parakeet v3 and convert the normalized word timings for Lixity's
@@ -1388,7 +1422,7 @@ even when signal inspection succeeds. Source/audio mismatch, unsupported decodin
 and exceeded limits fail explicitly. Core limits include 2 GiB source audio,
 six hours, 500 million decoded samples, 1 GiB temporary decoded data, 16 MiB JSON,
 100,000 transcript words and 10,000 plan segments; decoding has a 120-second
-deadline. In **Listen & direct → Inspect external recording**, choose a WAV/FLAC/MP3
+deadline. In **Chapter audio → Inspect external recording**, choose a WAV/FLAC/MP3
 and optionally the matching transcript, then **Inspect recording**. The current
 chapter/manuscript export scope supplies the plan. The browser limits audio to
 96 MiB and transcript JSON to 8 MiB. It shows a bounded comparison and offers the
@@ -1455,21 +1489,24 @@ engines have local transports. `model_matches: null` means the comparison is
 unknown. Missing or invalid project settings return a diagnostic. The result
 omits manuscript prose and private delivery and pronunciation text.
 
-For a configured `openai-compatible` profile, readiness remains unknown until
-synthesis. The `mlx-audio` engine instead checks the isolated runtime and local
-checkpoint cache. See [MLX-Audio on Apple Silicon](#mlx-audio-on-apple-silicon).
-The browser's **Services & audio queue** shows open project views and the shared
-FIFO queue: one active render and up to three waiting jobs. Cancellation and
-context checks apply before queued work starts. **Ready** requires the expected
-model's health response; it does not establish GPU acceleration. External-provider
-status is unknown without probing, and the queue does not establish the execution
-location of an external or mixed job. See [service lifecycle](USAGE.md#lixity-service)
-for view lifetime and application start/restart behavior.
+The `mlx-audio` check uses the isolated runtime and local checkpoint cache for
+the fixed [ZONOS3 binding](#mlx-audio-on-apple-silicon). Native HTTP workers
+report model identity and residency through their health response. Use a render
+to verify inference with the reported model. For an `openai-compatible` profile,
+Lixity reports the configuration and leaves readiness unknown until synthesis.
+
+The browser's **Services & audio queue** shows open project views and the
+shared FIFO queue with one active render and up to three waiting jobs.
+Cancellation and context checks apply before queued work starts. The queue can
+leave the execution location of an external or mixed job unknown. See
+[service lifecycle](USAGE.md#lixity-service) for view lifetime and application
+start/restart behavior.
 
 ## Audio settings upgrades and recovery
 
 The minimum settings format is `/3` for Coqui, `/4` for explicit providers and
-`/5` for IPA and structured prosody. Upgrade only if your current settings are
+`/5` for IPA, structured prosody and the shared pronunciation lexicon. Upgrade
+only if your current settings are
 older than the format you need. Preview the candidate, then apply with its exact
 snapshot token and a new backup outside the project. The migration ZIP covers
 configuration. Use [private audio backup](PROJECT_BACKUP.md#back-up-private-audio-separately)
@@ -1533,10 +1570,17 @@ Writing mono 16-bit PCM WAV at 24 kHz needs no conversion. Install FFmpeg on the
 Lixity computer for MP3 output, for worker WAVs that need normalization and for
 tempo postprocessing. ZONOS3 applies speed inside the model, while its 44.1 kHz
 output still needs normalization. Missing, malformed, empty or mismatched PCM
-and failed conversion are errors. Streamed atomic output
-preserves an existing file on failure. The native job result offers a temporary download:
+and failed conversion are errors. Streamed atomic output preserves an existing
+file on failure.
+
+The checkout renderer fades up to five milliseconds at internal segment edges
+where speech meets another segment or inserted silence. This keeps the same
+sample count and preserves explicit pause durations. Individual cached segments
+retain the original synthesized audio for use in another render.
+
 WAV output is capped at 200 MiB during rendering, including inserted silence;
-results are bound to the selected source/settings and selection generation, with
+browser jobs offer a temporary download tied to the selected source, settings,
+and selection generation, with
 at most four retained jobs and a 30-minute retention window after completion.
 Save the download when needed. Project/source changes invalidate old results;
 returning to an earlier project cannot revive them. Model-generated omissions,
@@ -1551,7 +1595,7 @@ different lifetimes.
 | Symptom | What to check next |
 | --- | --- |
 | Worker unavailable or model mismatch | Refresh **Services & audio queue** or run `audio-status`. Confirm the worker serves the exact selected model, then test a short render. [Worker lifecycle](INSTALLATION.md#native-audio-model-lifecycle) |
-| Unsupported delivery or IPA | Inspect the plan and chosen engine. Remove incompatible profile instructions explicitly; `--no-direction` removes saved passage direction only. IPA/prosody require Toucan. |
+| Unsupported delivery or IPA | Inspect the plan and selected voice. Use IMS-Toucan for IPA and structured prosody or supply an explicit alternate spelling for a text-only voice. Clear incompatible profile instructions separately. `--no-direction` skips passage instructions, voice assignments and pauses for one render. |
 | Voice changes between segments | Compare several short directed/undirected previews. Check reference speaker, preset/description and delivery profiles; see [continuity review](#check-narration-continuity-before-a-chapter-render). |
 | Source, profile or direction changed during render | Reopen the current project and inspect the updated plan, then start a new job. Context guards prevent publishing audio for stale inputs. |
 | Saved passage is stale | Review the manuscript location and remove or replace the stale direction explicitly. Lixity does not relocate it by similar wording. |

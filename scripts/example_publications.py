@@ -19,7 +19,7 @@ from scripts.stage_pages import DEMO_READER_AUDIO_CHAPTERS
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_DIR = ROOT
-SITE = "https://mfahsold.github.io/lixity"
+SITE = "https://lixity.de"
 OG_IMAGE_ALT = "Lixity continuous manuscript reader with chapter navigation and contextual tools"
 LICENSE_URL = "https://github.com/mfahsold/lixity/blob/main/LICENSE"
 DEMO_DOSSIER_PDF = "warehouse-4-dossier.pdf"
@@ -64,9 +64,16 @@ def _head_metadata(
     escaped_title = html.escape(title, quote=True)
     image_path, image_alt = preview_image or ("screenshots/dashboard-light.png", OG_IMAGE_ALT)
     image_url = f"{SITE}/{image_path}"
-    image_header = (ROOT / "docs" / image_path).read_bytes()[:24]
+    image_bytes = (ROOT / "docs" / image_path).read_bytes()
+    _require(len(image_bytes) <= 1024 * 1024,
+             f"social preview image must stay under 1 MB for link unfurls: {image_path}")
+    image_header = image_bytes[:24]
     _require(image_header[:8] == b"\x89PNG\r\n\x1a\n", "the preview image must be a PNG")
     width, height = struct.unpack(">II", image_header[16:24])
+    _require(width >= 1000 and height >= 500,
+             f"social preview image must be at least 1000x500 for large cards: {image_path}")
+    _require(width >= height,
+             f"social preview image must be landscape for link unfurls: {image_path}")
     structured: dict[str, object] = {
         "@context": "https://schema.org",
         "@type": "TechArticle",
@@ -101,6 +108,8 @@ def _head_metadata(
         f'<meta property="og:description" content="{escaped}"/>\n'
         f'<meta property="og:url" content="{canonical}"/>\n'
         f'<meta property="og:image" content="{image_url}"/>\n'
+        f'<meta property="og:image:secure_url" content="{image_url}"/>\n'
+        f'<meta property="og:image:type" content="image/png"/>\n'
         f'<meta property="og:image:width" content="{width}"/>\n'
         f'<meta property="og:image:height" content="{height}"/>\n'
         f'<meta property="og:image:alt" content="{html.escape(image_alt, quote=True)}"/>\n'
@@ -274,8 +283,8 @@ def build_research_demo(root: Path, project: Path, *, dossier_pdf: bytes | None 
     document = _replace_title(document, page_title)
     head = _head_metadata(canonical=f"{SITE}/demo/report.html", title=page_title,
                           description="Explore a fictional manuscript draft with uneven rhythm, repeated phrases, a tense slip and wordy passages. Inspect what Lixity counted and decide what to revise.",
-                          language="en", preview_image=("screenshots/dashboard-dossier-image.png",
-                              "Historical Hamburg map retained with source provenance in a research dossier"))
+                          language="en", preview_image=("screenshots/dashboard-heatmap.png",
+                              "Chapter comparison map showing differences from the manuscript's own style"))
     counter = _analytics_endpoint(root)
     counter_source = f" {counter}" if counter else ""
     site_code = counter.removeprefix("https://").split(".", 1)[0] if counter else None
@@ -420,8 +429,13 @@ def build_publication_examples(root: Path, project: Path) -> dict[str, Path]:
         title = "Warehouse 4 — " + ("read with context" if mode == "reader" else "a reader's companion")
         description = ("Read six fictional harbour chapters with context you reveal as you read." if mode == "reader" else
                        "Explore a fictional harbour's setting beside your book; this companion contains no novel text and stops at chapter three.")
+        preview = (("screenshots/dashboard-reader-focus.png",
+                    "Lixity continuous manuscript reader with chapter navigation and contextual tools")
+                   if mode == "reader" else
+                   ("screenshots/dashboard-dossier-diagram.png",
+                    "Setting references and image credits for the Warehouse 4 companion"))
         metadata = _head_metadata(canonical=f"{SITE}/demo/{mode}/index.html", title=title,
-            description=description, language="en", analytics=False)
+            description=description, language="en", analytics=False, preview_image=preview)
         document = document.replace("</head>", metadata + "</head>", 1)
         document = _site_navigation(document, title, links=(
             ("../report.html", "Author workspace"), ("../reader/", "Read with context"),
@@ -449,7 +463,8 @@ def build_publication_examples(root: Path, project: Path) -> dict[str, Path]:
                 canonical=f"{SITE}/demo/reader/analysis.html",
                 title="Warehouse 4 — chapter analysis",
                 description="Explore selected chapter measurements for the synthetic Warehouse 4 reading copy.",
-                language="en", analytics=False)
+                language="en", analytics=False, preview_image=("screenshots/dashboard-heatmap.png",
+                    "Chapter comparison map showing differences from the manuscript's own style"))
             analysis = analysis.replace("</head>", analysis_metadata + "</head>", 1)
             files["analysis.html"] = _finalize(analysis).encode("utf-8")
         files.pop("manifest.json")

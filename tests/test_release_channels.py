@@ -951,7 +951,7 @@ def test_verify_pages_validates_deployment_sha_and_staged_bytes(channels, candid
     source, _dist = candidate
     fake_git(monkeypatch, channels)
     pages = _setup_pages_stub(channels, monkeypatch, source)
-    base = "https://mfahsold.github.io/lixity/"
+    base = "https://lixity.de/"
     values = {
         base + "deployment.json": {"schema_version": 1, "source_sha": SHA, "workflow_run_url": "https://example"},
         base: pages["index.html"],
@@ -1026,7 +1026,7 @@ def test_verify_release_checks_github_pypi_bytes_and_pages_end_to_end(channels, 
     attestation_checks = []
     monkeypatch.setattr(channels, "verify_attestations", lambda *args: attestation_checks.append(args))
     pages = _setup_pages_stub(channels, monkeypatch, source)
-    base = "https://mfahsold.github.io/lixity/"
+    base = "https://lixity.de/"
     pypi_urls = []
     extra = {
         base + "deployment.json": {"schema_version": 1, "source_sha": SHA},

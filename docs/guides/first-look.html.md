@@ -4,7 +4,7 @@ Open one marked sentence. See which words counted, read the sentence in its scen
 
 [Kurze Einführung auf Deutsch](first-look-de.html)
 
-Updated 25 November 2026
+Updated 26 November 2026
 
 This walkthrough follows the generated demo. It uses the same reading website export available in **Project actions → Reading website**. Its manuscript, analysis and chosen Research are a fixed snapshot; importing and saving require a local project. See [how to make your own reading website](research-pdf.html#reading-website).
 
@@ -116,17 +116,15 @@ Manuscript input supports Markdown (`.md`, `.markdown`) and plain text (`.txt`).
 
 ## Hear a passage in your own project
 
-Open **Project → Settings → Audio and services**, or use **Listen & direct** in the manuscript toolbar. The public demo cannot request your microphone, save a reference or generate speech.
+Use **Teleprompter** (`P`) to rehearse a passage in a local project. The public demo plays existing chapter recordings. Use the local app to capture your own voice, save a reference or generate speech.
 
-Start with **Teleprompter** to rehearse a passage. **Author voice** is where you can review a recorded or imported reference take. To set project defaults or connect a voice service, use the [audio setup guide](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md). The controls depend on the installed build and the microphone or service available to it.
+1. Open **Project → Settings → Audio and services → Record author's voice**. Allow microphone access, read a short passage and listen to the take. Check the words you actually spoke before you choose **Save as author voice for this book**. The [recording guide](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening) covers microphone permission and imported takes.
 
-The state beside the recording button shows pending permission, active recording or a failed start. Remove a saved microphone block using the icon beside the address, then retry and allow access. Failed starts log diagnostics in the browser console. A browser permission refusal sends no server request, so it produces no service-log entry. See [recording and troubleshooting](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening).
+2. Open **Voice profiles**. If the take is not active, choose a profile that supports a **Reference recording**, select the take and save the profile. Check the engine setup under **Speech service**. Then use **Listen and direct → Preview paragraph** in the manuscript to hear a sample. [Choose a synthesis route](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#choose-a-synthesis-route)
 
-In **Listen & direct → Export direction**, prepare JSON and SSML for a passage, chapter or manuscript without contacting a speech service. JSON retains direction details; SSML reports controls it cannot carry portably. **Generate audio** uses a configured speech service. Locally inspecting an external recording can compare text only when a timestamped transcript for that recording is supplied. See the [audio guide](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#audio-export-and-external-providers-unreleased) for setup and limits.
+3. Use **Export direction → Preview export** to review or download the planned delivery as JSON or SSML. This works offline without the synthesis service. Once you have listened to the paragraph preview, use **Chapter audio → Render chapter**.
 
-Read a passage in the **Teleprompter** (`P`), record a take and edit the words actually spoken. WAV plus JSON export preserves the audio hash and whether the transcript is missing, a draft or confirmed. Sending the take to **Author voice** opens a review; it does not save automatically.
-
-**Optional IMS-Toucan, available in 0.8.1:** German and English author-reference voices accept separate IPA overrides and structured passage-level duration and prosody controls. Free acting prompts are unsupported by this engine. Other workers have different capabilities; preview a short passage before a long render. [Setup and model limits](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction).
+For German or English with IPA input and structured prosody, use a saved reference with [IMS-Toucan](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction). In v0.9.3, save pronunciations in the voice profile. The development checkout adds a [project pronunciation dictionary](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#project-pronunciations) with IPA and alternate spellings.
 
 In the local app, open **Project** for a read-only overview of the selected manuscript, research folder and existing outputs. It inspects metadata without rebuilding analysis; where an output came from and how it was generated remain unknown. The exported demo has no local project-folder view. [Project inspection and CLI](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#inspect-project-structure).
 

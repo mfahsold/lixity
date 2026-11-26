@@ -28,7 +28,8 @@ explains offline help.
 | Follow a quotation or review a character dossier | [Dossier beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript) · [Review a draft dossier](ONBOARDING.md#review-a-manuscript-dossier) | [Research manual](research/USAGE.md#find-a-task) |
 | Retain material from Zotero or scanned PDFs | [First Zotero capture](ONBOARDING.md#first-zotero-capture) | [Zotero](research/USAGE.md#zotero-desktop-bridge) · [PDF extraction and OCR](research/USAGE.md#self-hosted-pdf-and-ocr-extraction) |
 | Share a manuscript, dossier or reading website | [Manuscript PDF](WORKSPACE.md#download-a-manuscript-pdf) · [Dossier PDF](WORKSPACE.md#download-a-dossier-pdf) · [Reading website](WORKSPACE.md#export-a-reading-website) | [PDF layouts](USAGE.md#lixity-pdf) · [Dossier PDF contents](research/USAGE.md#download-a-dossier-as-pdf) · [Website scope](USAGE.md#lixity-export-site) |
-| Record a voice, use the teleprompter or add chapter audio | [Audio manual](AUDIO.md) | [Optional workers and setup](INSTALLATION.md#optional-qwen-audio-worker) |
+| Rehearse a passage or record an author voice | [First recording and preview](ONBOARDING.md#record-or-share-a-reading) | [Teleprompter and author voice](AUDIO.md#author-voice-recording-and-listening) |
+| Set pronunciation, direct a passage or render chapter audio | [Audio workflow](AUDIO.md#getting-started) · [Project pronunciations](AUDIO.md#project-pronunciations) | [Speech synthesis setup](INSTALLATION.md#speech-synthesis-setup) · [Speech automation](AGENTS.md#native-speech) |
 | Reopen a project or inspect generated outputs | [Project structure and outputs](WORKSPACE.md#inspect-project-structure) | [Build outputs](USAGE.md#lixity-build) · [Service and diagnostics](INSTALLATION.md#running-the-server) |
 | Back up and restore | [Project backup](PROJECT_BACKUP.md) includes the selected project files and retained research | [Research archive recovery](research/USAGE.md#export-and-restoration) covers retained evidence |
 
@@ -55,7 +56,7 @@ explains offline help.
 | Demo, example reports, screenshots and videos | Follow the [demo maintenance guide](https://github.com/mfahsold/lixity/blob/main/docs/demo/README.md), [screenshot](screenshots/README.md) and [video](videos/README.md) procedures. They identify the source fixture, reviewed outputs and generation order. |
 | Wiki and offline reference bundle | `wiki/` provides short entries into the manuals. The `llms-full.txt` bundle is generated from maintained documentation. |
 
-Use the [public guides](https://mfahsold.github.io/lixity/#guides),
+Use the [public guides](https://lixity.de/#guides),
 [articles](blog/index.html) or [Wiki](https://github.com/mfahsold/lixity/wiki)
 for shareable introductions.
 [Documentation workflow](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#updating-documentation-and-pages)

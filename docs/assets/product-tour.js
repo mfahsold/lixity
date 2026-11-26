@@ -8,6 +8,20 @@
   const line = caption.querySelector('span');
   const error = figure.querySelector('.tour-error');
   const cues = [...figure.querySelectorAll('[data-start]')];
+  const portrait = matchMedia('(orientation: portrait)');
+  const landscapePoster = video.getAttribute('poster');
+  const applyPoster = () => {
+    const target = portrait.matches && video.dataset.portraitPoster
+      ? video.dataset.portraitPoster : landscapePoster;
+    if (video.getAttribute('poster') !== target) video.setAttribute('poster', target);
+  };
+  applyPoster();
+  if (portrait.addEventListener) portrait.addEventListener('change', applyPoster);
+  video.addEventListener('loadedmetadata', () => {
+    if (video.videoWidth && video.videoHeight) {
+      video.style.setProperty('--tour-aspect', `${video.videoWidth} / ${video.videoHeight}`);
+    }
+  });
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
   let reducedMotion = motion.matches;
   let attempted = false;
@@ -55,11 +69,14 @@
   video.addEventListener('error', reportFailure);
   const sources = [...video.querySelectorAll('source')].filter(source => video.canPlayType(source.type));
   const failedSources = new Set();
+  const exhaustedSources = () => sources
+    .filter(source => !source.media || matchMedia(source.media).matches)
+    .every(source => failedSources.has(source));
   for (const source of sources) source.addEventListener('error', () => {
     failedSources.add(source);
-    if (failedSources.size === sources.length) reportFailure();
+    if (exhaustedSources()) reportFailure();
   });
-  if (!sources.length) reportFailure();
+  if (exhaustedSources()) reportFailure();
   document.addEventListener('visibilitychange', () => { if (document.hidden) video.pause(); });
   motion.addEventListener('change', event => {
     reducedMotion = event.matches;

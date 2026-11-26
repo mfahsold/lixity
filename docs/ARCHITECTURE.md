@@ -1094,11 +1094,16 @@ whose destination no longer matches the current URL, so an older queued passage
 jump cannot reverse a newer view choice. A later genuine fragment still navigates.
 
 Action explanations reuse `tooltips.js`, localized label packs and native
-controls. Help names the action or effect in one or two short sentences; it does
-not repeat the control name or front-load implementation details. Requirements
-and consequential limits remain visible at the relevant action. Detailed methods
-belong in disclosures and the existing command reference. German help avoids
-direct address; all seven locales retain the same meaning and placeholders.
+controls. `LixityComponents.setControlLabel` keeps the accessible name and
+`data-help` synchronized on icon controls, including changing playback states.
+It clears the native `title` so one control has one tooltip. Use visible field
+help for prerequisites, capability limits and blocked actions. The tooltip
+suppresses help that repeats a visible action label or an equivalent visible
+note linked through `aria-describedby`, while retaining distinct explanations
+and shortcuts. Its accessible description preserves existing description links
+and adds only new copy. Detailed methods belong in disclosures and the existing
+command reference. German help avoids direct address. All seven locales retain
+the same meaning and placeholders.
 CLI help leads with purpose, default read/preview behavior and write flags, then
 one example. It must state partial-success boundaries for multi-link acceptance.
 Storage help describes retained data, not an unconditional historical format
@@ -1646,186 +1651,96 @@ new archive schema or database authority is introduced.
 
 ```mermaid
 flowchart LR
-    Manuscript[Manuscript structure and scenes] --> Planner[Shared speech planning & direction engine]
-    Project[Project profiles, pronunciations and direction] --> Planner
+    Manuscript[Manuscript structure and scenes] --> Planner[Speech plan compiler]
+    Project[Profiles, pronunciations and direction] --> Planner
     Planner --> Export[Timeline JSON and SSML projection]
-    Planner --> Provider[Explicit HTTP speech provider]
-    Planner --> Native[Existing optional native workers]
-    Planner --> MLX[Short-lived ZONOS3 MLX worker]
-    Provider --> Output[Normalized PCM, tempo, pauses and atomic output]
-    Native --> Output
-    MLX --> Output
-    Audio[Imported audio and optional timed transcript] --> Quality[Local signal and plan comparison]
-    Export --> Quality
+    Planner --> Render[Validated synthesis and cache]
+    Render --> Adapter[Selected isolated worker or explicit provider]
+    Adapter --> Render
+    Render --> Output[PCM assembly and atomic WAV or MP3 output]
+    Audio[Imported audio and optional timed transcript] --> Audit[Local signal and plan comparison]
+    Export --> Audit
 ```
 
-Lixity's audio architecture separates manuscript dramaturgy, phonetic
-lexicons and passage-level direction from synthesis. In 0.8.1, the shared
-planner has an export mode that retains direction even when a synthesis adapter
-cannot honor it. `speech_export.py` produces `lixity-audio-timeline/1` and an SSML
-projection with explicit limitations. The existing `plan_json` contract remains
-`lixity-speech-plan/1`. Export reads neither reference audio nor API keys and
-does not probe providers. Planned silence is known; spoken durations and start
-times are unknown until measured. Substitution spans share the pronunciation
-matcher, preserving original text and replacement provenance.
+`speech_profiles.py` validates root-local audio settings and resolves saved or
+explicit draft profiles. `speech_controls.py` defines each adapter's control
+semantics and bounds. `AudioProfile.control_support` resolves the effective
+capability for a specific profile, including the OpenAI-compatible provider's
+explicit instruction declaration. The API reports the same capability
+vocabulary. In the browser, `speech.js` exposes the selected profile's support
+to settings, Studio and `speech-direction.js`. The server validates the actual
+plan before a job can start.
 
-`speech_providers.py` adds a minimal explicit `/v1/audio/speech` HTTP client.
-Settings schema `/4` binds a provider URL, model, voice and optional environment
-variable name for authentication. HTTPS and local HTTP are accepted after URL
-validation; credentials in URLs, queries, fragments and redirects are rejected.
-Only rendering sends text or reads the key. There is no service discovery,
-automatic readiness request, model download or inference dependency. Bounded WAV
-responses are validated and, if necessary, normalized with FFmpeg to the shared
-mono 16-bit 24 kHz pipeline. Endpoint, model and adapter identity distinguish
-external cache entries; existing native cache identities stay unchanged.
+`speech_direction.py` projects manuscript structure into spoken text, applies
+saved profiles and exact passage ranges, and compiles a shared speech plan. A
+structural pause is a Lixity control. An instruction to a model is an adapter
+capability whose effect needs listening review. `speech_export.py` exchanges the
+compiled intent as timeline JSON or SSML with explicit warnings. The exporter
+retains original text, substitution provenance and controls that cannot be
+synthesized by the chosen profile. It reads no voice-reference bytes or
+credentials and probes no provider. Planned silence is known. Speech duration
+and timing remain unknown until measured. Plans and timelines retain their
+`/1` representations where applicable and use `/2` for extended phonetic or
+structured controls, as specified in the [automation contract](AGENTS.md#external-audio-exchange-and-inspection).
 
-The fixed local ZONOS3 adapter is intentionally not the generic HTTP transport.
-`speech_providers.py` validates a saved reference identity, writes only a temporary
-WAV copy and launches `speech_mlx_zonos.py` in the isolated MLX-Audio Python
-runtime. `speed` is a model condition; ordinary FFmpeg tempo does not run a second
-time. The worker result is bounded and normalized before atomic publication.
-`audio-status` inspects only executable/cache presence and returns an isolated-process
-readiness target without paths. It does not load model weights. The MLX HTTP service
-remains the explicit Parakeet STT transport.
+The local author voice path uses a saved project reference with ZONOS3. The
+optional IMS-Toucan path supports German and English reference voices with IPA
+and structured prosody. An explicitly configured OpenAI-compatible provider
+offers text delivery instructions when its profile declares support. These
+paths have distinct controls and readiness checks. The installed capabilities
+also describe other native profiles and identify entries that cannot be
+created. See the [audio workflow](AUDIO.md) and
+[native engine registry](#native-engine-registry-and-phonetic-author-voices).
 
-`audio_audit.py` reads chapter audio locally, computes level, clipping, DC offset
-and heuristic silence observations, and optionally compares the direction plan
-with an explicitly supplied timestamped transcript. External speech recognizer
-outputs (e.g. OpenAI Whisper or word timestamp arrays) are bridged into the
-`lixity-audio-transcript/1` schema via `audio-import-transcript`, tying word
-boundaries directly to the audio recording's SHA-256 hash. The transcript must identify
-the exact original audio hash. Missing alignment evidence stays unknown;
-comparison is not speech recognition or a quality verdict. The existing
-`speech_reference_quality.py` remains a separate bounded voice-reference
-inspection API. Neither API edits audio or manuscripts.
+`speech_providers.py` owns the explicit provider binding and the fixed local
+ZONOS3 adapter. The generic binding accepts HTTPS or explicitly configured
+local/private-IP HTTP. It rejects credentials in URLs, queries, fragments and
+redirects. Rendering alone sends text, reads any configured credential and
+validates the bounded WAV response. Provider status stays unknown before
+rendering. The fixed ZONOS3 adapter validates the saved reference identity,
+passes a temporary WAV to the isolated MLX-Audio runtime and applies speed as
+a model condition. Its status check observes runtime and model-cache presence
+without loading weights. Only the fixed local binding accepts a project
+reference. The MLX HTTP service remains the explicit Parakeet STT transport.
 
-**Since v0.7.6:** `speech_profiles.py` owns strict project-only audio
-settings and engine capabilities. Existing root-only atomic settings updates
-persist `audio`; the CLI and native dialog share profile resolution and rendering
-controls. Version 0.7.7 supports Qwen3-TTS 1.7B CustomVoice, VoiceDesign and Base
-profiles. Existing Qwen synthesis requires a matching worker for the selected
-variant. Coqui and explicit external-provider paths in 0.8.1 extend that set;
-the native inference implementations remain available and are not removed by
-the export/provider change.
-For Qwen, Coqui, Toucan and ordinary external providers, `speed` remains a
-post-synthesis FFmpeg `atempo` factor from 0.5 to 2.0. The fixed local ZONOS3 adapter
-passes `speed` into the model's `speaking_rate` condition instead. Fresh implicit
-profiles use 1.1; previously saved explicit or omitted values retain their values.
-Cached model segments remain unmodified. Adapters with postprocessing adjust tempo
-before explicit silence; ZONOS3 skips that second processing step.
-is inserted. Delivery instructions do not establish an exact speaking rate. Ten
-explicit speech languages include six of the seven
-analysis languages; Dutch is unsupported by the Qwen adapter. Explicit pronunciation substitutions
-do not edit source bytes. Optional inference dependencies remain outside the core
-installation.
+`speech.py` owns adapter dispatch, bounded PCM assembly and atomic WAV/MP3
+publication. All segments enter assembly as 24 kHz mono PCM16. When needed,
+FFmpeg normalizes a provider response and applies per-segment tempo before
+explicit silence. Fixed ZONOS3 uses its model rate alone. Unreleased assembly
+uses bounded 5 ms edge fades at internal boundaries, without overlap or changes
+to frame counts. Explicit pauses stay exact at the PCM sample rate. The
+renderer validates format and required FFmpeg support before publication.
+Conversion failures, cancellation and stale context preserve the existing
+output. The direct-child FFmpeg deadline does not interrupt an in-process
+model call.
 
-For Base, explicitly created immutable project-local reference records bind the
-exact PCM WAV and transcript to a content identity. The identity is checked when
-preparing synthesis, rendering and accepting a job result, and participates in the raw audio
-cache key. References are private project data, not disposable cache; their bytes
-and transcripts are not returned by the plan. The Base worker accepts bounded
-reference data over the existing fixed transport and caches at most one prompt.
-Base does not support free-form delivery instructions: invalid combinations fail
-instead of silently dropping them. A selected reference does not infer speakers.
+`speech_cache.py` reuses verified raw PCM in a private project-keyed cache
+outside the source folder, including for read-only projects. CLI and Studio
+chapter renders share it. Previews are fresh. Cache identity includes effective
+text and synthesis controls, model/profile reference identity when applicable
+and the external binding identity. The cache stores unmodified synthesis, so
+tempo, fades and pauses are applied for the current assembly. Corruption or
+eviction causes recomputation. Replays can work without a running worker.
+A cached segment does not establish that local checkpoint bytes, generation
+recipes or devices are equivalent. Clear the cache or use a fresh render when
+the underlying assets change.
 
-`speech.py` owns bounded text planning, shared structural pauses, format checks
-and atomic output. FFmpeg is needed for MP3 and non-1.0 tempo; a missing executable
-fails before synthesis. The subprocess runner limits each FFmpeg conversion
-to one hour and translates timeout errors without exposing captured prose.
-Temporary output cleanup and final atomic publication remain renderer-owned;
-this direct-child deadline does not interrupt in-process model inference.
-`speech_qwen.py` is the fixed-loopback adapter and optional
-isolated model worker. It imports the heavy runtime lazily, loads a complete local
-checkpoint once, serializes synthesis and never downloads a model during use.
-CPU is a supported asynchronous rendering path; GPU availability is not presumed.
-Optional operator selection `--device cuda --codec-device cpu` keeps the talker
-on CUDA while placing the existing audio decoder on CPU float32. Default decoder
-placement follows the main device. This changes resource placement, not the
-checkpoint family or portable voice-profile contract; memory sufficiency still
-requires a real synthesis test. Worker-only `--attention auto|eager|sdpa` permits
-explicit attention selection; `auto` keeps eager on CPU and SDPA on CUDA. Hardware
-comparisons require measured synthesis on the actual workload, without changing
-the model or promising faster output.
-Inference runs inside `torch.inference_mode`. Optional
-`--codec-chunk-frames` configures only the loaded 12 Hz decoder instance through
-its validated upstream chunk hook, retaining 25 frames of left context. Default
-300 is untouched; explicit 16–300 values bound chunk activations, not total
-model/KV-cache/output memory. Additive worker health metadata reports resolved
-device, dtype, threads, attention, codec placement and chunk size without paths.
+Native `SpeechJobs` own temporary immutable source snapshots and WAV outputs,
+one active render plus at most three FIFO waiters per app, and bounded
+completion-based retention. Every result read checks project settings and the
+source digest. A monotonic workspace generation prevents a return to an earlier
+selection from reviving an old job. The scheduler performs validity callbacks
+outside its lock. An in-flight model call can finish after cancellation, but
+an invalid job cannot publish. The browser sends source and profile choices
+and displays server progress without assembling its own synthesis plan.
 
-Per-render `local|jetson` selection chooses fixed loopback ports 8769 or 8770 for
-Qwen models. `speech_f5.py` provides the Flow-Matching Diffusion Transformer adapter
-(`SWivid/F5-TTS`, default local loopback port 8771), accepting verified project
-references over the shared transport. Its earlier incomplete bundled inference
-loader is retired and fails explicitly; retained settings, exports and cache are
-not converted or deleted. Single-narrator
-integrity (`same_narrator`) ensures the manuscript narrator voice remains consistent,
-while delivery references of the same speaker modulate localized passage intonation.
-The remote worker remains loopback-only. Location is not part of portable project voice
-settings, and these native target selectors cannot supply an inference URL. Explicit
-external profiles instead carry their validated provider URL; this choice is project
-configuration and is never inferred from manuscript text.
-
-`speech_migration.py` prepares explicit replacements for removed Piper profiles.
-The `lixity-audio-settings/1` wire version remains valid for existing Qwen records;
-Piper records and saved profiles without an explicit engine fail rather than
-silently changing voice. `audio-migrate` defaults to a JSON dry run. Apply requires
-the reviewed snapshot token, bound to source, root configs and replacement
-candidate, and a new backup outside the project. The verified private
-configuration ZIP contains no manuscript bytes. IDs, selection, names,
-languages, pauses and pronunciation settings survive the migration; the operator
-chooses each Qwen preset and any new style instructions, with speed fixed at
-`1.0`. Existing optimistic root-configuration checks and source snapshot checks
-guard the atomic update; they do not provide a cross-process manuscript lock.
-
-Native `SpeechJobs` own temporary immutable source snapshots and WAV outputs, one
-active render plus at most three FIFO waiters per app, progress, cancellation
-and bounded completed-result retention. Pending work never evicts a just-completed
-result merely because the active queue is full. Global validity sweeps run outside
-individual workspace locks; the scheduler never holds its lock while invoking
-project validity callbacks.
-Every read/download checks project settings and the source digest. A monotonic
-workspace generation prevents a return to an earlier selection from resurrecting
-an old job. Observed staleness persists as cancellation. A model call already in
-flight may finish, but cannot publish a cancelled/stale result. Retention starts
-after completion so a long CPU render cannot expire its own successful output.
-The dialog displays backend data and user choices; it neither assembles synthesis
-plans nor stores profile settings in browser storage.
-
-`speech_cache.py` provides bounded project-scoped reuse for Qwen segments in a private
-user cache outside manuscript folders, including read-only source projects. CLI
-renders and native chapter jobs opt into the same verified WAV/hash store;
-previews never reuse audio. Request keys contain synthesized text and delivery
-identity, while metadata retains only hashes and byte lengths. Each new segment
-is atomically stored after PCM validation; the final listening copy remains an
-independent atomic output. Source/context guards still govern downloads. Cache
-eviction or corruption causes recomputation, not publication of partial audio.
-The model identity is the named family, so local weight changes require a fresh
-render or cache removal. Cache replay deliberately works without a running
-worker; a family cache hit does not establish checkpoint, generation-recipe or
-device equivalence between machines. Exact renderer fingerprinting would require
-an explicit verified-online versus offline-replay policy before changing keys.
-This derived cache does not persist native job state.
-
-The October 2026 upstream review covered Qwen3-TTS 1.7B with CustomVoice,
-VoiceDesign and Base variants. The native adapters in 0.8.1 extend that
-set; their protocol support and actual model-runtime verification are separate. Model cards,
-code licenses, voice assets and measured hardware behavior are separate inputs
-to an integration decision. [Pocket TTS](https://github.com/kyutai-labs/pocket-tts)
-is a relevant CPU/Dutch evaluation candidate, but its
-[weights and access conditions](https://huggingface.co/kyutai/pocket-tts) and
-reference-voice licenses need separate handling. Its published CPU timings do
-not measure this project's Jetson path.
-[Chatterbox](https://github.com/resemble-ai/chatterbox) distinguishes multilingual
-models from smaller English models; their speed and language claims are not
-interchangeable. [VoxCPM](https://github.com/OpenBMB/VoxCPM),
-[CosyVoice](https://github.com/QwenAudio/CosyVoice) and
-[Kokoro](https://huggingface.co/hexgrad/Kokoro-82M) have different language,
-frontend and runtime boundaries. Those models are not implemented Lixity backends; the separate IMS-Toucan adapter
-described below provides explicit phonetics and structured prosody. Choosing
-one requires checkpoint-specific offline checks, memory measurements and a
-controlled multilingual listening evaluation; valid WAV transport alone does
-not establish intelligibility, naturalness or faithful long-form narration.
+`audio_audit.py` computes local level, clipping, DC offset and heuristic
+silence observations. Alignment comparison additionally requires an explicitly
+supplied timed transcript. `audio-import-transcript` bridges external recognizer
+output to `lixity-audio-transcript/1`, bound to the exact original audio's
+SHA-256 hash. Missing alignment evidence stays unknown. The separate
+`speech_reference_quality.py` API inspects bounded reference recordings.
+Neither path edits audio or manuscripts.
 
 Native workspace routing uses one bounded `WorkspaceRegistry` per
 HTTP server. A project view owns independent handler state, cached HTML and an
@@ -1859,24 +1774,34 @@ See [methods](METHODS.md#optional-grammatical-analysis) and
 
 ### Native engine registry and phonetic author voices
 
-`speech_engines.py` owns immutable native model, fixed endpoint and reference
+`speech_engines.py` owns native model identities, fixed endpoints and reference
 requirements. `speech_worker.py` owns the bounded loopback HTTP protocol, exact
-model/voice checks, serialized inference and sanitized diagnostics. Qwen, Coqui,
-F5 and Toucan reuse it. The optional `speech_toucan.py` loads a pinned upstream
-acoustic model, vocoder and local ECAPA speaker encoder in a separate environment;
-core dependencies remain unchanged. German and English eSpeak frontends are
-explicit, without a download fallback. Unsupported phonemes fail rather than
-being removed. Profiles, references, queueing, PCM output and cancellation share
-existing product paths; F5 and Toucan have independent fixed sockets.
+model and voice checks, serialized inference and sanitized diagnostics. Qwen,
+Coqui and Toucan use this transport. Retained F5 profiles remain readable for
+export and cached audio while the bundled inference runtime is unavailable.
+`speech_toucan.py` loads a pinned acoustic model, vocoder and local ECAPA speaker
+encoder in a separate environment. Its German and English eSpeak frontends
+reject unsupported phonemes. No speech adapter adds core dependencies or
+downloads models during synthesis.
 
-`pronunciations` remain spelling substitutions. `phonemes` are separate whole-word
-IPA overrides on the substituted text. Transport segmentation preserves those
-matches. Sparse profile/passage `prosody` controls scale predicted durations,
-intonation/energy variation and internal pauses. This is not free-text acting or
-absolute per-phone acoustic editing. The compiler rejects unsupported rendering
-controls while export preserves author intent. Cache identities include all new
-synthesis inputs. Existing profiles are preserved by reviewed schema `/5` upgrades;
-new direction/plan/timeline data uses `/2` while old representations remain stable.
+Legacy `pronunciations` are literal spelling substitutions. Profile `phonemes`
+are whole-word IPA overrides on effective spoken text. The unreleased project
+`pronunciation_lexicon` is an optional table in settings schema `/5` that can
+pair both forms for one term. The same pronunciation editor offers project
+and profile scopes. The planner matches the project rule against original
+spoken text, gives it precedence over overlapping spelling substitutions and
+chooses IPA when the profile supports it. For a profile without IPA, an
+authored respelling supplies the spoken form. An IPA-only match blocks
+synthesis and survives export with a warning. Conflicts and direction ranges
+that split a pronunciation term fail with a readable error. Transport
+segmentation preserves supported phoneme matches. Projects on older schemas
+require a reviewed upgrade before adopting the optional table.
+
+Sparse profile and passage `prosody` values scale predicted duration,
+intonation and energy variation, and internal pauses. Explicit passage values
+override profile defaults. The controls describe model parameters and preserve
+authored text and silence separately. See the
+[automation contract](AGENTS.md#native-speech) for fields and ranges.
 
 <a id="native-model-residency-unreleased"></a>
 
@@ -1888,10 +1813,16 @@ and Toucan entrypoints validate lightweight local assets and pass picklable
 loaders into that shared serving path. Their explicit library loaders and the
 shared `speech_worker` transport remain the existing adapter boundaries. Health
 separates service readiness from model residency and never creates or refreshes
-a model. Child exit releases allocator/device ownership; dropping Python tensor
-references alone is not used as proof of RAM reclamation. Browser synthesis and
-external providers do not own native model processes. F5's unavailable bundled
-runtime remains unavailable.
+a model. Child exit releases allocator and device ownership. Browser clients
+and generic HTTP provider profiles do not own native model processes.
+
+The fixed ZONOS3 binding instead reuses a separate isolated MLX worker for the
+life of the Lixity process or until five idle minutes elapse. Unreleased
+reference handling reuses one speaker embedding in that worker, keyed by the
+SHA-256 of the reference WAV bytes. A new reference replaces the entry. The
+embedding lives in memory and disappears with the worker. The reference and
+transcript remain private project files. The renderer checks the saved identity
+before synthesis and the job checks reference validity before publication.
 
 ### Authored passage direction
 
@@ -1908,13 +1839,14 @@ lines and the paragraph hash identify the exact sibling prose; selections
 inside the spoken-text field retain the server's projected character offsets.
 The editor sends only direction and context to the API. Static exports omit it.
 
-Direction fields use SSML-like separation of voice, substitution and silence;
-they are not SSML XML or portable acoustic parameters. The Qwen adapter retains
-its existing text/speaker/instruct interface. Backend capability limits remain
-explicit: natural-language delivery is probabilistic; silence is generated by
-Lixity; The optional Toucan adapter adds explicit IPA and structured variation controls;
-calibrated pitch/rate/emotion and native inline event tags remain unsupported. Authored direction introduces no model download or implicit acting
-inference.
+Direction fields use SSML-like separation of voice, substitution and silence.
+The same-narrator check compares compatible saved bindings, including the
+reference identity for ZONOS3. Toucan and other native reference adapters that
+permit a different delivery recording leave speaker identity to the author's
+review. Natural-language instructions are model-interpreted on adapters that
+declare support. Toucan accepts IPA and structured prosody. Lixity produces
+exact authored silences. Exports preserve unavailable delivery intent, and
+rendering rejects unsupported controls instead of silently dropping them.
 
 Design sources checked 2026-10-28: [W3C SSML 1.1](https://www.w3.org/TR/speech-synthesis11/),
 [Qwen CustomVoice](https://github.com/QwenLM/Qwen3-TTS#custom-voice-generate),

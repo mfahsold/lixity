@@ -1,6 +1,6 @@
 # From chapter comparisons to spoken direction: 3D style space and speech-plan export
 
-By [Matthias Fahsold](https://github.com/mfahsold) · Published 2 November 2026 · Updated 25 November 2026 · 7 minutes
+By [Matthias Fahsold](https://github.com/mfahsold) · Published 2 November 2026 · Updated 26 November 2026 · 7 minutes
 
 When an author revises a long draft, two questions often meet in the same chapter. Why does this chapter stand apart in the book's own style comparison? And how does the passage sound when read aloud with deliberate pacing and voice direction?
 
@@ -32,7 +32,7 @@ When you follow a chapter from the overview back into the manuscript, paragraph-
 
 ## 3. Export speech direction without locking into one audio engine
 
-Reading a scene aloud is one of the oldest ways to test sentence rhythm, dialogue turns and local word echoes. Lixity stores project-local passage direction in `.lixity/audio-directions.json`. It shares voice profiles between the CLI and browser workbench and supports FFmpeg tempo post-processing (`--speed`) without altering explicit pauses, and connects to separately installed speech workers. Qwen VoiceDesign, Qwen Base, Coqui/OpenVoice and IMS-Toucan have distinct voice and direction capabilities; selecting a profile does not start or replace a worker.
+Reading a scene aloud can help you hear sentence rhythm, dialogue turns and local word echoes. Save a delivery in **Listen and direct** to keep it with the passage. The CLI and browser workspace use the same project voice profiles and directions. Each renderer applies the controls it supports. For instance, ZONOS3 handles pace during speech generation, while other adapters can use FFmpeg tempo processing. Explicit pauses are assembled separately. [Synthesis routes and setup](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#choose-a-synthesis-route)
 
 Lixity uses manuscript structure to carry paragraph context, pronunciation rules, pauses and delivery notes into the plan. Choose the export, render or inspection workflow for the passage you are reviewing.
 
@@ -57,9 +57,9 @@ The audio manual covers provider configuration, privacy boundaries and reviewed 
 
 ## 4. Separate spoken words, IPA and delivery controls
 
-The optional IMS-Toucan worker uses a saved author reference for German or English. It supports IPA overrides and passage-level duration, pitch variation, energy variation and pause controls. Spelling substitutions have their own field. Free acting prompts are preserved in exports, and Toucan synthesis reports them as unsupported. [IMS-Toucan setup](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction)
+With a saved author reference, IMS-Toucan accepts IPA overrides and controls for duration, pitch variation, energy variation and pauses in German or English. Free acting prompts can stay in a direction export for another service. Use the export preview to check which instructions the target accepts, then listen to a short render. [Controls, examples and limits](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#ims-toucan-phonetics-and-structured-direction)
 
-The reviewed audio settings schema `/5` migration preserves existing profiles. Timelines containing phonetic or prosody controls use schema `/2`. The teleprompter and export preview use the same spoken text and control summaries. [Controls, examples and limits](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#ims-toucan-phonetics-and-structured-direction)
+In v0.9.3, voice profiles store spelling substitutions and Toucan IPA entries. The development checkout can also store a project-wide entry with both IPA and an alternate spelling. The planner uses IPA for an eligible adapter and the explicit spelling where the target needs text. Export details show the selected route. [Project pronunciations](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#project-pronunciations)
 
 Microphone takes and paired WAV/JSON imports use one review path. A transcript must describe the actual recording and be explicitly confirmed; a reading script alone is not evidence. The [author-voice workflow](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#author-voice-recording-and-listening) explains capture, playback, review and save.
 

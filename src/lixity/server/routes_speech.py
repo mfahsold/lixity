@@ -30,7 +30,9 @@ from ..speech_direction import (
     BaseDirectionConflict,
     CoquiDirectionConflict,
     Direction,
+    MLXDirectionConflict,
     NarratorConflict,
+    UnsupportedDirection,
     build_speech_plan,
     direction_id,
     direction_snapshot,
@@ -309,7 +311,8 @@ class SpeechRoutesMixin(ResponseMixin):
         )
         key = ("speech_base_direction_conflict" if isinstance(exc, BaseDirectionConflict) else
                "speech_coqui_direction_conflict" if isinstance(exc, CoquiDirectionConflict) else
-               "speech_narrator_conflict" if isinstance(exc, NarratorConflict) else None)
+               "speech_narrator_conflict" if isinstance(exc, NarratorConflict) else
+               "speech_instructions_export_only" if isinstance(exc, (MLXDirectionConflict, UnsupportedDirection)) else None)
         message = workspace_labels_for(self.language)[key] if key else str(exc)
         self._json({"ok": False, "message": message}, code)
 

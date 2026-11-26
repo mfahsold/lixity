@@ -3,7 +3,7 @@
 The [research manual](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#find-a-task)
 covers the browser and command-line workflows for retained sources, authored
 claims and decisions, and dossiers. Try the
-[illustrated walkthrough](https://mfahsold.github.io/lixity/guides/research-pdf.html)
+[illustrated walkthrough](https://lixity.de/guides/research-pdf.html)
 for an example.
 
 | I want to… | Guide |

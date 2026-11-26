@@ -20,9 +20,10 @@ from urllib.parse import urljoin
 
 from desktop.scripts.verify_desktop_artifacts import DesktopArtifact, public_installer_inventory
 from scripts import desktop_downloads
-from scripts.stage_pages import CUSTOM_PAGES_BASE_URL, stage
+from scripts.stage_pages import CUSTOM_PAGES_BASE_URL, LEGACY_PAGES_BASE_URL, stage
 
-SITE = "https://mfahsold.github.io/lixity/"
+SITE = CUSTOM_PAGES_BASE_URL
+LEGACY_SITE = LEGACY_PAGES_BASE_URL
 BASH = shutil.which("bash")
 GIT = shutil.which("git")
 PREVIEW_BUILD = {
@@ -502,7 +503,7 @@ class TestPagesStaging(unittest.TestCase):
             self.assertIn("sitemap-video/1.1", sitemap_text)
             image_ns = "{http://www.google.com/schemas/sitemap-image/1.1}"
             video_ns = "{http://www.google.com/schemas/sitemap-video/1.1}"
-            prefix = "https://mfahsold.github.io/lixity/"
+            prefix = "https://lixity.de/"
             media = [node.text for node in tree.getroot().findall(f".//{image_ns}image/{image_ns}loc")]
             media += [node.text for node in tree.getroot().findall(f".//{video_ns}video/{video_ns}content_loc")]
             media += [node.text for node in tree.getroot().findall(f".//{video_ns}video/{video_ns}thumbnail_loc")]
@@ -518,23 +519,27 @@ class TestPagesStaging(unittest.TestCase):
     def test_custom_domain_uses_published_urls_and_preserves_reviewed_demo_content(self):
         docs = Path(__file__).resolve().parents[1] / "docs"
         with tempfile.TemporaryDirectory() as directory:
-            old_site = Path(directory) / "project"
-            new_site = Path(directory) / "apex"
-            self.assertEqual(stage(docs, old_site), stage(docs, new_site, base_url="https://lixity.de"))
-            for name in ("index.html", "blog/feed.xml", "robots.txt", "sitemap.xml", "demo/manifest.json"):
-                self.assertEqual((old_site / name).read_bytes(), (docs / name).read_bytes(), name)
+            apex_site = Path(directory) / "apex"
+            legacy_site = Path(directory) / "project"
+            self.assertEqual(stage(docs, apex_site, base_url="https://lixity.de"),
+                             stage(docs, legacy_site, base_url=LEGACY_SITE))
+            for name in ("index.html", "blog/feed.xml", "sitemap.xml", "demo/manifest.json"):
+                self.assertEqual((apex_site / name).read_bytes(), (docs / name).read_bytes(), name)
+            # robots.txt strips its deployment notes during staging; only the last line is base-specific.
+            self.assertNotIn(b"Deployment note", (apex_site / "robots.txt").read_bytes())
 
             new_base = CUSTOM_PAGES_BASE_URL
-            sitemap = (new_site / "sitemap.xml").read_bytes()
-            self.assertEqual(sitemap, (new_site / "sitemap-alt.xml").read_bytes())
-            old_urls = [(node.text or "") for node in ET.parse(old_site / "sitemap.xml").findall("{*}url/{*}loc")]  # noqa: S314
-            new_urls = [node.text for node in ET.fromstring(sitemap).findall("{*}url/{*}loc")]  # noqa: S314
-            self.assertEqual(new_urls, [url.replace(SITE, new_base, 1) for url in old_urls])
-            self.assertIn(new_base + "demo/report.html", new_urls)
-            self.assertNotIn(SITE.encode("utf-8"), sitemap)
-            self.assertEqual((new_site / "robots.txt").read_text(encoding="utf-8").splitlines()[-1],
+            sitemap = (apex_site / "sitemap.xml").read_bytes()
+            self.assertEqual(sitemap, (apex_site / "sitemap-alt.xml").read_bytes())
+            apex_urls = [(node.text or "") for node in ET.parse(apex_site / "sitemap.xml").findall("{*}url/{*}loc")]  # noqa: S314
+            legacy_sitemap = (legacy_site / "sitemap.xml").read_bytes()
+            legacy_parsed = [node.text for node in ET.fromstring(legacy_sitemap).findall("{*}url/{*}loc")]  # noqa: S314
+            self.assertEqual(legacy_parsed, [url.replace(SITE, LEGACY_SITE, 1) for url in apex_urls])
+            self.assertIn(new_base + "demo/report.html", apex_urls)
+            self.assertNotIn(LEGACY_SITE.encode("utf-8"), sitemap)
+            self.assertEqual((apex_site / "robots.txt").read_text(encoding="utf-8").splitlines()[-1],
                              f"Sitemap: {new_base}sitemap.xml")
-            self.assertNotIn("policy template", (new_site / "robots.txt").read_text(encoding="utf-8"))
+            self.assertNotIn("policy template", (apex_site / "robots.txt").read_text(encoding="utf-8"))
 
             for relative, canonical in (
                 ("index.html", new_base),
@@ -545,7 +550,7 @@ class TestPagesStaging(unittest.TestCase):
                 ("demo/research.html", new_base + "demo/report.html"),
             ):
                 head = PageHead()
-                head.feed((new_site / relative).read_text(encoding="utf-8").split("</head>", 1)[0])
+                head.feed((apex_site / relative).read_text(encoding="utf-8").split("</head>", 1)[0])
                 self.assertEqual([link["href"] for link in head.links if link.get("rel") == "canonical"],
                                  [canonical], relative)
                 self.assertTrue(all(link["href"].startswith(new_base) for link in head.links
@@ -553,17 +558,17 @@ class TestPagesStaging(unittest.TestCase):
                 if "og:url" in head.meta:
                     self.assertEqual(head.meta["og:url"], [canonical], relative)
 
-            old_feed = ET.parse(old_site / "blog/feed.xml")  # noqa: S314
-            new_feed = ET.parse(new_site / "blog/feed.xml")  # noqa: S314
+            old_feed = ET.parse(legacy_site / "blog/feed.xml")  # noqa: S314
+            new_feed = ET.parse(apex_site / "blog/feed.xml")  # noqa: S314
             self.assertEqual([node.text for node in old_feed.iterfind(".//{*}id")],
                              [node.text for node in new_feed.iterfind(".//{*}id")])
             old_links = [link.attrib["href"] for link in old_feed.iterfind(".//{*}link")]
             new_links = [link.attrib["href"] for link in new_feed.iterfind(".//{*}link")]
-            self.assertEqual(new_links, [url.replace(SITE, new_base, 1) for url in old_links])
+            self.assertEqual(new_links, [url.replace(LEGACY_SITE, new_base, 1) for url in old_links])
 
             for bundle in ("demo", "demo/reader", "demo/companion"):
-                default_bundle = old_site / bundle
-                custom_bundle = new_site / bundle
+                default_bundle = legacy_site / bundle
+                custom_bundle = apex_site / bundle
                 default_manifest = json.loads((default_bundle / "manifest.json").read_bytes())
                 custom_manifest = json.loads((custom_bundle / "manifest.json").read_bytes())
                 default_members = default_manifest.pop("files")
@@ -577,7 +582,7 @@ class TestPagesStaging(unittest.TestCase):
                     if name.endswith(".html"):
                         original = (default_bundle / name).read_bytes()
                         old_head, marker, body = original.partition(b"</head>")
-                        self.assertTrue(revised == old_head.replace(SITE.encode(), new_base.encode()) + marker + body,
+                        self.assertTrue(revised == old_head.replace(LEGACY_SITE.encode(), new_base.encode()) + marker + body,
                                         name)
                     else:
                         self.assertEqual(default_members[name], record, name)
@@ -591,6 +596,67 @@ class TestPagesStaging(unittest.TestCase):
                 with self.subTest(base=base), self.assertRaisesRegex(ValueError, "supported public site"):
                     stage(docs, output, base_url=base)
                 self.assertFalse(output.exists())
+
+    def test_social_sharing_uses_distinct_landscape_previews(self):
+        docs = Path(__file__).resolve().parents[1] / "docs"
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "site"
+            stage(docs, output, base_url="https://lixity.de/")
+            checked = 0
+            images: dict[str, list[str]] = {}
+            for page in sorted(output.rglob("*.html")):
+                relative = page.relative_to(output).as_posix()
+                if relative == "demo/research.html":
+                    continue  # Compatibility redirect; canonical points to report.html.
+                if relative.startswith("guides/metrics/"):
+                    continue  # noindex utility reference; not a sharing target.
+                text = page.read_text(encoding="utf-8")
+                head = text.split("</head>", 1)[0]
+                links = re.findall(r'<link rel="canonical" href="([^"]*)"', head)
+                self.assertEqual(len(links), 1, f"{relative}: exactly one canonical")
+                canonical = links[0]
+                og_url = re.findall(r'<meta property="og:url" content="([^"]*)"', head)
+                self.assertEqual(og_url, [canonical], f"{relative}: og:url must match canonical")
+                for prop in ("og:title", "og:description", "og:image"):
+                    self.assertIn(f'property="{prop}"', head, f"{relative}: missing {prop}")
+                # Every shareable page uses a large summary card with matching Twitter copy.
+                self.assertIn('<meta name="twitter:card" content="summary_large_image"/>', head,
+                              f"{relative}: twitter card must be large")
+                for prop, name in (("og:title", "twitter:title"), ("og:description", "twitter:description"),
+                                   ("og:image", "twitter:image")):
+                    og_value = re.search(rf'<meta property="{prop}" content="([^"]*)"', head)
+                    tw_value = re.search(rf'<meta name="{name}" content="([^"]*)"', head)
+                    self.assertIsNotNone(og_value, f"{relative}: missing {prop}")
+                    self.assertIsNotNone(tw_value, f"{relative}: missing {name}")
+                    self.assertEqual(tw_value.group(1), og_value.group(1),
+                                     f"{relative}: {name} must match {prop}")
+                og_image = re.search(r'<meta property="og:image" content="([^"]*)"', head).group(1)
+                self.assertTrue(og_image.startswith("https://lixity.de/"), f"{relative}: og:image must be apex")
+                self.assertIn('<meta property="og:image:secure_url" content="' + og_image + '"/>', head,
+                              f"{relative}: missing secure_url")
+                self.assertIn('<meta property="og:image:type" content="image/png"/>', head,
+                              f"{relative}: missing image type")
+                width = int(re.search(r'<meta property="og:image:width" content="(\d+)"', head).group(1))
+                height = int(re.search(r'<meta property="og:image:height" content="(\d+)"', head).group(1))
+                self.assertGreaterEqual(width, 1000, f"{relative}: preview too narrow")
+                self.assertGreaterEqual(height, 500, f"{relative}: preview too short")
+                self.assertGreaterEqual(width, height, f"{relative}: preview must be landscape")
+                alt = re.search(r'<meta property="og:image:alt" content="([^"]*)"', head)
+                self.assertIsNotNone(alt, f"{relative}: missing image alt")
+                self.assertTrue(alt.group(1).strip(), f"{relative}: empty image alt")
+                image_path = output / og_image.removeprefix("https://lixity.de/")
+                self.assertTrue(image_path.is_file(), f"{relative}: preview file missing")
+                self.assertLessEqual(image_path.stat().st_size, 1024 * 1024,
+                                     f"{relative}: preview over 1 MB")
+                if relative.startswith("blog/") and relative != "blog/index.html":
+                    for prop in ("article:published_time", "article:modified_time",
+                                 "article:author", "article:section"):
+                        self.assertIn(f'property="{prop}"', head, f"{relative}: missing {prop}")
+                images.setdefault(og_image, []).append(relative)
+                checked += 1
+            self.assertGreater(checked, 30, "social check must cover published pages")
+            # Distinct sections must not all share one fallback image.
+            self.assertGreater(len(images), 5, "share previews must vary by page")
 
     def test_only_product_paths_are_published(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -982,6 +1048,9 @@ class TestPublicLanguages(unittest.TestCase):
                 content = json.loads((ROOT / f"docs/locales/{language}.json").read_text())
                 text = pages[page_path(language)]
                 self.assertIn('src="videos/product-tour.mp4"', text)
+                self.assertIn('src="videos/product-tour-portrait.mp4"', text)
+                self.assertIn('media="(orientation: portrait)"', text)
+                self.assertIn('data-portrait-poster="videos/product-tour-portrait.png"', text)
                 self.assertIn('preload="none"', text)
                 self.assertIn('muted playsinline controls', text)
                 self.assertNotIn(' autoplay', text)

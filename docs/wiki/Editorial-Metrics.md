@@ -7,7 +7,7 @@ highlighted wording in context.
 | Question | Reference |
 | --- | --- |
 | How do I get from a highlighted value to its passage? | [Read and explore](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#read-and-explore) |
-| What does an individual measurement mean? | [Measurement reference](https://mfahsold.github.io/lixity/guides/metrics/en.html) · [Metrikreferenz auf Deutsch](https://mfahsold.github.io/lixity/guides/metrics/de.html) |
-| How do I interpret a chapter comparison? | [Interpretation guide](https://mfahsold.github.io/lixity/guides/interpretation.html) |
+| What does an individual measurement mean? | [Measurement reference](https://lixity.de/guides/metrics/en.html) · [Metrikreferenz auf Deutsch](https://lixity.de/guides/metrics/de.html) |
+| How do I interpret a chapter comparison? | [Interpretation guide](https://lixity.de/guides/interpretation.html) |
 | Which formulas and uncertainty rules apply? | [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) · [Stability and limitations](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md) |
 | Can I repeat the analysis from the terminal? | [Linguistic text analysis](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#linguistic-text-analysis) |

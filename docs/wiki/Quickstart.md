@@ -3,17 +3,17 @@
 ## 1. Download and install Lixity
 
 Choose the desktop download for your computer and follow its setup steps.
-[Desktop downloads](https://mfahsold.github.io/lixity/guides/installation.html#desktop) ·
-[macOS](https://mfahsold.github.io/lixity/guides/installation.html#macos) ·
-[Windows x64](https://mfahsold.github.io/lixity/guides/installation.html#windows) ·
-[Linux x64](https://mfahsold.github.io/lixity/guides/installation.html#linux)
+[Desktop downloads](https://lixity.de/guides/installation.html#desktop) ·
+[macOS](https://lixity.de/guides/installation.html#macos) ·
+[Windows x64](https://lixity.de/guides/installation.html#windows) ·
+[Linux x64](https://lixity.de/guides/installation.html#linux)
 
 ## 2. Starting the workbench
 
 Open Lixity from Applications on macOS, the Start menu on Windows or the
 applications menu on Linux. If you chose an AppImage, open it from the folder
 where you saved it. On systems without a compatible desktop build, use the
-[local browser app and CLI](https://mfahsold.github.io/lixity/guides/installation.html#install).
+[local browser app and CLI](https://lixity.de/guides/installation.html#install).
 
 ## 3. Opening a manuscript
 
@@ -23,8 +23,8 @@ bundled sample. Confirm its destination to create an editable project.
 [Choose your starting point](https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md#choose-your-starting-point)
 
 To explore from your browser, try the
-[read-only demo](https://mfahsold.github.io/lixity/demo/report.html) or
-[edit a passage in the sandbox](https://mfahsold.github.io/lixity/sandbox/index.html?lang=en).
+[read-only demo](https://lixity.de/demo/report.html) or
+[edit a passage in the sandbox](https://lixity.de/sandbox/index.html?lang=en).
 
 ## 4. The three main workspaces
 

@@ -490,18 +490,18 @@ def build_outreach_package(source: Path, output: Path) -> None:
             manifest["images"].append({**item, "sha256": sha256(content).hexdigest(), "byte_length": len(content)})
             lines.extend(["## " + item["question"], "", "Image: images/" + item["file"],
                           "Alt: " + item["alt"], "Caption: " + item["caption"],
-                          "Destination: https://mfahsold.github.io/lixity/" + item["destination"], ""])
+                          "Destination: https://lixity.de/" + item["destination"], ""])
         lines.extend([
             "## Why is this sentence underlined?", "",
             "The silent clip opens a real explanation in the fictional manuscript.",
             "English: Why is this sentence underlined? See what Lixity counted, then read it in context.",
             "Text alternative: Lixity opens the selected sentence's explanation and marks the words it counted.",
-            "Destination: https://mfahsold.github.io/lixity/#product-tour-preview", "",
+            "Destination: https://lixity.de/#product-tour-preview", "",
             "Deutsch: Warum ist dieser Satz unterstrichen? Schau nach, welche Wörter Lixity gezählt hat, "
             "und lies den Satz im Zusammenhang.",
             "Alternativtext: Lixity öffnet im Beispielmanuskript die Erklärung zu einem unterstrichenen Satz "
             "und hebt die gezählten Wörter hervor.",
-            "Ziel: https://mfahsold.github.io/lixity/index-de.html#product-tour-preview", "",
+            "Ziel: https://lixity.de/index-de.html#product-tour-preview", "",
         ])
         for name, width, height, limit in SOCIAL_CLIPS:
             content = (source / "videos" / name).read_bytes()

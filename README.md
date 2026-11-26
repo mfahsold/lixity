@@ -58,9 +58,10 @@ are available through PyPI. If you already use pipx with Python 3.10 or newer, r
 - **Keep research by the text.** Link passages to dossiers, notes and exact
   source quotations. Revisit the retained source version behind a citation.
   [Research and dossiers](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md)
-- **Read it aloud.** Rehearse in the teleprompter and keep delivery notes with
-  the passage. Review a recording before deciding whether to retain it.
-  [Audio and passage direction](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md)
+- **Read it aloud.** Rehearse in the teleprompter, record a reference for your
+  voice or set the delivery for a passage. With an optional speech engine,
+  listen to a paragraph before rendering a chapter.
+  [Audio first steps](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md#getting-started)
 - **Share a reading copy.** Export a manuscript or dossier PDF, or prepare a
   reading website with the chapters and background you choose.
   [Reading website export](https://github.com/mfahsold/lixity/blob/main/docs/WORKSPACE.md#export-a-reading-website)
