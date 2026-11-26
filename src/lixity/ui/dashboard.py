@@ -712,9 +712,14 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 )
             )
         parts.append("</nav></details>")
-        parts.append('<p class="workspace-product-details">' + read_only_note + product_details(labels) + '</p>')
-        if can_edit and not first_workspace:
-            parts.append('<div>' + support_lixity_link(labels) + '</div>')
+        support_inline = support_lixity_link(labels, compact_mobile=True) if can_edit and not first_workspace else ""
+        parts.append(
+            '<p class="workspace-product-details">'
+            + read_only_note
+            + product_details(labels)
+            + support_inline
+            + '</p>'
+        )
         parts.append("</div></div>")
 
     if status:

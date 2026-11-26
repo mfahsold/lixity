@@ -10,6 +10,8 @@ Updated 25 November 2026
 
 ## Desktop downloads
 
+**Want to start right away without a GitHub account?** Use the [published local browser app and CLI](#install) below — no sign-in and no expiry. The desktop test archives here are unsigned builds hosted on GitHub Actions.
+
 The v0.9.3 downloads are desktop test builds. [Sign in to GitHub](https://github.com/login?return_to=%2Fmfahsold%2Flixity%2Factions%2Fruns%2F45655881121) to download your ZIP, then extract it.
 
 These test archives have expired. [Find another test build](https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml).
@@ -114,7 +116,7 @@ For a test build, use a separate account or test machine. If startup fails, the 
 
 This source guide describes **v0.9.3**. Its changes are listed in the source [release notes](https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.3.md). The browser and CLI installation uses the package published on [PyPI](https://pypi.org/project/lixity/). Check `lixity --version` and [Latest on GitHub](https://github.com/mfahsold/lixity/releases/latest) for the published version. Historical 1.x and 3.x tags predate the version reset.
 
-**Alternative installation with the terminal**
+**Published local browser app and CLI (no GitHub account required)**
 
 <a id="requirements"></a>
 

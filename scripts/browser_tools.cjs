@@ -25,6 +25,7 @@ function resolveChromium() {
   const home = os.homedir();
   const caches = [
     path.join(browserToolsDir, 'browsers'),
+    path.join(home, 'Library', 'Caches', 'ms-playwright'),
     path.join(home, '.cache', 'ms-playwright'),
   ];
   for (const cache of caches) {

@@ -10,6 +10,10 @@ on:
         description: Sign Windows candidates with Azure Artifact Signing
         type: boolean
         default: false
+      publish_preview_release:
+        description: Publish unsigned/ad-hoc desktop preview installers as a public GitHub prerelease (no login, no 30-day expiry)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -318,3 +322,71 @@ jobs:
           path: dist-desktop/*
           if-no-files-found: error
           retention-days: 30
+
+  publish-preview-release:
+    needs: [combine-checksums]
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      inputs.publish_preview_release &&
+      (!inputs.notarize_macos || !inputs.sign_windows)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: lixity-desktop-test-bundle
+          path: dist-desktop
+
+      - name: Publish unsigned/ad-hoc preview installers as a public GitHub prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          VERSION="$(python -c 'import json; print(json.load(open("desktop/src-tauri/tauri.conf.json"))["version"])')"
+          PREVIEW_TAG="desktop-preview-v${VERSION}"
+          NOTES="Unsigned/ad-hoc desktop preview installers for v${VERSION} (commit ${SOURCE_SHA}).
+
+          These installers do not require a GitHub account and do not expire after 30 days.
+          macOS builds use ad-hoc signing and Windows builds are unsigned; check SHA256SUMS-desktop.txt
+          and follow https://lixity.de/guides/installation.html for platform setup steps.
+
+          Built from GitHub Actions run: ${RUN_URL}"
+          shopt -s nullglob
+          ASSETS=(
+            dist-desktop/*.dmg
+            dist-desktop/*.exe
+            dist-desktop/*.msi
+            dist-desktop/*.deb
+            dist-desktop/*.AppImage
+            dist-desktop/SHA256SUMS-desktop.txt
+            dist-desktop/desktop-artifacts-*.json
+          )
+          if gh release view "$PREVIEW_TAG" >/dev/null 2>&1; then
+            gh release edit "$PREVIEW_TAG" \
+              --prerelease \
+              --target "$SOURCE_SHA" \
+              --title "Lixity v${VERSION} Desktop Preview (unsigned)" \
+              --notes "$NOTES"
+            gh release upload "$PREVIEW_TAG" "${ASSETS[@]}" --clobber
+          else
+            gh release create "$PREVIEW_TAG" "${ASSETS[@]}" \
+              --prerelease \
+              --target "$SOURCE_SHA" \
+              --title "Lixity v${VERSION} Desktop Preview (unsigned)" \
+              --notes "$NOTES"
+          fi
+          echo "Published preview release tag: ${PREVIEW_TAG}"
+          echo "Add \"preview_release_tag\": \"${PREVIEW_TAG}\" to docs/desktop-test-build.json and run make docs-sync."

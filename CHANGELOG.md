@@ -9,6 +9,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Tighten the narrow-viewport workspace entry so the first manuscript paragraph
+  sits higher on 320 px screens: fold the project support link inline into the
+  compact metadata row below 1100 px while keeping the sidebar button on wide
+  desktops and the footer licensing link everywhere.
+- Reduce first-click installation friction before signed desktop installers are
+  published: keep the published login-free local browser app instructions open
+  on the installation guide, add an opt-in `publish_preview_release` workflow
+  input on `desktop-release.yml` to publish unsigned/ad-hoc desktop preview
+  installers as a public GitHub prerelease without a GitHub account or 30-day
+  expiry, and support `preview_release_tag` in `docs/desktop-test-build.json`.
 - Use `https://lixity.de/` in the application, package metadata, funding and
   citation links. The earlier GitHub Pages address redirects to the same path
   on the new domain. The Pages build rewrites site links for the selected base.

@@ -36,6 +36,7 @@ SCHEMA = "lixity-desktop-downloads/1"
 TEST_BUILD_SCHEMA = "lixity-desktop-test-build/1"
 CHECKSUMS = DESKTOP_CHECKSUMS
 TAG = PUBLIC_RELEASE_TAG
+PREVIEW_RELEASE_TAG = re.compile(r"desktop-preview-v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9]+)?")
 SHA256 = re.compile(r"[0-9a-f]{64}")
 COMMIT_SHA = re.compile(r"[0-9a-f]{40}")
 UTC_TIMESTAMP = "%Y-%m-%dT%H:%M:%SZ"
@@ -144,8 +145,11 @@ def write_catalog(catalog: dict[str, Any], output: Path) -> None:
 
 def validate_test_build(test_build: dict[str, Any]) -> None:
     """Validate one reviewed Actions run separately from public installers."""
+    required_keys = {"schema_version", "tag", "commit", "run_id", "expires_at", "artifacts", "installers"}
+    optional_keys = {"preview_release_tag"}
     if (not isinstance(test_build, dict)
-            or test_build.keys() != {"schema_version", "tag", "commit", "run_id", "expires_at", "artifacts", "installers"}
+            or not required_keys <= test_build.keys()
+            or not test_build.keys() <= (required_keys | optional_keys)
             or test_build["schema_version"] != TEST_BUILD_SCHEMA):
         raise ValueError("Invalid desktop test build record")
     tag, commit, run_id = test_build["tag"], test_build["commit"], test_build["run_id"]
@@ -153,6 +157,14 @@ def validate_test_build(test_build: dict[str, Any]) -> None:
             or not isinstance(commit, str) or not COMMIT_SHA.fullmatch(commit)
             or type(run_id) is not int or run_id <= 0):
         raise ValueError("Expected a reviewed test version, source commit and Actions run ID")
+    preview_release_tag = test_build.get("preview_release_tag")
+    if preview_release_tag is not None and (
+        not isinstance(preview_release_tag, str)
+        or not PREVIEW_RELEASE_TAG.fullmatch(preview_release_tag)
+        or not (preview_release_tag == f"desktop-preview-{tag}"
+                or preview_release_tag.startswith(f"desktop-preview-{tag}-"))
+    ):
+        raise ValueError("Expected a matching desktop-preview-vX.Y.Z prerelease tag")
     expires_at = test_build["expires_at"]
     try:
         expires = datetime.strptime(expires_at, UTC_TIMESTAMP)  # noqa: DTZ007 - compared as a UTC string
@@ -203,6 +215,31 @@ def render(catalog: dict[str, Any], test_build: dict[str, Any] | None = None) ->
         if test_build is not None:
             validate_test_build(test_build)
             run = f'{REPOSITORY}/actions/runs/{test_build["run_id"]}'
+            preview_tag = test_build.get("preview_release_tag")
+            if preview_tag:
+                installers = sorted(test_build["installers"], key=lambda asset: (
+                    tuple(INSTALLER_LABELS).index((asset["target"], asset["kind"])), asset["filename"],
+                ))
+                links = []
+                for asset in installers:
+                    label = INSTALLER_LABELS[(asset["target"], asset["kind"])]
+                    filename = asset["filename"]
+                    if asset["kind"] == "windows-msi":
+                        label += " (German)" if filename.endswith("_de-DE.msi") else " (English)"
+                    size = asset["bytes"] / (1024 * 1024)
+                    links.append((asset["target"],
+                                  f'<a class="ctl primary" href="{RELEASES}/download/{preview_tag}/{filename}">'
+                                  f'<strong>{label}</strong><span>Preview · {filename} · {size:.1f} MiB</span></a>'))
+                return (f'<p id="desktop-test-downloads">These {test_build["tag"]} desktop preview builds are '
+                        'unsigned/ad-hoc installers you can download directly without a GitHub account. '
+                        'For the published release without OS security prompts, use the '
+                        '<a href="#install">published local browser app and CLI</a>.</p>\n'
+                        f'{render_platforms(links)}\n'
+                        f'{render_verification(installers)}\n'
+                        f'<p><a href="{RELEASES}/tag/{preview_tag}">Preview release {preview_tag}</a> · '
+                        f'<a href="{RELEASES}/download/{preview_tag}/{CHECKSUMS}">Check SHA-256 sums</a> · '
+                        f'<a href="{REPOSITORY}/commit/{test_build["commit"]}">Source commit</a> · '
+                        '<a href="#install">Published browser app and CLI</a>.</p>')
             links = []
             for target, (label, _, format_label) in TEST_TARGETS.items():
                 artifact = test_build["artifacts"][target]
@@ -210,7 +247,10 @@ def render(catalog: dict[str, Any], test_build: dict[str, Any] | None = None) ->
                                       f'<strong>{label}</strong><span>Test ZIP · {format_label}</span></a>'))
             expires = test_build["expires_at"]
             login = f'https://github.com/login?return_to=%2Fmfahsold%2Flixity%2Factions%2Fruns%2F{test_build["run_id"]}'
-            return (f'<p id="desktop-test-downloads">The {test_build["tag"]} downloads are desktop test builds. '
+            return ('<p class="notice-box"><strong>Want to start right away without a GitHub account?</strong> '
+                    'Use the <a href="#install">published local browser app and CLI</a> below — '
+                    'no sign-in and no expiry. The desktop test archives here are unsigned builds hosted on GitHub Actions.</p>\n'
+                    f'<p id="desktop-test-downloads">The {test_build["tag"]} downloads are desktop test builds. '
                     f'<a href="{login}">Sign in to GitHub</a> to download your ZIP, then extract it.</p>\n'
                     '<p id="desktop-test-expired" hidden>These test archives have expired. '
                     f'<a href="{TEST_WORKFLOW}">Find another test build</a>.</p>\n'

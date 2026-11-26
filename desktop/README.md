@@ -4,7 +4,7 @@ The Rust/Tauri v2 app opens the Lixity workspace in an operating-system window.
 It uses the shared manuscript editor, analysis, and research views. Choose your
 platform in the download guide to install it. Desktop downloads currently lead
 to test builds. The app includes the runtime it needs.
-[Download Lixity](https://mfahsold.github.io/lixity/guides/installation.html#desktop)
+[Download Lixity](https://lixity.de/guides/installation.html#desktop)
 · [Installation reference](../docs/INSTALLATION.md#download-the-desktop-app)
 
 | Build | Where to find it | How to verify its identity |
@@ -64,10 +64,11 @@ RPM and Flatpak await installer qualification.
 ## Download a test build
 
 1. Choose the archive for your computer in the
-   [desktop downloads](https://mfahsold.github.io/lixity/guides/installation.html#desktop).
-   Sign in to GitHub to download the ZIP.
-2. Extract it and use the
-   [installer checker](https://mfahsold.github.io/lixity/guides/installation.html#installer-check)
+   [desktop downloads](https://lixity.de/guides/installation.html#desktop).
+   Preview prereleases download directly without a GitHub account; Actions test
+   archives require signing in to GitHub.
+2. Extract it if it came in a ZIP and use the
+   [installer checker](https://lixity.de/guides/installation.html#installer-check)
    to compare the installer with the companion SHA-256 list on your computer.
    On macOS, open the DMG and drag Lixity to **Applications**. On Windows,
    open the `-setup.exe`. On Debian or Ubuntu, open the `.deb` with a
@@ -110,8 +111,12 @@ To update the installation guide's test links, set `docs/desktop-test-build.json
 to one reviewed successful run. Match each target to its artifact ID on that run
 and use the earliest expiration of the four archives. Populate `installers`
 from the verified files in the same run, with their exact sizes and SHA-256
-digests. Run `make docs-sync` and `make docs-check`. The public download catalog
-is filled through the separate
+digests. To offer direct, login-free, non-expiring downloads for unsigned/ad-hoc
+preview builds before signing credentials are configured, dispatch
+`desktop-release.yml` on `main` with `publish_preview_release=true` and record
+the resulting `desktop-preview-vX.Y.Z` tag as `"preview_release_tag"` in
+`docs/desktop-test-build.json`. Run `make docs-sync` and `make docs-check`. The
+public download catalog is filled through the separate
 [qualification and publication procedure](#public-desktop-downloads).
 
 ## Local build and verification
@@ -408,9 +413,11 @@ their package managers. A separate `uv` installation uses its own update path.
 
 #### Local macOS development rollout
 
-Commit the candidate and use a clean checkout of that exact commit. Save open
-work, finish or cancel active and queued audio, then quit Lixity and its
-bundled engine. Run the local build with explicit update intent.
+Commit the candidate and use a clean checkout of that exact commit (or a clean
+temporary `git worktree` reusing `CARGO_TARGET_DIR` when the main checkout has
+unrelated local edits). Save open work, finish or cancel active and queued
+audio, then quit Lixity and its bundled engine. Run the local build with
+explicit update intent.
 
 ```sh
 .venv/bin/python desktop/scripts/build_macos_app.py --offline --dmg --update-installed

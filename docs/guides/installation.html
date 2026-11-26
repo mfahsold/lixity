@@ -102,6 +102,7 @@
 <a class="ctl" href="#linux">Linux</a>
 </nav>
 <!-- desktop-downloads:start -->
+<p class="notice-box"><strong>Want to start right away without a GitHub account?</strong> Use the <a href="#install">published local browser app and CLI</a> below — no sign-in and no expiry. The desktop test archives here are unsigned builds hosted on GitHub Actions.</p>
 <p id="desktop-test-downloads">The v0.9.3 downloads are desktop test builds. <a href="https://github.com/login?return_to=%2Fmfahsold%2Flixity%2Factions%2Fruns%2F45655881121">Sign in to GitHub</a> to download your ZIP, then extract it.</p>
 <p id="desktop-test-expired" hidden>These test archives have expired. <a href="https://github.com/mfahsold/lixity/actions/workflows/desktop-release.yml">Find another test build</a>.</p>
 <div class="desktop-download-grid">
@@ -176,7 +177,7 @@
 
 <p class="notice-box">This source guide describes <strong>v0.9.3</strong>. Its changes are listed in the source <a href="https://github.com/mfahsold/lixity/blob/main/docs/releases/v0.9.3.md">release notes</a>. The browser and CLI installation uses the package published on <a href="https://pypi.org/project/lixity/">PyPI</a>. Check <code>lixity --version</code> and <a href="https://github.com/mfahsold/lixity/releases/latest">Latest on GitHub</a> for the published version. Historical 1.x and 3.x tags predate the version reset.</p>
 
-<details id="install"><summary>Alternative installation with the terminal</summary>
+<details id="install" open><summary>Published local browser app and CLI (no GitHub account required)</summary>
 <h2 id="requirements">What does the published browser app need?</h2>
 <p>Install <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. It supplies managed Python 3.12 and installs Lixity from <a href="https://pypi.org/project/lixity/">PyPI</a>. You can also find the current wheel and its checksums on <a href="https://github.com/mfahsold/lixity/releases/latest">GitHub Releases</a>. Installation needs an internet connection. Analysis runs offline afterward. PDF import has <a href="research-pdf.html#ocr">additional requirements</a>.</p>
 <p class="notice-box">Lixity is open source under AGPL-3.0-or-later. You can write and self-publish with it. A separate commercial license is available for closed-source integrations. <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">Licensing guide</a></p>

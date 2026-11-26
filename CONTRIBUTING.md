@@ -577,16 +577,16 @@ verification in Webmaster Tools.
    pages, Markdown alternates, `llms-full.txt` and localized metric references.
 3. Run the [documentation and browser checks](#select-the-checks-for-your-change).
    Inspect desktop and mobile layouts, titles, links and reviewed media.
-4. Serve the staged preview under the production path prefix `/lixity/` on a
-   loopback-only address. Open `http://127.0.0.1:8000/lixity/` while the server
-   is running. The staging rules select published content and copy the shared
-   design-token and component assets. Add public paths deliberately and use
-   absolute GitHub URLs for repository-root documents. The documentation tests
-   validate links in the staged tree.
+4. Serve the staged preview from the apex root on a loopback-only address and
+   open `http://127.0.0.1:8000/` while the server is running (the legacy
+   `/lixity/` path redirects to apex on production). The staging rules select
+   published content and copy the shared design-token and component assets. Add
+   public paths deliberately and use absolute GitHub URLs for repository-root
+   documents. The documentation tests validate links in the staged tree.
 
    ```sh
    pages_preview_dir="$(mktemp -d "${TMPDIR:-/tmp}/lixity-pages.XXXXXX")"
-   python3 scripts/stage_pages.py --output "$pages_preview_dir/lixity" &&
+   python3 scripts/stage_pages.py --output "$pages_preview_dir" &&
      python3 -m http.server 8000 --bind 127.0.0.1 --directory "$pages_preview_dir"
    ```
 

@@ -338,10 +338,11 @@ def product_details(labels: Mapping[str, str] | None = None) -> str:
     )
 
 
-def support_lixity_link(labels: Mapping[str, str] | None) -> str:
+def support_lixity_link(labels: Mapping[str, str] | None, *, compact_mobile: bool = False) -> str:
     """Offer an optional route to the public project funding information."""
+    extra = " workspace-support-link" if compact_mobile else ""
     return (
-        f'<a class="ctl ctl-sm" id="support-lixity" href="{esc(FUNDING_DETAILS_URL)}" hreflang="en" '
+        f'<a class="ctl ctl-sm{extra}" id="support-lixity" href="{esc(FUNDING_DETAILS_URL)}" hreflang="en" '
         f'target="_blank" rel="noopener noreferrer">{esc(label(labels, "support_lixity"))}</a>'
     )
 

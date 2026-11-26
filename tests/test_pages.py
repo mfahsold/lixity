@@ -135,6 +135,24 @@ class TestDesktopDownloads(unittest.TestCase):
         self.assertIn('id="installer-check-file"', rendered)
         self.assertIn("Lixity_0.9.3_aarch64.dmg", rendered)
 
+    def test_preview_release_tag_renders_direct_login_free_downloads(self):
+        catalog = {"schema_version": desktop_downloads.SCHEMA, "tag": None, "installers": []}
+        preview_release = {**PREVIEW_BUILD, "preview_release_tag": "desktop-preview-v0.9.3"}
+        desktop_downloads.validate_test_build(preview_release)
+        rendered = desktop_downloads.render(catalog, preview_release)
+        base = desktop_downloads.RELEASES
+        self.assertIn(f'href="{base}/download/desktop-preview-v0.9.3/Lixity_0.9.3_aarch64.dmg"', rendered)
+        self.assertIn(f'href="{base}/download/desktop-preview-v0.9.3/{desktop_downloads.CHECKSUMS}"', rendered)
+        self.assertIn(f'href="{base}/tag/desktop-preview-v0.9.3"', rendered)
+        self.assertIn("without a GitHub account", rendered)
+        self.assertNotIn("/actions/runs/", rendered)
+        self.assertNotIn("github.com/login", rendered)
+        self.assertIn('href="#install"', rendered)
+        self.assertIn('id="installer-check-file"', rendered)
+        for bad_tag in ("v0.9.3", "desktop-preview-v0.9.4", "preview", 123):
+            with self.subTest(bad_tag=bad_tag), self.assertRaises(ValueError):
+                desktop_downloads.validate_test_build({**PREVIEW_BUILD, "preview_release_tag": bad_tag})
+
     def test_test_build_requires_exact_targets_and_reviewed_metadata(self):
         artifacts = PREVIEW_BUILD["artifacts"]
         missing = {key: value for key, value in artifacts.items() if value != 104}

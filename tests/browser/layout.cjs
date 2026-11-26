@@ -65,8 +65,25 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       }
       const support = page.locator('#workspace-navigation-content').getByRole('link', {name: 'Support Lixity'});
       assert.ok(await support.isVisible(), `Project support belongs in the visible workspace at ${width}px`);
-      assert.ok(await support.evaluate(link => link.scrollWidth <= link.clientWidth + 1
-        && link.getBoundingClientRect().height >= 44), `The support link fits and remains touchable at ${width}px`);
+      assert.ok(await support.evaluate((link, wide) => link.scrollWidth <= link.clientWidth + 1
+        && (!wide || link.getBoundingClientRect().height >= 44), width >= 1100),
+        `The support link fits and stays touchable in the sidebar at ${width}px`);
+      if (width === 320) {
+        const entry = await page.evaluate(() => {
+          const meta = document.querySelector('.workspace-product-details').getBoundingClientRect();
+          const supportBox = document.getElementById('support-lixity').getBoundingClientRect();
+          const paragraph = document.querySelector('#chapters p').getBoundingClientRect();
+          return {
+            supportInsideMeta: supportBox.top >= meta.top - 1 && supportBox.bottom <= meta.bottom + 1,
+            supportHeight: Math.round(supportBox.height),
+            metaHeight: Math.round(meta.height),
+            firstParagraphTop: Math.round(paragraph.top),
+          };
+        });
+        assert.equal(entry.supportInsideMeta, true, 'Support link folds into the compact metadata row on 320px');
+        assert.ok(entry.supportHeight <= 28, `Support link stays inline without adding a 44px button row (${entry.supportHeight}px)`);
+        assert.ok(entry.metaHeight <= 56, `Compact metadata row stays tight on 320px (${entry.metaHeight}px)`);
+      }
       assert.ok(await page.locator('#license-terms').isVisible());
       assert.ok((await page.locator('#license-terms').textContent()).includes('self-publishing'));
       await page.locator('.license-badge').focus();

@@ -1211,6 +1211,10 @@ body.lixity-workspace:not(.manuscript-reading) .toolbar { background: var(--bg);
 .workspace-product-details { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2); margin: 0; padding-top: var(--space-2); border-top: 1px solid var(--line); font-size: var(--text-micro); color: var(--muted); }
 .workspace-product-details .version-badge, .workspace-product-details .license-badge { border: 0; padding: 0; margin: 0; background: transparent; font: inherit; }
 .workspace-product-details .license-badge { text-underline-offset: .2em; }
+.workspace-product-details .workspace-support-link { flex: 0 0 auto; }
+@media screen and (min-width: 1100px) {
+.workspace-product-details .workspace-support-link { margin-top: var(--space-1); }
+}
 .workspace-actions { min-width: 0; }
 .workspace-actions > summary { color: var(--fg-secondary); font-weight: 400; }
 .workspace-actions:not([open]) > .workspace-bar { display: none; }
@@ -1456,14 +1460,22 @@ Loaded-state chrome uses the rendered class: a body :has query over mutable
 prose invalidates the whole book during paragraph enhancement on mobile. */
 .navigation-collapsed .view-nav-tab { white-space: normal; overflow-wrap: anywhere; font-size: var(--text-control); padding: .6rem .3rem; }
 @media screen and (max-width: 1099px) {
-.lixity-workspace.has-reading .workspace-shell { gap: .6rem; }
-.lixity-workspace.has-reading .project-header { gap: .35rem; margin-bottom: 0; }
-.lixity-workspace.has-reading .project-header h1 { margin-bottom: .25rem; }
-.lixity-workspace.has-reading .product-meta { margin-bottom: .5rem; }
+body.lixity-workspace.has-reading { padding-top: var(--space-3); }
+body.lixity-workspace.has-reading > .page { gap: var(--space-3); }
+.lixity-workspace.has-reading .workspace-shell { gap: var(--space-2); }
+.lixity-workspace.has-reading .project-header { gap: .25rem; margin-bottom: 0; }
+.lixity-workspace.has-reading .project-header h1 { margin-bottom: .15rem; }
+.lixity-workspace.has-reading .project-header .project-meta { margin-top: .15rem; }
+.lixity-workspace.has-reading .product-meta { margin-bottom: .35rem; }
 .lixity-workspace.has-reading .project-header .sub { display: none; }
+.lixity-workspace.has-reading .workspace-product-details { padding-top: var(--space-1); gap: var(--space-1) var(--space-3); }
+.workspace-product-details a.ctl.workspace-support-link { --control-target: 0px; --control-pointer-min: 0px; border: 0; padding: 0; margin: 0; min-block-size: 0; min-height: 0; background: transparent; color: var(--accent); font: inherit; font-weight: var(--weight-medium); text-decoration: underline; text-underline-offset: .2em; }
 .lixity-workspace.has-reading .workspace-bar { padding: .4rem 0; }
 .lixity-workspace.has-reading .workspace-bar > .row { gap: .35rem; }
 .lixity-workspace.has-reading .workspace-bar :is(button, a, summary).ctl { padding: .35rem var(--space-2); font-size: var(--text-control); }
+}
+@media screen and (max-width: 480px) {
+body.lixity-workspace.has-reading { padding: var(--space-2) var(--space-3) 3rem; }
 }
 /* Reading controls are adjacent tools; repeated section spacing should not
 turn the short mobile entry into several screens of application chrome. */
