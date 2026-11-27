@@ -107,8 +107,8 @@ def test_adjacent_directions_do_not_emit_whitespace_segments():
     assert spoken[2].profile.instructions == 'Ruhig und klar.'
 
 
-def test_zonos_uses_shorter_fragments_without_changing_transport_limit():
-    from lixity.speech_direction import build_speech_plan
+def test_zonos_bundles_complete_sentences_within_transport_limit():
+    from lixity.speech_direction import build_speech_plan, segment_speech_text
     from lixity.speech_profiles import MLX_AUDIO_ZONOS_SEGMENT_CHARS
 
     passage = ' '.join(f'Satz Nummer {index} bleibt verständlich.' for index in range(40))
@@ -118,6 +118,9 @@ def test_zonos_uses_shorter_fragments_without_changing_transport_limit():
     assert len(spoken) > 1
     assert max(len(row.text) for row in spoken) <= MLX_AUDIO_ZONOS_SEGMENT_CHARS
     assert ''.join(''.join(row.text.split()) for row in spoken) == ''.join(passage.split())
+
+    paragraph = ' '.join(f'Satz Nummer {index} bleibt verständlich.' for index in range(9))
+    assert segment_speech_text(paragraph, profile) == [paragraph]
 
 
 def test_base_allows_passage_pauses_and_other_explicit_profiles():

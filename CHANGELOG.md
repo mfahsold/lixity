@@ -18,6 +18,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Bundle ZONOS3 speech into complete-sentence fragments up to 600 characters
+  instead of 220, retaining paragraph prosody while staying below the model's
+  default 2,000-frame generation budget and the shared transport limit.
 - Bundle IMS-Toucan speech into longer sentence-aligned fragments (up to
   1,800 characters) so duration, pitch and energy predictions retain paragraph
   context instead of being sampled independently for each sentence. Qwen and

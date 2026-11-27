@@ -60,7 +60,10 @@ MLX_AUDIO_BASE_URL = "http://127.0.0.1:8000/v1"
 MLX_AUDIO_TTS_MODEL = "mlx-community/ZONOS3-Mini"
 MLX_AUDIO_DEFAULT_VOICE = "liesel"
 MLX_AUDIO_LANGUAGES = ("de", "en", "fr", "es", "it", "pt", "nl")
-MLX_AUDIO_ZONOS_SEGMENT_CHARS = 220
+# ZONOS3 is autoregressive but supports paragraph-sized utterances. Keep
+# complete sentences together below the 600-character transport bound; the
+# model's default 2,000 audio frames at 15 Hz leave room for this text length.
+MLX_AUDIO_ZONOS_SEGMENT_CHARS = 600
 # IMS-Toucan predicts duration, pitch and energy per utterance, so longer
 # fragments keep prosody coherent across sentences. Autoregressive engines
 # keep short fragments to bound drift and hallucinations.
