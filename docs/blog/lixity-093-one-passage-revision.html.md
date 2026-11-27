@@ -32,7 +32,7 @@ If you want to try it side by side, choose **Try the example offline** in a desk
 
 [Video walkthrough](../videos/editorial-loop.mp4)
 
-*In this 19-second walkthrough from the 0.9.0 interface, the editor follows a review mark and leaves a note on the Warehouse 4 opening.*
+*Follow a review mark and leave a note on the Warehouse 4 opening.*
 
 I would like to hear where you paused. Does the full stop help you see the crate tip?
 

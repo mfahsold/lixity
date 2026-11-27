@@ -127,9 +127,12 @@ def convert(name: str, poster_at: str, max_mp4: int, max_gif: int) -> None:
         mp4, gif, poster = (staging / f"{name}.{extension}" for extension in ("mp4", "gif", "png"))
         run([*command, "-vf", f"{trim},{GUIDE_VIDEO_FILTER}", "-an", "-c:v", "libx264", "-preset", "slow", "-crf", "19",
              "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(mp4)])
-        run([*command, "-an", "-vf",
-             f"{trim},fps=10,scale=800:-1:flags=lanczos,split[s0][s1];"
-             "[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer", "-loop", "0", str(gif)])
+        gif_input = f"{trim},fps=10,scale=800:-1:flags=lanczos,split[s0][s1];"
+        for palette, dither in (("", "bayer"), (":max_colors=192", "none:diff_mode=rectangle")):
+            run([*command, "-an", "-vf", f"{gif_input}[s0]palettegen=stats_mode=diff{palette}[p];"
+                 f"[s1][p]paletteuse=dither={dither}", "-loop", "0", str(gif)])
+            if gif.stat().st_size <= max_gif:
+                break
         run([*command, "-vf", f"trim=start_frame={poster_frame}", "-frames:v", "1", "-update", "1", str(poster)])
         for path, limit in ((mp4, max_mp4), (gif, max_gif)):
             size = path.stat().st_size

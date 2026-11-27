@@ -215,6 +215,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Keep guide walkthrough captions readable as they fade out and refresh the
+  published clips.
 - Share integer-PCM WAV validation (including partial-frame rejection) across
   workers, cache, providers and assembly, and isolate FFmpeg tempo conversion
   to a fresh output file so a previous segment cannot replace a missing one.

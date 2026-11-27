@@ -94,6 +94,43 @@ def test_encoder_rejects_raw_bytes_changed_after_the_frame_anchor_was_measured(
         make_videos.convert_product_tour()
 
 
+@pytest.mark.parametrize("first_gif_size", [3, 5])
+def test_guide_retries_gif_only_when_over_budget(tmp_path: Path, monkeypatch, first_gif_size: int) -> None:
+    source = tmp_path / "guide.webm"
+    source.write_bytes(b"synthetic guide take")
+    source.with_suffix(".json").write_text(json.dumps({
+        "schema_version": "lixity-guide-recording/1", "file": source.name, "startFrame": 2,
+        "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+    }), encoding="utf-8")
+    output = tmp_path / "output"
+    gif_filters: list[str] = []
+
+    def fake_encode(command: list[str]) -> None:
+        target = Path(command[-1])
+        size = 3
+        if target.suffix == ".gif":
+            if not gif_filters:
+                size = first_gif_size
+            gif_filters.append(command[command.index("-vf") + 1])
+        target.write_bytes(b"x" * size)
+
+    monkeypatch.setattr(make_videos, "BASE_DIR", tmp_path)
+    monkeypatch.setattr(make_videos, "RAW_DIR", tmp_path)
+    monkeypatch.setattr(make_videos, "OUT_DIR", output)
+    monkeypatch.setattr(make_videos.shutil, "which", lambda name: name)
+    monkeypatch.setattr(make_videos, "_video_info", lambda _: ({"avg_frame_rate": "25/1", "nb_read_frames": "50"}, {}))
+    monkeypatch.setattr(make_videos, "run", fake_encode)
+    make_videos.convert("guide", "1", max_mp4=4, max_gif=4)
+
+    assert (output / "guide.gif").stat().st_size == 3
+    assert len(gif_filters) == (1 if first_gif_size <= 4 else 2)
+    assert "paletteuse=dither=bayer" in gif_filters[0]
+    if len(gif_filters) == 2:
+        assert "max_colors=192" in gif_filters[1]
+        assert "paletteuse=dither=none" in gif_filters[1]
+    assert all("trim=start_frame=2,setpts=PTS-STARTPTS,fps=10,scale=800:" in filters for filters in gif_filters)
+
+
 @pytest.mark.skipif(not MEDIA_TOOLS, reason="ffmpeg and ffprobe are required for video validation")
 def test_export_validation_rejects_non_square_pixels(tmp_path: Path, monkeypatch) -> None:
     assert FFMPEG

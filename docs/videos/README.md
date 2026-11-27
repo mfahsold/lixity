@@ -59,7 +59,9 @@ new dialog and the reader copy it produces.
 The recorder overlays short step captions in the three guide walkthroughs.
 The raw take includes a capture marker after the first guide view is ready.
 The encoder verifies the recording's hash and starts at the first frame after
-that marker. MP4, GIF and poster all use this trimmed take.
+that marker. MP4, GIF and poster all use this trimmed take. If the first GIF
+exceeds its size limit, the encoder retries with a smaller palette and no
+dithering at the same resolution and frame rate.
 
 Use the development environment and install pinned Chromium and Playwright
 with `make browser-tools`. Guide builds use FFmpeg with `libx264` and `ffprobe`.
