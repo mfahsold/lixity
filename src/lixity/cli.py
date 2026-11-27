@@ -942,16 +942,8 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
         plan = build_speech_plan(text, profile,
             directions=saved_directions(view) if view is not None else [], profiles=profiles,
             chapter=args.chapter, project_config=args._project_config, skip_markers=not args.keep_markers,
-            for_export=args.plan_only)
-        if preview:
-            anchors = [row.anchor for row in plan if row.text and row.anchor]
-            selected = next((anchor for anchor in anchors if args.preview_line is None or
-                             anchor["start_line"] <= args.preview_line <= anchor["end_line"]), None)
-            if selected is None:
-                raise ValueError("No anchored paragraph or list item found at the selected line or chapter; quote blocks cannot currently be selected for preview")
-            plan = [row for row in plan if row.anchor == selected]
-            if not args.plan_only and sum(len(row.text) for row in plan) > 6000:
-                raise ValueError("Passage preview exceeds 6000 characters; render the chapter")
+            for_export=args.plan_only, preview_at=(args.preview_line if args.preview_line is not None else "first")
+            if preview else None)
         if args.plan_only:
             check_context()
             if getattr(args, "ssml", False):

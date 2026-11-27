@@ -245,6 +245,109 @@ def test_first_paragraph_preview_keeps_all_directed_segments(speech_server, save
         assert cli["segments"] == segments
 
 
+@pytest.mark.parametrize("explicit_selection", [False, True])
+def test_preview_rejects_draft_for_different_or_changed_passage(speech_server, explicit_selection):
+    from lixity.speech_direction import speech_passages
+
+    port, source, handler, observed = speech_server
+    first, second = [row["anchor"] for row in speech_passages(source.read_text(), "en")]
+    payload = {**context(source, handler), "mode": "preview", "chapter": 1}
+    if explicit_selection:
+        payload["paragraph"] = first
+    for draft_anchor in (second, {**first, "paragraph_sha256": "0" * 64}):
+        for route in ("/api/speech-plan", "/api/speech-render"):
+            response = send(port, route, payload={
+                **payload, "draft_direction": {"anchor": draft_anchor, "instructions": "Calm."},
+            })
+            assert response.status == 400, response.body
+            assert "different or changed preview passage" in json.loads(response.body)["message"]
+    assert observed == []
+
+
+def test_preview_rejects_source_changed_while_loading_direction(speech_server, monkeypatch):
+    from lixity.server import routes_speech
+
+    port, source, handler, observed = speech_server
+    original = routes_speech.direction_state
+
+    def revised_direction(*args, **kwargs):
+        source.write_text("## Revised\n\nA different passage.\n", encoding="utf-8")
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(routes_speech, "direction_state", revised_direction)
+    response = send(port, "/api/speech-plan",
+                    payload={**context(source, handler), "mode": "preview", "chapter": 1})
+    assert response.status == 409, response.body
+    assert "changed while preparing speech" in json.loads(response.body)["message"]
+    assert observed == []
+
+
+def test_zonos_preview_validates_direction_only_for_its_selected_paragraph(speech_server, monkeypatch, capsys):
+    from lixity.cli import main
+    from lixity.speech_direction import direction_state, save_direction
+    from lixity.speech_profiles import AudioProfile
+
+    port, source, handler, observed = speech_server
+    clean = "Eine Amsel kreuzt den Garten."
+    directed = "Der Wind kommt vom Tal."
+    source.write_text(f"## Anfang\n\n{clean}\n\n{directed}\n", encoding="utf-8")
+    handler.language = "de"
+    view = direction_state(source.parent, source, language="de")
+    first, second = [row["anchor"] for row in view["passages"]]
+    instruction = {"anchor": second, "instructions": "Leise lesen."}
+    saved = save_direction(source.parent, source, instruction, expected_source_sha256=view["source_sha256"],
+                           expected_settings_sha256=view["settings_sha256"],
+                           expected_direction_sha256=view["direction_sha256"], language="de")
+    profile = AudioProfile(engine="mlx-audio", voice="liesel", language="de")
+    bound = context(source, handler)
+    payload = {**bound, "chapter": 1, "profile": profile.model_dump()}
+
+    for scope in ({"mode": "chapter"}, {"mode": "preview", "paragraph": second}):
+        response = send(port, "/api/speech-render", payload={**payload, **scope})
+        assert response.status == 400
+        assert "Freie Regietexte" in json.loads(response.body)["message"]
+    assert observed == []
+
+    for selection in ({}, {"paragraph": first}):
+        response = send(port, "/api/speech-render", payload={**payload, "mode": "preview", **selection})
+        assert response.status == 202, response.body
+        job = json.loads(response.body)["job"]
+        assert job["context"]["title"] == "Anfang"
+        assert job["context"]["excerpt"] == clean
+        for key in first:
+            if selection:
+                assert job["context"][key] == first[key]
+            else:
+                assert key not in job["context"]
+        query = urlencode({**bound, "id": job["id"]})
+        for _ in range(100):
+            status = json.loads(send(port, "/api/speech-job?" + query).body)["job"]["state"]
+            if status not in ("pending", "running"):
+                break
+            time.sleep(0.01)
+        assert status == "ready"
+    assert observed == [clean, clean]
+
+    cli_spoken = []
+
+    def synthesize(text, *_args, **_kwargs):
+        cli_spoken.append(text)
+        return generate_silence_wav(0.01, sample_rate=24000)
+
+    monkeypatch.setattr("lixity.speech._synthesize_segment", synthesize)
+    output = source.parent / "preview.wav"
+    args = ["read-aloud", "--project", str(source.parent), "--chapter", "1",
+            "--engine", "mlx-audio", "--voice", "liesel", "--language", "de", "-o", str(output)]
+    assert main([*args, "--preview"]) == 0
+    assert main([*args, "--preview-line", str(first["start_line"])]) == 0
+    assert cli_spoken == [clean, clean] and output.read_bytes().startswith(b"RIFF")
+    capsys.readouterr()
+    assert main([*args, "--preview-line", str(second["start_line"])]) != 0
+    assert "ZONOS3 cannot render free-text" in capsys.readouterr().err
+    assert cli_spoken == [clean, clean]
+    assert direction_state(source.parent, source, language="de")["direction_sha256"] == saved["direction_sha256"]
+
+
 def test_first_paragraph_preview_does_not_report_truncation_for_complete_split_paragraph(speech_server):
     port, source, handler, _observed = speech_server
     paragraph = "A quiet bird flies. " * 45
@@ -262,8 +365,9 @@ def test_first_paragraph_preview_does_not_report_truncation_for_complete_split_p
 
 
 def test_first_paragraph_preview_context_matches_selected_paragraph_after_quote(speech_server):
-    port, source, handler, _observed = speech_server
-    source.write_text("## First\n\n> A quoted opening.\n\nA bird crosses the garden.\n", encoding="utf-8")
+    port, source, handler, observed = speech_server
+    long_word = "x" * 601
+    source.write_text(f"## First\n\n> A quoted opening.\n\nA bird crosses the garden.\n\n{long_word}\n", encoding="utf-8")
     payload = {**context(source, handler), "mode": "preview", "chapter": 1}
     response = send(port, "/api/speech-plan", payload=payload)
     assert response.status == 200, response.body
@@ -271,6 +375,10 @@ def test_first_paragraph_preview_context_matches_selected_paragraph_after_quote(
     assert [row["text"] for row in result["plan"]["segments"]] == ["A bird crosses the garden."]
     assert result["context"]["excerpt"] == "A bird crosses the garden."
     assert result["context"]["truncated"] is False
+    chapter = send(port, "/api/speech-render", payload={**payload, "mode": "chapter"})
+    assert chapter.status == 400, chapter.body
+    assert "exceeds the speech segment limit" in json.loads(chapter.body)["message"]
+    assert observed == []
 
 
 def test_preview_without_anchored_paragraph_does_not_read_chapter_heading(speech_server, capsys):
@@ -286,7 +394,8 @@ def test_preview_without_anchored_paragraph_does_not_read_chapter_heading(speech
 
 
 @pytest.mark.parametrize("explicit_paragraph", [False, True])
-def test_first_paragraph_preview_rejects_over_limit_for_both_entry_points(speech_server, explicit_paragraph):
+def test_first_paragraph_preview_rejects_over_limit_for_both_entry_points(speech_server, explicit_paragraph, capsys):
+    from lixity.cli import main
     from lixity.speech_direction import speech_passages
 
     port, source, handler, _observed = speech_server
@@ -300,6 +409,12 @@ def test_first_paragraph_preview_rejects_over_limit_for_both_entry_points(speech
     response = send(port, "/api/speech-render", payload=payload)
     assert response.status == 400
     assert "exceeds 6000 characters" in json.loads(response.body)["message"]
+    output = source.parent / "preview.wav"
+    args = ["read-aloud", "--project", str(source.parent), "--chapter", "1", "-o", str(output)]
+    args += ["--preview-line", str(payload["paragraph"]["start_line"])] if explicit_paragraph else ["--preview"]
+    assert main(args) != 0
+    assert "exceeds 6000 characters" in capsys.readouterr().err
+    assert not output.exists()
 
 
 def test_speech_fixture_does_not_probe_external_workers(speech_server, monkeypatch):

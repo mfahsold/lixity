@@ -21,6 +21,8 @@ GOLD = "#D5BB89"
 LILAC = "#F1EEF7"
 VIOLET = "#593E79"
 ICON = "docs/assets/brand/icon-192.png"
+CSS_VIEWPORT = (1440, 900)
+MAX_CSS_SCALE = 2.0
 TEXT_SCALE = 0.85
 LOGO_SCALE = 0.85
 # Leave space for native controls and portrait social overlays.
@@ -56,14 +58,124 @@ def png_size(path: Path) -> tuple[int, int]:
         return struct.unpack(">II", source.read(24)[16:24])
 
 
+def require_filmcraft() -> str:
+    """Resolve filmcraft-cli on PATH with an actionable installation message."""
+    cli = shutil.which("filmcraft-cli")
+    if cli is None:
+        raise SystemExit(
+            "FilmCraft CLI 0.20.1 or newer is required to build the product tour "
+            "(install filmcraft-cli and ensure it is on PATH; see docs/videos/README.md)."
+        )
+    return cli
+
+
+def prepare_project_path(review_dir: Path, width: int, height: int) -> Path:
+    """Return a clean deterministic .fcproj path, clearing stale project/lock files."""
+    review_dir.mkdir(parents=True, exist_ok=True)
+    stem = f"warehouse-4-{width}x{height}"
+    project = review_dir / f"{stem}.fcproj"
+    for stale in (project, review_dir / f".{stem}.fcproj.lock"):
+        if stale.exists():
+            stale.unlink()
+    return project
+
+
+def prune_stale_tour_artifacts(
+    review_dir: Path,
+    *,
+    keep_receipts: set[str] | None = None,
+    keep_markers: set[str] | None = None,
+) -> list[Path]:
+    """Remove accumulated random-suffix receipts, marker CSVs, and stale lock files."""
+    if not review_dir.is_dir():
+        return []
+    keep_r = keep_receipts or set()
+    keep_m = keep_markers or set()
+    removed: list[Path] = []
+    for path in sorted(review_dir.iterdir()):
+        name = path.name
+        if not path.is_file():
+            continue
+        is_stale_lock = name.startswith(".warehouse-4-") and name.endswith(".fcproj.lock")
+        is_stale_receipt = name.startswith("receipt-") and name.endswith(".json") and name not in keep_r
+        is_stale_marker = (
+            name.startswith("warehouse-4-") and "-markers" in name and name.endswith(".csv") and name not in keep_m
+        )
+        if is_stale_lock or is_stale_receipt or is_stale_marker:
+            path.unlink()
+            removed.append(path)
+    return removed
+
+
+def inspect_cut_plan(
+    plan: dict[str, Any],
+    footage: list[tuple[dict[str, Any], Path, Path]],
+    *,
+    width: int,
+    height: int,
+    fps: int,
+) -> list[dict[str, Any]]:
+    """Compute cut-by-cut timing and crop-scale geometry without launching FilmCraft."""
+    port = width < height
+    clips = {segment["id"]: segment for segment, _, _ in footage}
+    rows: list[dict[str, Any]] = []
+    cursor = 0
+    for capture in plan["captures"]:
+        name = capture["id"]
+        duration = capture["duration"]
+        segment = clips[name]
+        source_size = segment.get("sourceSize") or CSS_VIEWPORT
+        src_w, src_h = int(source_size[0]), int(source_size[1])
+        dpr = src_w / CSS_VIEWPORT[0]
+        if src_h / CSS_VIEWPORT[1] != dpr:
+            raise SystemExit(f"The {name} recording has a non-uniform scale factor: {src_w}x{src_h}")
+        destination_frames = duration * fps
+        focus: dict[int, dict[str, Any]] = {}
+        for region in segment["focus"]:
+            frame = round(float(region["seconds"]) * fps)
+            if 0 <= frame < destination_frames:
+                focus[frame] = region
+        cuts = sorted(focus)
+        if not cuts or cuts[0] != 0:
+            raise SystemExit(f"The {name} recording has no opening focus region")
+        # Layout box dimensions matching _body()
+        below = name in LOW_HEADINGS
+        if port:
+            box_w, box_h = width - 88, 680 if below else 686
+        else:
+            box_w, box_h = width - 92, 560 if below else 558
+        max_physical = MAX_CSS_SCALE / dpr
+        for index, (begin, end) in enumerate(zip(cuts, [*cuts[1:], destination_frames], strict=True)):
+            region = focus[begin]
+            take = _take(segment, region, scene_frame=cursor * fps, begin=begin, end=end,
+                         destination_frames=destination_frames, rate=fps)
+            chosen = region.get("portrait", region) if port else region
+            _, _, css_w, css_h = _crop(chosen, 1.0)
+            phys_scale = min(box_w / (css_w * dpr), box_h / (css_h * dpr), max_physical)
+            rows.append({
+                "shot": name,
+                "cut": index,
+                "start_s": round(take.start / fps, 2),
+                "end_s": round(take.end / fps, 2),
+                "frames": take.end - take.start,
+                "source_frame": take.source_frame,
+                "hold_frames": take.hold_end,
+                "css_crop": (round(css_w), round(css_h)),
+                "dpr": dpr,
+                "css_scale": round(phys_scale * dpr, 2),
+                "physical_scale": round(phys_scale, 2),
+                "inset": bool(region.get("inset")),
+                "comparison": bool(region.get("comparison")),
+            })
+        cursor += duration
+    return rows
+
+
 class Edit:
     """Keep the title, picture and logo independently editable in FilmCraft."""
 
     def __init__(self, path: Path, width: int, height: int, fps: int) -> None:
-        cli = shutil.which("filmcraft-cli")
-        if cli is None:
-            raise SystemExit("FilmCraft CLI 0.20.1 or newer is required to build the product tour.")
-        self.cli = cli
+        self.cli = require_filmcraft()
         self.path = path
         self.width, self.height = width, height
         self.port = width < height
@@ -81,10 +193,17 @@ class Edit:
         project = ["--save-as" if first else "--project", str(self.path)]
         if save and not first:
             project.append("--save")
-        result = subprocess.check_output(  # noqa: S603 - fixed FilmCraft invocation
-            [self.cli, *project, "exec", name, json.dumps(params)], text=True,
+        result = subprocess.run(  # noqa: S603 - fixed FilmCraft invocation
+            [self.cli, *project, "exec", name, json.dumps(params)],
+            text=True, capture_output=True, check=False,
         )
-        return json.loads(result)
+        if result.returncode:
+            detail = (result.stderr or result.stdout).strip()
+            raise SystemExit(f"FilmCraft command '{name}' failed for {self.path.name}: {detail}")
+        try:
+            return json.loads(result.stdout)
+        except json.JSONDecodeError as error:
+            raise SystemExit(f"FilmCraft command '{name}' returned non-JSON output for {self.path.name}: {error}") from error
 
     def batch(self, name: str, commands: list[dict[str, Any]]) -> None:
         script = "\n".join(json.dumps({"id": name, "params": params}) for params in commands)
@@ -173,8 +292,10 @@ class Edit:
             low, high = PORTRAIT_SAFE_Y if self.port else LANDSCAPE_SAFE_Y
             if not low <= top < top + height <= high:
                 raise SystemExit("The product capture overlaps the player controls or social overlays")
-        # A single button or icon should remain visibly smaller than a full panel.
-        scale = min(width / across, height / down, 3.25) * 100
+        # Cap zoom at <=2.0x CSS (=1.0x physical on a 2x capture) so UI text stays crisp.
+        dpr = source.width / CSS_VIEWPORT[0] if crop is not None else 1.0
+        max_scale = MAX_CSS_SCALE / dpr if crop is not None else 3.25
+        scale = min(width / across, height / down, max_scale) * 100
         motion = {
             "anchor": [x + across / 2, y + down / 2], "position": [left + width / 2, top + height / 2], "scale": scale,
         }
@@ -188,15 +309,15 @@ class Edit:
             self.cut_frames.add(take.start)
         moving_end = take.end - take.hold_end
         self._place_picture(source, track, take.start, moving_end, take.source_frame, motion, crop_edges,
-                            window, reveal=reveal)
+                            window, dpr=dpr, reveal=reveal)
         if take.hold_end:
             last_source_frame = take.source_frame + moving_end - take.start - 1
             self._place_picture(source, track, moving_end, take.end, last_source_frame, motion, crop_edges,
-                                window, hold=True)
+                                window, dpr=dpr, hold=True)
 
     def _place_picture(self, source: Source, track: str, start: int, end: int, source_frame: int,
                        motion: dict[str, Any], crop: dict[str, float] | None, window: tuple[float, float] | None,
-                       *, hold: bool = False, reveal: bool = False) -> None:
+                       *, dpr: float = 1.0, hold: bool = False, reveal: bool = False) -> None:
         clip, = self.command("timeline.place", {
             "item": source.item, "track": track, "frame": start,
             "duration": {"frame": end - start}, "sourceIn": {"frame": source_frame}, "audio": False,
@@ -211,10 +332,10 @@ class Edit:
             scale = motion["scale"] / 100
             mask = self.command("masks.add", {
                 "clip": clip, "effect": "opacity", "shape": "rectangle", "center": motion["anchor"],
-                "size": window, "cornerRadius": min(18, narrow * .16, 16 / scale),
+                "size": window, "cornerRadius": min(18 * dpr, narrow * .16, 16 / scale),
             })
             self.command("masks.set", {"clip": clip, "effect": "opacity", "mask": mask["mask"],
-                                       "feather": min(6, narrow * .055, 5 / scale)})
+                                       "feather": min(6 * dpr, narrow * .055, 5 / scale)})
         fade = min(round(.28 * self.fps), end - start - 1)
         if reveal and fade >= 2:
             self.batch("effects.setParam", [
@@ -302,6 +423,7 @@ SCENE_HEADINGS = {
     "research": ("RESEARCH", "Open the linked claim", INK),
     "compare": ("REVISION", "Compare the new draft", LILAC),
     "save": ("SAVE", "Keep the reviewed change", LILAC),
+    "teleprompter": ("TELEPROMPTER", "Read aloud and record", INK),
     "export": ("EXPORT", "Check the reading copy", PAPER),
     "reader": ("READING COPY", "Open the result", PAPER),
 }
@@ -312,8 +434,8 @@ LOW_HEADINGS = {"save"}
 RIGHT_INSETS = {"research", "reader"}
 
 
-def _crop(focus: dict[str, Any]) -> Rect:
-    x, y, w, h = (float(focus[axis]) for axis in ("x", "y", "width", "height"))
+def _crop(focus: dict[str, Any], dpr: float = 1.0) -> Rect:
+    x, y, w, h = (float(focus[axis]) * dpr for axis in ("x", "y", "width", "height"))
     if not all(math.isfinite(value) for value in (x, y, w, h)) or w <= 0 or h <= 0:
         raise SystemExit("The tour capture supplied an invalid focus region")
     return x, y, w, h
@@ -358,7 +480,7 @@ def _paired_picture(edit: Edit, source: Source, name: str, main: Rect, inset: Re
 
 
 def _comparison(edit: Edit, source: Source, regions: dict[str, Any], extent: tuple[float, float],
-                take: Take) -> None:
+                take: Take, *, dpr: float = 1.0) -> None:
     """Show matched source frames from the two relevant manuscript versions."""
     x, y, w, _ = _body(edit, "compare")
     if edit.port:
@@ -366,11 +488,12 @@ def _comparison(edit: Edit, source: Source, regions: dict[str, Any], extent: tup
     else:
         across = (w - 48) / 2
         rows = ((x, y + 116, across, 300), (x + across + 48, y + 116, across, 300))
+    max_scale = MAX_CSS_SCALE / dpr
     for key, label, slot, track in zip(("current", "draft"), ("Current file", "Draft to review"),
                                        rows, ("V2", "V3"), strict=True):
-        crop = _crop(regions[key])
+        crop = _crop(regions[key], dpr)
         left, top, width, height = slot
-        scale = min(width / extent[0], height / extent[1])
+        scale = min(width / extent[0], height / extent[1], max_scale)
         left += (width - extent[0] * scale) / 2
         edit.picture(source, take, (left, top, crop[2] * scale, crop[3] * scale), crop=crop, track=track)
         edit.text(take.start / edit.fps, take.end / edit.fps, label, max(44, left), top - 14,
@@ -380,19 +503,18 @@ def _comparison(edit: Edit, source: Source, regions: dict[str, Any], extent: tup
 
 def _take(segment: dict[str, Any], region: dict[str, Any], *, scene_frame: int, begin: int,
           end: int, destination_frames: int, rate: int) -> Take:
-    # A cut belongs to the action. Its incoming footage starts when the new
-    # layout has reached the recording. Chromium can deliver recorded frames
-    # after the DOM geometry is already correct, so give each new crop 120 ms.
-    recording_buffer = math.ceil(.12 * rate)
+    # A cut belongs to the action. With compositor-synced anchors, incoming
+    # footage needs at most 1 frame of settle buffer (0 frames for typing), and
+    # outgoing freeze-holds are capped at <=2 frames to avoid mid-action stalls.
+    recording_buffer = 0 if region.get("noBuffer") else 1
     stable_frame = math.ceil(float(region["sourceSeconds"]) * rate)
     if begin:
         stable_frame += recording_buffer
     source_start = max(begin, stable_frame)
     length = end - begin
-    # The comparison result reflows both panes before the response callback
-    # in Playwright's clock. Freeze the previous crop before that repaint.
-    outgoing = math.ceil(.2 * rate) if region.get("comparison") else recording_buffer
-    moving = max(1, end - outgoing - source_start) if end < destination_frames else length
+    outgoing = 1 if end < destination_frames else 0
+    hold_end = min(2, max(outgoing, source_start - begin + outgoing)) if end < destination_frames else 0
+    moving = max(1, length - hold_end)
     if source_start + moving > segment["frames"]:
         raise SystemExit(f"The settled {segment['id']} picture extends beyond its native recording")
     return Take(scene_frame + begin, scene_frame + end, segment["startFrame"] + source_start, length - moving)
@@ -402,11 +524,16 @@ def compose(edit: Edit, root: Path, plan: dict[str, Any],
             footage: list[tuple[dict[str, Any], Path, Path]]) -> None:
     """Follow the recorded author journey from the evidence to the delivered reading copy."""
     port, rate = edit.port, edit.fps
-    movies = list(dict.fromkeys(movie for _, movie, _ in footage))
+    movie_sizes: dict[Path, tuple[int, int]] = {}
+    for segment, movie, _ in footage:
+        if movie not in movie_sizes:
+            size = segment.get("sourceSize")
+            movie_sizes[movie] = (int(size[0]), int(size[1])) if size else CSS_VIEWPORT
+    movies = list(movie_sizes)
     artwork = root / ICON
     logo, *recordings = edit.import_sources(
         [artwork, *movies],
-        [png_size(artwork), *((1440, 900) for _ in movies)],
+        [png_size(artwork), *(movie_sizes[movie] for movie in movies)],
     )
     sources = dict(zip(movies, recordings, strict=True))
     clips = {segment["id"]: (segment, sources[movie]) for segment, movie, _ in footage}
@@ -417,6 +544,9 @@ def compose(edit: Edit, root: Path, plan: dict[str, Any],
         duration = capture["duration"]
         stop = cursor + duration
         segment, source = clips[name]
+        dpr = source.width / CSS_VIEWPORT[0]
+        if source.height / CSS_VIEWPORT[1] != dpr:
+            raise SystemExit(f"The {name} recording has a non-uniform scale factor: {source.width}x{source.height}")
         destination_frames = duration * rate
         if destination_frames > segment["frames"] or segment["actionEnd"] > duration:
             raise SystemExit(f"The {name} recording does not contain its complete action within the edit")
@@ -438,19 +568,20 @@ def compose(edit: Edit, root: Path, plan: dict[str, Any],
         cuts = sorted(focus)
         if not cuts or cuts[0] != 0:
             raise SystemExit(f"The {name} recording has no opening focus region")
-        panes = [_crop(pane) for region in focus.values() for pane in region.get("comparison", {}).values()]
+        panes = [_crop(pane, dpr) for region in focus.values() for pane in region.get("comparison", {}).values()]
         comparison_extent = (max((pane[2] for pane in panes), default=0), max((pane[3] for pane in panes), default=0))
         for begin, end in zip(cuts, [*cuts[1:], destination_frames], strict=True):
             region = focus[begin]
             take = _take(segment, region, scene_frame=cursor * rate, begin=begin, end=end,
                          destination_frames=destination_frames, rate=rate)
             if comparison := region.get("comparison"):
-                _comparison(edit, source, comparison, comparison_extent, take)
+                _comparison(edit, source, comparison, comparison_extent, take, dpr=dpr)
             elif inset := region.get("inset"):
-                _paired_picture(edit, source, name, _crop(region), _crop(inset), take, reveal=region.get("reveal", False))
+                _paired_picture(edit, source, name, _crop(region, dpr), _crop(inset, dpr), take,
+                                reveal=region.get("reveal", False))
             else:
                 edit.picture(source, take, _body(edit, name),
-                             crop=_crop(region.get("portrait", region) if port else region),
+                             crop=_crop(region.get("portrait", region) if port else region, dpr),
                              reveal=region.get("reveal", False))
         cursor = stop
 

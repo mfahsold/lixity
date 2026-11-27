@@ -64,6 +64,7 @@
   "tour_research": "Apri la ricerca collegata al paragrafo successivo e leggi il documento conservato.",
   "tour_compare": "Scrivi una versione più breve e confrontala con il testo salvato. La frase passa da 31 a 12 parole.",
   "tour_save": "Applica la bozza, salvala e riapri il manoscritto per verificare la modifica.",
+  "tour_teleprompter": "Leggi il passo rivisto nel gobbo elettronico e registra localmente una traccia vocale.",
   "tour_export": "Scegli cosa includere nel sito di lettura e controlla l’esportazione prima di scaricarla.",
   "tour_reader": "Apri la copia esportata per vedere che cosa riceverà chi legge.",
   "tour_demo": "Esamina lo stesso brano nella demo di sola lettura.",

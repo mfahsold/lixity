@@ -22,20 +22,12 @@ def wait_for(jobs, identifier, context="context"):
     pytest.fail("Synthetic speech job did not settle")
 
 
-def test_scope_never_accepts_stale_paragraphs_or_invalid_chapters():
+def test_native_scope_selects_one_chapter_and_rejects_an_invalid_chapter():
     text, info = prepare_speech_source(TEXT, language="en", mode="preview", chapter=1)
     assert "bird crosses" in text and "Another passage" not in text
-    assert info["mode"] == "preview" and info["chapter"] == 1
-    with pytest.raises(ValueError):
+    assert info == {"mode": "preview", "chapter": 1, "title": "First"}
+    with pytest.raises(ValueError, match="existing chapter"):
         prepare_speech_source(TEXT, language="en", mode="preview", chapter=99)
-    with pytest.raises(ValueError):
-        prepare_speech_source(
-            TEXT,
-            language="en",
-            mode="preview",
-            chapter=1,
-            paragraph={"start_line": 3, "end_line": 3, "paragraph_sha256": "0" * 64},
-        )
 
 
 def test_success_returns_only_owned_audio_and_keeps_source_immutable(tmp_path):

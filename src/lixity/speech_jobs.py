@@ -20,8 +20,8 @@ from .log import (
     speech_diagnostic_scope,
 )
 from .markdown_parser import split_chapters
-from .pipeline import document_paragraph_texts, paragraph_identity, resolve_document_config
-from .speech import SpeechCancelled, extract_audio_cues, render_speech_audio
+from .pipeline import resolve_document_config
+from .speech import SpeechCancelled, _speech_error_kind, render_speech_audio
 from .speech_direction import SpeechSegment
 from .speech_profiles import AudioProfile
 
@@ -42,11 +42,10 @@ def prepare_speech_source(
     language: str,
     mode: str,
     chapter: int,
-    paragraph: Mapping[str, Any] | None = None,
     project_config: Mapping[str, Any] | None = None,
     for_export: bool = False,
 ) -> tuple[str, dict[str, Any]]:
-    """Select actual manuscript prose, verifying a requested displayed anchor."""
+    """Bind a native audio request to a chapter before compiling its speech plan."""
     if mode not in ("preview", "chapter") or type(chapter) is not int or chapter < 1:
         raise ValueError("Choose a valid speech mode and chapter")
     config, _resolved = resolve_document_config(text, language, project_config=project_config)
@@ -56,37 +55,9 @@ def prepare_speech_source(
         raise ValueError("Choose an existing chapter")
     number, title, body = selected
     context: dict[str, Any] = {"mode": mode, "chapter": number, "title": title}
-    if mode == "chapter":
-        if paragraph is not None:
-            raise ValueError("A paragraph selection is only valid for previews")
-        if not for_export and len(body) > 250000:
-            raise ValueError("Chapter exceeds the native audio limit; use the CLI")
-        return f"## {title}\n\n{body}" if title else body, context
-    if paragraph is not None:
-        keys = {"start_line", "end_line", "paragraph_sha256"}
-        if set(paragraph) != keys:
-            raise ValueError("Supply one exact displayed paragraph identity")
-        matches = [
-            item
-            for item in document_paragraph_texts(text, config)
-            if paragraph_identity(item) == dict(paragraph)
-        ]
-        if len(matches) != 1:
-            raise ValueError("The selected paragraph changed; choose it again")
-        item = matches[0]
-        if item.chapter_num not in (0, chapter):
-            raise ValueError("The selected paragraph belongs to another chapter")
-        body = item.text
-        context.update(paragraph_identity(item))
-    cues = [
-        cue
-        for cue in extract_audio_cues(body, language=config.language)
-        if cue.text and cue.kind not in ("heading", "scene_break")
-    ]
-    if not cues:
-        raise ValueError("The selected passage has no supported spoken prose")
-    context.update(excerpt=cues[0].text, truncated=len(cues) > 1)
-    return cues[0].text, context
+    if mode == "chapter" and not for_export and len(body) > 250000:
+        raise ValueError("Chapter exceeds the native audio limit; use the CLI")
+    return f"## {title}\n\n{body}" if mode == "chapter" and title else body, context
 
 
 @dataclass
@@ -261,8 +232,8 @@ class SpeechJobs:
             category = "cancelled"
             terminal_state = "cancelled"
         except Exception as exc:  # noqa: BLE001 - asynchronous adapter failures must settle the job
-            category = ("io" if isinstance(exc, OSError) else "validation" if isinstance(exc, ValueError)
-                        else "runtime" if isinstance(exc, RuntimeError) else "unexpected")
+            kind = _speech_error_kind(exc)
+            category = {"missing": "io", "other": "unexpected"}.get(kind, kind)
             terminal_state = "cancelled" if job.cancel.is_set() else "error"
             terminal_message = str(exc)[:500]
         finally:

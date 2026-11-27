@@ -52,6 +52,30 @@ def test_fresh_render_does_not_count_cached_segments(tmp_path, monkeypatch):
         render_speech_audio(source, output, profile=preset, plan=plan, cache_dir=cache, fresh_audio=True)
 
 
+def test_cache_eviction_cannot_switch_a_live_native_worker_to_another_model(tmp_path, monkeypatch):
+    preset, design, plan = _plan()
+    source, output = tmp_path / 'text.md', tmp_path / 'audio.wav'
+    source.write_text('Ein Satz. Noch ein Satz.')
+    output.write_bytes(b'old audio')
+    cache = SpeechSegmentCache(tmp_path / 'cache', max_bytes=1000)
+    audio = generate_silence_wav(.01)
+    cache.put('Noch ein Satz.', design, audio)
+    assert cache.get('Noch ein Satz.', design) == audio
+    monkeypatch.setattr('lixity.speech_cache.SpeechSegmentCache', lambda _directory: cache)
+    calls = []
+
+    def synthesize(text, profile, **_kwargs):
+        calls.append((text, profile.engine))
+        return audio
+
+    monkeypatch.setattr('lixity.speech_qwen.synthesize_qwen', synthesize)
+    with pytest.raises(ValueError, match=r'multiple.*model'):
+        render_speech_audio(source, output, profile=preset, plan=plan, cache_dir=cache.directory)
+    assert cache.get('Noch ein Satz.', design) is None
+    assert calls == [('Ein Satz.', 'qwen3')]
+    assert output.read_bytes() == b'old audio'
+
+
 def test_all_cached_mixed_models_do_not_need_a_worker(tmp_path, monkeypatch):
     preset, design, plan = _plan()
     source, output, cache = tmp_path / 'text.md', tmp_path / 'audio.wav', tmp_path / 'cache'

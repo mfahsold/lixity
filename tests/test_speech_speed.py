@@ -159,6 +159,36 @@ def test_tempo_filter_failure_keeps_existing_output(tmp_path, monkeypatch):
     assert output.read_bytes() == b"prior"
 
 
+def test_missing_tempo_output_cannot_reuse_previous_segment(tmp_path, monkeypatch):
+    from pathlib import Path
+    from subprocess import CompletedProcess
+
+    from lixity.speech import generate_silence_wav
+
+    source = tmp_path / "source.md"
+    source.write_text("Two synthetic passages.")
+    output = tmp_path / "out.wav"
+    output.write_bytes(b"prior")
+    profile = AudioProfile(speed=1.2)
+    plan = [SpeechSegment("First.", profile), SpeechSegment("Second.", profile)]
+    monkeypatch.setattr("lixity.speech.shutil.which", lambda _name: "/synthetic/ffmpeg")
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", lambda *_args, **_kwargs: generate_silence_wav(0.5))
+    conversions = []
+
+    def adjust(command):
+        conversions.append(command)
+        if len(conversions) == 1:
+            Path(command[-1]).write_bytes(generate_silence_wav(0.4))
+        return CompletedProcess(command, 0, b"", b"")
+
+    monkeypatch.setattr("lixity.speech._run_ffmpeg", adjust)
+    with pytest.raises(RuntimeError, match="FFmpeg failed to adjust"):
+        render_speech_audio(source, output, profile=profile, plan=plan)
+    assert len(conversions) == 2
+    assert output.read_bytes() == b"prior"
+    assert not list(tmp_path.glob(".lixity-speech-*"))
+
+
 def test_cli_speed_override_applies_to_directed_profiles_without_saving(tmp_path, capsys):
     from lixity.cli import main
     from lixity.config import prepare_project_settings

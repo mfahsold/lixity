@@ -9,6 +9,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Bound loudness jumps between generated speech segments with active-window
+  RMS gain correction and −2 dBFS PCM peak headroom while retaining raw cached
+  PCM and logging per-segment level diagnostics.
+- Share preview passage selection and direction validation between the CLI and
+  workspace with O(1) indexed passage lookup, scoping preview checks to the
+  selected passage while keeping full chapter renders subject to all saved
+  directions.
 - Count the download section links on all localized homepages. Keep in-page
   jumps inside public reports, articles and the installation guide out of the
   corresponding website opening events.
@@ -208,6 +215,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Share integer-PCM WAV validation (including partial-frame rejection) across
+  workers, cache, providers and assembly, and isolate FFmpeg tempo conversion
+  to a fresh output file so a previous segment cannot replace a missing one.
+- Reject stale or mismatched draft directions during preview, verify segment
+  cache reads with bounded checksummed I/O, and re-check shared native workers
+  on a mid-render cache miss so eviction preserves existing output.
+- Classify FFmpeg and local ZONOS3 timeouts as `error=timeout` in speech
+  diagnostics and distinguish ZONOS3 worker startup timeouts from per-segment
+  response timeouts.
 - Exclude reserved private directories and credential files from local Pages
   staging, including inside approved public subtrees.
 - Keep the home navigation, language picker and blog index within the page at

@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from lixity.log import get_logger, speech_diagnostic_id, speech_diagnostic_scope
-from lixity.speech import SpeechCancelled
+from lixity.speech import SpeechBackendTimeout, SpeechCancelled
 from lixity.speech_jobs import SpeechJobs
 from lixity.speech_profiles import AudioProfile
 
@@ -83,6 +83,23 @@ def test_cancelled_job_and_error_do_not_log_exception_content(events):
         wait_for(events, "status=cancelled")
     finally:
         release.set()
+        jobs.close()
+
+
+def test_backend_timeout_reports_the_same_category_on_the_native_job(events):
+    def render(_source, _output, **_options):
+        raise SpeechBackendTimeout("Local ZONOS3 synthesis failed: worker startup timed out")
+
+    jobs = SpeechJobs(renderer=render)
+    try:
+        response = jobs.start("context", "Synthetic passage.", AudioProfile(),
+                              {"mode": "preview"}, lambda: True)
+        wait_for(events, "stage=finished")
+        job = jobs.status(response["id"], "context")
+        assert job["state"] == "error"
+        assert "worker startup timed out" in job["message"]
+        assert any("category=timeout" in event and "stage=finished" in event for event in events)
+    finally:
         jobs.close()
 
 

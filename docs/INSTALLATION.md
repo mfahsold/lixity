@@ -705,7 +705,13 @@ In 0.8.0, audio jobs and renders add technical events to the same logger.
 A random diagnostic ID correlates a native job with its render without using the
 job's access identifier. INFO events record queue and render state and segment
 count; DEBUG additionally records each segment's requested model variant and
-preset, cache outcome, elapsed time and bounds on the assembled PCM timeline.
+preset, cache outcome, elapsed time, assembled PCM timeline bounds and, on
+current builds, active-window RMS in dBFS, applied gain in dB and post-gain
+sample peak in dBFS before edge fades
+([assembly level correction](AUDIO.md#cache-tempo-and-saved-settings)).
+FFmpeg conversion deadlines and local ZONOS3 deadlines both record
+`error=timeout`; for ZONOS3, the error message explicitly distinguishes worker
+startup timeout (120 s) from per-segment response timeout (300 s).
 Change indicators show whether the instruction, voice description or reference
 selection differs from the preceding segment without recording their values.
 The client also sends the random render ID as an optional HTTP header; a current

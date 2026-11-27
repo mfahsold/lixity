@@ -23,9 +23,9 @@ import urllib.request
 import wave
 from pathlib import Path
 from string import Template
-from typing import TYPE_CHECKING, Any
+from typing import IO, TYPE_CHECKING, Any
 
-from .audio_audit import _wave_reader_is_integer_pcm
+from .audio_pcm import SPEECH_PCM_FORMAT, read_pcm_wav, wave_reader_is_integer_pcm
 
 if TYPE_CHECKING:
     from .speech_profiles import AudioProfile
@@ -120,10 +120,19 @@ def validate_resolved_endpoint(endpoint: str, *, allow_link_local: bool = False)
             raise ValueError("Speech localhost endpoint must resolve to a loopback address")
 
 
+def _zonos_worker_paths() -> tuple[Path, Path]:
+    return (Path.home() / ".local/share/lixity/runtimes/mlx-audio/bin/python",
+            Path(__file__).with_name("speech_mlx_zonos.py"))
+
+
+def _zonos_worker_available(runtime: Path, worker_script: Path) -> bool:
+    return runtime.is_file() and os.access(runtime, os.X_OK) and worker_script.is_file()
+
+
 def _zonos_runtime_status(profile: AudioProfile | None) -> dict[str, Any]:
     from .speech_profiles import MLX_AUDIO_TTS_MODEL
 
-    runtime = Path.home() / ".local/share/lixity/runtimes/mlx-audio/bin/python"
+    runtime, worker_script = _zonos_worker_paths()
     worker_env = _zonos_worker_env()
     # Use the cache precedence of huggingface_hub inside the isolated worker.
     xdg_cache = worker_env.get("XDG_CACHE_HOME", str(Path.home() / ".cache"))
@@ -133,9 +142,9 @@ def _zonos_runtime_status(profile: AudioProfile | None) -> dict[str, Any]:
     hub_cache = Template(os.path.expanduser(worker_env.get(
         "HF_HUB_CACHE", os.path.join(hf_home, "hub")
     ))).safe_substitute(worker_env)
-    snapshots = Path(hub_cache) / "models--mlx-community--ZONOS3-Mini/snapshots"
-    runtime_available = (runtime.is_file() and os.access(runtime, os.X_OK)
-                         and Path(__file__).with_name("speech_mlx_zonos.py").is_file())
+    model_directory = "models--" + MLX_AUDIO_TTS_MODEL.replace("/", "--")
+    snapshots = Path(hub_cache) / model_directory / "snapshots"
+    runtime_available = _zonos_worker_available(runtime, worker_script)
     model_cached = any(
         snapshot.joinpath("config.json").is_file()
         and (any(snapshot.rglob("*.safetensors")) or any(snapshot.rglob("*.gguf")))
@@ -192,21 +201,21 @@ def _validate_wav_container(data: bytes) -> None:
 
 
 def _normalize_wav(data: bytes) -> bytes:
-    from .speech import _read_pcm, _run_ffmpeg
+    from .speech import _run_ffmpeg
 
     _validate_wav_container(data)
     try:
-        params, _frames = _read_pcm(data)
+        params, _frames = read_pcm_wav(data)
     except ValueError:
         try:
             with wave.open(io.BytesIO(data), "rb") as reader:
-                integer_pcm = _wave_reader_is_integer_pcm(reader)
+                integer_pcm = wave_reader_is_integer_pcm(reader)
         except (wave.Error, EOFError):
             integer_pcm = False
         if integer_pcm:
             raise ValueError("Speech provider returned missing or truncated PCM audio") from None
         params = None  # Non-integer or unsupported WAV formats need the decoder.
-    if params == (1, 2, 24000):
+    if params == SPEECH_PCM_FORMAT:
         return data
     ffmpeg = shutil.which("ffmpeg")
     if ffmpeg is None:
@@ -214,15 +223,16 @@ def _normalize_wav(data: bytes) -> bytes:
     with tempfile.TemporaryDirectory(prefix="lixity-provider-wav-") as directory:
         source, target = Path(directory) / "source.wav", Path(directory) / "normalized.wav"
         source.write_bytes(data)
+        channels, _, rate = SPEECH_PCM_FORMAT
         result = _run_ffmpeg([ffmpeg, "-nostdin", "-y", "-v", "error", "-i", str(source),
-                              "-ac", "1", "-ar", "24000", "-c:a", "pcm_s16le",
+                              "-ac", str(channels), "-ar", str(rate), "-c:a", "pcm_s16le",
                               "-fs", str(MAX_RESPONSE_BYTES + 1), str(target)])
         if result.returncode or not target.is_file():
             raise ValueError("Speech provider WAV could not be decoded")
         if target.stat().st_size > MAX_RESPONSE_BYTES:
             raise ValueError("Normalized provider audio exceeds the byte limit")
         normalized = target.read_bytes()
-        if _read_pcm(normalized)[0] != (1, 2, 24000):
+        if read_pcm_wav(normalized)[0] != SPEECH_PCM_FORMAT:
             raise ValueError("Speech provider WAV could not be normalized")
         return normalized
 
@@ -274,13 +284,13 @@ DEFAULT_ZONOS_STARTUP_TIMEOUT_SECONDS = 120.0
 DEFAULT_ZONOS_REQUEST_TIMEOUT_SECONDS = REQUEST_TIMEOUT_SECONDS
 
 
-def _readline_with_timeout(pipe: Any, size: int, timeout_seconds: float) -> bytes:
+def _read_zonos_reply(pipe: IO[bytes], timeout_seconds: float, *, phase: str) -> bytes:
     """Read one bounded line without blocking the server thread indefinitely."""
-    result: list[Any] = []
+    result: list[bytes | Exception] = []
 
     def _target() -> None:
         try:
-            result.append(pipe.readline(size))
+            result.append(pipe.readline(4096))
         except Exception as exc:  # noqa: BLE001 - transport errors become bounded failures
             result.append(exc)
 
@@ -288,17 +298,15 @@ def _readline_with_timeout(pipe: Any, size: int, timeout_seconds: float) -> byte
     reader.start()
     reader.join(timeout_seconds)
     if reader.is_alive():
-        raise TimeoutError("Local ZONOS3 worker timed out")
+        from .speech import SpeechBackendTimeout
+
+        raise SpeechBackendTimeout(f"Local ZONOS3 synthesis failed: worker {phase} timed out")
     if not result:
         return b""
     item = result[0]
     if isinstance(item, Exception):
         raise item
-    if item is None:
-        return b""
-    if isinstance(item, str):
-        return item.encode("utf-8")
-    return bytes(item)
+    return item
 
 
 class _ZonosWorkerSession:
@@ -380,7 +388,7 @@ class _ZonosWorkerSession:
                     self._runtime_key = key
                     if process.stdout is None:
                         raise RuntimeError("Local ZONOS3 worker failed to start")
-                    banner_raw = _readline_with_timeout(process.stdout, 4096, self._startup_timeout)
+                    banner_raw = _read_zonos_reply(process.stdout, self._startup_timeout, phase="startup")
                     banner = json.loads(banner_raw.decode("utf-8")) if banner_raw else {}
                     if not isinstance(banner, dict) or banner.get("ready") is not True:
                         raise RuntimeError("Local ZONOS3 worker failed to start")
@@ -392,7 +400,7 @@ class _ZonosWorkerSession:
                     process.stdin.flush()
                 except (BrokenPipeError, OSError) as exc:
                     raise RuntimeError("Local ZONOS3 synthesis failed") from exc
-                reply_raw = _readline_with_timeout(process.stdout, 4096, self._request_timeout)
+                reply_raw = _read_zonos_reply(process.stdout, self._request_timeout, phase="response")
                 reply = json.loads(reply_raw.decode("utf-8")) if reply_raw else {}
                 if not isinstance(reply, dict) or reply.get("ok") is not True:
                     raise RuntimeError("Local ZONOS3 synthesis failed")
@@ -422,9 +430,9 @@ def _synthesize_zonos_direct(text: str, profile: AudioProfile,
                              reference: SpeechReference | None) -> bytes:
     from .speech_references import validate_reference
 
-    runtime = Path.home() / ".local/share/lixity/runtimes/mlx-audio/bin/python"
-    if not runtime.is_file():
-        raise FileNotFoundError("The local MLX-Audio runtime is required for ZONOS3")
+    runtime, worker_script = _zonos_worker_paths()
+    if not _zonos_worker_available(runtime, worker_script):
+        raise FileNotFoundError("ZONOS3 synthesis requires an executable local MLX-Audio runtime and worker script")
     if profile.voice == "reference":
         if reference is None or reference.id != profile.reference_id:
             raise ValueError("A verified reference is required for the selected ZONOS3 voice")
@@ -432,7 +440,6 @@ def _synthesize_zonos_direct(text: str, profile: AudioProfile,
     elif reference is not None:
         raise ValueError("A preset ZONOS3 voice cannot use a local reference")
     request_data = external_speech_request(text, profile)
-    worker_script = Path(__file__).with_name("speech_mlx_zonos.py")
     with tempfile.TemporaryDirectory(prefix="lixity-zonos-") as directory:
         os.chmod(directory, 0o700)
         output = Path(directory) / "speech.wav"

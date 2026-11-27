@@ -63,6 +63,25 @@ def test_speech_failure_logs_category_without_exception_text(tmp_path, monkeypat
     assert "event=render_end" in log and "error=runtime" in log
 
 
+def test_ffmpeg_timeout_reports_timeout_without_command_details(tmp_path, monkeypatch, records):
+    source = tmp_path / "source.md"
+    source.write_text("synthetic", encoding="utf-8")
+    profile = AudioProfile(speed=1.2)
+    monkeypatch.setattr(speech.shutil, "which", lambda _name: "/synthetic/ffmpeg")
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", lambda *_a, **_kw: speech.generate_silence_wav(0.5))
+
+    def timeout(_command, **_kwargs):
+        raise speech.subprocess.TimeoutExpired(["PRIVATE-COMMAND-DETAILS"], 1)
+
+    monkeypatch.setattr(speech.subprocess, "run", timeout)
+    with pytest.raises(RuntimeError, match="FFmpeg timed out"):
+        speech.render_speech_audio(source, tmp_path / "out.wav", profile=profile)
+    log = records.getvalue()
+    assert "PRIVATE-COMMAND-DETAILS" not in log
+    for event in ("event=segment_end", "event=render_end"):
+        assert any(event in line and "error=timeout" in line for line in log.splitlines())
+
+
 def test_cancelled_before_planning_is_logged_without_changing_exception(tmp_path, records):
     with pytest.raises(speech.SpeechCancelled):
         speech.render_speech_audio(tmp_path / "secret.md", tmp_path / "secret.wav", cancelled=lambda: True)

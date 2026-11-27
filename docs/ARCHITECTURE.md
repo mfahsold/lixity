@@ -1721,15 +1721,23 @@ new archive schema or database authority is introduced.
 
 ## Project audio direction, timeline export and external audio pipelines
 
+Local voice recording, the Teleprompter and speech-plan export are stable local
+workflows; TTS synthesis adapters (local workers and external OpenAI-compatible
+providers) are optional and still evolving.
+
 ```mermaid
 flowchart LR
     Manuscript[Manuscript structure and scenes] --> Planner[Speech plan compiler]
     Project[Profiles, pronunciations and direction] --> Planner
     Planner --> Export[Timeline JSON and SSML projection]
-    Planner --> Render[Validated synthesis and cache]
-    Render --> Adapter[Selected isolated worker or explicit provider]
-    Adapter --> Render
-    Render --> Output[PCM assembly and atomic WAV or MP3 output]
+    Planner --> Render[Validated segment request]
+    Render -->|Fresh or cache miss| Adapter[Selected isolated worker or explicit provider]
+    Render -->|Cache hit| Cache[Verified raw PCM segment cache]
+    Adapter --> PCM[Validated 24 kHz PCM segment]
+    PCM -.->|Cache enabled| Cache
+    PCM --> Assembly[Tempo, level correction, fades and pauses]
+    Cache --> Assembly
+    Assembly --> Output[Atomic WAV or MP3 output]
     Audio[Imported audio and optional timed transcript] --> Audit[Local signal and plan comparison]
     Export --> Audit
 ```
@@ -1744,58 +1752,71 @@ to settings, Studio and `speech-direction.js`. The server validates the actual
 plan before a job can start.
 
 `speech_direction.py` projects manuscript structure into spoken text, applies
-saved profiles and exact passage ranges, and compiles a shared speech plan. A
-structural pause is a Lixity control. An instruction to a model is an adapter
-capability whose effect needs listening review. `speech_export.py` exchanges the
-compiled intent as timeline JSON or SSML with explicit warnings. The exporter
-retains original text, substitution provenance and controls that cannot be
-synthesized by the chosen profile. It reads no voice-reference bytes or
-credentials and probes no provider. Planned silence is known. Speech duration
-and timing remain unknown until measured. Plans and timelines retain their
-`/1` representations where applicable and use `/2` for extended phonetic or
-structured controls, as specified in the [automation contract](AGENTS.md#external-audio-exchange-and-inspection).
+saved profiles and exact passage ranges, and compiles one shared speech plan
+used by both the CLI and browser (`build_speech_plan`). A structural pause is a
+Lixity control; an instruction to a model is an adapter capability whose effect
+needs listening review. Preview planning selects the target anchored passage
+(up to 6,000 characters) before validating only the directions overlapping it,
+and rejects any draft direction whose anchor does not match that passage or
+whose manuscript digest (`source_sha256`) is stale. Passage lookup uses an O(1)
+anchor-digest index (`_passage_texts`) for range validation and direction
+updates. `speech_export.py` exchanges the compiled intent as timeline JSON or
+SSML with explicit warnings, retaining original text, substitution provenance
+and unsupported controls without reading voice-reference bytes, credentials or
+probing any provider. Planned silence is known; speech duration and timing
+remain unknown until measured. Plans and timelines retain `/1` where applicable
+and use `/2` for extended phonetic or structured controls
+([automation contract](AGENTS.md#external-audio-exchange-and-inspection)).
 
-The local author voice path uses a saved project reference with ZONOS3. The
-optional IMS-Toucan path supports German and English reference voices with IPA
-and structured prosody. An explicitly configured OpenAI-compatible provider
+The local author-voice synthesis path uses a saved project reference with
+ZONOS3; optional IMS-Toucan supports German and English reference voices with
+IPA and structured prosody; an explicitly configured OpenAI-compatible provider
 offers text delivery instructions when its profile declares support. These
-paths have distinct controls and readiness checks. The installed capabilities
-also describe other native profiles and identify entries that cannot be
-created. See the [audio workflow](AUDIO.md) and
+paths have distinct controls and readiness checks. See the
+[audio workflow](AUDIO.md) and
 [native engine registry](#native-engine-registry-and-phonetic-author-voices).
 
 `speech_providers.py` owns the explicit provider binding and the fixed local
 ZONOS3 adapter. The generic binding accepts HTTPS or explicitly configured
-local/private-IP HTTP. It rejects credentials in URLs, queries, fragments and
+local/private-IP HTTP, rejecting credentials in URLs, queries, fragments and
 redirects. Rendering alone sends text, reads any configured credential and
-validates the bounded WAV response. Provider status stays unknown before
+validates the bounded WAV response; provider status stays unknown before
 rendering. The fixed ZONOS3 adapter validates the saved reference identity,
-passes a temporary WAV to the isolated MLX-Audio runtime and applies speed as
-a model condition. Its status check observes runtime and model-cache presence
-without loading weights. Only the fixed local binding accepts a project
-reference. The MLX HTTP service remains the explicit Parakeet STT transport.
+passes a temporary WAV to the isolated MLX-Audio runtime and applies speed as a
+model condition. Its status check and launcher share the same runtime and
+worker paths, and status inspects the model cache without loading weights.
+ZONOS3 enforces separate worker startup (120 s) and per-segment response
+(300 s) deadlines via `SpeechBackendTimeout`, distinguishing both phases in
+diagnostics. Only the fixed local binding accepts a project reference; the MLX
+HTTP service remains the explicit Parakeet STT transport.
 
-`speech.py` owns adapter dispatch, bounded PCM assembly and atomic WAV/MP3
-publication. All segments enter assembly as 24 kHz mono PCM16. When needed,
-FFmpeg normalizes a provider response and applies per-segment tempo before
-explicit silence. Fixed ZONOS3 uses its model rate alone. Unreleased assembly
-uses bounded 5 ms edge fades at internal boundaries, without overlap or changes
-to frame counts. Explicit pauses stay exact at the PCM sample rate. The
-renderer validates format and required FFmpeg support before publication.
-Conversion failures, cancellation and stale context preserve the existing
-output. The direct-child FFmpeg deadline does not interrupt an in-process
-model call.
+`audio_pcm.py` owns the single integer-PCM WAV reader (`read_pcm_wav`) and
+target format (`SPEECH_PCM_FORMAT`, 24 kHz mono 16-bit PCM) enforced uniformly
+at worker, provider, cache and assembly boundaries, including rejecting partial
+trailing frames. `speech.py` owns adapter dispatch, bounded PCM assembly and
+atomic WAV/MP3 publication. When needed, FFmpeg normalizes provider audio to
+that format and applies per-segment `atempo` into a fresh output file so an
+earlier conversion can never replace a missing segment (ZONOS3 uses its model
+rate alone). Independently synthesized segments can vary in level; unreleased
+`speech_leveling.py` applies
+[bounded active-window RMS gain](AUDIO.md#cache-tempo-and-saved-settings) with
+a −2 dBFS sample-peak ceiling after tempo and before 5 ms edge fades, preserving
+frame counts and exact pauses. Conversion failures, `SpeechBackendTimeout`
+deadlines, cancellation and stale context preserve any existing output. The
+direct-child FFmpeg deadline does not interrupt an in-process model call.
 
-`speech_cache.py` reuses verified raw PCM in a private project-keyed cache
-outside the source folder, including for read-only projects. CLI and Studio
-chapter renders share it. Previews are fresh. Cache identity includes effective
-text and synthesis controls, model/profile reference identity when applicable
-and the external binding identity. The cache stores unmodified synthesis, so
-tempo, fades and pauses are applied for the current assembly. Corruption or
-eviction causes recomputation. Replays can work without a running worker.
-A cached segment does not establish that local checkpoint bytes, generation
-recipes or devices are equivalent. Clear the cache or use a fresh render when
-the underlying assets change.
+`speech_cache.py` reuses verified raw PCM (before tempo, leveling, fades and
+pauses) in a private project-keyed cache outside the source folder, including
+for read-only projects. CLI and Studio chapter renders share it; previews are
+always fresh. Cache identity covers effective text, synthesis controls,
+model/profile reference identity when applicable and external binding identity.
+Reads use bounded regular-file I/O and verify schema version, `request_sha256`,
+`byte_length`, `audio_sha256` and PCM format before reuse. Preflight checks
+shared native worker endpoints without holding cached audio in memory, and a
+cache miss during rendering re-checks that endpoint so mid-render eviction
+cannot mix incompatible models. Replays can succeed without a running worker,
+but cached segments do not fingerprint local checkpoint bytes or devices; clear
+the cache or request fresh audio when underlying assets change.
 
 Native `SpeechJobs` own temporary immutable source snapshots and WAV outputs,
 one active render plus at most three FIFO waiters per app, and bounded

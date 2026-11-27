@@ -1,7 +1,6 @@
 # Audio direction and listening
 
-Short entry; workflows and prerequisites live in the [audio manual](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md). Recording, local synthesis and explicitly
-configured remote rendering have different requirements and data boundaries.
+Short entry; workflows and prerequisites live in the [audio manual](https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md). Local voice recording and the Teleprompter work reliably today; optional TTS synthesis is still evolving and has separate setup and data boundaries.
 
 | I want to… | Guide |
 | --- | --- |

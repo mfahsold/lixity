@@ -16,7 +16,8 @@ from types import SimpleNamespace
 import pytest
 from pydantic import ValidationError
 
-from lixity.speech import _read_pcm, generate_silence_wav, render_speech_audio
+from lixity.audio_pcm import read_pcm_wav
+from lixity.speech import generate_silence_wav, render_speech_audio
 from lixity.speech_cache import SpeechSegmentCache
 from lixity.speech_direction import SpeechSegment
 from lixity.speech_profiles import (
@@ -134,13 +135,29 @@ def test_local_zonos_status_checks_runtime_and_model_without_paths(tmp_path, mon
     assert external_provider_status(None, engine='mlx-audio')['state'] == 'unavailable'
 
 
+def test_local_zonos_status_and_synthesis_require_the_worker_script(tmp_path, monkeypatch):
+    from lixity import speech_providers
+
+    runtime = tmp_path / 'python'
+    runtime.touch(mode=0o700)
+    missing_worker = tmp_path / 'worker.py'
+    monkeypatch.setattr(speech_providers, '_zonos_worker_paths', lambda: (runtime, missing_worker))
+    profile = AudioProfile(engine='mlx-audio', language='de')
+
+    status = speech_providers.external_provider_status(profile)
+    assert status['state'] == 'unavailable'
+    assert status['runtime_available'] is False
+    with pytest.raises(FileNotFoundError, match='worker script'):
+        speech_providers.synthesize_external('Hallo.', profile)
+
+
 def test_standard_request_accepts_provider_wav_without_native_headers(monkeypatch):
     from lixity.speech_providers import synthesize_external
     monkeypatch.setenv('SYNTHETIC_SPEECH_KEY', 'synthetic-secret')
     with provider() as (url, records):
         audio = synthesize_external('Synthetic text.', external(base_url=url,
             api_key_env='SYNTHETIC_SPEECH_KEY', supports_instructions=True, instructions='Calm'))
-    assert _read_pcm(audio)[0] == (1, 2, 24000)
+    assert read_pcm_wav(audio)[0] == (1, 2, 24000)
     path, headers, payload = records[0]
     assert path == '/v1/audio/speech'
     assert headers['Authorization'] == 'Bearer synthetic-secret'
@@ -175,7 +192,7 @@ def test_mlx_audio_render_dispatches_through_the_shared_pipeline(tmp_path):
         render_speech_audio(source, output, profile=selected)
     assert output.is_file()
     assert records[0][2]['lang_code'] == 'de'
-    assert _read_pcm(output.read_bytes())[0] == (1, 2, 24000)
+    assert read_pcm_wav(output.read_bytes())[0] == (1, 2, 24000)
 
 
 def test_local_zonos_dispatches_reference_through_private_worker(monkeypatch):
@@ -194,7 +211,7 @@ def test_local_zonos_dispatches_reference_through_private_worker(monkeypatch):
     monkeypatch.setattr('lixity.speech_providers._synthesize_zonos_direct', synthesize)
     audio = synthesize_external('Synthetic text.', selected, reference=reference)
     assert observed == [('Synthetic text.', selected, reference)]
-    assert _read_pcm(audio)[0] == (1, 2, 24000)
+    assert read_pcm_wav(audio)[0] == (1, 2, 24000)
 
 
 def test_render_dispatches_multiple_external_models_and_reuses_distinct_cache(tmp_path):
@@ -207,7 +224,7 @@ def test_render_dispatches_multiple_external_models_and_reuses_distinct_cache(tm
         for _ in range(2):
             render_speech_audio(source, output, profile=first, plan=plan, cache_dir=tmp_path/'cache')
         assert [row[2]['model'] for row in records] == ['synthetic-model', 'second-model']
-    assert len(_read_pcm(output.read_bytes())[1]) == 960
+    assert len(read_pcm_wav(output.read_bytes())[1]) == 960
 
 
 def test_cache_separates_endpoint_model_and_provider_identity(tmp_path):
@@ -275,7 +292,7 @@ def test_provider_pcm_is_normalized_with_ffmpeg_or_fails_explicitly(monkeypatch)
     body = generate_silence_wav(.05, sample_rate=44100, channels=2)
     with provider(body=body) as (url, _records):
         if shutil.which('ffmpeg'):
-            assert _read_pcm(synthesize_external('Synthetic.', external(base_url=url)))[0] == (1, 2, 24000)
+            assert read_pcm_wav(synthesize_external('Synthetic.', external(base_url=url)))[0] == (1, 2, 24000)
         monkeypatch.setattr('lixity.speech_providers.shutil.which', lambda _: None)
         with pytest.raises(FileNotFoundError, match='FFmpeg'):
             synthesize_external('Synthetic.', external(base_url=url))
@@ -313,7 +330,7 @@ def test_complete_float_wav_retains_all_frames_when_normalized(extended):
     from lixity.speech_providers import _normalize_wav
     if not shutil.which('ffmpeg'):
         pytest.skip('FFmpeg is required to decode float WAV')
-    params, frames = _read_pcm(_normalize_wav(float_wav(extended=extended)))
+    params, frames = read_pcm_wav(_normalize_wav(float_wav(extended=extended)))
     assert params == (1, 2, 24000)
     assert frames == struct.pack('<h', 8192) * 2400
 
@@ -327,9 +344,22 @@ def test_complete_pcm_formats_include_odd_unpadded_terminal_data(sample_width):
     with wave.open(output, 'wb') as writer:
         writer.setparams((1, sample_width, 24000, 0, 'NONE', 'not compressed'))
         writer.writeframes(bytes(2401 * sample_width))
-    params, frames = _read_pcm(_normalize_wav(output.getvalue()))
+    params, frames = read_pcm_wav(_normalize_wav(output.getvalue()))
     assert params == (1, 2, 24000)
     assert len(frames) == 2401 * 2
+
+
+def test_incomplete_final_pcm_frame_is_rejected_before_conversion(monkeypatch):
+    from lixity.speech_providers import _normalize_wav
+
+    output = io.BytesIO()
+    with wave.open(output, 'wb') as writer:
+        writer.setparams((1, 2, 24000, 0, 'NONE', 'not compressed'))
+        writer.writeframes(bytes(5))
+    monkeypatch.setattr('lixity.speech._run_ffmpeg',
+                        lambda *_args, **_kwargs: pytest.fail('Partial PCM frame reached the decoder'))
+    with pytest.raises(ValueError, match='truncated PCM audio'):
+        _normalize_wav(output.getvalue())
 
 
 def test_plan_controls_are_checked_before_transmitting_any_segment(tmp_path):
@@ -613,31 +643,37 @@ def test_zonos_worker_drain_consumes_remainder_until_newline(monkeypatch):
     assert len(seen) == 2
 
 
-def test_zonos_session_times_out_on_hung_worker(tmp_path):
+@pytest.mark.parametrize('phase', ['startup', 'response'])
+def test_zonos_session_times_out_on_hung_worker(tmp_path, phase):
     import sys
     from pathlib import Path
 
+    from lixity.speech import SpeechBackendTimeout, _speech_error_kind
     from lixity.speech_providers import _ZonosWorkerSession
 
     worker = tmp_path / 'hung_worker.py'
-    worker.write_text(
-        "import json, sys, time\n"
+    banner = (
         "sys.stdout.write(json.dumps({'ready': True, 'model': 'mlx-community/ZONOS3-Mini'}) + '\\n')\n"
         "sys.stdout.flush()\n"
-        "time.sleep(30)\n",
+    )
+    worker.write_text(
+        "import json, sys, time\n" + (banner if phase == 'response' else "") + "time.sleep(30)\n",
         encoding='utf-8',
     )
     session = _ZonosWorkerSession(
-        idle_timeout_seconds=60.0, startup_timeout_seconds=5.0, request_timeout_seconds=0.2,
+        idle_timeout_seconds=60.0,
+        startup_timeout_seconds=0.2 if phase == 'startup' else 5.0,
+        request_timeout_seconds=0.2,
     )
     try:
         out = tmp_path / 'out.wav'
-        with pytest.raises(RuntimeError, match='synthesis failed'):
+        with pytest.raises(SpeechBackendTimeout, match=f'worker {phase} timed out') as caught:
             session.synthesize(
                 Path(sys.executable),
                 worker,
                 {'model': 'mlx-community/ZONOS3-Mini', 'input': 'Hallo.', 'output_path': str(out)},
             )
+        assert _speech_error_kind(caught.value) == 'timeout'
         assert session._process is None
     finally:
         session.close()

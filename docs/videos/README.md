@@ -78,8 +78,8 @@ contains only the approved fictional project before committing it.
 ## Homepage product tour
 
 **Why is this sentence marked?** follows one revision in the fictional
-Warehouse 4 manuscript. The 65-second tour starts in the running workspace and
-leads to the exported reading copy.
+Warehouse 4 manuscript. The 74-second tour starts in the running workspace and
+leads through the teleprompter recording flow to the exported reading copy.
 
 | Time | Story and evidence |
 | --- | --- |
@@ -88,9 +88,10 @@ leads to the exported reading copy.
 | 10–22 s | Follow the research link from the next paragraph to the saved record. |
 | 22–35 s | Type the shorter version and compare the 31-word sentence with the 12-word draft. |
 | 35–43 s | Apply the draft, save it explicitly and return to the revised text. |
-| 43–54 s | Choose the scope of the reading website and check the export. |
-| 54–61 s | Open the exported reading copy and check the sentence the reader receives. |
-| 61–65 s | Invite viewers to check the same passage in the read-only demo. |
+| 43–52 s | Open the revised passage in the teleprompter and record a local voice take. |
+| 52–63 s | Choose the scope of the reading website and check the export. |
+| 63–70 s | Open the exported reading copy and check the sentence the reader receives. |
+| 70–74 s | Invite viewers to check the same passage in the read-only demo. |
 
 The recorder uses one disposable copy of the English project. It verifies the
 counted words, the original text during comparison and the revised sentence
@@ -149,12 +150,21 @@ separate checkouts because each checkout shares its recording and output paths.
 
 ```sh
 .venv/bin/python scripts/make_screenshots.py --video --only product-tour
+.venv/bin/python scripts/make_videos.py --inspect-cuts
 .venv/bin/python scripts/make_videos.py --only product-tour
 make docs-sync
 make video-review
 make docs-check
 PYTHON_BIN="$PWD/.venv/bin/python" node tests/browser/home-tour.cjs --review-frames
 ```
+
+Use `--variant landscape`, `--variant portrait`, or `--variant social-16x9`
+with `scripts/make_videos.py` to rebuild or `--inspect-cuts` a single tour
+format. Deterministic FilmCraft project files (`warehouse-4-*.fcproj`),
+marker CSVs (`warehouse-4-*-markers.csv`), and receipts (`receipt-*.json`)
+live under `.artifacts/filmcraft/warehouse-4-tour/`; stale lock files and
+superseded receipts are pruned automatically, and `--no-keep-projects` removes
+the `.fcproj` and `*-cuts/` scratch files after encoding.
 
 ```mermaid
 flowchart LR
@@ -182,11 +192,11 @@ the build.
 
 Both website landscape codecs share the 1440×900 sequence. The website and
 social portrait MP4s share the 1080×1920 sequence. The horizontal social frame
-is 1600×900. Every video has 1,625 frames at 25 fps, square pixels and one
+is 1600×900. Every video has 1,850 frames at 25 fps, square pixels and one
 picture stream. The tour encodes retain the capture's sRGB transfer
 with explicit limited-range BT.709 video metadata. The file budget is 4 MB,
 with 3.5 MB for horizontal social.
-The landscape WebP and 540×960 portrait posters use the opening scene at
+The landscape WebP and 1080×1920 portrait posters use the opening scene at
 two seconds. `make docs-sync` fingerprints the player sources, posters and
 download links while preserving the base filenames.
 

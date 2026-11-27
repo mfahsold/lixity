@@ -23,10 +23,24 @@ from pathlib import Path
 
 if __package__:
     from .build_evidence import utc_now, write_build_receipt
-    from .product_tour_edit import ICON, Edit, compose
+    from .product_tour_edit import (
+        ICON,
+        Edit,
+        compose,
+        inspect_cut_plan,
+        prepare_project_path,
+        prune_stale_tour_artifacts,
+    )
 else:
     from build_evidence import utc_now, write_build_receipt
-    from product_tour_edit import ICON, Edit, compose
+    from product_tour_edit import (
+        ICON,
+        Edit,
+        compose,
+        inspect_cut_plan,
+        prepare_project_path,
+        prune_stale_tour_artifacts,
+    )
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 RAW_DIR = BASE_DIR / ".artifacts" / "screenshots" / "videos"
@@ -40,10 +54,27 @@ SOCIAL_CLIPS = (
     (LANDSCAPE_SOCIAL, 1600, 900, 3_500_000),
     (PORTRAIT_SOCIAL, 1080, 1920, 4_000_000),
 )
+TOUR_VARIANTS = ("landscape", "portrait", "social-16x9")
+CANONICAL_TOUR_MARKERS = {
+    "warehouse-4-1440x900-markers.csv",
+    "warehouse-4-1080x1920-markers.csv",
+    "warehouse-4-1600x900-markers.csv",
+}
+CANONICAL_TOUR_RECEIPTS = {
+    "receipt-product-tour.json",
+    "receipt-landscape.json",
+    "receipt-portrait.json",
+    "receipt-social.json",
+    "receipt-social-16x9.json",
+}
 TOUR_VIDEO_LIMITS = {name: limit for name, _, _, limit in SOCIAL_CLIPS}
 DEFAULT_TOUR_VIDEO_LIMIT = 4_000_000
 TOUR_VIDEO_FILTER = (
     "scale=in_range=pc:out_color_matrix=bt709:out_range=tv,format=yuv420p,"
+    "setparams=range=tv:colorspace=bt709:color_primaries=bt709:color_trc=iec61966-2-1,setsar=1"
+)
+GUIDE_VIDEO_FILTER = (
+    "scale='min(iw,1920)':-2:flags=lanczos:out_color_matrix=bt709:out_range=tv,format=yuv420p,"
     "setparams=range=tv:colorspace=bt709:color_primaries=bt709:color_trc=iec61966-2-1,setsar=1"
 )
 
@@ -94,10 +125,10 @@ def convert(name: str, poster_at: str, max_mp4: int, max_gif: int) -> None:
     with tempfile.TemporaryDirectory(prefix=f".{name}-", dir=OUT_DIR) as pending:
         staging = Path(pending)
         mp4, gif, poster = (staging / f"{name}.{extension}" for extension in ("mp4", "gif", "png"))
-        run([*command, "-vf", trim, "-an", "-c:v", "libx264", "-preset", "slow", "-crf", "23",
+        run([*command, "-vf", f"{trim},{GUIDE_VIDEO_FILTER}", "-an", "-c:v", "libx264", "-preset", "slow", "-crf", "19",
              "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(mp4)])
         run([*command, "-an", "-vf",
-             f"{trim},fps=5,scale=800:-1:flags=lanczos,split[s0][s1];"
+             f"{trim},fps=10,scale=800:-1:flags=lanczos,split[s0][s1];"
              "[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer", "-loop", "0", str(gif)])
         run([*command, "-vf", f"trim=start_frame={poster_frame}", "-frames:v", "1", "-update", "1", str(poster)])
         for path, limit in ((mp4, max_mp4), (gif, max_gif)):
@@ -202,9 +233,11 @@ def _tour_recordings(plan: dict) -> tuple[dict, list[tuple[dict, Path, Path]]]:
         start = segment["startFrame"]
         frames = scene["record_duration"] * plan["fps"]
         if (not isinstance(start, int) or start < 0 or segment["frames"] != frames or
-                segment.get("theme") != scene["theme"] or (video["width"], video["height"]) != (1440, 900) or
+                segment.get("theme") != scene["theme"] or
+                (video["width"], video["height"]) not in {(1440, 900), (2880, 1800)} or
                 Fraction(video["avg_frame_rate"]) != plan["fps"]):
             raise SystemExit(f"{filename} has an invalid frame anchor, theme, geometry, count or fps")
+        segment["sourceSize"] = (video["width"], video["height"])
         if int(video["nb_read_frames"]) < start + frames:
             raise SystemExit(f"{filename} needs {start + frames} frames including its anchor; "
                              f"only {video['nb_read_frames']} were recorded")
@@ -217,9 +250,9 @@ def _tour_recordings(plan: dict) -> tuple[dict, list[tuple[dict, Path, Path]]]:
 
 def _webm_codec(encoders: str) -> list[str]:
     if "libsvtav1" in encoders:
-        return ["-c:v", "libsvtav1", "-preset", "9", "-crf", "36"]
+        return ["-c:v", "libsvtav1", "-preset", "6", "-crf", "28"]
     if "libaom-av1" in encoders:
-        return ["-c:v", "libaom-av1", "-cpu-used", "7", "-crf", "36", "-b:v", "0", "-row-mt", "1"]
+        return ["-c:v", "libaom-av1", "-cpu-used", "6", "-crf", "28", "-b:v", "0", "-row-mt", "1"]
     raise SystemExit("FFmpeg needs an AV1 encoder (libsvtav1 or libaom-av1) for the homepage WebM.")
 
 
@@ -231,17 +264,59 @@ def _tour_tool_versions(tools: dict[str, tuple[str, str]]) -> dict[str, str]:
     return versions
 
 
-def convert_product_tour(selection: str | None = None) -> None:
+def _print_cut_plan(plan: dict, recordings: list, layouts: list[tuple[int, int, tuple]]) -> None:
+    fps = plan["fps"]
+    for width, height, _ in layouts:
+        rows = inspect_cut_plan(plan, recordings, width=width, height=height, fps=fps)
+        print(f"=== Cut plan: warehouse-4-{width}x{height} ({len(rows)} cuts, {plan['duration']}s @ {fps}fps) ===")
+        for row in rows:
+            cw, ch = row["css_crop"]
+            flags = []
+            if row["inset"]:
+                flags.append("inset")
+            if row["comparison"]:
+                flags.append("compare")
+            flag_text = f" [{','.join(flags)}]" if flags else ""
+            print(
+                f"  {row['shot']:8s}[{row['cut']}] {row['start_s']:5.2f}-{row['end_s']:5.2f}s "
+                f"({row['frames']:3d}f, src={row['source_frame']:4d}, hold={row['hold_frames']}f) "
+                f"crop={cw:4d}x{ch:<3d} css={row['css_scale']:.2f}x phys={row['physical_scale']:.2f}x{flag_text}"
+            )
+
+
+def convert_product_tour(
+    selection: str | None = None,
+    *,
+    variant: str | None = None,
+    inspect_cuts: bool = False,
+    keep_projects: bool = True,
+) -> None:
     """Encode the editable FilmCraft cut once per destination codec."""
     plan = _tour_plan()
     recording, recordings = _tour_recordings(plan)
+    effective_selection = variant or selection or "product-tour"
+    want_landscape = (variant == "landscape") if variant else selection in (None, "product-tour")
+    want_portrait = (variant == "portrait") if variant else True
+    want_social_16x9 = (variant == "social-16x9") if variant else selection in (None, "product-tour", "social")
+
+    if inspect_cuts:
+        preview_layouts: list[tuple[int, int, tuple]] = []
+        if want_landscape:
+            preview_layouts.append((1440, 900, ()))
+        if want_portrait:
+            preview_layouts.append((1080, 1920, ()))
+        if want_social_16x9:
+            preview_layouts.append((1600, 900, ()))
+        _print_cut_plan(plan, recordings, preview_layouts)
+        return
+
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         raise SystemExit("ffmpeg is required to publish walkthrough videos.")
     cwebp = shutil.which("cwebp")
-    h264 = ["-c:v", "libx264", "-preset", "slow", "-crf", "25", "-movflags", "+faststart"]
+    h264 = ["-c:v", "libx264", "-preset", "slow", "-crf", "19", "-movflags", "+faststart"]
     layouts = []
-    if selection in (None, "product-tour"):
+    if want_landscape:
         encoders = subprocess.check_output([ffmpeg, "-hide_banner", "-encoders"], text=True)  # noqa: S603
         if cwebp is None and "libwebp" not in encoders:
             raise SystemExit("The landscape poster needs cwebp or FFmpeg with libwebp.")
@@ -249,9 +324,9 @@ def convert_product_tour(selection: str | None = None) -> None:
             ("product-tour.mp4", h264),
             ("product-tour.webm", _webm_codec(encoders)),
         )))
-    # All tour modes refresh the same portrait master, poster and social alias.
-    layouts.append((1080, 1920, ((PORTRAIT_MASTER, h264),)))
-    if selection in (None, "product-tour", "social"):
+    if want_portrait:
+        layouts.append((1080, 1920, ((PORTRAIT_MASTER, h264),)))
+    if want_social_16x9:
         layouts.append((1600, 900, ((LANDSCAPE_SOCIAL, h264),)))
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -262,9 +337,12 @@ def convert_product_tour(selection: str | None = None) -> None:
     filmcraft = shutil.which("filmcraft-cli")
     ffprobe = shutil.which("ffprobe")
     if filmcraft is None or ffprobe is None:
-        raise SystemExit("FilmCraft CLI and ffprobe are required to build the product tour.")
+        raise SystemExit(
+            "FilmCraft CLI (filmcraft-cli) and ffprobe are required to build the product tour. "
+            "Check PATH and see docs/videos/README.md."
+        )
     tools = {"filmcraft": (filmcraft, "--version"), "ffmpeg": (ffmpeg, "-version"), "ffprobe": (ffprobe, "-version")}
-    if cwebp and selection in (None, "product-tour"):
+    if cwebp and want_landscape:
         tools["cwebp"] = (cwebp, "-version")
     versions = _tour_tool_versions(tools)
     script = Path(__file__).resolve()
@@ -275,11 +353,12 @@ def convert_product_tour(selection: str | None = None) -> None:
     )
     input_hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in inputs}
 
-    def encode(width: int, height: int, exports: tuple, staging: Path) -> tuple[dict[str, list[int]], Path]:
+    def encode(width: int, height: int, exports: tuple, staging: Path) -> tuple[dict[str, list[int]], Path, Path]:
         stem = f"warehouse-4-{width}x{height}"
-        edit = Edit(review / f"{stem}.fcproj", width, height, fps)
+        project = prepare_project_path(review, width, height)
+        edit = Edit(project, width, height, fps)
         compose(edit, BASE_DIR, plan, recordings)
-        markers = review / f"{stem}-markers-{staging.name.removeprefix('.tour-')}.csv"
+        markers = review / f"{stem}-markers.csv"
         edit.export_markers(markers, plan)
         with tempfile.TemporaryDirectory(prefix="frames-", dir=review) as temp:
             sequence = edit.render(Path(temp), duration=plan["duration"])
@@ -300,29 +379,33 @@ def convert_product_tour(selection: str | None = None) -> None:
                          "-frames:v", "1", "-c:v", "libwebp", "-quality", "85", str(target)])
             if width == 1080:
                 run([ffmpeg, "-y", "-loglevel", "error", "-i", str(poster),
-                     "-frames:v", "1", "-vf", "scale=540:960:flags=lanczos", str(staging / PORTRAIT_POSTER)])
-        return {name: edit.review_frames for name, _ in exports}, markers
+                     "-frames:v", "1", str(staging / PORTRAIT_POSTER)])
+        return {name: edit.review_frames for name, _ in exports}, markers, project
 
     with tempfile.TemporaryDirectory(prefix=".tour-", dir=OUT_DIR) as pending:
         staging = Path(pending)
         review_frames = {}
         marker_reports = {}
+        built_projects: list[Path] = []
         with ThreadPoolExecutor(max_workers=min(3, len(layouts))) as pool:
             futures = [pool.submit(encode, width, height, exports, staging) for width, height, exports in layouts]
             for future in futures:
-                samples, markers = future.result()
+                samples, markers, project = future.result()
                 review_frames.update(samples)
                 marker_reports[markers.name] = hashlib.sha256(markers.read_bytes()).hexdigest()
-        shutil.copyfile(staging / PORTRAIT_MASTER, staging / PORTRAIT_SOCIAL)
-        review_frames[PORTRAIT_SOCIAL] = review_frames[PORTRAIT_MASTER]
+                built_projects.append(project)
+        if want_portrait:
+            shutil.copyfile(staging / PORTRAIT_MASTER, staging / PORTRAIT_SOCIAL)
+            review_frames[PORTRAIT_SOCIAL] = review_frames[PORTRAIT_MASTER]
         targets = sorted(staging.iterdir())
         outputs = {target.name: hashlib.sha256(target.read_bytes()).hexdigest() for target in targets}
         for target in targets:
             target.replace(OUT_DIR / target.name)
-        write_build_receipt(review / f"receipt-{staging.name.removeprefix('.tour-')}.json", {
+        receipt_name = f"receipt-{effective_selection}.json"
+        write_build_receipt(review / receipt_name, {
             "schema_version": "lixity-product-tour-build/1",
             "built_at": utc_now(),
-            "selection": selection or "product-tour",
+            "selection": effective_selection,
             "tools": versions,
             "inputs_sha256": input_hashes,
             "recording_sha256": {
@@ -335,25 +418,61 @@ def convert_product_tour(selection: str | None = None) -> None:
             "review_frames": review_frames,
             "filmcraft_marker_reports_sha256": marker_reports,
         })
+        full_tour = effective_selection == "product-tour"
+        prune_stale_tour_artifacts(
+            review,
+            keep_receipts={receipt_name} if full_tour else CANONICAL_TOUR_RECEIPTS,
+            keep_markers=set(marker_reports) if full_tour else CANONICAL_TOUR_MARKERS,
+        )
+        if not keep_projects:
+            for project in built_projects:
+                if project.exists():
+                    project.unlink()
+                cuts_dir = project.with_name(f"{project.stem}-cuts")
+                if cuts_dir.is_dir():
+                    shutil.rmtree(cuts_dir)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--only", choices=["product-tour", "portrait", "social", *(item[0] for item in WALKTHROUGHS)])
+    parser.add_argument(
+        "--variant",
+        choices=TOUR_VARIANTS,
+        help="Build or inspect a single product-tour variant (landscape, portrait, or social-16x9).",
+    )
+    parser.add_argument(
+        "--inspect-cuts",
+        action="store_true",
+        help="Dry-run: print cut timing and crop-scale geometry for the selected product-tour variant(s) without rendering.",
+    )
+    parser.add_argument(
+        "--keep-projects",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Keep editable FilmCraft .fcproj files and *-cuts samples under .artifacts/filmcraft/warehouse-4-tour/ (default: true).",
+    )
     args = parser.parse_args()
+    walkthrough_names = {item[0] for item in WALKTHROUGHS}
+    if (args.variant or args.inspect_cuts) and args.only in walkthrough_names:
+        parser.error("--variant and --inspect-cuts apply only to product-tour builds")
+    if args.inspect_cuts:
+        convert_product_tour(args.only, variant=args.variant, inspect_cuts=True, keep_projects=args.keep_projects)
+        return 0
     jobs = []
-    if args.only in (None, "product-tour", "portrait", "social"):
-        jobs.append((convert_product_tour, (args.only,)))
-    for name, poster_at, max_mp4, max_gif in WALKTHROUGHS:
-        if args.only in (None, name):
-            jobs.append((convert, (name, poster_at, max_mp4, max_gif)))
+    if args.variant or args.only in (None, "product-tour", "portrait", "social"):
+        jobs.append((convert_product_tour, (args.only,), {"variant": args.variant, "keep_projects": args.keep_projects}))
+    if not args.variant:
+        for name, poster_at, max_mp4, max_gif in WALKTHROUGHS:
+            if args.only in (None, name):
+                jobs.append((convert, (name, poster_at, max_mp4, max_gif), {}))
     workers = min(len(jobs), max(1, min(4, os.cpu_count() or 2)))
     if workers <= 1:
-        for fn, fn_args in jobs:
-            fn(*fn_args)
+        for fn, fn_args, fn_kwargs in jobs:
+            fn(*fn_args, **fn_kwargs)
     else:
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = [pool.submit(fn, *fn_args) for fn, fn_args in jobs]
+            futures = [pool.submit(fn, *fn_args, **fn_kwargs) for fn, fn_args, fn_kwargs in jobs]
             for future in futures:
                 future.result()
     return 0

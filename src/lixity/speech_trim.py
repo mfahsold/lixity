@@ -13,7 +13,7 @@ import threading
 import wave
 from pathlib import Path
 
-from .audio_audit import _wave_reader_is_integer_pcm
+from .audio_pcm import wave_reader_is_integer_pcm
 from .io import FileUtils, sanitized_subprocess_env
 from .speech_recording_settings import MAX_REFERENCE_SECONDS, MIN_REFERENCE_SECONDS
 from .speech_worker import REFERENCE_WAV_FORMAT
@@ -45,7 +45,7 @@ def configured_soundcraft() -> Path | None:
 def _pcm_frames(wav: bytes, maximum_frames: int) -> bytes:
     try:
         with wave.open(io.BytesIO(wav), "rb") as reader:
-            if not _wave_reader_is_integer_pcm(reader) or (
+            if not wave_reader_is_integer_pcm(reader) or (
                 reader.getnchannels(), reader.getsampwidth(), reader.getframerate()
             ) != REFERENCE_WAV_FORMAT:
                 raise ValueError("Choose an uncompressed 24 kHz mono 16-bit WAV")

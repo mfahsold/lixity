@@ -3529,20 +3529,30 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/AUDIO.md
 
 # Audio, author voice and passage direction
 
-Use audio to record your own voice, listen to a passage or produce a chapter
-recording. This manual covers the desktop app, local browser app and CLI.
-Read the [workspace manual](WORKSPACE.md) for project work and the
-[CLI reference](USAGE.md) for commands. The [installation manual](INSTALLATION.md#find-your-setup-task)
-covers app and CLI setup.
+Use audio to record your own voice, rehearse with the teleprompter, or test
+optional speech synthesis on a passage or chapter. This manual covers the
+desktop app, local browser app and CLI. Read the [workspace manual](WORKSPACE.md)
+for project work, the [CLI reference](USAGE.md) for commands, and the
+[installation manual](INSTALLATION.md#find-your-setup-task) for app and CLI setup.
+
+> [!NOTE]
+> **Feature maturity:** **Local voice recording and the Teleprompter work
+> reliably today**—including microphone capture, take export/import, reference
+> preparation, and rehearsing aloud with direction cues, phonetics and dossier
+> context. **TTS audio generation is still evolving / experimental**: local
+> speech workers (ZONOS3, IMS-Toucan, Qwen, Coqui/OpenVoice) and external
+> OpenAI-compatible endpoints require optional setup, continue to evolve in
+> continuity and controls, and always require human listening review.
 
 The published v0.9.3 includes recording, passage direction, the teleprompter,
-and the ZONOS3, IMS-Toucan and OpenAI-compatible adapters described below.
-This manual follows the checkout. The updated audio layout, shared IPA and
-alternate-spelling lexicon, upgrade that keeps a profile draft open, and
-expanded audio diagnostics are unreleased. In v0.9.3, use profile spelling
-replacements or the IMS-Toucan profile's IPA dictionary. Audio settings,
-direction, timeline and transcript schemas have independent versions. Check
-your installation with `lixity --version` and the relevant command's `--help`.
+and the ZONOS3, IMS-Toucan and OpenAI-compatible adapters. This manual follows
+the current checkout, where the updated audio layout, shared IPA and
+alternate-spelling lexicon, profile-draft upgrade, assembly level correction,
+shared preview planner, and expanded audio diagnostics are unreleased. In
+v0.9.3, use profile spelling replacements or the IMS-Toucan profile's IPA
+dictionary. Audio settings, direction, timeline and transcript schemas have
+independent versions; check your installation with `lixity --version` and the
+relevant command's `--help`.
 
 | I want to… | Open in the workspace | Commands and details |
 | --- | --- | --- |
@@ -3587,6 +3597,10 @@ synthesizes audio.
   can include it when the manuscript and chapter still match.
 
 ### Choose a synthesis route
+
+TTS generation is optional and still experimental; local voice recording and
+the Teleprompter work without any speech model. When you do want generated
+speech, choose one of these routes:
 
 | What you want to hear | Choose | Controls available in Lixity |
 | --- | --- | --- |
@@ -3723,12 +3737,20 @@ Draft previews leave settings untouched. Interactive synthesis and profile
 settings require a writable workspace.
 
 The preview and chapter controls offer an explicit option to ignore passage
-direction. It is off when the dialog opens. Enabling it omits
-saved passage instructions, voice assignments and range-specific pauses for that
-render; an unsaved direction draft is also omitted from the preview but remains
-in the editor. The selected profile's instructions, pronunciation rules, speed
-and standard pauses still apply. No saved direction is deleted or rewritten.
-For a Base profile, clear any incompatible instructions in the profile as well.
+direction (off by default). Enabling it omits saved passage instructions,
+voice assignments and range-specific pauses for that render, plus any unsaved
+direction draft in the editor, without deleting or rewriting saved directions.
+The selected profile's instructions, pronunciation rules, speed and standard
+pauses still apply; for a Base profile, clear incompatible profile instructions
+separately.
+
+In the current checkout, the CLI and browser share one preview and direction
+planner. A paragraph preview selects the target anchored passage first (up to
+6,000 characters) and validates only the directions overlapping that passage.
+A draft direction must match that passage's exact anchor and current manuscript
+text; if the draft refers to another passage or an earlier revision, reselect
+the intended paragraph before auditioning it. Full chapter renders still
+validate all included directions.
 
 ```bash
 lixity read-aloud --project ./novel --profile narrator -o reading-copy.wav
@@ -3760,63 +3782,80 @@ their registered local target. An external profile uses its own validated URL.
 
 ### Cache, tempo and saved settings
 
-The browser starts a background render and reports completed segments without
-holding the initial request open. Cancellation waits for an in-flight synthesis
-segment to return, then prevents publication. Native worker requests allow up to
-one hour for a segment; this is a limit, not an estimate of chapter duration.
-For external providers, the request timeout is 300 seconds per segment.
+The browser runs renders in the background and reports completed segments
+without holding the initial request open. Cancellation waits for an in-flight
+synthesis segment to finish, then blocks publication so any existing output is
+preserved.
 
-Long CPU renders can be retried without recomputing every completed segment.
-Chapter jobs in the native UI and CLI renders retain verified segments in
-`$XDG_CACHE_HOME/lixity/speech/<project-hash>/` (default
-`~/.cache/lixity/speech/<project-hash>/`), bounded to 2 GiB per project.
-The manuscript folder need not be writable.
-Repeating the render reuses only requests with the same synthesis text, named
-model family, language, preset voice and delivery instructions. Changes to pauses
-are applied when assembling the output; they do not require new speech. Progress
-includes reused segments. The final WAV/MP3 still appears only after successful
-completion, so cancellation or failure preserves an existing output.
+- **Timeouts:** Native worker requests allow up to 1 hour per segment (a limit,
+  not a duration estimate); external providers allow 300 seconds per segment;
+  external FFmpeg invocations allow up to 1 hour; local ZONOS3 enforces
+  separate startup (120 s) and per-segment response (300 s) deadlines. Timeouts
+  fail cleanly, remove temporary files, preserve existing output and record
+  `error=timeout` in the [audio diagnostics](INSTALLATION.md#logs) (with ZONOS3
+  distinguishing worker startup from waiting for a segment response). The
+  FFmpeg deadline limits only the direct child process, not in-process
+  inference or arbitrary grandchildren.
+- **PCM validation and assembly:** Workers, providers, cache reads and assembly
+  all enforce the same 24 kHz mono 16-bit integer-PCM WAV validation, including
+  rejecting partial trailing frames. In the current checkout, assembly applies
+  bounded level correction after tempo and before up to 5 ms internal edge
+  fades: active 100 ms RMS windows outside −32 to −28 dBFS receive a constant
+  gain of up to ±6 dB toward that band, capped at a −2 dBFS PCM sample-peak
+  ceiling. Very short or low-signal segments and explicit alternate delivery
+  receive peak protection only. Both leveling and edge fades preserve internal
+  dynamics, pauses and exact sample counts; integrated loudness and
+  reconstructed true peaks remain separate measurements, especially after MP3
+  encoding.
+- **Segment cache:** Chapter renders in the UI and CLI retain verified raw PCM
+  segments (before tempo, leveling, fades and pauses) in
+  `$XDG_CACHE_HOME/lixity/speech/<project-hash>/` (default
+  `~/.cache/lixity/speech/<project-hash>/`), bounded to 2 GiB per project. The
+  manuscript folder need not be writable. Cache reads use bounded regular-file
+  I/O and verify the schema, `request_sha256`, `byte_length`, `audio_sha256`
+  and PCM format before reuse. Repeating a render reuses only segments with the
+  same effective spoken text, model family, language, voice/reference and
+  delivery controls; pause or leveling changes do not require new synthesis.
+  On a cache miss during rendering, Lixity re-checks shared native worker
+  endpoints—if an eviction makes a mixed-model render infeasible on a shared
+  worker, the render fails cleanly and preserves any existing recording (use
+  profiles that share one model).
 
-The **Reuse completed chapter segments** option is enabled by default;
-uncheck it for a fresh interpretation. CLI users can request the same explicitly:
+**Reuse completed chapter segments** is enabled by default; uncheck it or pass
+`--fresh-audio` for a fresh interpretation:
 
 ```bash
 lixity read-aloud --project ./novel --profile narrator --chapter 2 --fresh-audio -o chapter-2.wav
 ```
 
-`--no-audio-cache` renders without reading or retaining segments.
-Previews are always fresh. The Python renderer
-opts in with `cache_dir=...`, and accepts `fresh_audio=True` to recompute while
-refreshing retained segments. Matching segments can be reused across execution
-targets; request fresh audio when comparing CPU and GPU delivery.
-Cache metadata stores request/audio hashes rather
-than raw manuscript text, but the WAV files contain spoken project content and
-must be treated as private. Missing, corrupt or evicted entries are recomputed.
-The cache is not a saved job ledger: after restarting the app, start a new chapter
-job to reuse its completed work. Temporary download expiration does not erase
-these retained segments. Remove the derived folder to discard it. After replacing
-local checkpoint files within the same named model family, request fresh audio
-or clear the cache; the key does not fingerprint model weight bytes.
-
-External FFmpeg conversion is limited to one hour per invocation.
-A timeout fails the export, preserves an existing completed output and removes
-temporary files. It does not restart a service or switch engines. This limits
-the direct child process, not in-process inference or arbitrary grandchildren.
+`--no-audio-cache` renders without reading or retaining segments; previews are
+always fresh. The Python renderer opts in with `cache_dir=...` and accepts
+`fresh_audio=True` to recompute while refreshing retained segments. Matching
+segments can be reused across execution targets (request fresh audio when
+comparing CPU and GPU delivery). Cache metadata stores hashes rather than raw
+manuscript text, but the WAV files contain spoken project content and must be
+treated as private. Missing, corrupt or evicted entries are recomputed when
+the worker can serve the required model. The cache is not a saved job ledger:
+after restarting the app, start a new chapter job to reuse completed work.
+Temporary download expiration does not erase cached segments; delete the cache
+folder or pass `--fresh-audio` after replacing local checkpoint files within
+the same named model family (the key does not fingerprint model weight bytes).
 
 The selected saved profile is used when `--profile` is omitted. Explicit `--voice`,
 `--language` and `--instructions` override that invocation without rewriting the
-saved profile. `--speed` applies to every profile in that render without saving.
-The control ranges from 0.5 to 2.0. New implicit profiles use `1.1`; existing saved
-profiles retain their explicit rate and previously omitted legacy rates remain
-`1.0`.
+saved profile. `--speed` applies to every profile in that render without saving
+(range `0.5`–`2.0`; new implicit profiles default to `1.1`, saved profiles keep
+their explicit rate, and legacy omitted rates stay `1.0`).
 
-For Qwen and the other postprocessed adapters, FFmpeg applies `atempo` to each
-synthesized or cached speech segment before explicit pauses are inserted. `1.0`
-leaves the original speech untouched. If FFmpeg returns no samples for an
-extremely short segment, the original segment is kept. ZONOS3 instead receives
-`speed` in model generation and skips this FFmpeg step. Neither adapter promises a
-precise linear duration ratio; compare short previews and ASR evidence when pacing
-and word fidelity matter. Delivery instructions do not guarantee a speaking rate.
+For Qwen and other postprocessed adapters, FFmpeg applies `atempo` to each
+synthesized or cached segment into a fresh temporary output before explicit
+pauses are inserted, so a previous conversion can never replace a missing or
+failed segment. `1.0` leaves the audio untouched; if `atempo` returns no
+samples for an extremely short segment, the original PCM is kept. ZONOS3
+receives `speed` directly as its model `speaking_rate` condition and skips
+FFmpeg tempo. Neither route promises a precise linear duration ratio; compare
+short previews and ASR evidence when pacing and word fidelity matter. Delivery
+instructions do not guarantee a speaking rate.
 
 A root `lixity.toml` can define a local Apple Silicon reference profile. Use the
 ID returned by `lixity audio-reference create`.
@@ -5384,25 +5423,20 @@ markers are omitted unless `--keep-markers` is supplied. The manuscript is not
 edited. Unknown chapters, unsupported voices and unsupported languages fail explicitly.
 
 Writing mono 16-bit PCM WAV at 24 kHz needs no conversion. Install FFmpeg on the
-Lixity computer for MP3 output, for worker WAVs that need normalization and for
-tempo postprocessing. ZONOS3 applies speed inside the model, while its 44.1 kHz
-output still needs normalization. Missing, malformed, empty or mismatched PCM
-and failed conversion are errors. Streamed atomic output preserves an existing
-file on failure.
-
-The checkout renderer fades up to five milliseconds at internal segment edges
-where speech meets another segment or inserted silence. This keeps the same
-sample count and preserves explicit pause durations. Individual cached segments
-retain the original synthesized audio for use in another render.
+Lixity computer for MP3 output, WAV normalization (including ZONOS3's 44.1 kHz
+output) and post-synthesis tempo. Missing, malformed, empty, truncated or
+mismatched PCM and failed conversion fail cleanly while preserving any existing
+output. See [Cache, tempo and saved settings](#cache-tempo-and-saved-settings)
+for level correction, edge fades and timeout limits.
 
 WAV output is capped at 200 MiB during rendering, including inserted silence;
 browser jobs offer a temporary download tied to the selected source, settings,
-and selection generation, with
-at most four retained jobs and a 30-minute retention window after completion.
-Save the download when needed. Project/source changes invalidate old results;
-returning to an earlier project cannot revive them. Model-generated omissions,
-repetitions, pronunciation and expressive reading still need human review.
-Successful encoding or an ASR transcript does not establish narration quality.
+and selection generation, with at most four retained jobs and a 30-minute
+retention window after completion. Save the download when needed.
+Project/source changes invalidate old results; returning to an earlier project
+cannot revive them. Model-generated omissions, repetitions, pronunciation and
+expressive reading still need human review; successful encoding or an ASR
+transcript does not establish narration quality.
 
 Completed chapter WAVs also have a separate
 [retained project artifact](#retain-or-import-chapter-audio). A temporary
@@ -5415,11 +5449,12 @@ different lifetimes.
 | Unsupported delivery or IPA | Inspect the plan and selected voice. Use IMS-Toucan for IPA and structured prosody or supply an explicit alternate spelling for a text-only voice. Clear incompatible profile instructions separately. `--no-direction` skips passage instructions, voice assignments and pauses for one render. |
 | Voice changes between segments | Compare several short directed/undirected previews. Check reference speaker, preset/description and delivery profiles; see [continuity review](#check-narration-continuity-before-a-chapter-render). |
 | Source, profile or direction changed during render | Reopen the current project and inspect the updated plan, then start a new job. Context guards prevent publishing audio for stale inputs. |
-| Saved passage is stale | Review the manuscript location and remove or replace the stale direction explicitly. Lixity does not relocate it by similar wording. |
+| Saved passage is stale or draft does not match preview | Review the manuscript location and remove or replace the stale direction explicitly; for a preview draft, reselect the intended paragraph before auditioning. Lixity does not relocate directions by similar wording. |
+| Render or conversion timed out (`error=timeout`) | Check the [service log](INSTALLATION.md#logs). For ZONOS3, the error distinguishes worker startup (120 s) from per-segment response (300 s); for FFmpeg, check input size and host load. Existing output is preserved. |
 | No microphone or permission denied | Use browser site/system permissions for browser capture; use **Mic & levels** for the server's hardware. See [recording recovery](#author-voice-recording-and-listening). |
 | Take cannot become a reference | Check exact transcript confirmation, 1–60 second duration, 24 kHz mono 16-bit PCM and transcript length. Prepare an excerpt if needed. [Trim with SoundCraft](#trim-a-take-locally-with-soundcraft) · [Prepare a reference file](#experimental-reference-voices) |
 | Calibration or capture unavailable | Check optional host tools and the actual device/mixer; choose the device and control explicitly. Browser capture may still be available. |
-| Chapter render interrupted | Start it again to reuse matching completed segments. `--fresh-audio` or the UI reuse switch requests a new interpretation; previews are always fresh. |
+| Chapter render interrupted or cache evicted mid-render | Start the render again to reuse matching completed segments. If a cache eviction makes a mixed-model render infeasible on a shared worker, use profiles that share one model. `--fresh-audio` or the UI reuse switch requests a new interpretation; previews are always fresh. |
 | CLI says audio was written but chapter retention failed | Keep the completed output, resolve the project storage/context error, and use `audio-import` with the reviewed source hash. The output may exist even though the command reports failure. |
 | Audio inspection cannot compare words | Supply a timestamped transcript bound to those exact audio bytes. Signal measurements alone cannot establish word fidelity. |
 

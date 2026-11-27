@@ -13,7 +13,7 @@ import cmath
 import math
 import sys
 
-from .speech import _read_pcm
+from .audio_pcm import read_pcm_wav
 
 SCHEMA = "lixity-audio-reference-quality/1"
 _FRAME = 1024
@@ -75,7 +75,7 @@ def _bandwidth(spectrum: list[float], rate: int) -> float | None:
 
 def assess_reference(audio: bytes) -> dict[str, object]:
     """Measure a PCM WAV reference; undeterminable values are ``None`` with a note."""
-    (channels, width, rate), frames = _read_pcm(audio)
+    (channels, width, rate), frames = read_pcm_wav(audio)
     if width != 2 or channels != 1:
         raise ValueError("Reference diagnostics require mono 16-bit PCM")
     samples = array.array("h")

@@ -1,5 +1,5 @@
 const {selectMetric} = require('../tests/browser/support/analysis-controls.cjs');
-const {launchChromium} = require('./browser_tools.cjs');
+const {launchChromium, playwrightModule} = require('./browser_tools.cjs');
 const {anchoredFrames, digest, recordProductTour, shotAnchor} = require('./product_tour_capture.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -11,6 +11,7 @@ const CAPTURE_ORIGIN = 'http://localhost:41737';
 async function main() {
   const captures = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
   const browser = await launchChromium();
+  let guideBrowser = null;
   const results = [];
   try {
     const fixturePath = path.join(path.dirname(captures[0].source), 'research-workspace-fixture.json');
@@ -496,17 +497,28 @@ async function main() {
         await save(capture.target);
       }
     }
-    await Promise.all(captures.filter(item => item.video).map(async capture => {
+    const videoCaptures = captures.filter(item => item.video);
+    if (videoCaptures.some(item => path.basename(item.videoTarget, '.webm') !== 'product-tour')) {
+      const {chromium} = require(playwrightModule);
+      guideBrowser = await chromium.launch({
+        headless: true,
+        args: ['--force-device-scale-factor=2', '--mute-audio'],
+      });
+    }
+    await Promise.all(videoCaptures.map(async capture => {
       const flow = path.basename(capture.videoTarget, '.webm');
       if (flow === 'product-tour') {
         results.push(...await recordProductTour({browser, capture, prepareWorkspacePage}));
         return;
       }
-      const context = await browser.newContext({
+      const videoScale = 2;
+      const context = await guideBrowser.newContext({
         viewport: {width: capture.width, height: capture.height},
-        reducedMotion: 'reduce',
-        recordVideo: {dir: path.dirname(capture.videoTarget), size: {width: capture.width, height: capture.height}},
-        deviceScaleFactor: 2,
+        recordVideo: {
+          dir: path.dirname(capture.videoTarget),
+          size: {width: capture.width * videoScale, height: capture.height * videoScale},
+        },
+        deviceScaleFactor: videoScale,
       });
       const page = await context.newPage();
       const errors = [];
@@ -514,12 +526,129 @@ async function main() {
       page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
       await prepareWorkspacePage(page, {cursor: true});
       page.setDefaultTimeout(15000);
-      const say = async text => {
+      let pointer = {x: Math.round(capture.width * 0.5), y: Math.round(capture.height * 0.45)};
+      const settleFrame = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      const readyCursor = async () => {
+        await page.locator('#walkthrough-cursor').waitFor({state: 'attached'});
+        await page.evaluate(() => {
+          const cursor = document.getElementById('walkthrough-cursor');
+          if (!cursor) return;
+          cursor.style.transition = 'transform .12s ease, opacity .18s ease';
+          if (typeof cursor.showPopover === 'function') {
+            cursor.setAttribute('popover', 'manual');
+            Object.assign(cursor.style, {right: 'auto', bottom: 'auto', padding: '0', overflow: 'visible'});
+            if (!cursor.matches(':popover-open')) cursor.showPopover();
+          }
+        });
+      };
+      const moveTo = async (locator, {duration = null, point = null} = {}) => {
+        await locator.scrollIntoViewIfNeeded();
+        await settleFrame();
+        const box = await locator.boundingBox();
+        assert.ok(box && box.width && box.height, 'Walkthrough target must be visible before pointer movement');
+        const destination = point || {x: box.x + box.width / 2, y: box.y + box.height / 2};
+        await readyCursor();
+        const dist = Math.hypot(destination.x - pointer.x, destination.y - pointer.y);
+        const travelMs = duration ?? Math.min(520, Math.max(240, 220 + dist * 0.25));
+        const started = Date.now();
+        while (true) {
+          const progress = Math.min(1, (Date.now() - started) / travelMs);
+          const eased = (1 - Math.cos(Math.PI * progress)) / 2;
+          await page.mouse.move(
+            pointer.x + (destination.x - pointer.x) * eased,
+            pointer.y + (destination.y - pointer.y) * eased,
+          );
+          if (progress >= 1) break;
+          await page.waitForTimeout(16);
+        }
+        pointer = destination;
+      };
+      const smoothClick = async (locator, options = {}) => {
+        await moveTo(locator, options);
+        await page.waitForTimeout(80);
+        await page.mouse.down();
+        await page.waitForTimeout(110);
+        await page.mouse.up();
+      };
+      const smoothHover = async (locator, holdMs = 550) => {
+        await moveTo(locator);
+        await page.waitForTimeout(holdMs);
+      };
+      const smoothSelect = async (locator, value) => {
+        await moveTo(locator);
+        await locator.focus();
+        await page.evaluate(() => {
+          const cursor = document.getElementById('walkthrough-cursor');
+          if (cursor) cursor.style.transform = 'scale(.72)';
+        });
+        await page.waitForTimeout(110);
+        await locator.selectOption(value);
+        await page.evaluate(() => {
+          const cursor = document.getElementById('walkthrough-cursor');
+          if (cursor) cursor.style.transform = 'scale(1)';
+        });
+      };
+      const smoothScrollBy = async (deltaY, steps = 10, totalMs = 400) => {
+        const stepDelay = Math.max(16, Math.round(totalMs / steps));
+        let applied = 0;
+        for (let i = 1; i <= steps; i++) {
+          const eased = (1 - Math.cos(Math.PI * (i / steps))) / 2;
+          const target = deltaY * eased;
+          await page.mouse.wheel(0, target - applied);
+          applied = target;
+          await page.waitForTimeout(stepDelay);
+        }
+      };
+      const setCaption = async text => {
         await page.evaluate(value => {
+          const caption = document.getElementById('walkthrough-caption');
+          if (caption && value) {
+            Object.assign(caption.style, {
+              left: '50%', right: 'auto', top: 'auto', bottom: '28px', transform: 'translateX(-50%)',
+            });
+          }
           if (window.setWalkthroughCaption) window.setWalkthroughCaption(value);
         }, text);
-        await page.waitForTimeout(2200);
-        await page.evaluate(() => window.setWalkthroughCaption(''));
+      };
+      const placeCaptionClear = async selector => {
+        await page.locator(selector).evaluateAll(controls => {
+          const caption = document.getElementById('walkthrough-caption');
+          if (!caption) return;
+          const visible = controls
+            .map(control => control.getBoundingClientRect())
+            .filter(rect => rect.width && rect.height);
+          if (!visible.length) return;
+          const candidates = [
+            {left: '50%', right: 'auto', top: 'auto', bottom: '28px', transform: 'translateX(-50%)'},
+            {left: '50%', right: 'auto', top: '12px', bottom: 'auto', transform: 'translateX(-50%)'},
+            {left: '24px', right: 'auto', top: 'auto', bottom: '28px', transform: 'none'},
+            {left: 'auto', right: '24px', top: 'auto', bottom: '28px', transform: 'none'},
+            {left: 'auto', right: '24px', top: '12px', bottom: 'auto', transform: 'none'},
+          ];
+          const prevTransition = caption.style.transition;
+          caption.style.transition = 'none';
+          for (const candidate of candidates) {
+            Object.assign(caption.style, candidate);
+            const overlay = caption.getBoundingClientRect();
+            const clear = visible.every(rect =>
+              rect.right <= overlay.left || rect.left >= overlay.right ||
+              rect.bottom <= overlay.top || rect.top >= overlay.bottom
+            );
+            if (clear) break;
+          }
+          void caption.offsetHeight;
+          caption.style.transition = prevTransition;
+        });
+      };
+      const withCaption = async (text, action, {leadMs = 420, holdMs = 1500, keep = false} = {}) => {
+        await setCaption(text);
+        await page.waitForTimeout(leadMs);
+        await action();
+        if (holdMs > 0) await page.waitForTimeout(holdMs);
+        if (!keep) {
+          await setCaption('');
+          await page.waitForTimeout(220);
+        }
       };
       const assertCaptionClear = async selector => {
         assert.ok(await page.locator(selector).evaluateAll(controls => {
@@ -560,109 +689,112 @@ async function main() {
       });
       await shotAnchor(page);
       if (flow === 'editorial-loop') {
-        await page.waitForTimeout(1000);
-        await say('Start with the manuscript review overview.');
-        await page.locator('[data-analysis-workflow=review]').click();
-        await page.locator('#flags').scrollIntoViewIfNeeded();
-        await page.waitForTimeout(900);
-        const flagRow = page.locator('#flags .flag-row button[data-target]').first();
-        if (await flagRow.count()) {
-          await flagRow.hover();
-          await page.waitForTimeout(900);
-        }
-        await say('Open a passage for closer inspection.');
-        await page.locator('#workbench-overview-back').click();
+        await page.waitForTimeout(350);
+        await withCaption('Start with the manuscript review overview.', async () => {
+          await smoothClick(page.locator('[data-analysis-workflow=review]'));
+          await page.locator('#flags').scrollIntoViewIfNeeded();
+          await page.waitForTimeout(450);
+          const flagRow = page.locator('#flags .flag-row button[data-target]').first();
+          if (await flagRow.count()) await smoothHover(flagRow, 700);
+        }, {leadMs: 450, holdMs: 900});
         const paragraph = page.locator('#ch-1 .ptext').nth(2);
-        await paragraph.locator('[data-reader-paragraph]').click();
-        await page.locator('[data-reader-action=values]').click();
-        assert.equal(await page.locator('#reader-inspector').isVisible(), true);
-        assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false',
-          'Local paragraph Values leave global Analysis Off');
-        await page.waitForTimeout(1200);
-        await say('Draft a review note beside the selected passage.');
-        await paragraph.locator('[data-reader-paragraph]').click();
-        await page.locator('[data-reader-action=todo]').click();
-        await paragraph.locator('.marker-note').pressSequentially('Check the closing cadence here', {delay: 60});
-        await assertCaptionClear('.marker-note, [data-marker-save], [data-marker-cancel], #reader-inspector button');
-        await page.waitForTimeout(1300);
-        await say('Return to the overview to find passage markers.');
-        await page.locator('#workbench-overview-open').click();
-        await page.locator('[data-analysis-workflow=review]').click();
-        await page.locator('[data-analysis-section-target=markers]').click();
-        await page.locator('#markers').scrollIntoViewIfNeeded();
-        await page.waitForTimeout(1500);
+        await withCaption('Open a passage for closer inspection.', async () => {
+          await smoothClick(page.locator('#workbench-overview-back'));
+          await smoothClick(paragraph.locator('[data-reader-paragraph]'));
+          await smoothClick(page.locator('[data-reader-action=values]'));
+          assert.equal(await page.locator('#reader-inspector').isVisible(), true);
+          assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false',
+            'Local paragraph Values leave global Analysis Off');
+        }, {leadMs: 400, holdMs: 1450});
+        await withCaption('Draft a review note beside the selected passage.', async () => {
+          await smoothClick(paragraph.locator('[data-reader-paragraph]'));
+          await smoothClick(page.locator('[data-reader-action=todo]'));
+          await placeCaptionClear('.marker-note, [data-marker-save], [data-marker-cancel], #reader-inspector button');
+          await moveTo(paragraph.locator('.marker-note'));
+          await paragraph.locator('.marker-note').pressSequentially('Check the closing cadence here', {delay: 55});
+          await assertCaptionClear('.marker-note, [data-marker-save], [data-marker-cancel], #reader-inspector button');
+        }, {leadMs: 400, holdMs: 1500});
+        await withCaption('Return to the overview to find passage markers.', async () => {
+          await smoothClick(page.locator('#workbench-overview-open'));
+          await smoothClick(page.locator('[data-analysis-workflow=review]'));
+          await smoothClick(page.locator('[data-analysis-section-target=markers]'));
+          await page.locator('#markers').scrollIntoViewIfNeeded();
+        }, {leadMs: 400, holdMs: 2800, keep: true});
       } else if (flow === 'analysis-review') {
-        await page.waitForTimeout(1000);
-        await say('Read with manuscript analysis switched off.');
+        await page.waitForTimeout(350);
         const paragraph = page.locator('#chapters .ptext').first();
-        await paragraph.scrollIntoViewIfNeeded();
-        assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false');
-        await page.waitForTimeout(1200);
-        await say('Open a passage for closer inspection.');
-        await paragraph.locator('[data-reader-paragraph]').click();
-        await page.locator('[data-reader-action=values]').click();
-        assert.equal(await page.locator('#reader-inspector').isVisible(), true);
-        assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false',
-          'Local paragraph Values leave global Analysis Off');
-        await page.waitForTimeout(1300);
-        await say('Open the analysis overview for chapter comparisons.');
-        await page.locator('#workbench-overview-open').click();
-        await assertReviewConfirmed();
-        await page.locator('[data-analysis-workflow=compare]').click();
-        await page.locator('[data-analysis-section-target=style]').click();
+        await withCaption('Read with manuscript analysis switched off.', async () => {
+          await paragraph.scrollIntoViewIfNeeded();
+          await moveTo(paragraph);
+          assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false');
+        }, {leadMs: 400, holdMs: 1500});
+        await withCaption('Open a passage for closer inspection.', async () => {
+          await smoothClick(paragraph.locator('[data-reader-paragraph]'));
+          await smoothClick(page.locator('[data-reader-action=values]'));
+          assert.equal(await page.locator('#reader-inspector').isVisible(), true);
+          assert.equal(await page.locator('#manuscript-analysis-toggle').getAttribute('aria-pressed'), 'false',
+            'Local paragraph Values leave global Analysis Off');
+        }, {leadMs: 400, holdMs: 1600});
+        await withCaption('Open the analysis overview for chapter comparisons.', async () => {
+          await smoothClick(page.locator('#workbench-overview-open'));
+          await assertReviewConfirmed();
+          await smoothClick(page.locator('[data-analysis-workflow=compare]'));
+          await smoothClick(page.locator('[data-analysis-section-target=style]'));
+        }, {leadMs: 400, holdMs: 1300});
         const dimensions = page.locator('#style-tab-dimensions');
         if (await dimensions.count()) {
-          await say('View chapters in the style dimensions chart.');
-          await dimensions.scrollIntoViewIfNeeded();
-          await page.waitForTimeout(700);
-          await dimensions.click();
-          await page.waitForTimeout(1300);
+          await withCaption('View chapters in the style dimensions chart.', async () => {
+            await dimensions.scrollIntoViewIfNeeded();
+            await smoothClick(dimensions);
+          }, {leadMs: 400, holdMs: 1600});
         }
-        await say('Select a chapter to inspect its style coordinates.');
-        await page.locator('#dim-chapter-select').selectOption('2');
-        await page.locator('.dim-selection-panel').scrollIntoViewIfNeeded();
-        assert.equal(await page.locator('#dim-selection').getAttribute('data-chapter'), '2');
-        await page.waitForTimeout(1000);
-        await say('Switch to a two-dimensional chart projection.');
-        await page.locator('#dim-projection').selectOption('d1-d2');
-        await page.locator('.dim-view-control').filter({has: page.locator('#dim-projection')}).evaluate(element => {
-          const toolbar = document.querySelector('.toolbar');
-          const offset = toolbar ? toolbar.getBoundingClientRect().height : 0;
-          window.scrollTo({top: scrollY + element.getBoundingClientRect().top - offset - 16, behavior: 'instant'});
-        });
-        assert.equal(await page.locator('#dim-3d-canvas').getAttribute('data-projection'), 'd1-d2');
-        assert.ok(await page.locator('#dim-3d-canvas').evaluate(element => {
-          const bounds = element.getBoundingClientRect();
-          const toolbar = document.querySelector('.toolbar');
-          return bounds.top >= (toolbar ? toolbar.getBoundingClientRect().bottom : 0) && bounds.bottom <= innerHeight;
-        }), 'The walkthrough shows the full planar chart below the manuscript toolbar');
-        await page.waitForTimeout(1000);
+        await withCaption('Select a chapter to inspect its style coordinates.', async () => {
+          await smoothSelect(page.locator('#dim-chapter-select'), '2');
+          await page.locator('.dim-selection-panel').scrollIntoViewIfNeeded();
+          assert.equal(await page.locator('#dim-selection').getAttribute('data-chapter'), '2');
+        }, {leadMs: 400, holdMs: 1600});
+        await withCaption('Switch to a two-dimensional chart projection.', async () => {
+          await smoothSelect(page.locator('#dim-projection'), 'd1-d2');
+          await page.locator('.dim-view-control').filter({has: page.locator('#dim-projection')}).evaluate(element => {
+            const toolbar = document.querySelector('.toolbar');
+            const offset = toolbar ? toolbar.getBoundingClientRect().height : 0;
+            window.scrollTo({top: scrollY + element.getBoundingClientRect().top - offset - 16, behavior: 'instant'});
+          });
+          assert.equal(await page.locator('#dim-3d-canvas').getAttribute('data-projection'), 'd1-d2');
+          assert.ok(await page.locator('#dim-3d-canvas').evaluate(element => {
+            const bounds = element.getBoundingClientRect();
+            const toolbar = document.querySelector('.toolbar');
+            return bounds.top >= (toolbar ? toolbar.getBoundingClientRect().bottom : 0) && bounds.bottom <= innerHeight;
+          }), 'The walkthrough shows the full planar chart below the manuscript toolbar');
+        }, {leadMs: 400, holdMs: 2800, keep: true});
       } else {
-        await page.waitForTimeout(900);
-        await say('Open the timeline to compare recorded claim dates.');
-        await page.locator('[data-view="research"]').click();
-        await page.locator('[data-rtab="claims"]').click();
-        await page.waitForTimeout(1200);
-        await page.locator('#r-open-timeline').click();
-        await page.waitForFunction(() => document.querySelector('#research-claims-timeline .research-timeline-strip-row'));
-        await page.waitForTimeout(600);
+        await page.waitForTimeout(350);
         const rows = page.locator('#research-claims-timeline .research-timeline-strip-row');
-        const count = await rows.count();
-        for (let index = 0; index < count; index++) {
-          await rows.nth(index).hover();
-          await page.waitForTimeout(400);
-        }
-        await say('Follow a timeline row to its claim.');
-        await rows.first().click();
-        await assertCaptionClear('#research-claims-list button, #research-claims-timeline button');
-        await page.waitForTimeout(1200);
-        await page.mouse.wheel(0, 300);
-        await page.waitForTimeout(1300);
-        await page.mouse.wheel(0, -700);
-        await page.waitForTimeout(700);
-        await say('Dates organize claims; they do not verify them.');
-        await rows.nth(Math.min(1, count - 1)).hover();
-        await page.waitForTimeout(1300);
+        let count = 0;
+        await withCaption('Open the timeline to compare recorded claim dates.', async () => {
+          await smoothClick(page.locator('[data-view="research"]'));
+          await smoothClick(page.locator('[data-rtab="claims"]'));
+          await page.waitForTimeout(500);
+          await smoothClick(page.locator('#r-open-timeline'));
+          await page.waitForFunction(() => document.querySelector('#research-claims-timeline .research-timeline-strip-row'));
+          await page.waitForTimeout(450);
+          count = await rows.count();
+          for (let index = 0; index < count; index++) {
+            await smoothHover(rows.nth(index), 550);
+          }
+        }, {leadMs: 400, holdMs: 900});
+        await withCaption('Follow a timeline row to its claim.', async () => {
+          await smoothClick(rows.first());
+          await placeCaptionClear('#research-claims-list button, #research-claims-timeline button');
+          await assertCaptionClear('#research-claims-list button, #research-claims-timeline button');
+          await page.waitForTimeout(900);
+          await smoothScrollBy(300, 10, 400);
+          await page.waitForTimeout(1200);
+          await smoothScrollBy(-700, 12, 480);
+        }, {leadMs: 400, holdMs: 600});
+        await withCaption('Dates organize claims; they do not verify them.', async () => {
+          await smoothHover(rows.nth(Math.min(1, count - 1)), 600);
+        }, {leadMs: 400, holdMs: 2800, keep: true});
       }
       assert.deepEqual(errors, [], 'Walkthrough recording must be free of runtime errors');
       const video = page.video();
@@ -683,6 +815,7 @@ async function main() {
     fs.writeFileSync(path.join(base, 'capture-results.json'), JSON.stringify(results, null, 2));
     console.log(JSON.stringify(results, null, 2));
   } finally {
+    if (guideBrowser) await guideBrowser.close();
     await browser.close();
   }
 }

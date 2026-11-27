@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .audio_pcm import read_pcm_wav
+
 if TYPE_CHECKING:
     from .speech_direction import SpeechSegment
 
@@ -239,8 +241,6 @@ def list_references(project: str | Path) -> list[dict[str, Any]]:
     ref_dir = repo.root / ".lixity" / "audio-references"
     if not ref_dir.is_dir():
         return []
-    from .speech import _read_pcm
-
     entries: list[dict[str, Any]] = []
     try:
         paths = sorted(ref_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
@@ -252,7 +252,7 @@ def list_references(project: str | Path) -> list[dict[str, Any]]:
             continue
         try:
             ref = _read_record(repo, ref_id)
-            (channels, width, rate), frames = _read_pcm(ref.audio)
+            (channels, width, rate), frames = read_pcm_wav(ref.audio)
             duration = round(len(frames) / max(1, rate * width * channels), 2)
             entries.append({
                 "id": ref.id,

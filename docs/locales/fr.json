@@ -64,6 +64,7 @@
   "tour_research": "Depuis le paragraphe suivant, ouvrez la recherche associée et consultez la pièce conservée.",
   "tour_compare": "Saisissez une version plus courte et comparez-la au texte enregistré. La phrase passe de 31 à 12 mots.",
   "tour_save": "Appliquez le brouillon, enregistrez-le et rouvrez le manuscrit pour vérifier la modification.",
+  "tour_teleprompter": "Lisez le passage révisé dans le téléprompteur et enregistrez une prise vocale locale.",
   "tour_export": "Choisissez le contenu du site de lecture et vérifiez l’export avant de le télécharger.",
   "tour_reader": "Ouvrez la version exportée pour voir ce que reçoit la personne qui vous lit.",
   "tour_demo": "Examinez le même passage dans la démonstration en lecture seule.",

@@ -11,7 +11,14 @@ import pytest
 
 from scripts import make_videos
 from scripts.build_public_site import render_pages
-from scripts.product_tour_edit import Take, _take
+from scripts.product_tour_edit import (
+    MAX_CSS_SCALE,
+    Take,
+    _take,
+    inspect_cut_plan,
+    prepare_project_path,
+    prune_stale_tour_artifacts,
+)
 
 FFMPEG = shutil.which("ffmpeg")
 FFPROBE = shutil.which("ffprobe")
@@ -22,12 +29,14 @@ PUBLISHED_VIDEOS = Path(__file__).resolve().parents[1] / "docs" / "videos"
 def test_reframing_uses_settled_footage_and_keeps_the_cue_duration() -> None:
     segment = {"id": "reader", "startFrame": 1000, "frames": 225}
     assert _take(segment, {"sourceSeconds": 0}, scene_frame=1350, begin=0, end=29,
-                 destination_frames=175, rate=25) == Take(1350, 1379, 1000, 3)
+                 destination_frames=175, rate=25) == Take(1350, 1379, 1000, 1)
     assert _take(segment, {"sourceSeconds": 1.84}, scene_frame=1350, begin=29, end=175,
-                 destination_frames=175, rate=25) == Take(1379, 1525, 1049)
+                 destination_frames=175, rate=25) == Take(1379, 1525, 1047, 0)
     comparison = {"id": "compare", "startFrame": 832, "frames": 300}
     assert _take(comparison, {"sourceSeconds": 3.061, "comparison": {"current": {}}},
-                 scene_frame=650, begin=75, end=133, destination_frames=250, rate=25) == Take(725, 783, 912, 10)
+                 scene_frame=650, begin=75, end=133, destination_frames=250, rate=25) == Take(725, 783, 910, 2)
+    assert _take(comparison, {"sourceSeconds": 3.0, "noBuffer": True, "comparison": {"current": {}}},
+                 scene_frame=650, begin=75, end=133, destination_frames=250, rate=25) == Take(725, 783, 907, 1)
 
 
 def test_all_homepage_transcripts_follow_the_full_tour() -> None:
@@ -48,7 +57,7 @@ def short_tour_recording(
     source = raw / "product-tour.webm"
     assert FFMPEG
     subprocess.run(  # noqa: S603 - fixed synthetic media fixture invocation
-        [FFMPEG, "-v", "error", "-f", "lavfi", "-i", "color=size=1440x900:rate=25",
+        [FFMPEG, "-v", "error", "-f", "lavfi", "-i", "color=size=2880x1800:rate=25",
          "-t", "0.4", "-c:v", "libvpx", str(source)], check=True,
     )
     plan = make_videos._tour_plan()
@@ -156,7 +165,8 @@ def test_partial_tour_refreshes_one_portrait_and_both_destinations(tmp_path: Pat
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     portrait_hash = hashlib.sha256((output / master).read_bytes()).hexdigest()
     assert receipt["outputs_sha256"][master] == receipt["outputs_sha256"][alias] == portrait_hash
-    assert receipt["review_frames"][master] == receipt["review_frames"][alias] == [0, 1624]
+    expected_frames = [0, make_videos._tour_plan()["duration"] * 25 - 1]
+    assert receipt["review_frames"][master] == receipt["review_frames"][alias] == expected_frames
     assert (horizontal in receipt["review_frames"]) == (selection == "social")
     marker_reports = receipt["filmcraft_marker_reports_sha256"]
     assert len(marker_reports) == len(rendered)
@@ -164,6 +174,105 @@ def test_partial_tour_refreshes_one_portrait_and_both_destinations(tmp_path: Pat
                for name, digest in marker_reports.items())
     assert receipt["selection"] == selection
     assert "product-tour-timing.json" in receipt["inputs_sha256"]
+
+
+def test_prepare_project_path_and_prune_stale_artifacts(tmp_path: Path) -> None:
+    review = tmp_path / "warehouse-4-tour"
+    review.mkdir()
+    old_proj = review / "warehouse-4-1440x900.fcproj"
+    old_lock = review / ".warehouse-4-1440x900.fcproj.lock"
+    stale_receipt = review / "receipt-abc12345.json"
+    keep_receipt = review / "receipt-product-tour.json"
+    stale_marker = review / "warehouse-4-1440x900-markers-abc12345.csv"
+    keep_marker = review / "warehouse-4-1440x900-markers.csv"
+    for path in (old_proj, old_lock, stale_receipt, keep_receipt, stale_marker, keep_marker):
+        path.write_text("x", encoding="utf-8")
+
+    prepared = prepare_project_path(review, 1440, 900)
+    assert prepared == old_proj
+    assert not old_proj.exists()
+    assert not old_lock.exists()
+
+    removed = prune_stale_tour_artifacts(
+        review,
+        keep_receipts={"receipt-product-tour.json"},
+        keep_markers={"warehouse-4-1440x900-markers.csv"},
+    )
+    assert {path.name for path in removed} == {"receipt-abc12345.json", "warehouse-4-1440x900-markers-abc12345.csv"}
+    assert keep_receipt.exists()
+    assert keep_marker.exists()
+
+
+def test_inspect_cut_plan_enforces_2x_scale_cap_and_low_holds() -> None:
+    plan = make_videos._tour_plan()
+    footage = [
+        (
+            {
+                "id": cap["id"],
+                "startFrame": 100,
+                "frames": cap["record_duration"] * plan["fps"],
+                "sourceSize": (2880, 1800),
+                "actionEnd": cap["duration"] - 2,
+                "focus": [
+                    {"seconds": 0, "sourceSeconds": 0, "x": 100, "y": 100, "width": 200, "height": 50},
+                    {"seconds": 2.0, "sourceSeconds": 2.04, "x": 50, "y": 50, "width": 600, "height": 400},
+                ],
+            },
+            Path("product-tour.webm"),
+            Path("still.png"),
+        )
+        for cap in plan["captures"]
+    ]
+    rows = inspect_cut_plan(plan, footage, width=1440, height=900, fps=plan["fps"])
+    assert len(rows) == 2 * len(plan["captures"])
+    assert all(row["css_scale"] <= MAX_CSS_SCALE for row in rows)
+    assert all(row["physical_scale"] <= 1.0 for row in rows)
+    assert all(row["hold_frames"] <= 2 for row in rows)
+
+
+def test_variant_build_targets_single_layout_and_honors_no_keep_projects(tmp_path: Path, monkeypatch) -> None:
+    output = tmp_path / "videos"
+    output.mkdir()
+    source = tmp_path / make_videos.ICON
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_bytes(b"test artwork")
+    recording = {"segments": []}
+    (tmp_path / "product-tour.json").write_text(json.dumps(recording), encoding="utf-8")
+    rendered: list[tuple[int, int]] = []
+
+    class FakeEdit:
+        def __init__(self, project: Path, width: int, height: int, _fps: int):
+            self.project = project
+            project.write_text("fcproj", encoding="utf-8")
+            project.with_name(f"{project.stem}-cuts").mkdir(exist_ok=True)
+            rendered.append((width, height))
+
+        def export_markers(self, path: Path, _plan: dict) -> None:
+            path.write_bytes(b"markers")
+
+        def render(self, frames: Path, *, duration: int) -> Path:
+            self.review_frames = [0, duration * 25 - 1]
+            return frames / "frame%04d.png"
+
+    monkeypatch.setattr(make_videos, "BASE_DIR", tmp_path)
+    monkeypatch.setattr(make_videos, "OUT_DIR", output)
+    monkeypatch.setattr(make_videos, "RAW_DIR", tmp_path)
+    monkeypatch.setattr(make_videos, "_tour_recordings", lambda _plan: (recording, []))
+    monkeypatch.setattr(make_videos, "Edit", FakeEdit)
+    monkeypatch.setattr(make_videos, "compose", lambda *_args: None)
+    monkeypatch.setattr(make_videos, "run", lambda command: Path(command[-1]).write_bytes(b"new"))
+    monkeypatch.setattr(make_videos, "_verify_export", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(make_videos.shutil, "which", lambda name: name)
+    monkeypatch.setattr(make_videos, "_tour_tool_versions", lambda tools: dict.fromkeys(tools, "test"))
+
+    make_videos.convert_product_tour(variant="social-16x9", keep_projects=False)
+    assert rendered == [(1600, 900)]
+    assert (output / make_videos.LANDSCAPE_SOCIAL).is_file()
+    assert not (output / make_videos.PORTRAIT_MASTER).exists()
+    review = tmp_path / ".artifacts/filmcraft/warehouse-4-tour"
+    assert not (review / "warehouse-4-1600x900.fcproj").exists()
+    assert not (review / "warehouse-4-1600x900-cuts").exists()
+    assert (review / "receipt-social-16x9.json").is_file()
 
 
 def test_published_portrait_destinations_are_byte_identical() -> None:

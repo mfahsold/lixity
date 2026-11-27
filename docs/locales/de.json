@@ -64,6 +64,7 @@
   "tour_research": "Öffne am nächsten Absatz die verknüpfte Recherche und lies den gespeicherten Beleg.",
   "tour_compare": "Tippe eine kürzere Fassung ein. Im Vergleich kürzt der Entwurf den Satz von 31 auf 12 Wörter.",
   "tour_save": "Übernimm den Entwurf, speichere ihn und prüfe die Änderung im wieder geöffneten Manuskript.",
+  "tour_teleprompter": "Lies die überarbeitete Stelle im Teleprompter ein und nimm lokal eine Sprachaufnahme auf.",
   "tour_export": "Wähle den Umfang der Lesewebsite und prüfe den Export vor dem Download.",
   "tour_reader": "Öffne die exportierte Lesefassung und sieh, was bei der Leserin ankommt.",
   "tour_demo": "Prüfe dieselbe Stelle in der schreibgeschützten Demo.",

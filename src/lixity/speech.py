@@ -22,16 +22,18 @@ import textwrap
 import time
 import unicodedata
 import wave
+from collections import Counter
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 
-from .audio_audit import _wave_reader_is_integer_pcm
+from .audio_pcm import SPEECH_PCM_FORMAT, read_pcm_wav
 from .log import get_logger, log_event, speech_diagnostic_scope
 from .markdown_parser import counting_inline_text, parse_markdown_blocks, split_chapters
 from .sentences import split_sentences
+from .speech_leveling import level_speech_pcm
 from .speech_profiles import (
     EXTERNAL_ENGINES,
     MAX_PLAYBACK_SPEED,
@@ -56,6 +58,10 @@ class SpeechCancelled(RuntimeError):
     """The caller cancelled a render before publication."""
 
 
+class SpeechBackendTimeout(RuntimeError):
+    """A synthesis worker or a conversion process exceeded its deadline."""
+
+
 _P = ParamSpec("_P")
 _R = TypeVar("_R")
 
@@ -66,7 +72,7 @@ def _speech_error_kind(error: BaseException) -> str:
         return "cancelled"
     if isinstance(error, KeyboardInterrupt):
         return "interrupted"
-    if isinstance(error, TimeoutError):
+    if isinstance(error, (TimeoutError, SpeechBackendTimeout)):
         return "timeout"
     if isinstance(error, FileNotFoundError):
         return "missing"
@@ -136,6 +142,8 @@ def _observe_speech_segment(index: int, total: int, profile: AudioProfile,
         log_event(logger, "segment_end", logging.DEBUG, index=index, total=total, status=status,
                   error=error_kind, cache=state["cache"], pcm_start_ms=pcm_start_ms,
                   pcm_end_ms=state["pcm_end_ms"] if state["pcm_end_ms"] is not None else "unknown",
+                  **{key: state[key] for key in ("level_active_rms_dbfs", "level_gain_db", "level_sample_peak_dbfs")
+                     if key in state},
                   duration_ms=max(0, round((time.monotonic() - started) * 1000)))
 
 
@@ -301,7 +309,7 @@ def extract_audio_cues(
 
 def generate_silence_wav(
     duration_seconds: float,
-    sample_rate: int = 24000,
+    sample_rate: int = SPEECH_PCM_FORMAT[2],
     channels: int = 1,
     sample_width: int = 2,
 ) -> bytes:
@@ -314,22 +322,6 @@ def generate_silence_wav(
         writer.setparams((channels, sample_width, sample_rate, 0, "NONE", "not compressed"))
         writer.writeframes(frames)
     return output.getvalue()
-
-
-def _read_pcm(data: bytes, *, allow_empty: bool = False) -> tuple[tuple[int, int, int], bytes]:
-    try:
-        with wave.open(io.BytesIO(data), "rb") as reader:
-            if not _wave_reader_is_integer_pcm(reader):
-                raise ValueError("Audio segment requires integer PCM WAV")
-            params = (reader.getnchannels(), reader.getsampwidth(), reader.getframerate())
-            count = reader.getnframes()
-            frames = reader.readframes(count)
-            if (reader.getcomptype() != "NONE" or (not count and not allow_empty)
-                    or len(frames) != count * params[0] * params[1]):
-                raise ValueError("Missing or truncated PCM audio segment")
-            return params, frames
-    except (wave.Error, EOFError, OSError) as exc:
-        raise ValueError("Invalid WAV audio segment") from exc
 
 
 def _fade_pcm_edges(frames: bytes, rate: int, *, fade_in: bool, fade_out: bool) -> bytes:
@@ -356,11 +348,13 @@ def concatenate_wavs(wav_bytes_list: list[bytes]) -> bytes:
     if not wav_bytes_list:
         raise ValueError("No audio segments to concatenate")
     output = io.BytesIO()
-    expected, _frames = _read_pcm(wav_bytes_list[0])
+    chunks = iter(wav_bytes_list)
+    expected, first_frames = read_pcm_wav(next(chunks))
     with wave.open(output, "wb") as writer:
         writer.setparams((*expected, 0, "NONE", "not compressed"))
-        for data in wav_bytes_list:
-            params, frames = _read_pcm(data)
+        writer.writeframes(first_frames)
+        for data in chunks:
+            params, frames = read_pcm_wav(data)
             if params != expected:
                 raise ValueError("Incompatible PCM audio format")
             writer.writeframes(frames)
@@ -384,7 +378,32 @@ def _run_ffmpeg(command: list[str]) -> subprocess.CompletedProcess[bytes]:
     except subprocess.TimeoutExpired:
         # run() kills and waits for the direct child before raising. The caller's
         # temporary-directory context removes partial audio without publishing it.
-        raise RuntimeError("FFmpeg timed out while creating audio") from None
+        raise SpeechBackendTimeout("FFmpeg timed out while creating audio") from None
+
+
+def _adjust_pcm_tempo(data: bytes, frames: bytes, *, directory: Path, ffmpeg: str,
+                      speed: float) -> bytes:
+    """Convert one segment without reusing output from an earlier conversion."""
+    source = directory / "tempo-source.wav"
+    output = directory / "tempo-output.wav"
+    source.write_bytes(data)
+    output.unlink(missing_ok=True)
+    channels, width, rate = SPEECH_PCM_FORMAT
+    result = _run_ffmpeg([ffmpeg, "-nostdin", "-y", "-v", "error", "-i", str(source),
+                          "-af", f"atempo={speed}", "-ac", str(channels), "-ar", str(rate),
+                          "-c:a", "pcm_s16le", str(output)])
+    if result.returncode or not output.is_file():
+        raise RuntimeError("FFmpeg failed to adjust audio speed")
+    params, adjusted = read_pcm_wav(output.read_bytes(), allow_empty=True)
+    if params != SPEECH_PCM_FORMAT:
+        raise ValueError("Unexpected tempo-adjusted audio format")
+    if adjusted:
+        return adjusted
+    # At very short durations atempo can produce no samples. Preserve the
+    # original in that case, while surfacing unexpectedly empty longer output.
+    if len(frames) > rate * channels * width // 10:
+        raise RuntimeError("FFmpeg produced empty tempo-adjusted audio")
+    return frames
 
 
 def _synthesize_segment(
@@ -439,7 +458,6 @@ def render_speech_audio(
         raise ValueError("Audio byte limit must be an integer of at least 44")
     profile = (AudioProfile.model_validate(profile.model_dump()) if profile is not None
                else resolve_audio_profile(None, language=language))
-    language = profile.language
     if target not in ("local", "jetson"):
         raise ValueError("Unknown speech execution target")
     source = Path(manuscript_path).expanduser().resolve()
@@ -450,7 +468,8 @@ def render_speech_audio(
         raise ValueError("Audio output must differ from the manuscript")
     if output.suffix.lower() not in (".wav", ".mp3"):
         raise ValueError("Audio output must use .wav or .mp3")
-    rate = 24000
+    channels, width, rate = SPEECH_PCM_FORMAT
+    frame_bytes = channels * width
     from .speech_direction import build_speech_plan, require_render_direction
 
     cues = plan if plan is not None else build_speech_plan(
@@ -462,11 +481,13 @@ def render_speech_audio(
     from .speech_engines import NATIVE_ENGINES, native_endpoint
     from .speech_profiles import mlx_audio_uses_model_speed, profile_uses_reference
 
+    native_bindings: dict[str, str] = {}
     for cue in cues:
         if not cue.text:
             continue
-        if cue.profile.engine not in EXTERNAL_ENGINES:
-            native_endpoint(cue.profile.engine, target)
+        engine = cue.profile.engine
+        if engine not in EXTERNAL_ENGINES and engine not in native_bindings:
+            native_bindings[engine] = native_endpoint(engine, target)
         require_render_direction(cue.profile, cue.profile.instructions)
     if target != "local" and any(cue.text and cue.profile.engine in EXTERNAL_ENGINES for cue in cues):
         raise ValueError("External speech uses its configured provider URL, not the Jetson execution target")
@@ -489,23 +510,26 @@ def render_speech_audio(
         from .speech_cache import SpeechSegmentCache
 
         segment_cache = SpeechSegmentCache(Path(cache_dir))
-    # One native target serves one model variant. External segments have their
-    # own bindings; only uncached native variants compete for that worker.
-    if len({cue.profile.engine for cue in cues if cue.text}) > 1:
-        missing_engines: dict[str, set[str]] = {}
+    def claim_native_endpoint(claims: dict[str, str], engine: str) -> None:
+        endpoint = native_bindings.get(engine)
+        if endpoint is not None and claims.setdefault(endpoint, engine) != engine:
+            raise ValueError("The audio plan needs multiple uncached model variants; one worker serves "
+                             "one model. Choose profiles using the same model or reuse previously "
+                             "cached segments")
+
+    # Independent workers and external providers do not depend on cache hits.
+    # Preflight shared endpoints without holding the cached audio in memory.
+    endpoint_use = Counter(native_bindings.values())
+    shared_endpoints = {endpoint for endpoint, count in endpoint_use.items() if count > 1}
+    if shared_endpoints:
+        preflight_claims: dict[str, str] = {}
         for cue in cues:
             _check_cancelled(cancelled)
-            if not cue.text:
+            if not cue.text or native_bindings.get(cue.profile.engine) not in shared_endpoints:
                 continue
-            cached = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, cue.profile)
-            if cached is None:
-                if cue.profile.engine not in EXTERNAL_ENGINES:
-                    endpoint = native_endpoint(cue.profile.engine, target)
-                    missing_engines.setdefault(endpoint, set()).add(cue.profile.engine)
-                if any(len(engines) > 1 for engines in missing_engines.values()):
-                    raise ValueError("The audio plan needs multiple uncached model variants; one worker serves "
-                                     "one model. Choose profiles using the same model or reuse previously "
-                                     "cached segments")
+            if fresh_audio or segment_cache is None or segment_cache.get(cue.text, cue.profile) is None:
+                claim_native_endpoint(preflight_claims, cue.profile.engine)
+    render_claims: dict[str, str] = {}
     total = sum(bool(cue.text) for cue in cues)
     requested_engines = sorted({cue.profile.engine if cue.profile.engine in NATIVE_ENGINES or cue.profile.engine in EXTERNAL_ENGINES else "unknown"
                                 for cue in cues if cue.text})
@@ -520,9 +544,10 @@ def render_speech_audio(
     # Streaming limits memory to one bounded segment. Temporary files live on
     # the output filesystem so replace is atomic and old copies survive errors.
     with tempfile.TemporaryDirectory(prefix=".lixity-speech-", dir=output.parent) as directory:
-        pcm = Path(directory) / "reading.wav"
+        render_dir = Path(directory)
+        pcm = render_dir / "reading.wav"
         with wave.open(str(pcm), "wb") as writer:
-            writer.setparams((1, 2, rate, 0, "NONE", "not compressed"))
+            writer.setparams((*SPEECH_PCM_FORMAT, 0, "NONE", "not compressed"))
             written = 44
 
             def write_frames(frames: bytes) -> None:
@@ -536,9 +561,9 @@ def render_speech_audio(
             for index, cue in enumerate(cues):
                 _check_cancelled(cancelled)
                 if cue.pause_before:
-                    write_frames(bytes(int(rate * cue.pause_before) * 2))
+                    write_frames(bytes(int(rate * cue.pause_before) * frame_bytes))
                 if not cue.text:
-                    write_frames(bytes(int(rate * cue.pause_after) * 2))
+                    write_frames(bytes(int(rate * cue.pause_after) * frame_bytes))
                     continue
                 effective = cue.profile
 
@@ -552,62 +577,60 @@ def render_speech_audio(
                 with _observe_speech_segment(done + 1, total, effective, writer.getnframes() * 1000 // rate,
                                              instruction_changed, description_changed, reference_changed) as diagnostic:
                     data = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, effective)
+                    cached = data is not None
                     diagnostic["cache"] = ("disabled" if segment_cache is None else "fresh" if fresh_audio else
-                                           "hit" if data is not None else "miss")
+                                           "hit" if cached else "miss")
                     if data is None:
+                        # A cache entry may have been evicted after preflight.
+                        claim_native_endpoint(render_claims, effective.engine)
                         data = _synthesize_segment(cue.text, effective, target=target, references=references)
-                        params, frames = _read_pcm(data)
-                        if params != (1, 2, rate):
-                            raise ValueError("Unexpected synthesized audio format")
-                        _check_cancelled(cancelled)
-                        if segment_cache is not None:
-                            segment_cache.put(cue.text, effective, data)
-                    else:
-                        params, frames = _read_pcm(data)
+                    params, frames = read_pcm_wav(data)
+                    if params != SPEECH_PCM_FORMAT:
+                        raise ValueError("Unexpected synthesized audio format")
                     _check_cancelled(cancelled)
+                    if not cached and segment_cache is not None:
+                        segment_cache.put(cue.text, effective, data)
+                        _check_cancelled(cancelled)
                     if effective.speed != 1.0 and not mlx_audio_uses_model_speed(effective):
                         # Cache the unmodified model audio. Processing each spoken
                         # segment leaves explicit pauses and per-profile rates intact.
-                        tempo_source = Path(directory) / "tempo-source.wav"
-                        tempo_output = Path(directory) / "tempo-output.wav"
-                        tempo_source.write_bytes(data)
                         if ffmpeg is None:  # defensive: checked before synthesis
                             raise FileNotFoundError("FFmpeg is required for audio speed adjustment")
-                        result = _run_ffmpeg([ffmpeg, "-nostdin", "-y", "-v", "error", "-i", str(tempo_source),
-                                              "-af", f"atempo={effective.speed}", "-ac", "1", "-ar", str(rate),
-                                              "-c:a", "pcm_s16le", str(tempo_output)])
-                        if result.returncode != 0 or not tempo_output.is_file():
-                            raise RuntimeError("FFmpeg failed to adjust audio speed")
-                        adjusted_params, adjusted_frames = _read_pcm(tempo_output.read_bytes(), allow_empty=True)
-                        if adjusted_params != (1, 2, rate):
-                            raise ValueError("Unexpected tempo-adjusted audio format")
-                        # At very short durations atempo can produce no samples. In
-                        # that case preserve the original rather than lose speech.
-                        if adjusted_frames:
-                            frames = adjusted_frames
-                        elif len(frames) > rate * 2 // 10:
-                            raise RuntimeError("FFmpeg produced empty tempo-adjusted audio")
+                        frames = _adjust_pcm_tempo(data, frames, directory=render_dir, ffmpeg=ffmpeg,
+                                                   speed=effective.speed)
                         _check_cancelled(cancelled)
-                    # Smooth joins in the assembly only. The cache holds the
-                    # original synthesis for reuse with different neighbors.
+                    # Level and fade only the final assembly. An explicit
+                    # alternate delivery keeps its level apart from peak protection.
+                    level = level_speech_pcm(frames, rate, preserve_delivery=(
+                        effective.instructions != profile.instructions or effective.prosody != profile.prosody
+                        or effective.reference_id != profile.reference_id
+                        or effective.voice_description != profile.voice_description
+                        or effective.engine != profile.engine or effective.voice != profile.voice
+                    ))
+                    _check_cancelled(cancelled)
+                    diagnostic["level_active_rms_dbfs"] = ("unknown" if level.active_rms_dbfs is None
+                                                            else round(level.active_rms_dbfs, 1))
+                    diagnostic["level_gain_db"] = round(level.gain_db, 2)
+                    diagnostic["level_sample_peak_dbfs"] = ("unknown" if level.sample_peak_dbfs is None
+                                                             else round(level.sample_peak_dbfs, 1))
                     follows_audio = writer.getnframes() > 0
                     precedes_audio = (done + 1 < total or int(rate * cue.pause_after) > 0
                                       or any(int(rate * following.pause_before) > 0
                                              or int(rate * following.pause_after) > 0
                                              for following in cues[index + 1:]))
-                    write_frames(_fade_pcm_edges(frames, rate, fade_in=follows_audio, fade_out=precedes_audio))
+                    write_frames(_fade_pcm_edges(level.frames, rate, fade_in=follows_audio, fade_out=precedes_audio))
                     diagnostic["pcm_end_ms"] = writer.getnframes() * 1000 // rate
                     _check_cancelled(cancelled)
                 done += 1
                 if progress is not None:
                     progress(done, total)
                 if cue.pause_after:
-                    write_frames(bytes(int(rate * cue.pause_after) * 2))
+                    write_frames(bytes(int(rate * cue.pause_after) * frame_bytes))
         final = pcm
         if output.suffix.lower() == ".mp3":
             if ffmpeg is None:  # defensive: checked before synthesis
                 raise FileNotFoundError("FFmpeg is required for MP3 output")
-            final = Path(directory) / "reading.mp3"
+            final = render_dir / "reading.mp3"
             result = _run_ffmpeg(
                 [ffmpeg, "-nostdin", "-y", "-v", "error", "-i", str(pcm),
                                      "-b:a", "192k", str(final)])

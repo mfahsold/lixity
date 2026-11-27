@@ -19,11 +19,11 @@ from multiprocessing.connection import Connection, wait
 from multiprocessing.process import BaseProcess
 from typing import Any
 
+from .audio_pcm import SPEECH_PCM_FORMAT, read_pcm_wav
 from .log import get_logger, log_event
 from .speech_worker import (
     MAX_BASE_REQUEST_BYTES,
     MAX_RESPONSE_BYTES,
-    SAMPLE_RATE,
     SYNTHESIS_TIMEOUT_SECONDS,
 )
 
@@ -93,8 +93,7 @@ def _child(connection: Connection, loader: Loader) -> None:
         while True:
             request = json.loads(connection.recv_bytes(MAX_BASE_REQUEST_BYTES))
             data = renderer(request)
-            from .speech import _read_pcm
-            if not isinstance(data, bytes) or len(data) > MAX_RESPONSE_BYTES or _read_pcm(data)[0] != (1, 2, SAMPLE_RATE):
+            if not isinstance(data, bytes) or len(data) > MAX_RESPONSE_BYTES or read_pcm_wav(data)[0] != SPEECH_PCM_FORMAT:
                 raise ValueError("Invalid generated PCM audio")
             connection.send_bytes(data)
     except (EOFError, BrokenPipeError):
@@ -177,7 +176,6 @@ class ModelLifecycle:
                 self._dispose("unloaded")
 
     def __call__(self, request: dict[str, Any]) -> bytes:
-        from .speech import _read_pcm
         payload = json.dumps(request).encode()
         if len(payload) > MAX_BASE_REQUEST_BYTES:
             raise ValueError("Native model request exceeds transport limit")
@@ -219,7 +217,7 @@ class ModelLifecycle:
                     raise RuntimeError("Native model process is disconnected")
                 self._connection.send_bytes(payload)
                 data = self._receive(MAX_RESPONSE_BYTES)
-                if _read_pcm(data)[0] != (1, 2, SAMPLE_RATE):
+                if read_pcm_wav(data)[0] != SPEECH_PCM_FORMAT:
                     raise ValueError("Invalid native model PCM audio")
                 return data
             except Exception as exc:

@@ -64,6 +64,7 @@
   "tour_research": "Open the research linked from the next paragraph and read the saved record.",
   "tour_compare": "Type a shorter draft and compare it with the saved text. The sentence goes from 31 to 12 words.",
   "tour_save": "Apply the draft, save it and reopen the manuscript to check the change.",
+  "tour_teleprompter": "Read the revised passage in the teleprompter and record a local voice take.",
   "tour_export": "Choose what the reading website includes and check the export before downloading.",
   "tour_reader": "Open the exported copy to see what the reader receives.",
   "tour_demo": "Check the same passage in the read-only demo.",

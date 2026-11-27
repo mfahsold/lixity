@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from .audio_pcm import SPEECH_PCM_FORMAT, read_pcm_wav
 from .io import FileUtils
 from .speech_engines import native_engine
 from .speech_profiles import (
@@ -54,7 +55,7 @@ class SpeechSegmentCache:
         if profile.engine in EXTERNAL_ENGINES:
             from .speech_providers import ADAPTER_ID, speech_endpoint
 
-            request.update(model=profile.model, endpoint=speech_endpoint(profile.base_url),
+            request.update(endpoint=speech_endpoint(profile.base_url),
                            adapter=ADAPTER_ID if profile.engine == "openai-compatible" else "lixity-mlx-audio/1",
                            api_key_env=profile.api_key_env or "")
             if mlx_audio_uses_model_speed(profile):
@@ -76,27 +77,26 @@ class SpeechSegmentCache:
 
     @staticmethod
     def _valid_audio(data: bytes) -> bool:
-        from .speech import _read_pcm
-
         try:
-            return 44 < len(data) <= MAX_RESPONSE_BYTES and _read_pcm(data)[0] == (1, 2, 24000)
+            return 44 < len(data) <= MAX_RESPONSE_BYTES and read_pcm_wav(data)[0] == SPEECH_PCM_FORMAT
         except ValueError:
             return False
 
     def get(self, text: str, profile: AudioProfile) -> bytes | None:
         key, audio, metadata = self._paths(text, profile)
         try:
-            if metadata.stat().st_size > 4096 or not 44 < audio.stat().st_size <= MAX_RESPONSE_BYTES:
-                return None
-            record = json.loads(metadata.read_text(encoding="utf-8"))
-            data = audio.read_bytes()
+            raw_record, _ = FileUtils.read_bounded_regular_bytes(metadata, maximum=4096)
+            record = json.loads(raw_record.decode("utf-8"))
             if (not isinstance(record, dict) or record.get("schema_version") != _SCHEMA
-                    or record.get("request_sha256") != key or record.get("byte_length") != len(data)
+                    or record.get("request_sha256") != key):
+                return None
+            data, _ = FileUtils.read_bounded_regular_bytes(audio, maximum=MAX_RESPONSE_BYTES)
+            if (record.get("byte_length") != len(data)
                     or record.get("audio_sha256") != hashlib.sha256(data).hexdigest()
                     or not self._valid_audio(data)):
                 return None
             return data
-        except (OSError, ValueError, UnicodeError):
+        except (OSError, ValueError):
             # Derived data is reconstructible; a missing/invalid pair is a miss.
             return None
 

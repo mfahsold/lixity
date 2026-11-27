@@ -1,22 +1,24 @@
 {
   "schema_version": "lixity-product-tour-timing/3",
   "fps": 25,
-  "duration": 65,
+  "duration": 74,
   "scenes": [
     {"id": "opening", "start": 0, "end": 3},
     {"id": "passage", "start": 3, "end": 10},
     {"id": "research", "start": 10, "end": 22},
     {"id": "compare", "start": 22, "end": 35},
     {"id": "save", "start": 35, "end": 43},
-    {"id": "export", "start": 43, "end": 54},
-    {"id": "reader", "start": 54, "end": 61},
-    {"id": "demo", "start": 61, "end": 65}
+    {"id": "teleprompter", "start": 43, "end": 52},
+    {"id": "export", "start": 52, "end": 63},
+    {"id": "reader", "start": 63, "end": 70},
+    {"id": "demo", "start": 70, "end": 74}
   ],
   "captures": [
     {"id": "passage", "duration": 10, "record_duration": 12, "theme": "dark"},
     {"id": "research", "duration": 12, "record_duration": 14, "theme": "dark"},
     {"id": "compare", "duration": 13, "record_duration": 15, "theme": "light"},
     {"id": "save", "duration": 8, "record_duration": 10, "theme": "light"},
+    {"id": "teleprompter", "duration": 9, "record_duration": 11, "theme": "dark"},
     {"id": "export", "duration": 11, "record_duration": 13, "theme": "light"},
     {"id": "reader", "duration": 7, "record_duration": 9, "theme": "light"}
   ]

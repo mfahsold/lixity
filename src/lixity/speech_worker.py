@@ -18,6 +18,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from secrets import token_hex
 from typing import TYPE_CHECKING, Any
 
+from .audio_pcm import SPEECH_PCM_FORMAT, read_pcm_wav
 from .log import get_logger, log_event, speech_diagnostic_id, speech_diagnostic_scope
 from .speech_engines import QWEN_MODEL, engine_for_model, native_engine
 from .speech_profiles import AudioProfile, audio_capabilities
@@ -37,7 +38,7 @@ MAX_REQUEST_BYTES = 32768
 MAX_REFERENCE_BYTES = 3 * 1024 * 1024
 MAX_BASE_REQUEST_BYTES = MAX_REQUEST_BYTES + 4 * ((MAX_REFERENCE_BYTES + 2) // 3)
 MAX_RESPONSE_BYTES = 32 * 1024 * 1024
-SAMPLE_RATE = 24000
+SAMPLE_RATE = SPEECH_PCM_FORMAT[2]
 REFERENCE_WAV_FORMAT = (1, 2, SAMPLE_RATE)
 MAX_REFERENCE_TRANSCRIPT_CHARS = 2000
 SYNTHESIS_TIMEOUT_SECONDS = 3600
@@ -141,7 +142,7 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
                     reference: SpeechReference | None = None,
                       endpoints: Mapping[str, str] | None = None, diagnostic_id: str | None = None) -> bytes:
     """Request bounded PCM WAV through a fixed loopback target, without fallback."""
-    from .speech import MAX_SEGMENT_CHARS, _read_pcm
+    from .speech import MAX_SEGMENT_CHARS
 
     profile = AudioProfile.model_validate(profile.model_dump())
     spec = native_engine(profile.engine)
@@ -245,11 +246,11 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
         transport_failed("response_too_large", 200)
         raise ValueError(f"{worker_name} worker response exceeds the audio limit")
     try:
-        params, _frames = _read_pcm(data)
+        params, _frames = read_pcm_wav(data)
     except ValueError:
         transport_failed("invalid_audio", 200)
         raise
-    if params != (1, 2, SAMPLE_RATE):
+    if params != SPEECH_PCM_FORMAT:
         transport_failed("audio_format_mismatch", 200)
         raise ValueError(f"Unexpected {worker_name} audio format")
     return data
@@ -257,8 +258,6 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
 
 def _decode_reference(encoded: object, transcript: object) -> tuple[bytes, bytes]:
     """Validate a bounded in-memory PCM reference and exact transcript."""
-    from .speech import _read_pcm
-
     if (not isinstance(encoded, str) or not encoded or
             len(encoded) > 4 * ((MAX_REFERENCE_BYTES + 2) // 3)):
         raise ValueError("Invalid reference audio size")
@@ -269,7 +268,7 @@ def _decode_reference(encoded: object, transcript: object) -> tuple[bytes, bytes
     data = base64.b64decode(encoded, validate=True)
     if len(data) > MAX_REFERENCE_BYTES:
         raise ValueError("Reference audio is too large")
-    params, frames = _read_pcm(data)
+    params, frames = read_pcm_wav(data)
     channels, width, rate = REFERENCE_WAV_FORMAT
     bytes_per_second = channels * width * rate
     if params != REFERENCE_WAV_FORMAT or not (
@@ -333,7 +332,7 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                 self._send_reply(404, b'{"error":"Not found"}')
 
         def do_POST(self) -> None:
-            from .speech import MAX_SEGMENT_CHARS, _read_pcm
+            from .speech import MAX_SEGMENT_CHARS
 
             if self.path != "/v1/audio/speech":
                 self._send_reply(404, b'{"error":"Not found"}')
@@ -407,7 +406,7 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                 log_event(logger, "worker_synthesis", id=request_id, render_id=render_id, engine=engine, status="started")
                 with speech_diagnostic_scope(request_id):
                     data = synthesize(request)
-                if len(data) > MAX_RESPONSE_BYTES or _read_pcm(data)[0] != (1, 2, SAMPLE_RATE):
+                if len(data) > MAX_RESPONSE_BYTES or read_pcm_wav(data)[0] != SPEECH_PCM_FORMAT:
                     raise ValueError("Unexpected generated audio format")
                 phase = "response"
                 if not self._send_reply(200, data, "audio/wav", request["voice"],

@@ -259,6 +259,7 @@ PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("src/lixity/ui/assets/reader-audio.js", ("sharing",)),
     ("src/lixity/speech*.py", ("audio",)),
     ("src/lixity/audio_audit.py", ("audio",)),
+    ("src/lixity/audio_pcm.py", ("audio",)),
     ("src/lixity/server/routes_speech.py", ("audio",)),
     ("src/lixity/ui/assets/audio-*.js", ("audio",)),
     ("src/lixity/ui/assets/speech*.*", ("audio",)),

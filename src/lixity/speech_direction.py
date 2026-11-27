@@ -47,6 +47,7 @@ from .speech_profiles import EXTERNAL_ENGINES, AudioProfile, parse_audio_setting
 
 POLICY = 'lixity-speech-plan/1'
 MAX_BYTES = 4 * 1024 * 1024
+MAX_PREVIEW_CHARS = 6000
 
 
 class BaseDirectionConflict(ValueError):
@@ -262,25 +263,32 @@ def _boundary(text: str, index: int) -> bool:
             text[index] == '\u200d' or text[index - 1] == '\u200d')
 
 
-def _ranges(passages: list[dict[str, Any]], directions: list[Direction]) -> dict[str, list[Direction]]:
-    lookup = {_digest(p['anchor']): p for p in passages}
+def _passage_texts(passages: list[dict[str, Any]]) -> dict[str, str]:
+    return {_digest(passage['anchor']): passage['text'] for passage in passages}
+
+
+def _validate_range(direction: Direction, passages: Mapping[str, str]) -> str:
+    key = _digest(direction.anchor.model_dump())
+    content = passages.get(key)
+    if content is None:
+        raise ValueError('A directed passage changed or is stale; review its saved direction')
+    end = direction.end if direction.end is not None else len(content)
+    start = direction.start
+    if not start < end <= len(content) or not _boundary(content, start) or not _boundary(content, end):
+        raise ValueError('Direction range must select complete Unicode characters in the spoken passage')
+    if not content[start:end].strip():
+        raise ValueError('Direction range must contain spoken text')
+    return key
+
+
+def _ranges(passages: Mapping[str, str], directions: list[Direction]) -> dict[str, list[Direction]]:
     result: dict[str, list[Direction]] = defaultdict(list)
-    for d in directions:
-        key = _digest(d.anchor.model_dump())
-        p = lookup.get(key)
-        if p is None:
-            raise ValueError('A directed passage changed or is stale; review its saved direction')
-        content = p['text']
-        end = d.end if d.end is not None else len(content)
-        if not d.start < end <= len(content) or not _boundary(content, d.start) or not _boundary(content, end):
-            raise ValueError('Direction range must select complete Unicode characters in the spoken passage')
-        if not content[d.start:end].strip():
-            raise ValueError('Direction range must contain spoken text')
-        result[key].append(d)
-    for rows in result.values():
+    for direction in directions:
+        result[_validate_range(direction, passages)].append(direction)
+    for key, rows in result.items():
         rows.sort(key=lambda d: d.start)
         for a, b in pairwise(rows):
-            if b.start < (a.end if a.end is not None else len(lookup[_digest(a.anchor.model_dump())]['text'])):
+            if b.start < (a.end if a.end is not None else len(passages[key])):
                 raise ValueError('Speech direction ranges overlap; choose one direction for each passage')
     return dict(result)
 
@@ -288,7 +296,9 @@ def _ranges(passages: list[dict[str, Any]], directions: list[Direction]) -> dict
 def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Direction] | None = None,
                       profiles: Mapping[str, AudioProfile] | None = None, chapter: int | str | None = None,
                       project_config: Mapping[str, Any] | None = None,
-                      skip_markers: bool = True, for_export: bool = False) -> list[SpeechSegment]:
+                      skip_markers: bool = True, for_export: bool = False,
+                      preview_at: int | Literal['first'] | Mapping[str, Any] | None = None,
+                      draft_direction: Direction | None = None) -> list[SpeechSegment]:
     """Compile explicit ranges without interpreting author direction as prose.
 
     Export preserves source ranges and instructions independently of whether a
@@ -309,13 +319,38 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
 
     profile = effective_profile(profile)
     passages = speech_passages(text, profile.language, project_config, skip_markers=skip_markers)
-    ranges = _ranges(passages, directions or [])
-    if directions and not skip_markers:
-        authored = {_digest(p['anchor']): p['text'] for p in speech_passages(text, profile.language, project_config)}
-        if any(p['text'] != authored.get(_digest(p['anchor'])) for p in passages if _digest(p['anchor']) in ranges):
-            raise ValueError('Saved direction uses marker-stripped offsets; use --no-direction with --keep-markers')
+    projections = _passage_texts(passages)
     cues = extract_audio_cues(text, profile.language, chapter, skip_markers, project_config, segment=False)
-    projections = {_digest(p['anchor']): p['text'] for p in passages}
+    if draft_direction is not None and preview_at is None:
+        raise ValueError('A draft direction requires a passage preview')
+    if preview_at is not None:
+        # A preview validates direction only for the selected spoken passage.
+        preview_anchor: dict[str, Any] | None
+        if isinstance(preview_at, Mapping):
+            preview_anchor = dict(preview_at)
+        else:
+            preview_anchor = next((cue.anchor for cue in cues if cue.text and cue.anchor and (
+                preview_at == 'first' or cue.anchor['start_line'] <= preview_at <= cue.anchor['end_line'])), None)
+        if preview_anchor is None:
+            raise ValueError('No anchored paragraph or list item found at the selected line or chapter; '
+                             'quote blocks cannot currently be selected for preview')
+        cues = [cue for cue in cues if cue.anchor == preview_anchor]
+        if not cues:
+            raise ValueError('Choose a displayed spoken paragraph')
+        if draft_direction is not None and draft_direction.anchor.model_dump() != preview_anchor:
+            raise ValueError('The draft direction belongs to a different or changed preview passage')
+        # Keep stale directions at the selected lines visible as validation
+        # errors. A stale hash on the selected passage is not a valid omission.
+        directions = [entry for entry in directions or [] if (
+            entry.anchor.start_line <= preview_anchor['end_line']
+            and entry.anchor.end_line >= preview_anchor['start_line'])]
+        if draft_direction is not None:
+            directions.append(draft_direction)
+    ranges = _ranges(projections, directions or [])
+    if directions and not skip_markers:
+        authored = _passage_texts(speech_passages(text, profile.language, project_config))
+        if any(projections[key] != authored.get(key) for key in ranges):
+            raise ValueError('Saved direction uses marker-stripped offsets; use --no-direction with --keep-markers')
     plan = []
     matched: set[str] = set()
     for cue in cues:
@@ -433,9 +468,13 @@ def build_speech_plan(text: str, profile: AudioProfile, *, directions: list[Dire
                 plan.append(SpeechSegment(piece, effective, before if n == 0 else 0.0,
                                           pause if n == len(pieces)-1 else 0.0, anchor, info))
     # A valid anchor must never silently disappear due to a projection mismatch.
-    selected_keys = {_digest(p['anchor']) for p in passages if chapter is None or p['chapter'] in {cue.chapter_num for cue in cues}}
-    if (set(ranges) & selected_keys) - matched:
-        raise ValueError('A directed passage cannot be matched to the spoken projection')
+    unmatched = ranges.keys() - matched
+    if unmatched:
+        selected_chapters = {cue.chapter_num for cue in cues}
+        if any(_digest(p['anchor']) in unmatched for p in passages if chapter is None or p['chapter'] in selected_chapters):
+            raise ValueError('A directed passage cannot be matched to the spoken projection')
+    if preview_at is not None and not for_export and sum(len(row.text) for row in plan) > MAX_PREVIEW_CHARS:
+        raise ValueError(f'Passage preview exceeds {MAX_PREVIEW_CHARS} characters; render the chapter')
     return plan
 
 
@@ -538,12 +577,13 @@ def direction_state(project: str | Path, source: str | Path, *, language: str = 
     settings = read_explicit_project_config(root)
     state, digest = _read(root)
     passages = speech_passages(text, language, settings)
+    projections = _passage_texts(passages)
     directions = []
     for entry in state.entries:
         if entry.source_path != relative:
             continue
         try:
-            _ranges(passages, [entry.direction])
+            _validate_range(entry.direction, projections)
             stale = False
         except ValueError:
             stale = True
@@ -598,8 +638,9 @@ def save_direction(project: str | Path, source: str | Path, value: Mapping[str, 
         if value is not None:
             remaining = [e.direction for e in retained if e.source_path == current['source_path']]
             # Stale records are preserved for explicit review, not silently reassigned.
-            fresh = [item for item in remaining if any(item.anchor.model_dump()==p['anchor'] for p in current['passages'])]
-            _ranges(current['passages'], [*fresh,d])
+            projections = _passage_texts(current['passages'])
+            fresh = [item for item in remaining if _digest(item.anchor.model_dump()) in projections]
+            _ranges(projections, [*fresh, d])
             retained.append(_Stored(source_path=current['source_path'], direction=d))
         retained.sort(key=lambda e: (e.source_path, e.direction.anchor.start_line, e.direction.start, e.direction.end or 0))
         version: Literal['lixity-audio-directions/1', 'lixity-audio-directions/2'] = (

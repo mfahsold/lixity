@@ -18,7 +18,7 @@ import wave
 from pathlib import Path
 from typing import Any
 
-from .audio_audit import _wave_reader_is_integer_pcm
+from .audio_pcm import wave_reader_is_integer_pcm
 from .io import sanitized_subprocess_env
 from .log import get_logger, log_event
 from .speech_recording_settings import MAX_REFERENCE_SECONDS, MIN_REFERENCE_SECONDS
@@ -356,7 +356,7 @@ def _trim_wav_duration(wav_data: bytes, target_seconds: float) -> bytes:
     """Trim complete capture frames and write a finalized WAV header."""
     try:
         with wave.open(io.BytesIO(wav_data), "rb") as reader:
-            if not _wave_reader_is_integer_pcm(reader):
+            if not wave_reader_is_integer_pcm(reader):
                 return wav_data
             channels = reader.getnchannels()
             sampwidth = reader.getsampwidth()
@@ -385,7 +385,7 @@ def analyze_signal(wav_bytes: bytes) -> dict[str, Any]:
     """Descriptive signal analysis matching calibration requirements."""
     try:
         with wave.open(io.BytesIO(wav_bytes), "rb") as w:
-            if not _wave_reader_is_integer_pcm(w) or w.getsampwidth() != 2:
+            if not wave_reader_is_integer_pcm(w) or w.getsampwidth() != 2:
                 raise ValueError("Signal analysis requires 16-bit integer PCM WAV")
             rate = w.getframerate()
             n = w.getnframes()

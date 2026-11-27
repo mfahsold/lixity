@@ -34,6 +34,7 @@ from ..speech_direction import (
     Direction,
     MLXDirectionConflict,
     NarratorConflict,
+    PassageAnchor,
     UnsupportedDirection,
     build_speech_plan,
     direction_id,
@@ -266,7 +267,7 @@ class SpeechRoutesMixin(ResponseMixin):
                 if payload.get("transcript") is not None:
                     profile = (AudioProfile.model_validate(payload["profile"]) if "profile" in payload
                                else resolve_audio_profile(settings, language=self.language))
-                    view = None if payload.get("ignore_direction") else self._direction_view()
+                    view = None if payload.get("ignore_direction") else self._direction_view(source_sha256=_digest)
                     direction_hash = view["direction_sha256"] if view else None
                     profiles = ({"narrator": profile} if settings.get("audio") is None and profile.engine in EXTERNAL_ENGINES
                                 else parse_audio_settings(settings.get("audio"), language=self.language).profiles)
@@ -343,11 +344,14 @@ class SpeechRoutesMixin(ResponseMixin):
         self._json({"ok": False, "message": message}, code)
 
     @classmethod
-    def _direction_view(cls) -> dict[str, Any]:
+    def _direction_view(cls, *, source_sha256: str | None = None) -> dict[str, Any]:
         root, source = cls.get_author_project_root(), cls.source_input
         if root is None or source is None:
             raise ValueError("Open a manuscript project before using direction")
-        return direction_state(root, source, language=cls.language)
+        view = direction_state(root, source, language=cls.language)
+        if source_sha256 is not None and view["source_sha256"] != source_sha256:
+            raise _SpeechStale("The manuscript changed while preparing speech; reload and try again")
+        return view
 
     def _handle_speech(self, _query: Any = None) -> None:
         try:
@@ -523,60 +527,61 @@ class SpeechRoutesMixin(ResponseMixin):
                         settings, payload.get("profile_id"), language=self.language
                     )
                 )
-                if payload.get("paragraph") is not None and not isinstance(
-                    payload["paragraph"], dict
-                ):
-                    raise ValueError("Supply a displayed paragraph identity")
+                mode = payload["mode"]
+                preview = mode == "preview"
+                paragraph = payload.get("paragraph")
+                if paragraph is not None:
+                    if not preview:
+                        raise ValueError("A paragraph selection is only valid for previews")
+                    paragraph = PassageAnchor.model_validate(paragraph).model_dump()
                 context: dict[str, Any]
-                if plan_only and payload["mode"] == "manuscript":
-                    if payload["chapter"] is not None or payload.get("paragraph") is not None:
+                if plan_only and mode == "manuscript":
+                    if payload["chapter"] is not None:
                         raise ValueError("Manuscript export cannot select a chapter or paragraph")
                     prepared, context = text, {"mode": "manuscript", "chapter": None, "title": ""}
                 else:
                     prepared, context = prepare_speech_source(
                         text,
                         language=self.language,
-                        mode=payload["mode"],
+                        mode=mode,
                         chapter=payload["chapter"],
-                        paragraph=payload.get("paragraph"),
                         project_config=settings,
                         for_export=plan_only,
                     )
-                view = self._direction_view()
+                view = self._direction_view(source_sha256=_digest)
                 if type(payload.get("ignore_direction", False)) is not bool:
                     raise ValueError("Ignore direction must be a boolean")
                 directions = [] if payload.get("ignore_direction") else saved_directions(view)
                 if "draft_replace_id" in payload and "draft_direction" not in payload:
                     raise ValueError("Draft replacement requires a direction")
+                draft = None
                 if "draft_direction" in payload:
-                    if payload["mode"] != "preview":
+                    if not preview:
                         raise ValueError("Save passage direction before rendering a chapter")
                     draft = Direction.model_validate(payload["draft_direction"])
                     replacement = payload.get("draft_replace_id", direction_id(draft))
                     if "draft_replace_id" in payload and not any(direction_id(d) == replacement for d in directions):
                         raise ValueError("Choose an existing direction to replace")
-                    directions = [d for d in directions if direction_id(d) != replacement] + [draft]
+                    directions = [d for d in directions if direction_id(d) != replacement]
                 profiles = ({"narrator": profile} if settings.get("audio") is None and profile.engine in EXTERNAL_ENGINES
                             else parse_audio_settings(settings.get("audio"), language=self.language).profiles)
                 plan = build_speech_plan(text, profile, directions=directions, profiles=profiles,
-                                         chapter=payload["chapter"], project_config=settings, for_export=plan_only)
-                if payload["mode"] == "preview":
-                    selected = payload.get("paragraph")
-                    if not selected:
-                        selected = next((row.anchor for row in plan if row.anchor), None)
-                    if selected is None:
-                        raise ValueError("No anchored paragraph or list item found at the selected line or chapter; quote blocks cannot currently be selected for preview")
-                    plan = [row for row in plan if row.anchor == selected]
+                                         chapter=payload["chapter"], project_config=settings, for_export=plan_only,
+                                         preview_at=(paragraph if paragraph is not None else "first") if preview else None,
+                                         draft_direction=draft)
+                if preview:
                     if not plan:
                         raise ValueError("Choose a displayed spoken paragraph")
+                    selected = plan[0].anchor
                     passage = next((item["text"] for item in view["passages"] if item["anchor"] == selected), None)
                     if passage is None:
                         raise ValueError("The selected passage changed; choose it again")
+                    prepared = passage
+                    if paragraph is not None:
+                        context.update(paragraph)
                     context["excerpt"] = (passage[:MAX_SEGMENT_CHARS].rstrip() + "…"
                                           if len(passage) > MAX_SEGMENT_CHARS else passage)
                     context["truncated"] = False
-                    if not plan_only and sum(len(row.text) for row in plan) > 6000:
-                        raise ValueError("Passage preview exceeds 6000 characters; render the chapter")
                 context["direction_sha256"] = view["direction_sha256"]
                 root = self.get_author_project_root()
                 if root is None:
