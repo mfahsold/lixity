@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 from .audio_pcm import SPEECH_PCM_FORMAT, read_pcm_wav
 from .log import get_logger, log_event, speech_diagnostic_id, speech_diagnostic_scope
 from .speech_engines import QWEN_MODEL, engine_for_model, native_engine
-from .speech_profiles import AudioProfile, audio_capabilities
+from .speech_profiles import AudioProfile, audio_capabilities, speech_segment_limit
 from .speech_providers import _NoRedirect as _NoRedirect
 from .speech_providers import no_redirect_opener
 from .speech_recording_settings import (
@@ -142,13 +142,11 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
                     reference: SpeechReference | None = None,
                       endpoints: Mapping[str, str] | None = None, diagnostic_id: str | None = None) -> bytes:
     """Request bounded PCM WAV through a fixed loopback target, without fallback."""
-    from .speech import MAX_SEGMENT_CHARS
-
     profile = AudioProfile.model_validate(profile.model_dump())
     spec = native_engine(profile.engine)
     if target not in spec.endpoints:
         raise ValueError("Unknown native speech execution target")
-    if not text.strip() or len(text) > MAX_SEGMENT_CHARS:
+    if not text.strip() or len(text) > speech_segment_limit(profile):
         raise ValueError("Invalid native synthesis request")
     model_id = spec.model
     worker_name = "Qwen" if profile.engine.startswith("qwen") else "Coqui" if profile.engine.startswith("coqui") else audio_capabilities()[profile.engine]["name"]
@@ -332,8 +330,6 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                 self._send_reply(404, b'{"error":"Not found"}')
 
         def do_POST(self) -> None:
-            from .speech import MAX_SEGMENT_CHARS
-
             if self.path != "/v1/audio/speech":
                 self._send_reply(404, b'{"error":"Not found"}')
                 return
@@ -374,7 +370,7 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                 if request["model"] != model or request["response_format"] != "wav":
                     raise ValueError("Unsupported model or format")
                 text = request["input"]
-                if not isinstance(text, str) or not text.strip() or len(text) > MAX_SEGMENT_CHARS:
+                if not isinstance(text, str) or not text.strip():
                     raise ValueError("Invalid synthesis text")
                 profile_fields = {"name": "Worker", "engine": engine, "language": request["language"],
                                   "voice": request["voice"], "instructions": request["instructions"],
@@ -386,7 +382,9 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                     if request["instructions"]:
                         raise ValueError("IMS Toucan does not support free-text direction")
                     profile_fields.update(phonemes=request["phonemes"], prosody=request["prosody"])
-                AudioProfile.model_validate(profile_fields)
+                profile = AudioProfile.model_validate(profile_fields)
+                if len(text) > speech_segment_limit(profile):
+                    raise ValueError("Invalid synthesis text")
             except OSError:
                 log_event(logger, "worker_synthesis", logging.WARNING, id=request_id, render_id=render_id,
                           engine=engine, status="failed", category="transport")

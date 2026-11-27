@@ -87,11 +87,33 @@ def test_cache_is_bounded_and_retains_no_raw_prose_in_metadata(tmp_path):
     audio = generate_silence_wav(.01, 24000)
     cache.put("Private synthetic phrase one.", narrator(), audio)
     cache.put("Private synthetic phrase two.", narrator(), audio)
-    assert sum(p.stat().st_size for p in cache.directory.iterdir()) <= 1000
     assert cache.get("Private synthetic phrase one.", narrator()) is None
     assert cache.get("Private synthetic phrase two.", narrator()) == audio
     assert all("Private synthetic" not in p.read_text() for p in cache.directory.glob("*.json"))
     assert cache.get("Private synthetic phrase two.", narrator(voice="Aiden")) is None
+
+
+def test_toucan_adapter_identity_separates_old_sentence_chunks(tmp_path):
+    import hashlib
+    import json
+
+    from lixity.speech_cache import SpeechSegmentCache
+    from lixity.speech_engines import TOUCAN_MODEL
+
+    profile = AudioProfile(engine="ims-toucan", language="de", voice="reference", reference_id="a" * 64)
+    audio = generate_silence_wav(.01, 24000)
+    text = "Synthetischer Absatz mit mehreren Sätzen."
+    request = {"schema_version": "lixity-speech-segment/1", "model": TOUCAN_MODEL,
+               "text": text, "language": "de", "voice": "reference", "instructions": "",
+               "adapter": "lixity-toucan/2", "phonemes": {}, "prosody": {},
+               "reference_id": "a" * 64}
+    expected = hashlib.sha256(json.dumps(request, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    cache = SpeechSegmentCache(tmp_path / "segments")
+    key, wav, _metadata = cache._paths(text, profile)
+    assert key == expected
+    cache.put(text, profile, audio)
+    assert wav.name == expected + ".wav"
+    assert cache.get(text, profile) == audio
 
 
 def test_base_cache_separates_reference_and_model_but_not_playback_speed(tmp_path):

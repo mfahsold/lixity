@@ -155,6 +155,61 @@ def test_toucan_adapter_sends_exact_structured_controls_and_verified_reference()
         synthesize_toucan("Name.", profile, target="jetson", reference=reference)
 
 
+def test_toucan_segments_keep_paragraph_prosody_context():
+    from lixity.speech_direction import build_speech_plan, segment_speech_text
+    from lixity.speech_profiles import TOUCAN_SEGMENT_CHARS
+
+    text = " ".join(f"Satz {index} steht im Absatz." for index in range(60))
+    toucan = AudioProfile(engine="ims-toucan", language="de", voice="reference", reference_id="a" * 64)
+    pieces = segment_speech_text(text, toucan)
+    assert len(pieces) == 1
+    assert len(pieces[0]) > 600
+    assert len(pieces[0]) <= TOUCAN_SEGMENT_CHARS
+
+    long_text = " ".join("Ein längerer Absatz behält seinen Kontext." for _ in range(200))
+    pieces = segment_speech_text(long_text, toucan)
+    assert 1 < len(pieces) <= (len(long_text) // 600 + 1)
+    assert all(len(piece) <= TOUCAN_SEGMENT_CHARS for piece in pieces)
+
+    qwen = AudioProfile(speed=1.0)
+    plan = build_speech_plan("## Kapitel\n\n" + text, toucan, chapter=1)
+    assert len([row for row in plan if row.anchor]) == 1
+    assert all(len(row.text) <= TOUCAN_SEGMENT_CHARS for row in plan if row.text)
+    assert len(segment_speech_text(text, qwen)) > 1
+
+
+def test_toucan_http_worker_accepts_long_segments_and_rejects_transport_limit():
+    from lixity.speech_profiles import TOUCAN_SEGMENT_CHARS
+    from lixity.speech_worker import worker_server
+
+    calls = []
+    server = worker_server(lambda request: calls.append(request) or generate_silence_wav(.1), port=0, model=TOUCAN_MODEL)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    endpoint = f"http://127.0.0.1:{server.server_port}/v1/audio/speech"
+    payload = {"model": TOUCAN_MODEL, "input": "Name.", "language": "de", "voice": "reference",
+               "instructions": "", "response_format": "wav", "reference_text": "Synthetic reference.",
+               "reference_audio": base64.b64encode(generate_silence_wav(1)).decode(),
+               "phonemes": {}, "prosody": {}}
+    def post(value):
+        return opener.open(urllib.request.Request(endpoint, data=json.dumps(value).encode(),
+                                                  headers={"Content-Type": "application/json"}))
+    try:
+        long_text = "Ein Absatz. " * (TOUCAN_SEGMENT_CHARS // 12)
+        with post({**payload, "input": long_text}) as response:
+            assert response.status == 200
+        with pytest.raises(urllib.error.HTTPError) as error:
+            post({**payload, "input": long_text + "Zu lang." * 500})
+        with error.value:
+            assert error.value.code == 400
+        assert len(calls) == 1
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
 def test_toucan_http_worker_enforces_controls_before_inference():
     from lixity.speech_worker import worker_server
 

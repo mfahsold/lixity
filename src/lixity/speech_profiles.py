@@ -61,6 +61,10 @@ MLX_AUDIO_TTS_MODEL = "mlx-community/ZONOS3-Mini"
 MLX_AUDIO_DEFAULT_VOICE = "liesel"
 MLX_AUDIO_LANGUAGES = ("de", "en", "fr", "es", "it", "pt", "nl")
 MLX_AUDIO_ZONOS_SEGMENT_CHARS = 220
+# IMS-Toucan predicts duration, pitch and energy per utterance, so longer
+# fragments keep prosody coherent across sentences. Autoregressive engines
+# keep short fragments to bound drift and hallucinations.
+TOUCAN_SEGMENT_CHARS = 1800
 MLX_AUDIO_TEMPERATURE = 0.0
 MLX_AUDIO_VOICES = {
     "en": ("cillian", "imogen", "jett", "morgana", "rupert", "sakura", "savannah", "thaddeus", "willow", "wyatt"),
@@ -86,11 +90,13 @@ PronunciationMap = dict[Annotated[str, Field(min_length=1, max_length=100)],
 
 
 def speech_segment_limit(profile: AudioProfile) -> int:
-    """Return an adapter-specific fragment bound, below the transport maximum."""
+    """Return an adapter-specific fragment bound enforced by the transport."""
     from .speech import MAX_SEGMENT_CHARS
 
     if profile.engine == "mlx-audio" and profile.model == MLX_AUDIO_TTS_MODEL:
         return MLX_AUDIO_ZONOS_SEGMENT_CHARS
+    if profile.engine == "ims-toucan":
+        return TOUCAN_SEGMENT_CHARS
     return MAX_SEGMENT_CHARS
 
 

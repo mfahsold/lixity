@@ -291,6 +291,12 @@ preserved.
   and PCM format before reuse. Repeating a render reuses only segments with the
   same effective spoken text, model family, language, voice/reference and
   delivery controls; pause or leveling changes do not require new synthesis.
+  IMS-Toucan bundles complete sentences into fragments of up to 1,800
+  characters so its per-utterance duration, pitch and energy predictions keep
+  paragraph context. Qwen and other engines retain shorter sentence-bounded
+  fragments. Adapter boundaries are enforced by the transport worker; the
+  Toucan adapter identity invalidates cache entries written for the former
+  sentence-sized chunks.
   On a cache miss during rendering, Lixity re-checks shared native worker
   endpoints—if an eviction makes a mixed-model render infeasible on a shared
   worker, the render fails cleanly and preserves any existing recording (use

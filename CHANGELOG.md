@@ -18,6 +18,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Bundle IMS-Toucan speech into longer sentence-aligned fragments (up to
+  1,800 characters) so duration, pitch and energy predictions retain paragraph
+  context instead of being sampled independently for each sentence. Qwen and
+  other engines keep shorter fragments. Enforce the same adapter-specific
+  bound in the worker and invalidate old Toucan sentence-cache entries.
 - Bound loudness jumps between generated speech segments with active-window
   RMS gain correction and −2 dBFS PCM peak headroom while retaining raw cached
   PCM and logging per-segment level diagnostics.
