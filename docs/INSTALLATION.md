@@ -704,10 +704,14 @@ still include contextual details; inspect logs before sharing them.
 In 0.8.0, audio jobs and renders add technical events to the same logger.
 A random diagnostic ID correlates a native job with its render without using the
 job's access identifier. INFO events record queue and render state and segment
-count; DEBUG additionally records each segment's requested model variant and
+count, plus a per-render `render_summary` with cache hits/misses, the maximum
+applied gain in dB, the count of peak-limited segments and the count of
+alternate-delivery segments that kept their level apart from peak protection;
+DEBUG additionally records each segment's requested model variant and
 preset, cache outcome, elapsed time, assembled PCM timeline bounds and, on
-current builds, active-window RMS in dBFS, applied gain in dB and post-gain
-sample peak in dBFS before edge fades
+current builds, active-window RMS in dBFS, applied gain in dB, post-gain
+sample peak in dBFS, whether the sample peak limited the gain and whether an
+alternate delivery preserved the segment level, all before edge fades
 ([assembly level correction](AUDIO.md#cache-tempo-and-saved-settings)).
 FFmpeg conversion deadlines and local ZONOS3 deadlines both record
 `error=timeout`; for ZONOS3, the error message explicitly distinguishes worker

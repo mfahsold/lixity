@@ -274,7 +274,11 @@ preserved.
   fades: active 100 ms RMS windows outside −32 to −28 dBFS receive a constant
   gain of up to ±6 dB toward that band, capped at a −2 dBFS PCM sample-peak
   ceiling. Very short or low-signal segments and explicit alternate delivery
-  receive peak protection only. Both leveling and edge fades preserve internal
+  receive peak protection only. The assembled render logs a `render_summary`
+  event with segment counts, cache hits/misses, maximum applied gain,
+  peak-limited segments and alternate-delivery segments; DEBUG segment events
+  carry the same gain, RMS and peak figures plus a delivery flag, so level
+  differences between spoken sentences can be traced in the log. Both leveling and edge fades preserve internal
   dynamics, pauses and exact sample counts; integrated loudness and
   reconstructed true peaks remain separate measurements, especially after MP3
   encoding.

@@ -7,6 +7,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Log a per-render `render_summary` audio event (INFO) with segment count,
+  cache hits/misses, maximum applied gain, peak-limited segment count and the
+  count of alternate-delivery segments that keep their level apart from peak
+  protection. `segment_end` (DEBUG) additionally reports `delivery_preserved`
+  and the leveling result reports whether the sample peak limited the gain,
+  so level jumps between spoken sentences can be traced without listening.
+
 ### Changed
 
 - Bound loudness jumps between generated speech segments with active-window

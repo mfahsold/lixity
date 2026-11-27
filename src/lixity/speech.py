@@ -142,7 +142,8 @@ def _observe_speech_segment(index: int, total: int, profile: AudioProfile,
         log_event(logger, "segment_end", logging.DEBUG, index=index, total=total, status=status,
                   error=error_kind, cache=state["cache"], pcm_start_ms=pcm_start_ms,
                   pcm_end_ms=state["pcm_end_ms"] if state["pcm_end_ms"] is not None else "unknown",
-                  **{key: state[key] for key in ("level_active_rms_dbfs", "level_gain_db", "level_sample_peak_dbfs")
+                  **{key: state[key] for key in ("level_active_rms_dbfs", "level_gain_db",
+                                                  "level_sample_peak_dbfs", "delivery_preserved")
                      if key in state},
                   duration_ms=max(0, round((time.monotonic() - started) * 1000)))
 
@@ -558,6 +559,9 @@ def render_speech_audio(
                 written += len(frames)
 
             previous_profile: AudioProfile | None = None
+            summary_hits = summary_misses = 0
+            summary_max_gain_db = 0.0
+            summary_peak_limited = summary_unleveled = 0
             for index, cue in enumerate(cues):
                 _check_cancelled(cancelled)
                 if cue.pause_before:
@@ -580,6 +584,10 @@ def render_speech_audio(
                     cached = data is not None
                     diagnostic["cache"] = ("disabled" if segment_cache is None else "fresh" if fresh_audio else
                                            "hit" if cached else "miss")
+                    if diagnostic["cache"] == "hit":
+                        summary_hits += 1
+                    elif diagnostic["cache"] == "miss":
+                        summary_misses += 1
                     if data is None:
                         # A cache entry may have been evicted after preflight.
                         claim_native_endpoint(render_claims, effective.engine)
@@ -601,12 +609,19 @@ def render_speech_audio(
                         _check_cancelled(cancelled)
                     # Level and fade only the final assembly. An explicit
                     # alternate delivery keeps its level apart from peak protection.
-                    level = level_speech_pcm(frames, rate, preserve_delivery=(
+                    delivery_preserved = (
                         effective.instructions != profile.instructions or effective.prosody != profile.prosody
                         or effective.reference_id != profile.reference_id
                         or effective.voice_description != profile.voice_description
                         or effective.engine != profile.engine or effective.voice != profile.voice
-                    ))
+                    )
+                    level = level_speech_pcm(frames, rate, preserve_delivery=delivery_preserved)
+                    diagnostic["delivery_preserved"] = delivery_preserved
+                    if delivery_preserved:
+                        summary_unleveled += 1
+                    summary_max_gain_db = max(summary_max_gain_db, abs(level.gain_db))
+                    if level.peak_limited:
+                        summary_peak_limited += 1
                     _check_cancelled(cancelled)
                     diagnostic["level_active_rms_dbfs"] = ("unknown" if level.active_rms_dbfs is None
                                                             else round(level.active_rms_dbfs, 1))
@@ -626,6 +641,10 @@ def render_speech_audio(
                     progress(done, total)
                 if cue.pause_after:
                     write_frames(bytes(int(rate * cue.pause_after) * frame_bytes))
+            log_event(get_logger("speech"), "render_summary", segments=total, cache_hits=summary_hits,
+                      cache_misses=summary_misses, max_gain_db=round(summary_max_gain_db, 2),
+                      peak_limited_segments=summary_peak_limited, unleveled_segments=summary_unleveled,
+                      output_format="mp3" if output.suffix.lower() == ".mp3" else "wav")
         final = pcm
         if output.suffix.lower() == ".mp3":
             if ffmpeg is None:  # defensive: checked before synthesis

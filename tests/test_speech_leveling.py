@@ -14,6 +14,7 @@ import pytest
 from lixity import speech
 from lixity.speech_cache import SpeechSegmentCache
 from lixity.speech_direction import SpeechSegment
+from lixity.speech_leveling import level_speech_pcm
 from lixity.speech_profiles import AudioProfile
 
 RATE = 24_000
@@ -182,3 +183,58 @@ def test_render_caps_negative_pcm_peak_with_uniform_gain_even_for_short_segments
     assert rendered[2] == 0
     assert rendered[3] == pytest.approx(-rendered[0] / 4, abs=1)
     assert rendered[4] == -rendered[1]
+
+
+def test_level_reports_peak_limiting_and_quiet_boost():
+    spike = _tone(500)
+    spike_list = list(spike)
+    spike_list[len(spike_list) // 2] = 32_000
+    transient_frames = struct.pack(f"<{len(spike_list)}h", *spike_list)
+    leveled_spike = level_speech_pcm(transient_frames, RATE)
+    assert leveled_spike.peak_limited is True
+    assert leveled_spike.sample_peak_dbfs == pytest.approx(-2.0, abs=0.1)
+
+    quiet_frames = struct.pack(f"<{TONE_FRAMES}h", *_tone(950))
+    leveled_quiet = level_speech_pcm(quiet_frames, RATE)
+    assert leveled_quiet.peak_limited is False
+    assert 0 < leveled_quiet.gain_db <= 6.01
+
+
+def test_render_logs_summary_with_gain_cache_and_delivery_counts(tmp_path, monkeypatch):
+    text = "A synthetic sentence."
+    source = tmp_path / "synthetic.md"
+    source.write_text(text, encoding="utf-8")
+    profile = AudioProfile(speed=1.0)
+    directed = AudioProfile(speed=1.0, instructions="Use a quiet aside.")
+    plan = [
+        SpeechSegment(text, profile, anchor=PASSAGE),
+        SpeechSegment(text, directed, anchor=PASSAGE),
+    ]
+    monkeypatch.setattr(speech, "_synthesize_segment", lambda *_args, **_kwargs: _wav(_tone(950)))
+    records = io.StringIO()
+    logger = logging.Logger("lixity.speech.test.summary", logging.DEBUG)
+    logger.addHandler(logging.StreamHandler(records))
+    monkeypatch.setattr(speech, "get_logger", lambda _suffix: logger)
+
+    speech.render_speech_audio(
+        source, tmp_path / "chapter.wav", profile=profile, plan=plan, cache_dir=tmp_path / "cache"
+    )
+
+    summaries = [
+        dict(field.split("=", 1) for field in line.split())
+        for line in records.getvalue().splitlines()
+        if "event=render_summary" in line
+    ]
+    assert len(summaries) == 1
+    summary = summaries[0]
+    assert summary["segments"] == "2"
+    assert summary["cache_misses"] == "2"
+    assert float(summary["max_gain_db"]) > 0
+    assert summary["unleveled_segments"] == "1"
+    assert text not in records.getvalue()
+    segment_ends = [
+        dict(field.split("=", 1) for field in line.split())
+        for line in records.getvalue().splitlines()
+        if "event=segment_end" in line
+    ]
+    assert [record["delivery_preserved"] for record in segment_ends] == ["false", "true"]

@@ -22,6 +22,7 @@ class LeveledSpeech:
     active_rms_dbfs: float | None
     gain_db: float
     sample_peak_dbfs: float | None
+    peak_limited: bool
 
 
 def level_speech_pcm(frames: bytes, rate: int, *, preserve_delivery: bool = False) -> LeveledSpeech:
@@ -32,7 +33,7 @@ def level_speech_pcm(frames: bytes, rate: int, *, preserve_delivery: bool = Fals
         samples.byteswap()
     peak = max(abs(min(samples, default=0)), abs(max(samples, default=0)))
     if not peak:
-        return LeveledSpeech(frames, None, 0.0, None)
+        return LeveledSpeech(frames, None, 0.0, None, False)
 
     width = max(1, rate // 10)
     scale = width * _FULL_SCALE**2
@@ -53,11 +54,14 @@ def level_speech_pcm(frames: bytes, rate: int, *, preserve_delivery: bool = Fals
 
     # Use the measured sample peak to restrict the one gain for the entire
     # segment. A flat clamp would distort the waveform at each peak.
-    gain = min(10 ** (correction / 20), _PEAK_LIMIT / peak)
+    unconstrained_gain = 10 ** (correction / 20)
+    allowed_gain = _PEAK_LIMIT / peak
+    peak_limited = unconstrained_gain > allowed_gain
+    gain = min(unconstrained_gain, allowed_gain)
     if gain != 1.0:
         adjusted = array("h", (round(s * gain) for s in samples))
         if sys.byteorder == "big":
             adjusted.byteswap()
         frames = adjusted.tobytes()
     return LeveledSpeech(frames, level, 20 * math.log10(gain),
-                         20 * math.log10(round(gain * peak) / _FULL_SCALE))
+                         20 * math.log10(round(gain * peak) / _FULL_SCALE), peak_limited)
