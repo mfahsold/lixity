@@ -9,10 +9,12 @@ import pytest
 
 from lixity.config import configuration_metadata, load_project_config, prepare_project_settings
 from lixity.speech_profiles import (
+    MLX_AUDIO_VOICES,
     AudioProfile,
     AudioSettings,
     audio_capabilities,
     migrate_audio_settings,
+    mlx_audio_profile_defaults,
     parse_audio_settings,
     resolve_audio_profile,
 )
@@ -30,6 +32,22 @@ def test_defaults_selection_and_serialization():
     assert resolve_audio_profile({"audio": raw}, "second").name == "Second"
     with pytest.raises(ValueError, match="Unknown audio profile"):
         resolve_audio_profile({"audio": raw}, "missing")
+
+
+@pytest.mark.parametrize("language", ["de", "en", "fr", "es", "it", "pt"])
+def test_implicit_mlx_voice_matches_profile_language(language):
+    defaults = mlx_audio_profile_defaults(language)
+    assert defaults["voice"] == MLX_AUDIO_VOICES[language][0]
+    assert AudioProfile(engine="mlx-audio", language=language).voice == defaults["voice"]
+
+
+def test_implicit_mlx_dutch_voice_requires_project_reference():
+    defaults = mlx_audio_profile_defaults("nl")
+    assert defaults["voice"] == "reference"
+    with pytest.raises(ValueError, match="saved reference identity"):
+        AudioProfile(engine="mlx-audio", language="nl")
+    profile = AudioProfile(engine="mlx-audio", language="nl", voice="reference", reference_id="a" * 64)
+    assert profile.voice == "reference"
 
 
 @pytest.mark.parametrize("raw", [[], "audio", {}, {"schema_version": "future"},

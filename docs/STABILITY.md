@@ -429,6 +429,10 @@ bandwidth of a saved reference. Its notes use fixed engineering thresholds
 without corpus calibration. Listen to the reference and a rendered passage to
 assess suitability, including transcript accuracy, accent and resemblance to
 the speaker. These qualities are outside the diagnostic's measurements.
+Activity separation is a heuristic: sparse digital pauses use the low-frame floor,
+while continuous speech returns an unknown noise floor rather than inventing a
+pause measurement. Quiet speech, breath, sustained background sound and strongly
+compressed recordings can still change the active-frame share and notes.
 A prior local OpenVoice V2 check used one target reference and one converter.
 The render retained content up to about 11 kHz with a wideband reference and
 lost content above about 8 kHz with a reference lacking those frequencies.

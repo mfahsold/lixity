@@ -10,6 +10,7 @@ import contextlib
 import io
 import ipaddress
 import json
+import logging
 import os
 import shutil
 import socket
@@ -26,6 +27,7 @@ from string import Template
 from typing import IO, TYPE_CHECKING, Any
 
 from .audio_pcm import SPEECH_PCM_FORMAT, read_pcm_wav, wave_reader_is_integer_pcm
+from .log import get_logger, log_event, speech_diagnostic_id
 
 if TYPE_CHECKING:
     from .speech_profiles import AudioProfile
@@ -240,7 +242,7 @@ def _normalize_wav(data: bytes) -> bytes:
 def external_speech_request(text: str, profile: AudioProfile) -> dict[str, str | float]:
     """Build the adapter-specific speech JSON from one validated profile."""
     from .speech_direction import require_render_direction
-    from .speech_profiles import MLX_AUDIO_TEMPERATURE
+    from .speech_profiles import MLX_AUDIO_TEMPERATURE, mlx_audio_uses_model_speed
 
     require_render_direction(profile, profile.instructions)
     request_data: dict[str, str | float] = {
@@ -253,7 +255,8 @@ def external_speech_request(text: str, profile: AudioProfile) -> dict[str, str |
         if profile.voice != "reference":
             request_data["voice"] = profile.voice
         request_data["lang_code"] = profile.language
-        request_data["speed"] = profile.speed
+        if mlx_audio_uses_model_speed(profile):
+            request_data["speed"] = profile.speed
         request_data["temperature"] = MLX_AUDIO_TEMPERATURE
         return request_data
     request_data["voice"] = profile.voice
@@ -365,7 +368,7 @@ class _ZonosWorkerSession:
                 self._timer = None
             self._dispose()
 
-    def synthesize(self, runtime: Path, worker_script: Path, worker_request: dict[str, Any]) -> None:
+    def synthesize(self, runtime: Path, worker_script: Path, worker_request: dict[str, Any]) -> dict[str, Any]:
         payload = json.dumps(worker_request, ensure_ascii=False).encode("utf-8") + b"\n"
         key = (str(runtime), str(worker_script))
         with self._lock:
@@ -390,7 +393,8 @@ class _ZonosWorkerSession:
                         raise RuntimeError("Local ZONOS3 worker failed to start")
                     banner_raw = _read_zonos_reply(process.stdout, self._startup_timeout, phase="startup")
                     banner = json.loads(banner_raw.decode("utf-8")) if banner_raw else {}
-                    if not isinstance(banner, dict) or banner.get("ready") is not True:
+                    if (not isinstance(banner, dict) or banner.get("ready") is not True
+                            or banner.get("model") != "mlx-community/ZONOS3-Mini"):
                         raise RuntimeError("Local ZONOS3 worker failed to start")
                 process = self._process
                 if process is None or process.stdin is None or process.stdout is None:
@@ -404,6 +408,13 @@ class _ZonosWorkerSession:
                 reply = json.loads(reply_raw.decode("utf-8")) if reply_raw else {}
                 if not isinstance(reply, dict) or reply.get("ok") is not True:
                     raise RuntimeError("Local ZONOS3 synthesis failed")
+                token_count = reply.get("token_count")
+                final_chunk = reply.get("is_final_chunk", True)
+                if token_count is not None and (type(token_count) is not int or not 0 <= token_count <= 1_000_000):
+                    raise RuntimeError("Local ZONOS3 worker returned invalid generation metadata")
+                if type(final_chunk) is not bool:
+                    raise RuntimeError("Local ZONOS3 worker returned invalid generation metadata")
+                return {"token_count": token_count, "is_final_chunk": final_chunk}
             except Exception as exc:
                 self._dispose()
                 if isinstance(exc, RuntimeError):
@@ -450,13 +461,30 @@ def _synthesize_zonos_direct(text: str, profile: AudioProfile,
             reference_path = Path(directory) / "reference.wav"
             reference_path.write_bytes(reference.audio)
             worker_request["ref_audio"] = str(reference_path)
-        _ZONOS_SESSION.synthesize(runtime, worker_script, worker_request)
+        metadata = _ZONOS_SESSION.synthesize(runtime, worker_script, worker_request)
         if output.is_symlink() or not output.is_file():
             raise RuntimeError("Local ZONOS3 synthesis failed")
         with output.open("rb") as stream:
             data = stream.read(MAX_RESPONSE_BYTES + 1)
     if not 44 < len(data) <= MAX_RESPONSE_BYTES:
         raise ValueError("Local ZONOS3 audio is empty or exceeds the byte limit")
+    params, frames = read_pcm_wav(data)
+    channels, width, rate = params
+    duration = len(frames) / (channels * width * rate)
+    token_count = metadata.get("token_count")
+    log_event(get_logger("speech.transport"), "zonos_generation", logging.DEBUG,
+              id=speech_diagnostic_id(), token_count=token_count,
+              duration_seconds=round(duration, 3), final_chunk=metadata.get("is_final_chunk"))
+    if metadata.get("is_final_chunk") is not True:
+        raise RuntimeError("Local ZONOS3 synthesis returned an incomplete audio chunk")
+    if token_count is not None and token_count >= 1990:
+        raise RuntimeError("Local ZONOS3 synthesis reached its generation budget; text may be truncated")
+    if not any(frames):
+        raise RuntimeError("Local ZONOS3 synthesis returned silent audio")
+    words = len(text.split())
+    if (profile.language not in {"ja", "zh", "ko"} and words >= 3
+            and duration < (words / (3.0 * profile.speed)) * 0.35):
+        raise RuntimeError("Local ZONOS3 synthesis output is implausibly short; text may be truncated")
     return data
 
 

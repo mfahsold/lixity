@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import io
 import json
+import math
 import shutil
 import struct
 import threading
@@ -11,6 +12,7 @@ import wave
 from contextlib import contextmanager
 from email.message import Message
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -31,6 +33,16 @@ from lixity.speech_profiles import (
 def external(**changes):
     return AudioProfile.model_validate({"engine": "openai-compatible", "voice": "custom-voice",
         "language": "nl", "model": "synthetic-model", "base_url": "http://127.0.0.1:8768/v1", **changes})
+
+
+def _short_tone_wav(seconds=0.2):
+    rate = 24000
+    samples = [round(8000 * math.sin(math.tau * 440 * index / rate)) for index in range(int(rate * seconds))]
+    output = io.BytesIO()
+    with wave.open(output, "wb") as writer:
+        writer.setparams((1, 2, rate, 0, "NONE", "not compressed"))
+        writer.writeframes(struct.pack(f"<{len(samples)}h", *samples))
+    return output.getvalue()
 
 
 @contextmanager
@@ -166,12 +178,17 @@ def test_standard_request_accepts_provider_wav_without_native_headers(monkeypatc
     assert audio_capabilities()['openai-compatible']['instructions'] is False
 
 
-def test_mlx_audio_request_uses_language_model_speed_and_temperature():
-    from lixity.speech_profiles import MLX_AUDIO_DEFAULT_VOICE, MLX_AUDIO_TTS_MODEL
+def test_custom_mlx_request_leaves_speed_to_postprocessing():
+    from lixity.speech_profiles import (
+        MLX_AUDIO_DEFAULT_VOICE,
+        MLX_AUDIO_TTS_MODEL,
+        mlx_audio_uses_model_speed,
+    )
     from lixity.speech_providers import synthesize_external
 
     with provider() as (url, records):
-        selected = AudioProfile(engine='mlx-audio', base_url=url, language='de')
+        selected = AudioProfile(engine='mlx-audio', base_url=url, language='de', speed=1.5)
+        assert mlx_audio_uses_model_speed(selected) is False
         synthesize_external('Synthetischer Text.', selected)
     assert records[0][2] == {
         'model': MLX_AUDIO_TTS_MODEL,
@@ -179,7 +196,6 @@ def test_mlx_audio_request_uses_language_model_speed_and_temperature():
         'response_format': 'wav',
         'voice': MLX_AUDIO_DEFAULT_VOICE,
         'lang_code': 'de',
-        'speed': 1.1,
         'temperature': 0.0,
     }
 
@@ -193,6 +209,41 @@ def test_mlx_audio_render_dispatches_through_the_shared_pipeline(tmp_path):
     assert output.is_file()
     assert records[0][2]['lang_code'] == 'de'
     assert read_pcm_wav(output.read_bytes())[0] == (1, 2, 24000)
+
+
+def test_local_zonos_rejects_silent_and_short_output_before_caching(monkeypatch):
+    from lixity import speech_providers
+
+    profile = AudioProfile(engine="mlx-audio", language="de", voice="liesel")
+    monkeypatch.setattr(speech_providers, "_zonos_worker_paths", lambda: (Path("/runtime"), Path("/worker.py")))
+    monkeypatch.setattr(speech_providers, "_zonos_worker_available", lambda *_args: True)
+    outputs = iter((generate_silence_wav(1), _short_tone_wav()))
+
+    def synthesize(_runtime, _worker, request):
+        Path(request["output_path"]).write_bytes(next(outputs))
+        return {"token_count": 20, "is_final_chunk": True}
+
+    monkeypatch.setattr(speech_providers._ZONOS_SESSION, "synthesize", synthesize)
+    with pytest.raises(RuntimeError, match="silent"):
+        speech_providers._synthesize_zonos_direct(" ".join(["Ein synthetischer Satz."] * 20), profile, None)
+    with pytest.raises(RuntimeError, match="implausibly short"):
+        speech_providers._synthesize_zonos_direct(" ".join(["Ein synthetischer Satz."] * 20), profile, None)
+
+
+def test_local_zonos_rejects_generation_budget_metadata(monkeypatch):
+    from lixity import speech_providers
+
+    profile = AudioProfile(engine="mlx-audio", language="de", voice="liesel")
+    monkeypatch.setattr(speech_providers, "_zonos_worker_paths", lambda: (Path("/runtime"), Path("/worker.py")))
+    monkeypatch.setattr(speech_providers, "_zonos_worker_available", lambda *_args: True)
+
+    def synthesize(_runtime, _worker, request):
+        Path(request["output_path"]).write_bytes(_short_tone_wav(1))
+        return {"token_count": 1995, "is_final_chunk": True}
+
+    monkeypatch.setattr(speech_providers._ZONOS_SESSION, "synthesize", synthesize)
+    with pytest.raises(RuntimeError, match="generation budget"):
+        speech_providers._synthesize_zonos_direct("Ein synthetischer Satz.", profile, None)
 
 
 def test_local_zonos_dispatches_reference_through_private_worker(monkeypatch):

@@ -333,9 +333,10 @@ For Qwen and other postprocessed adapters, FFmpeg applies `atempo` to each
 synthesized or cached segment into a fresh temporary output before explicit
 pauses are inserted, so a previous conversion can never replace a missing or
 failed segment. `1.0` leaves the audio untouched; if `atempo` returns no
-samples for an extremely short segment, the original PCM is kept. ZONOS3
-receives `speed` directly as its model `speaking_rate` condition and skips
-FFmpeg tempo. Neither route promises a precise linear duration ratio; compare
+samples for an extremely short segment, the original PCM is kept. The pinned
+local ZONOS3 worker receives `speed` directly as its model `speaking_rate`
+condition and skips FFmpeg tempo; custom MLX endpoints keep FFmpeg postprocessing
+so speed is not applied twice. Neither route promises a precise linear duration ratio; compare
 short previews and ASR evidence when pacing and word fidelity matter. Delivery
 instructions do not guarantee a speaking rate.
 
@@ -571,6 +572,12 @@ accepts a 1–60 second, mono, 24 kHz, 16-bit PCM WAV and a UTF-8 transcript of
 at most 2,000 characters. A recording may be longer if you select a suitable
 continuous excerpt before creating the reference. Takes longer than 30 seconds
 require an application and reference worker that support the 60-second limit.
+For a quick setup check, 15 seconds can be enough; prefer 30–60 seconds of
+continuous speech in the narration style and language you want. A longer clip
+is not automatically better: trim leading silence, keep one speaker and avoid
+noise gates, denoising or low-pass filtering. The voice library can show
+on-demand signal notes for clipping, level, noise, digital pauses and bandwidth;
+these are advisory diagnostics, not a quality score.
 
 Start and stop the recording yourself. For example, on a Linux desktop with
 PipeWire's `pw-record` and a selected default microphone, the following creates
@@ -645,11 +652,17 @@ lixity read-aloud --project ./novel --engine mlx-audio --language de \
 The status command checks the isolated runtime executable and whether the MLX
 checkpoint is cached. It does not load the model or expose filesystem paths. A
 `ready` result establishes prerequisites only; it does not establish speech quality.
+Implicit ZONOS3 profiles choose a preset from the selected language; Dutch has
+no fixed preset in the pinned model and therefore requires a project reference.
 At `speed=1.1`, ZONOS3 receives `speed` in `generate()`, which maps to the model's
 `speaking_rate` condition. It is not exact `10%` duration arithmetic because the
 model samples acoustic output; compare otherwise identical previews when duration
 is part of the acceptance criterion. Explicit paragraph and scene pauses remain in
-Lixity and are not changed by the model's speed value.
+Lixity and are not changed by the model's speed value. The local worker records
+bounded token/completion metadata and rejects silent, incomplete,
+budget-exhausted or implausibly short output before it can enter the segment
+cache. This is a truncation guard, not a speech-recognition check; listening and
+text review remain necessary.
 
 For a ZONOS3 render, use pronunciation substitutions and explicit pauses.
 Keep the profile and active ranges free of text instructions, or export those
@@ -1048,7 +1061,11 @@ Existing `pronunciations` are literal spelling replacements. The separate
 `phonemes` map contains IPA: case-sensitive, whole-word, longest-first matches
 are applied after spelling replacements. A multiword override is never split
 across model requests. Unsupported symbols fail before synthesis; IPA input
-must use the supported Toucan phoneme inventory.
+must use the supported Toucan phoneme inventory. Only overrides that match the
+current segment are sent to the worker. Invalid symbols, reserved control tokens
+and invalid modifier order return a stable validation code before inference,
+so the interface can distinguish an author-correctable pronunciation problem
+from a worker runtime failure.
 
 Profile prosody supplies defaults. A passage direction's sparse `prosody` object
 overrides only its explicitly supplied fields; empty fields inherit defaults:

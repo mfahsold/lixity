@@ -86,7 +86,8 @@ def assess_reference(audio: bytes) -> dict[str, object]:
     result: dict[str, object] = {
         "schema_version": SCHEMA, "method": "heuristic-uncalibrated", "sample_rate": rate,
         "duration_seconds": round(len(samples) / rate, 2), "peak_dbfs": None, "clipped_sample_ratio": None,
-        "speech_level_dbfs": None, "noise_floor_dbfs": None, "bandwidth_hz": None, "notes": notes,
+        "speech_level_dbfs": None, "noise_floor_dbfs": None, "active_frame_share": None,
+        "bandwidth_hz": None, "notes": notes,
     }
     peak = max((abs(value) for value in samples), default=0)
     if peak == 0:
@@ -100,20 +101,41 @@ def assess_reference(audio: bytes) -> dict[str, object]:
     powers = [sum(value * value for value in samples[start:start + step]) / (step * 32768.0 ** 2)
               for start in range(0, len(samples) - step + 1, step)]
     level = floor = None
+    active_starts: list[int] = []
+    active_share = None
     if powers:
         ordered = sorted(powers)
-        active = [power for power in powers if power >= _percentile(ordered, 0.5)]
-        level = round(_db(sum(active) / len(active)), 1)
-        floor = round(_db(_percentile(ordered, 0.05)), 1)
-        result["speech_level_dbfs"], result["noise_floor_dbfs"] = level, floor
+        positive = [power for power in ordered if power > 0.0]
+        if len(positive) >= 3:
+            floor = round(_db(_percentile(ordered, 0.05)), 1)
+            # A median-based gate counts digital silence as speech whenever
+            # pauses occupy at least half the clip. Use the measured low-frame
+            # floor instead, and keep unknown when speech and floor cannot be
+            # separated (for example continuous speech without pauses).
+            low_power = _percentile(positive, 0.05)
+            middle_power = _percentile(positive, 0.5)
+            threshold = (low_power * 0.5 if low_power >= middle_power * 0.1
+                         else max(low_power * 10.0, 10 ** (-120 / 10)))
+            active = [power for power in powers if power >= threshold]
+            if len(active) >= 3:
+                level = round(_db(sum(active) / len(active)), 1)
+                active_share = round(len(active) / len(powers), 4)
+                active_starts = [start for start, power in zip(
+                    range(0, len(samples) - step + 1, step), powers, strict=True
+                ) if power >= threshold]
+                if active_share >= 0.9:
+                    floor = None
+                result["speech_level_dbfs"], result["noise_floor_dbfs"] = level, floor
+                result["active_frame_share"] = active_share
 
     window = [0.5 - 0.5 * math.cos(2.0 * math.pi * index / _FRAME) for index in range(_FRAME)]
     starts = list(range(0, len(samples) - _FRAME + 1, _FRAME // 2))
     energies = [sum(value * value for value in samples[start:start + _FRAME]) for start in starts]
     bandwidth = None
-    if energies:
-        threshold = sorted(energies)[len(energies) // 2]
-        loud = [start for start, energy in zip(starts, energies, strict=True) if energy >= threshold and energy > 0]
+    if energies and active_starts:
+        loud = [start for start in starts if any(
+            abs(start - active) < _FRAME // 2 for active in active_starts[::max(1, len(active_starts) // 64)]
+        )]
         stride = max(1, math.ceil(len(loud) / _MAX_SPECTRUM_FRAMES))
         spectrum = [0.0] * (_FRAME // 2)
         for start in loud[::stride]:
@@ -135,6 +157,6 @@ def assess_reference(audio: bytes) -> dict[str, object]:
             notes.append(_note("high_noise", "The gap between speech and pauses is small; background noise is likely audible."))
     if bandwidth is not None and bandwidth < _NARROW_BANDWIDTH_SHARE * rate / 2:
         notes.append(_note("band_limited", f"No signal above about {bandwidth:.0f} Hz although the file allows "
-                                           f"{rate / 2:.0f} Hz; the OpenVoice converter reproduces such a limit, "
+                                           f"{rate / 2:.0f} Hz; a reference-based voice can inherit this limit, "
                                            "so the cloned voice sounds duller than a wideband recording."))
     return result

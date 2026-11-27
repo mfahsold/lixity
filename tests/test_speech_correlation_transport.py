@@ -476,3 +476,21 @@ def test_disconnect_while_reading_request_has_no_response_or_traceback(recorded,
     assert any("status=failed" in line and "category=transport" in line
                for line in recorded.getvalue().splitlines())
     assert "PRIVATE_READ_ERROR" not in recorded.getvalue()
+
+
+def test_native_validation_code_is_surfaced_without_worker_response_text(recorded, tmp_path):
+    log.configure(stream=recorded, level="INFO", force=True, json_format=True)
+    reference = save_reference(tmp_path, generate_silence_wav(1), "Synthetic reference.")
+    profile = AudioProfile(engine="ims-toucan", language="de", voice="reference", reference_id=reference.id)
+    payload = b'{"error":"PRIVATE_WORKER_DETAIL","code":"unsupported_phoneme"}'
+
+    def open_request(_request, timeout):
+        raise urllib.error.HTTPError(
+            "http://127.0.0.1:8772/v1/audio/speech", 400, "PRIVATE_STATUS",
+            Message(), io.BytesIO(payload)
+        )
+
+    with log.speech_diagnostic_scope("0123456789abcdef"), pytest.raises(ValueError, match="unsupported_phoneme"):
+        synthesize_native("Synthetic text.", profile, reference=reference,
+                          opener=SimpleNamespace(open=open_request))
+    assert "PRIVATE_" not in recorded.getvalue()

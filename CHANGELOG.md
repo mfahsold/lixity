@@ -9,6 +9,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Show on-demand reference-quality notes in the voice library, with localized
+  guidance for clipping, low level, noise, digital pauses and band limiting.
+  Recommend a 15-second quick check and a preferred 30–60-second continuous
+  sample in the intended narration style.
+- Return stable Toucan pronunciation validation codes such as
+  `unsupported_phoneme` and `invalid_modifier_order` instead of a generic
+  HTTP 500, and send only phonetic overrides that match the current segment.
+- Record bounded ZONOS3 generation metadata and reject silent, incomplete,
+  budget-exhausted or implausibly short audio before it can be cached.
 - Log a per-render `render_summary` audio event (INFO) with segment count,
   cache hits/misses, maximum applied gain, peak-limited segment count and the
   count of alternate-delivery segments that keep their level apart from peak
@@ -18,6 +27,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Choose implicit ZONOS3 preset voices by profile language and require a
+  project reference for Dutch. Keep custom MLX speed in FFmpeg postprocessing
+  so it is not applied twice and cache identity matches the effective request.
+  Show model-speed and instruction controls only for the adapters that actually
+  implement them.
+- Measure reference speech level against a low-frame floor instead of the
+  median, so sparse speech is not averaged with digital silence and continuous
+  speech does not invent a noise floor.
+- Canonicalize external speech endpoints and include the credential environment
+  name in narrator and timeline identity.
 - Bundle ZONOS3 speech into complete-sentence fragments up to 600 characters
   instead of 220, retaining paragraph prosody while staying below the model's
   default 2,000-frame generation budget and the shared transport limit.

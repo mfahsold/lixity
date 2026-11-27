@@ -45,6 +45,14 @@ SYNTHESIS_TIMEOUT_SECONDS = 3600
 _RENDER_ID_HEADER = "X-Lixity-Render-Id"
 
 
+class SpeechRequestValidationError(ValueError):
+    """A bounded, author-correctable synthesis request error."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
 def reference_format() -> dict[str, int]:
     """Return the capture and validation contract for author references."""
     channels, width, rate = REFERENCE_WAV_FORMAT
@@ -168,11 +176,16 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
     elif reference is not None:
         raise ValueError("This native model does not use a reference")
     if profile.engine == "ims-toucan":
-        request_data["phonemes"] = profile.phonemes
+        from .speech_controls import phoneme_spans
+
+        request_data["phonemes"] = {
+            text[start:end]: replacement
+            for start, end, replacement in phoneme_spans(text, profile.phonemes)
+        }
         request_data["prosody"] = profile.prosody.model_dump()
     payload = json.dumps(request_data, ensure_ascii=False).encode("utf-8")
     if len(payload) > (MAX_BASE_REQUEST_BYTES if spec.reference_required else MAX_REQUEST_BYTES):
-        raise ValueError("Qwen synthesis request is too large")
+        raise ValueError(f"{worker_name} synthesis request is too large")
     headers = {"Content-Type": "application/json"}
     render_id = _valid_render_id(diagnostic_id if diagnostic_id is not None else speech_diagnostic_id())
     if render_id is not None:
@@ -211,6 +224,15 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
         # HTTPError owns a response stream even though open() raised before
         # entering the response context manager.
         actual_model = exc.headers.get("X-Lixity-Model") if exc.headers else None
+        validation_code = None
+        if exc.code == 400:
+            try:
+                detail = json.loads(exc.read(4096))
+                candidate = detail.get("code") if isinstance(detail, dict) else None
+                if isinstance(candidate, str) and re.fullmatch(r"[a-z0-9_]{1,64}", candidate):
+                    validation_code = candidate
+            except (OSError, ValueError, TypeError):
+                pass
         exc.close()
         if actual_model is not None and actual_model != model_id:
             transport_failed("model_mismatch", exc.code, observed_model=actual_model)
@@ -218,6 +240,8 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
             raise RuntimeError(f"{worker_name} worker ({target}) is running a different {model_kind}; select the matching worker variant") from exc
         transport_failed("http_error", exc.code)
         if exc.code == 400:
+            if validation_code:
+                raise ValueError(f"{worker_name} worker ({target}) rejected the synthesis request ({validation_code})") from exc
             raise RuntimeError(f"{worker_name} worker ({target}) rejected the synthesis request (HTTP 400); check the selected profile and model") from exc
         if exc.code == 500:
             raise RuntimeError(f"{worker_name} worker ({target}) reported synthesis failed (HTTP 500); check the worker runtime and resources") from exc
@@ -412,6 +436,12 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                     return
                 log_event(logger, "worker_synthesis", id=request_id, render_id=render_id, engine=engine, status="success",
                           duration_ms=int((time.monotonic() - started) * 1000))
+            except SpeechRequestValidationError as exc:
+                log_event(logger, "worker_synthesis", logging.WARNING, id=request_id, render_id=render_id,
+                          engine=engine, status="rejected", category="validation", code=exc.code,
+                          duration_ms=int((time.monotonic() - started) * 1000))
+                self._send_reply(400, json.dumps({"error": "Invalid synthesis request", "code": exc.code}).encode(),
+                                 request_id=request_id, render_id=render_id)
             except Exception:  # noqa: BLE001 - optional inference adapter failures are reported locally
                 category = "transport" if phase == "response" else "execution"
                 log_event(logger, "worker_synthesis", logging.WARNING, id=request_id, render_id=render_id,

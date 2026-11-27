@@ -105,6 +105,20 @@ def test_distinct_designed_and_reference_voices_remain_distinct_and_stable():
     assert len([w for w in markup['warnings'] if w['code'] == 'voice_binding_required']) == 4
 
 
+def test_external_speaker_identity_canonicalizes_url_and_separates_credential_names():
+    from lixity.speech_export import timeline_json
+
+    first = AudioProfile(engine='openai-compatible', base_url='http://127.0.0.1:8768/v1/',
+                         model='synthetic-model', voice='narrator', api_key_env='VOICE_KEY_A')
+    same = AudioProfile(engine='openai-compatible', base_url='http://127.0.0.1:8768/v1',
+                        model='synthetic-model', voice='narrator', api_key_env='VOICE_KEY_A')
+    other = AudioProfile.model_validate({**same.model_dump(), 'api_key_env': 'VOICE_KEY_B'})
+    plan = [SpeechSegment('Synthetic prose.', profile) for profile in (first, same, other)]
+    ids = [row['speaker_id'] for row in timeline_json(plan)['segments']]
+    assert ids[0] == ids[1]
+    assert ids[0] != ids[2]
+
+
 def test_export_does_not_apply_backend_transport_word_limits():
     from lixity.speech import MAX_SEGMENT_CHARS
     from lixity.speech_export import timeline_json

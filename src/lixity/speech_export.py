@@ -18,6 +18,7 @@ from xml.sax.saxutils import escape, quoteattr
 
 from .speech_controls import phoneme_spans
 from .speech_direction import SpeechSegment, has_extended_controls, segment_prosody
+from .speech_profiles import EXTERNAL_ENGINES
 
 TIMELINE_SCHEMA = 'lixity-audio-timeline/1'
 _TIMING_REASON = 'Audio has not been measured; a text plan does not determine speech duration.'
@@ -28,7 +29,12 @@ def _speaker(row: SpeechSegment) -> tuple[str, dict[str, Any]]:
     profile = row.profile.model_dump()
     identity: dict[str, Any] = {key: profile[key] for key in (
         'name', 'engine', 'language', 'voice', 'voice_description', 'reference_id', 'base_url', 'model',
+        'api_key_env',
     ) if key in profile}
+    if profile.get('engine') in EXTERNAL_ENGINES:
+        from .speech_providers import speech_endpoint
+
+        identity['base_url'] = speech_endpoint(profile['base_url'])
     if row.export_info and row.export_info.direction and row.export_info.direction.profile_id:
         identity['profile_id'] = row.export_info.direction.profile_id
     encoded = json.dumps(identity, sort_keys=True, ensure_ascii=False, separators=(',', ':')).encode('utf-8')

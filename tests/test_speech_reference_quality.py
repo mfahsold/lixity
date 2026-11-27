@@ -60,6 +60,21 @@ def test_clipping_and_digitally_silent_pauses_are_reported() -> None:
     assert result["peak_dbfs"] is not None and result["peak_dbfs"] > -0.5
 
 
+def test_sparse_speech_is_not_averaged_with_digital_silence() -> None:
+    speech = _tone(1, [440], 8000)
+    result = assess_reference(_wav(speech + [0] * (RATE * 3)))
+    assert result["active_frame_share"] < 0.4
+    assert result["speech_level_dbfs"] > -20
+    assert result["noise_floor_dbfs"] <= -90
+    assert "low_level" not in _codes(result)
+
+
+def test_continuous_speech_does_not_invent_a_measurable_noise_floor() -> None:
+    result = assess_reference(_wav(_tone(4, [440], 8000)))
+    assert result["active_frame_share"] == 1.0
+    assert result["noise_floor_dbfs"] is None
+
+
 def test_assessment_is_deterministic_and_rejects_other_formats() -> None:
     audio = _wav(_tone(1, [440], 8000))
     assert assess_reference(audio) == assess_reference(audio)

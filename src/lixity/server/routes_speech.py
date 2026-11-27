@@ -924,6 +924,24 @@ class SpeechRoutesMixin(ResponseMixin):
                 "references": list_references(root),
             })
             return
+        if action == "inspect_reference":
+            from ..speech_reference_quality import assess_reference
+            from ..speech_references import load_reference
+
+            try:
+                if set(payload) != {"action", "project_token", "source_sha256", "reference_id"}:
+                    raise ValueError("Supply the saved recording ID and the selected manuscript context")
+                with self._workspace_lock:
+                    self._speech_bound(payload)
+                    root = self.get_author_project_root()
+                    if root is None:
+                        raise ValueError("Open a manuscript project before inspecting a recording")
+                    reference = load_reference(root, payload["reference_id"])
+                    quality = assess_reference(reference.audio)
+                self._json({"ok": True, "reference_id": reference.id, "quality": quality})
+            except (OSError, ValueError, RuntimeError, UserWarning) as exc:
+                self._speech_error(exc)
+            return
         if action == "list_references":
             from ..speech_references import list_references
 

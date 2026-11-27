@@ -118,7 +118,11 @@ def _serve_persistent(protocol: TextIO, parent_pid: int) -> int:
             _reuse_speaker_embedding(model, kwargs, embeddings)
             result = next(model.generate(text, **kwargs))
             write(str(output_path), result.audio, result.sample_rate, format="wav")
-            protocol.write('{"ok":true}\n')
+            protocol.write(json.dumps({
+                "ok": True,
+                "token_count": getattr(result, "token_count", None),
+                "is_final_chunk": getattr(result, "is_final_chunk", True),
+            }) + "\n")
         except Exception:  # noqa: BLE001 - report bounded status without echoing private text
             protocol.write('{"ok":false}\n')
         protocol.flush()

@@ -21,6 +21,7 @@
   var profileProsody;
   var currentAudioSchema = "lixity-audio-settings/5";
   var allReferences = [], calibrationTexts = null, profileConstraints = null;
+  var referenceQuality = new Map();
   var microphoneState = null, microphoneBusy = false, microphoneRefreshing = false, preferredMicrophone = "";
   var chapterAudio = null, chapterAudioBusy = false, chapterAudioSequence = 0;
   var audioStream = null, audioCtx = null, audioSource = null, audioProcessor = null, recordedChunks = [], totalRecordedSamples = 0;
@@ -271,8 +272,11 @@
   function profileSupport(profile) {
     var cap = profile ? capabilities?.[profile.engine] || {} : profileCapability();
     var support = Object.assign({}, cap.control_support || {});
+    var engine = profile ? profile.engine : fields.engine.value;
     var instructionsSupported = profile ? profile.supports_instructions : fields.supports_instructions.checked;
-    if (cap.configurable_instructions) support.direction = instructionsSupported ? "model_interpreted" : "unsupported";
+    if (engine === "openai-compatible" && cap.configurable_instructions) {
+      support.direction = instructionsSupported ? "model_interpreted" : "unsupported";
+    }
     return support;
   }
   function applyPauseBounds(inputs, support) {
@@ -813,7 +817,10 @@
     fields.design_hint.hidden = !designed;
     fields.speed.min = String(cap.speed.minimum);
     fields.speed.max = String(cap.speed.maximum);
-    var modelTempo = cap.speed.implementation === "model-condition";
+    var modelTempo = cap.speed.implementation === "model-condition" &&
+      fields.engine.value === "mlx-audio" &&
+      fields.provider_model.value.trim() === "mlx-community/ZONOS3-Mini" &&
+      fields.base_url.value.trim().replace(/\/+$/, "") === "http://127.0.0.1:8000/v1";
     var tempoHelp = uiFormat(modelTempo ? "speech_speed_hint_model" : "speech_speed_hint", {
       default: new Intl.NumberFormat(document.documentElement.lang || undefined).format(cap.speed.default)
     });
@@ -1381,6 +1388,36 @@
     return typeof seconds === "number" && Number.isFinite(seconds) && seconds >= 0
       ? seconds.toLocaleString(document.documentElement.lang || undefined, {maximumFractionDigits: 1}) + " s" : "";
   }
+  function renderReferenceQuality(reference, target) {
+    if (!target) return;
+    target.replaceChildren();
+    var quality = referenceQuality.get(reference.id);
+    if (!quality) return;
+    var notes = Array.isArray(quality.notes) ? quality.notes : [];
+    if (!notes.length) {
+      node("p", target, "ctl-note", label("reference_quality_none"));
+      return;
+    }
+    notes.forEach(function(note) {
+      var key = "speech_reference_quality_" + String(note.code || "").replace(/[^a-z0-9_]/g, "");
+      var text = label(key.replace(/^speech_/, ""));
+      node("p", target, "ctl-note", text && text !== key && text !== "speech_" + key ? text : note.message || key);
+    });
+  }
+  async function inspectReferenceQuality(reference, trigger, target) {
+    if (!reference || trigger.disabled || openedContext !== context()) return;
+    trigger.disabled = true;
+    try {
+      var response = await request("audio-microphone", Object.assign(tokens(), {
+        action:"inspect_reference", reference_id:reference.id
+      }));
+      if (response.reference_id !== reference.id || !response.quality) throw new Error(label("failed"));
+      referenceQuality.set(reference.id, response.quality);
+      renderReferenceQuality(reference, target);
+      target.hidden = false;
+    } catch (error) { status(error.message); }
+    finally { trigger.disabled = false; }
+  }
   function referenceLabel(referenceId) {
     var index = allReferences.findIndex(function(reference) { return reference.id === referenceId; });
     if (index < 0) return label("reference_unavailable");
@@ -1455,6 +1492,7 @@
       if (response.reference_id !== referenceId) throw new Error(label("failed"));
       if (fields.audio.getAttribute("src") === url("speech-audio", {reference_id:referenceId})) clearAudio();
       allReferences = allReferences.filter(function(item) { return item.id !== referenceId; });
+      referenceQuality.delete(referenceId);
       referenceOptions(fields.reference_id.value);
       renderReferenceList(allReferences); renderActiveVoiceBadge(); updateVoiceCard();
       status(label("reference_delete_done"));
@@ -1484,6 +1522,15 @@
       node("div", info, "voice-ref-text", name);
       var duration = referenceDuration(ref);
       if (duration) node("div", info, "voice-ref-meta", label("audit_duration") + ": " + duration);
+      var qualityBox = node("div", info, "voice-ref-quality ctl-note");
+      qualityBox.hidden = true;
+      if (referenceQuality.has(ref.id)) {
+        renderReferenceQuality(ref, qualityBox);
+        qualityBox.hidden = false;
+      }
+      var qualityBtn = node("button", info, "ctl", label("reference_quality_run"));
+      qualityBtn.type = "button";
+      qualityBtn.addEventListener("click", function() { inspectReferenceQuality(ref, qualityBtn, qualityBox); });
       var actions = node("div", item, "row");
       var play = node("button", actions, "ctl", "▶");
       play.type = "button";
@@ -1749,6 +1796,7 @@
     if (!res || !res.reference) return false;
     if (res.activation && res.activation.state === "activated") { location.reload(); return true; }
     // Saving a take and assigning it to a profile are distinct outcomes.
+    if (res.reference.quality) referenceQuality.set(res.reference.id, res.reference.quality);
     allReferences = res.references || allReferences;
     renderReferenceList(allReferences); referenceOptions(fields.reference_id.value);
     renderActiveVoiceBadge(); updateVoiceCard();

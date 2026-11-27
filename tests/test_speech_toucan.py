@@ -83,17 +83,19 @@ def test_phoneme_validation_fails_before_any_inference_or_fallback():
 def test_explicit_ipa_cannot_replace_words_with_toucan_control_tokens(replacement):
     from lixity.speech_toucan import prepare_phones
 
-    with pytest.raises(ValueError, match="control"):
+    with pytest.raises(ValueError, match="control") as error:
         prepare_phones("Name", {"Name": replacement}, phonemize=lambda _: pytest.fail("fallback"),
                        validate=lambda _: None)
+    assert error.value.code == "reserved_control_token"
 
 
 @pytest.mark.parametrize("phones", ["a \u02d0", "\u02c8 a", "\u02c8\u02c8a", "\u02c8", "~\u02d0a", "a.\u0303", "a\u02d0\u02d0"])
 def test_phoneme_modifiers_cannot_target_boundaries_or_silently_collapse(phones):
     from lixity.speech_toucan import _validate_phone_order
 
-    with pytest.raises(ValueError, match="modifier"):
+    with pytest.raises(ValueError, match="modifier") as error:
         _validate_phone_order(phones, {"a", "n"})
+    assert error.value.code == "invalid_modifier_order"
 
 
 def test_phoneme_modifiers_can_target_actual_adjacent_phones():
@@ -133,7 +135,7 @@ def test_toucan_adapter_sends_exact_structured_controls_and_verified_reference()
     audio = generate_silence_wav(1)
     reference = SpeechReference(_identity(audio, "Reference."), audio, "Reference.")
     profile = AudioProfile(engine="ims-toucan", language="de", voice="reference", reference_id=reference.id,
-                           phonemes={"Name": "na\u02d0mə"}, prosody={"pitch_variance_scale": 0.8})
+                           phonemes={"Name": "na\u02d0mə", "Unused": "ʊn"}, prosody={"pitch_variance_scale": 0.8})
     calls = []
     class Response(io.BytesIO):
         status = 200
@@ -204,6 +206,34 @@ def test_toucan_http_worker_accepts_long_segments_and_rejects_transport_limit():
         with error.value:
             assert error.value.code == 400
         assert len(calls) == 1
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_toucan_worker_returns_validation_code_for_unsupported_phoneme():
+    from lixity.speech_worker import SpeechRequestValidationError, worker_server
+
+    def synthesize(_request):
+        raise SpeechRequestValidationError("unsupported_phoneme", "Unsupported phoneme")
+
+    server = worker_server(synthesize, port=0, model=TOUCAN_MODEL)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    endpoint = f"http://127.0.0.1:{server.server_port}/v1/audio/speech"
+    payload = {"model": TOUCAN_MODEL, "input": "Name.", "language": "de", "voice": "reference",
+               "instructions": "", "response_format": "wav", "reference_text": "Synthetic reference.",
+               "reference_audio": base64.b64encode(generate_silence_wav(1)).decode(),
+               "phonemes": {"Name": "ɚ"}, "prosody": {}}
+    try:
+        with pytest.raises(urllib.error.HTTPError) as error:
+            opener.open(urllib.request.Request(endpoint, data=json.dumps(payload).encode(),
+                                               headers={"Content-Type": "application/json"}))
+        with error.value:
+            assert error.value.code == 400
+            assert json.loads(error.value.read())["code"] == "unsupported_phoneme"
     finally:
         server.shutdown()
         server.server_close()

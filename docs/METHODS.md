@@ -1072,11 +1072,16 @@ a quality score and say nothing about transcript accuracy or voice identity.
 
 - Peak: `20·log10(max|x| / 32768)` dBFS; clipped ratio: share of samples with
   `|x| ≥ 32760`.
-- Frame powers `P_f = mean(x²)/32768²` over 20 ms frames. Speech level is
-  `10·log10(mean P_f)` over frames at or above the median frame power; noise
-  floor is `10·log10` of the 5th-percentile frame power, floored at −120 dBFS.
-- Bandwidth: Hann-windowed 1024-sample frames (hop 512) at or above the median
-  frame energy, at most 64 evenly spaced, are averaged into a power spectrum.
+- Frame powers `P_f = mean(x²)/32768²` over 20 ms frames. Let `L` be the
+  5th-percentile power over all frames and `M` the median positive frame power.
+  The activity threshold is `0.5·L` when `L ≥ 0.1·M`, otherwise
+  `max(10·L, 10⁻¹²)`. Frames at or above that threshold are active; at least
+  three are required. Speech level is `10·log10(mean P_f)` over active frames,
+  and `active_frame_share` is their count divided by all frame counts. Noise
+  floor is `10·log10(L)`, floored at −120 dBFS, but is `null` when at least 90 %
+  of frames are active because speech and background cannot be separated.
+- Bandwidth: Hann-windowed 1024-sample frames (hop 512) near the active-frame
+  positions, at most 64 evenly spaced, are averaged into a power spectrum.
   With `B₀` the mean power below 1 kHz, the bandwidth is the upper edge of the
   highest 500 Hz band whose mean power is at least `10⁻⁷·B₀` (−70 dB).
 - Notes (`clipping`, `low_level`, `high_noise`, `digitally_silent_pauses`,

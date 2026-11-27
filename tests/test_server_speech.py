@@ -547,6 +547,22 @@ def test_speech_view_rejects_stale_context_before_probing_workers(speech_server,
     assert calls == []
 
 
+def test_voice_reference_quality_inspection_is_bound_and_read_only(speech_server):
+    from lixity.speech_references import load_reference, save_reference
+
+    port, source, handler, _observed = speech_server
+    reference = save_reference(source.parent, generate_silence_wav(1), "Synthetic quality reference.")
+    payload = {**context(source, handler), "action": "inspect_reference", "reference_id": reference.id}
+    response = send(port, "/api/audio-microphone", payload=payload)
+    assert response.status == 200, response.body
+    data = json.loads(response.body)
+    assert data["reference_id"] == reference.id
+    assert data["quality"]["notes"][0]["code"] == "silent"
+    assert send(port, "/api/audio-microphone", payload={**payload, "source_sha256": "0" * 64}).status == 409
+    assert send(port, "/api/audio-microphone", payload={**payload, "extra": True}).status == 400
+    assert load_reference(source.parent, reference.id) == reference
+
+
 def test_voice_reference_delete_is_bound_and_protects_every_saved_profile(speech_server):
     from lixity.speech_references import load_reference, save_reference
 

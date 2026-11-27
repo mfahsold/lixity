@@ -116,6 +116,18 @@ def test_toucan_adapter_identity_separates_old_sentence_chunks(tmp_path):
     assert cache.get(text, profile) == audio
 
 
+def test_toucan_cache_identity_uses_only_phonemes_matching_the_segment(tmp_path):
+    from lixity.speech_cache import SpeechSegmentCache
+
+    cache = SpeechSegmentCache(tmp_path / "segments")
+    first = AudioProfile(engine="ims-toucan", language="de", voice="reference", reference_id="a" * 64,
+                         phonemes={"Name": "na\u02d0mə"})
+    unrelated = AudioProfile(engine="ims-toucan", language="de", voice="reference", reference_id="a" * 64,
+                             phonemes={"Name": "na\u02d0mə", "Unused": "ʊn"})
+    assert cache._paths("Name.", first)[0] == cache._paths("Name.", unrelated)[0]
+    assert cache._paths("Unused.", first)[0] != cache._paths("Unused.", unrelated)[0]
+
+
 def test_base_cache_separates_reference_and_model_but_not_playback_speed(tmp_path):
     from lixity.speech_cache import SpeechSegmentCache
 

@@ -64,8 +64,13 @@ class SpeechSegmentCache:
             if profile.engine == "qwen3-design":
                 request["voice_description"] = profile.voice_description
             if profile.engine == "ims-toucan":
+                from .speech_controls import phoneme_spans
+
                 request["adapter"] = "lixity-toucan/2"
-                request["phonemes"] = profile.phonemes
+                request["phonemes"] = {
+                    text[start:end]: replacement
+                    for start, end, replacement in phoneme_spans(text, profile.phonemes)
+                }
                 request["prosody"] = profile.prosody.model_dump()
         if profile_uses_reference(profile):
             request["reference_id"] = profile.reference_id

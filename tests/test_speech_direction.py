@@ -70,6 +70,18 @@ def test_provider_direction_support_follows_the_profile_and_export_preserves_tex
     assert plan_json(render_plan)['controls']['instructions'] == 'model-interpreted'
 
 
+def test_external_narrator_identity_uses_canonical_url_and_credential_name():
+    from lixity.speech_direction import same_narrator
+
+    first = AudioProfile(engine='openai-compatible', base_url='http://127.0.0.1:8768/v1/',
+                         model='synthetic-model', voice='narrator', api_key_env='VOICE_KEY_A')
+    same = AudioProfile(engine='openai-compatible', base_url='http://127.0.0.1:8768/v1',
+                        model='synthetic-model', voice='narrator', api_key_env='VOICE_KEY_A')
+    other = AudioProfile.model_validate({**same.model_dump(), 'api_key_env': 'VOICE_KEY_B'})
+    assert same_narrator(first, same)
+    assert not same_narrator(first, other)
+
+
 def test_prepared_mlx_render_does_not_drop_legacy_profile_direction(tmp_path):
     from lixity.speech import render_speech_audio
     from lixity.speech_direction import MLXDirectionConflict, SpeechSegment

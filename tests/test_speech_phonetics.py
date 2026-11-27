@@ -14,7 +14,7 @@ from lixity.speech_direction import (
     speech_passages,
 )
 from lixity.speech_export import ssml_export, timeline_json
-from lixity.speech_profiles import AudioProfile, parse_audio_settings
+from lixity.speech_profiles import TOUCAN_SEGMENT_CHARS, AudioProfile, parse_audio_settings
 
 
 def toucan(**changes):
@@ -159,12 +159,12 @@ def test_passage_prosody_merges_over_profile_without_changing_other_spans():
 
 
 def test_phonetic_multiword_override_survives_transport_boundary_and_text_substitution():
-    text = "Wort " * 119 + "New York bleibt still."
+    text = "Wort " * 400 + "New York bleibt still."
     profile = toucan(pronunciations={"New York": "Neu York"}, phonemes={"Neu York": "nɔɪ jɔʁk"})
     rows = build_speech_plan(text, profile)
     assert len(rows) >= 2
     assert sum("Neu York" in row.text for row in rows) == 1
-    assert all(len(row.text) <= 600 for row in rows)
+    assert all(len(row.text) <= TOUCAN_SEGMENT_CHARS for row in rows)
     assert all("nɔɪ" not in row.text for row in rows)
     exported = plan_json(build_speech_plan(text, profile, for_export=True))
     assert exported["schema_version"] == "lixity-speech-plan/2"

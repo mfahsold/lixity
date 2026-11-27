@@ -27,7 +27,12 @@ from .speech_lifecycle import (
 )
 from .speech_profiles import AudioProfile
 from .speech_references import SpeechReference
-from .speech_worker import SAMPLE_RATE, _decode_reference, synthesize_native
+from .speech_worker import (
+    SAMPLE_RATE,
+    SpeechRequestValidationError,
+    _decode_reference,
+    synthesize_native,
+)
 
 UPSTREAM_REVISION = "3cc2094d9c7123336eda7e299ac0bc90319ca9ff"
 _MIN_CHECKPOINT_TORCH = (2, 6, 0)
@@ -54,7 +59,9 @@ def prepare_phones(text: str, overrides: Mapping[str, str], *, phonemize: Callab
     previous = 0
     for start, end, replacement in phoneme_spans(text, overrides):
         if any(char in replacement for char in "~#.!?"):
-            raise ValueError("Reserved control token in IMS Toucan pronunciation")
+            raise SpeechRequestValidationError(
+                "reserved_control_token", "Reserved control token in IMS Toucan pronunciation"
+            )
         validate(replacement)
         if start > previous:
             pieces.append(phonemize(text[previous:start]))
@@ -74,11 +81,15 @@ def _validate_phone_order(phones: str, base_phones: Collection[str]) -> None:
     for index, char in enumerate(phones):
         if char == "\u02c8":
             if index + 1 == len(phones) or phones[index + 1] not in base_phones:
-                raise ValueError("Unsupported phoneme modifier order in IMS Toucan pronunciation")
+                raise SpeechRequestValidationError(
+                    "invalid_modifier_order", "Unsupported phoneme modifier order in IMS Toucan pronunciation"
+                )
             preceding_phone = False
         elif char in _SUFFIX_MODIFIERS:
             if not preceding_phone or char in modifiers:
-                raise ValueError("Unsupported phoneme modifier order in IMS Toucan pronunciation")
+                raise SpeechRequestValidationError(
+                    "invalid_modifier_order", "Unsupported phoneme modifier order in IMS Toucan pronunciation"
+                )
             modifiers.add(char)
         else:
             preceding_phone = char in base_phones
@@ -183,12 +194,16 @@ def _load_runtime(model_dir: Path, speaker_dir: Path, *, device: str, threads: i
         # Upstream normalizes these two symbols even with input_phonemes=True.
         # Explicit pronunciations must not be silently rewritten.
         if any(char in phones for char in "ɚᵻ"):
-            raise ValueError("Unsupported phoneme in IMS Toucan pronunciation")
+            raise SpeechRequestValidationError(
+                "unsupported_phoneme", "Unsupported phoneme in IMS Toucan pronunciation"
+            )
         _validate_phone_order(phones, base_phones)
         try:
             frontend.string_to_tensor(phones, input_phonemes=True, handle_missing=False)
         except (KeyError, IndexError, ValueError) as exc:
-            raise ValueError("Unsupported phoneme or modifier order in IMS Toucan pronunciation") from exc
+            raise SpeechRequestValidationError(
+                "unsupported_phoneme", "Unsupported phoneme or modifier order in IMS Toucan pronunciation"
+            ) from exc
 
     def render(request: dict[str, Any]) -> bytes:
         nonlocal reference_key, reference_embedding

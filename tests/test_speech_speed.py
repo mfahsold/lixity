@@ -143,6 +143,32 @@ def test_zonos_speed_is_applied_inside_model_without_ffmpeg(tmp_path, monkeypatc
     assert calls and all(speed == 1.1 for _text, speed in calls)
 
 
+def test_custom_mlx_speed_is_postprocessed_once_on_cache_miss_and_hit(tmp_path, monkeypatch):
+    from lixity.speech import generate_silence_wav
+
+    source = tmp_path / "source.md"
+    source.write_text("A synthetic passage.")
+    profile = AudioProfile(engine="mlx-audio", base_url="http://127.0.0.1:8001/v1",
+                           language="de", speed=1.5)
+    requests, adjustments = [], []
+
+    def synthesize(_text, _profile, **_kwargs):
+        requests.append(1)
+        return generate_silence_wav(1)
+
+    def adjust(_data, _frames, *, directory, ffmpeg, speed):
+        adjustments.append(speed)
+        return generate_silence_wav(0.5)
+
+    monkeypatch.setattr("lixity.speech.shutil.which", lambda _name: "/synthetic/ffmpeg")
+    monkeypatch.setattr("lixity.speech_providers.synthesize_external", synthesize)
+    monkeypatch.setattr("lixity.speech._adjust_pcm_tempo", adjust)
+    for name in ("first.wav", "second.wav"):
+        render_speech_audio(source, tmp_path / name, profile=profile, cache_dir=tmp_path / "cache")
+    assert len(requests) == 1
+    assert adjustments == [1.5, 1.5]
+
+
 def test_tempo_filter_failure_keeps_existing_output(tmp_path, monkeypatch):
     from subprocess import CompletedProcess
 

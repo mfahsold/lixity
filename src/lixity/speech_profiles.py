@@ -105,18 +105,22 @@ def speech_segment_limit(profile: AudioProfile) -> int:
 
 def mlx_audio_profile_defaults(language: str) -> dict[str, str | float]:
     """Return one owner for implicit MLX-Audio profile values."""
+    presets = MLX_AUDIO_VOICES.get(language, ())
     defaults: dict[str, str | float] = {
         "base_url": MLX_AUDIO_BASE_URL,
         "model": MLX_AUDIO_TTS_MODEL,
-        "voice": MLX_AUDIO_DEFAULT_VOICE,
+        # Dutch has no fixed preset in the pinned model; require an explicit
+        # project reference instead of silently using a German narrator.
+        "voice": presets[0] if presets else "reference",
         "speed": MLX_AUDIO_DEFAULT_MODEL_SPEED,
     }
     return defaults
 
 
 def mlx_audio_uses_model_speed(profile: AudioProfile) -> bool:
-    """Return whether this MLX model applies speed inside generation."""
-    return profile.engine == "mlx-audio" and profile.model == MLX_AUDIO_TTS_MODEL
+    """Return whether the pinned local ZONOS worker applies speed inside generation."""
+    return (profile.engine == "mlx-audio" and profile.model == MLX_AUDIO_TTS_MODEL
+            and profile.base_url.rstrip("/") == MLX_AUDIO_BASE_URL.rstrip("/"))
 
 
 def profile_uses_reference(profile: AudioProfile) -> bool:
@@ -210,7 +214,7 @@ class AudioProfile(BaseModel):
             raise ValueError(_REMOVED_ENGINE)
         if isinstance(raw, Mapping) and raw.get("engine") == "mlx-audio":
             raw = dict(raw)
-            for key, value in mlx_audio_profile_defaults(str(raw.get("language", ""))).items():
+            for key, value in mlx_audio_profile_defaults(str(raw.get("language", "en"))).items():
                 raw.setdefault(key, value)
         if (isinstance(raw, Mapping) and raw.get("engine") in EXTERNAL_ENGINES
                 and any(not raw.get(key) for key in ("voice", "model", "base_url"))):

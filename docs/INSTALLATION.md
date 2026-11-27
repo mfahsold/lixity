@@ -715,7 +715,10 @@ alternate delivery preserved the segment level, all before edge fades
 ([assembly level correction](AUDIO.md#cache-tempo-and-saved-settings)).
 FFmpeg conversion deadlines and local ZONOS3 deadlines both record
 `error=timeout`; for ZONOS3, the error message explicitly distinguishes worker
-startup timeout (120 s) from per-segment response timeout (300 s).
+startup timeout (120 s) from per-segment response timeout (300 s). Successful
+local ZONOS3 generations also emit a DEBUG `zonos_generation` event with token
+count, audio duration and completion state; silent, incomplete, budget-exhausted
+or implausibly short output is rejected before caching.
 Change indicators show whether the instruction, voice description or reference
 selection differs from the preceding segment without recording their values.
 The client also sends the random render ID as an optional HTTP header; a current

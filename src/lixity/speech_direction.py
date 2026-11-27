@@ -108,8 +108,12 @@ def same_narrator(narrator: AudioProfile, delivery: AudioProfile) -> bool:
     if narrator.engine == 'qwen3-design':
         return narrator.voice_description == delivery.voice_description
     if narrator.engine in EXTERNAL_ENGINES:
-        return (narrator.base_url, narrator.model, narrator.voice, narrator.reference_id) == (
-            delivery.base_url, delivery.model, delivery.voice, delivery.reference_id)
+        from .speech_providers import speech_endpoint
+
+        return (speech_endpoint(narrator.base_url), narrator.model, narrator.voice,
+                narrator.reference_id, narrator.api_key_env) == (
+            speech_endpoint(delivery.base_url), delivery.model, delivery.voice,
+            delivery.reference_id, delivery.api_key_env)
     return narrator.voice == delivery.voice
 
 
