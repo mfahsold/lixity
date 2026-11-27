@@ -3,21 +3,21 @@
   "fps": 25,
   "duration": 65,
   "scenes": [
-    {"id": "opening", "start": 0, "end": 4},
-    {"id": "passage", "start": 4, "end": 13},
-    {"id": "research", "start": 13, "end": 26},
-    {"id": "compare", "start": 26, "end": 36},
-    {"id": "save", "start": 36, "end": 46},
-    {"id": "export", "start": 46, "end": 54},
+    {"id": "opening", "start": 0, "end": 3},
+    {"id": "passage", "start": 3, "end": 10},
+    {"id": "research", "start": 10, "end": 22},
+    {"id": "compare", "start": 22, "end": 35},
+    {"id": "save", "start": 35, "end": 43},
+    {"id": "export", "start": 43, "end": 54},
     {"id": "reader", "start": 54, "end": 61},
     {"id": "demo", "start": 61, "end": 65}
   ],
   "captures": [
-    {"id": "passage", "duration": 13, "record_duration": 15, "theme": "dark"},
-    {"id": "research", "duration": 13, "record_duration": 15, "theme": "dark"},
-    {"id": "compare", "duration": 10, "record_duration": 12, "theme": "light"},
-    {"id": "save", "duration": 10, "record_duration": 12, "theme": "light"},
-    {"id": "export", "duration": 8, "record_duration": 12, "theme": "light"},
+    {"id": "passage", "duration": 10, "record_duration": 12, "theme": "dark"},
+    {"id": "research", "duration": 12, "record_duration": 14, "theme": "dark"},
+    {"id": "compare", "duration": 13, "record_duration": 15, "theme": "light"},
+    {"id": "save", "duration": 8, "record_duration": 10, "theme": "light"},
+    {"id": "export", "duration": 11, "record_duration": 13, "theme": "light"},
     {"id": "reader", "duration": 7, "record_duration": 9, "theme": "light"}
   ]
 }

@@ -21,7 +21,21 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reading copy. Use larger workspace details and separately framed FilmCraft
   sequences. Match homepage captions in seven languages, the release article,
   posters and social downloads to the same cut, with consistent browser colors
-  across codecs.
+  across codecs. Reframe complete controls and matched manuscript passages,
+  vary title and inset placement by beat, and retain FilmCraft review frames
+  on both sides of every cut.
+- Document the FilmCraft production workflow and add `make video-review` to
+  decode receipt-matched frames from the product tour encodes.
+- Make the Lixity and FilmCraft skills discoverable through `.agents/skills/`.
+  Verify source availability and native chapter markers before encoding the
+  product tour.
+- Give the reading website preflight result more time on screen during the
+  Warehouse 4 tour and start guide clips at their first ready workspace frame.
+  Add a local MCP connection check for Lixity and FilmCraft.
+- Pace the product tour's click sequences and reading holds separately.
+  Soften the screen crops and selected entrances with editable FilmCraft masks
+  and preserve clear text during the manuscript comparison.
+- Preserve the full Save and Close labels when the editor status row shrinks.
 - Store local release rehearsal and macOS build evidence under a configurable
   shared root. Fingerprint untracked source files, record the verified app
   identity and require a clean source checkout for release artifact promotion.

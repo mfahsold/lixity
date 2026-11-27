@@ -162,8 +162,10 @@ explains offline help.
 | Information | Maintained reference |
 | --- | --- |
 | Counting rules, limits and tested language coverage | [Methods](METHODS.md) · [Validation and limits](STABILITY.md) · [Language support](LOCALIZATION.md) |
-| CLI, project settings and machine-readable responses | [Commands and configuration](USAGE.md) · [Automation contracts and MCP](AGENTS.md) · [Agent skill](https://github.com/mfahsold/lixity/blob/main/skills/lixity/SKILL.md) |
+| CLI, project settings and machine-readable responses | [Commands and configuration](USAGE.md) · [Automation contracts](AGENTS.md) |
+| Use Lixity from an AI agent | [Lixity skill](https://github.com/mfahsold/lixity/blob/main/skills/lixity/SKILL.md) · [MCP setup and tools](AGENTS.md#model-context-protocol-mcp-server) |
 | Application layers, local storage and evidence revisions | [Architecture](ARCHITECTURE.md) · [Research data model](research/DATA_MODEL.md) |
+| Public website events and statistics | [Measurement architecture](ARCHITECTURE.md#public-website-measurement) · [Retrieve and verify counts](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#public-website-measurement) |
 | Development, checks and publication | [Contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) · [Desktop maintainers' guide](https://github.com/mfahsold/lixity/blob/main/desktop/README.md) |
 | Product priorities, feedback criteria and user study | [Product direction](PRODUCT.md) · [Task-based user study protocol](https://github.com/mfahsold/lixity/blob/main/docs/USER_STUDY_PROTOCOL.md) · [Compare manuscript workflows](guides/manuscript-analysis-tools.html) |
 | Licensing, project funding and reporting issues | [Licensing](LICENSING.md) · [Project funding and use of funds](guides/support.html) · [Security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) |
@@ -178,7 +180,9 @@ explains offline help.
 | Installer cards in the installation guide | Update the reviewed [release catalog](desktop-downloads.json) or [preview record](https://github.com/mfahsold/lixity/blob/main/docs/desktop-test-build.json) through the [desktop download procedure](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#public-desktop-downloads). `make docs-sync` generates the download cards and installer checksums in the HTML. |
 | Localized metric reference | The app and Pages share the [metric reference renderer](https://github.com/mfahsold/lixity/blob/main/src/lixity/ui/metric_reference.py). `make docs-sync` generates `guides/metrics/` from it. |
 | Shared styles | [Packaged design tokens and components](https://github.com/mfahsold/lixity/tree/main/src/lixity/ui/assets) also ship on Pages. `assets/home.css` and `assets/site.css` own website layout. |
-| Demo, example reports, screenshots and videos | Follow the [demo maintenance guide](https://github.com/mfahsold/lixity/blob/main/docs/demo/README.md), [screenshot](screenshots/README.md) and [video](videos/README.md) procedures. They identify the source fixture, reviewed outputs and generation order. |
+| Demo, example reports and screenshots | Follow the [demo maintenance guide](https://github.com/mfahsold/lixity/blob/main/docs/demo/README.md) and [screenshot procedure](screenshots/README.md). They identify the source fixture, reviewed outputs and generation order. |
+| Product tours and software or website walkthroughs | Use the [video runbook](videos/README.md). |
+| Agent skills and local discovery | Use the [agent setup and verification guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#agent-setup-and-verification). |
 | Wiki and offline reference bundle | `wiki/` provides short entries into the manuals. The `llms-full.txt` bundle is generated from maintained documentation. |
 
 Use the [public guides](https://lixity.de/#guides),
@@ -1293,14 +1297,9 @@ defines the fields, exit codes and error states.
 
 ### `lixity mcp`
 
-Configure your client to launch the chosen `lixity` executable with the single
-argument `mcp`. The subprocess reads and writes JSON-RPC messages over stdio.
-Put manuscript text, language, thresholds and any required port in the tool
-arguments. The client can request `tools/list` to see the supported fields.
-Use `lixity_about` with `section` to retrieve the corresponding discovery
-subsection and build metadata when advertised.
-The browser app uses a separate local HTTP service.
-[Client configuration and tool contracts](AGENTS.md#model-context-protocol-mcp-server)
+`lixity mcp` starts the local automation server. Follow the
+[MCP contract](AGENTS.md#model-context-protocol-mcp-server) to configure a
+client, verify the selected process and discover its read-only tools.
 
 ### `lixity build`
 
@@ -10804,7 +10803,8 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md
 
 > [!NOTE]
 > This document specifies the external automation interface, HTTP endpoints, and JSON contracts for AI agents and tools that use Lixity.
-> For guidelines on contributing to or developing the Lixity codebase itself, see the repository root [`AGENTS.md`](https://github.com/mfahsold/lixity/blob/main/AGENTS.md) and [`CONTRIBUTING.md`](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
+> The [Lixity skill](https://github.com/mfahsold/lixity/blob/main/skills/lixity/SKILL.md) routes common tasks to these interfaces.
+> For changes to the checkout, start with the repository root [`AGENTS.md`](https://github.com/mfahsold/lixity/blob/main/AGENTS.md).
 
 ## Choose the interface
 
@@ -10943,26 +10943,31 @@ lixity doctor --port 8765 --json
 
 ### Model Context Protocol (MCP) Server
 
-Run `lixity mcp` as a JSON-RPC 2.0 stdio subprocess in your client. Use
-the absolute path to the intended executable when the client runs with a
-different PATH. The server accepts inputs in tool calls. Start it with
-`mcp` as its only argument. For example, configure the client with:
+Configure your MCP client to start a local JSON-RPC 2.0 stdio subprocess.
+Select the intended Lixity executable and pass `mcp` as its only argument.
+Use an absolute executable path if the client may resolve a different copy.
+The browser workspace has its own local HTTP API. A client that uses the
+`mcpServers` JSON layout can use this example.
 
 ```json
 {
   "mcpServers": {
     "lixity": {
-      "command": "lixity",
+      "command": "/absolute/path/to/lixity",
       "args": ["mcp"]
     }
   }
 }
 ```
 
-Query `tools/list` and `prompts/list` on the installed server for the available
-read-only operations and input schemas. Successful tools return the result as
-JSON inside a text content item. Check `isError` before decoding it. The client
-controls where it sends manuscript text and results.
+Complete `initialize` and `notifications/initialized` before discovery.
+Check `protocolVersion` and `serverInfo` in the initialization result. Query
+`tools/list` and `prompts/list` for the advertised operations and schemas,
+then call `lixity_about` without manuscript input to confirm the engine build.
+Successful tools return JSON in a text content item. Check `isError` before
+decoding. The client controls where it sends manuscript text and results.
+[MCP stdio transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports#stdio) ·
+[Local checkout verification](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#agent-setup-and-verification)
 Text analysis tools use their supplied arguments and built-in defaults
 regardless of the subprocess working directory or local user settings.
 For tools that accept a language, omit it for English or provide a supported

@@ -11,6 +11,7 @@ test('native browser entry points honor external Python without a repository ven
   const repository = path.resolve(__dirname, '../../..');
   const suites = ['editor-features.cjs', 'editor-navigation.cjs', 'manuscript-editor.cjs', 'home-tour.cjs'];
   for (const relative of ['scripts/browser_tools.cjs', 'tests/browser/support/staged-pages.cjs',
+    'docs/videos/product-tour-timing.json',
     ...suites.map(name => `tests/browser/${name}`)]) {
     const target = path.join(root, relative);
     fs.mkdirSync(path.dirname(target), {recursive: true});

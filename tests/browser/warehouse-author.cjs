@@ -56,6 +56,7 @@ async function checkPassageEvidence(page) {
     .toContainText('22 of 31 words as function words');
   await evidence.locator('.analysis-evidence-close').click();
   await expect(evidence).toBeHidden();
+  await page.locator('#reader-inspector').getByRole('button', {name: 'Close', exact: true}).click();
 }
 
 async function compareAndSave(page, api, manuscript, originalBytes, editedBytes) {
@@ -90,9 +91,18 @@ async function compareAndSave(page, api, manuscript, originalBytes, editedBytes)
   const status = page.locator('#manuscript-save-status');
   await expect(status).toHaveAttribute('data-state', 'unsaved');
   assert.deepEqual(fs.readFileSync(manuscript), originalBytes, 'Using the draft does not save it');
+  const save = page.locator('#manuscript-save');
+  await expect(save.locator('.editor-tool-label')).toBeVisible();
+  assert.ok(await save.evaluate(button => {
+    const label = button.querySelector('.editor-tool-label');
+    const range = document.createRange();
+    range.selectNodeContents(label);
+    const text = range.getBoundingClientRect(), control = button.getBoundingClientRect();
+    return text.width > 0 && text.left >= control.left && text.right < control.right;
+  }), 'The whole Save label fits inside its button beside the draft status');
   const saved = page.waitForResponse(response => response.url() === `${api}/manuscript-edit` &&
     response.request().method() === 'POST');
-  await page.locator('#manuscript-save').click();
+  await save.click();
   assert.ok((await saved).ok(), 'The explicit save succeeds');
   await expect(status).toHaveAttribute('data-state', 'saved');
   assert.deepEqual(fs.readFileSync(manuscript), editedBytes, 'Saving changes exactly the reviewed sentence');

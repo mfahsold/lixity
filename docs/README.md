@@ -40,8 +40,10 @@ explains offline help.
 | Information | Maintained reference |
 | --- | --- |
 | Counting rules, limits and tested language coverage | [Methods](METHODS.md) · [Validation and limits](STABILITY.md) · [Language support](LOCALIZATION.md) |
-| CLI, project settings and machine-readable responses | [Commands and configuration](USAGE.md) · [Automation contracts and MCP](AGENTS.md) · [Agent skill](https://github.com/mfahsold/lixity/blob/main/skills/lixity/SKILL.md) |
+| CLI, project settings and machine-readable responses | [Commands and configuration](USAGE.md) · [Automation contracts](AGENTS.md) |
+| Use Lixity from an AI agent | [Lixity skill](https://github.com/mfahsold/lixity/blob/main/skills/lixity/SKILL.md) · [MCP setup and tools](AGENTS.md#model-context-protocol-mcp-server) |
 | Application layers, local storage and evidence revisions | [Architecture](ARCHITECTURE.md) · [Research data model](research/DATA_MODEL.md) |
+| Public website events and statistics | [Measurement architecture](ARCHITECTURE.md#public-website-measurement) · [Retrieve and verify counts](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#public-website-measurement) |
 | Development, checks and publication | [Contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) · [Desktop maintainers' guide](https://github.com/mfahsold/lixity/blob/main/desktop/README.md) |
 | Product priorities, feedback criteria and user study | [Product direction](PRODUCT.md) · [Task-based user study protocol](https://github.com/mfahsold/lixity/blob/main/docs/USER_STUDY_PROTOCOL.md) · [Compare manuscript workflows](guides/manuscript-analysis-tools.html) |
 | Licensing, project funding and reporting issues | [Licensing](LICENSING.md) · [Project funding and use of funds](guides/support.html) · [Security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) |
@@ -56,7 +58,9 @@ explains offline help.
 | Installer cards in the installation guide | Update the reviewed [release catalog](desktop-downloads.json) or [preview record](https://github.com/mfahsold/lixity/blob/main/docs/desktop-test-build.json) through the [desktop download procedure](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#public-desktop-downloads). `make docs-sync` generates the download cards and installer checksums in the HTML. |
 | Localized metric reference | The app and Pages share the [metric reference renderer](https://github.com/mfahsold/lixity/blob/main/src/lixity/ui/metric_reference.py). `make docs-sync` generates `guides/metrics/` from it. |
 | Shared styles | [Packaged design tokens and components](https://github.com/mfahsold/lixity/tree/main/src/lixity/ui/assets) also ship on Pages. `assets/home.css` and `assets/site.css` own website layout. |
-| Demo, example reports, screenshots and videos | Follow the [demo maintenance guide](https://github.com/mfahsold/lixity/blob/main/docs/demo/README.md), [screenshot](screenshots/README.md) and [video](videos/README.md) procedures. They identify the source fixture, reviewed outputs and generation order. |
+| Demo, example reports and screenshots | Follow the [demo maintenance guide](https://github.com/mfahsold/lixity/blob/main/docs/demo/README.md) and [screenshot procedure](screenshots/README.md). They identify the source fixture, reviewed outputs and generation order. |
+| Product tours and software or website walkthroughs | Use the [video runbook](videos/README.md). |
+| Agent skills and local discovery | Use the [agent setup and verification guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#agent-setup-and-verification). |
 | Wiki and offline reference bundle | `wiki/` provides short entries into the manuals. The `llms-full.txt` bundle is generated from maintained documentation. |
 
 Use the [public guides](https://lixity.de/#guides),

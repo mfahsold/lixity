@@ -109,13 +109,11 @@ Use the local app to import a project, edit, search or compare the full research
 archive, or generate new analysis and PDFs.
 [Installation guide](../guides/installation.html)
 
-The published documentation and author-workspace demo use the configured
-GoatCounter counter for page paths and named links. A PDF event records a click
-on a prepared-file link, not a completed save to disk. The public-only wrapper includes explicit
-reviewed analytics configuration and a matching content policy. The production
-snapshot transport has no analytics exceptions or write routes. Local application
-views, the two curated examples and ordinary exported reading websites carry no
-counter. See the [website measurement notice](../index.html#website-measurement).
+The author-workspace demo uses the public measurement adapter with a pinned
+site code and matching image policy. Its PDF event records activation of a
+prepared file link. The curated Warehouse 4 reader and companion keep the
+ordinary export boundary. [Measurement architecture](../ARCHITECTURE.md#public-website-measurement)
+· [Visitor notice](../index.html#website-measurement)
 
 The generating version, provenance notice and unchanged distribution-license
 appendix stay outside the analyzed manuscript. The short text is a demonstration,

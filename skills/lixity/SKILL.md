@@ -1,26 +1,39 @@
 ---
 name: lixity
-description: Use Lixity to inspect manuscript evidence, compare drafts, review dossier suggestions and research, or diagnose a local workspace through CLI, HTTP or MCP.
+description: Use Lixity's CLI, HTTP or MCP interfaces for manuscript evidence, draft comparisons, research and local workspace diagnosis. Applies to author and project tasks using a Lixity installation or checkout.
 ---
 
 # Lixity
 
-New to Lixity? Start with the [product direction](https://github.com/mfahsold/lixity/blob/main/docs/PRODUCT.md#start-in-two-minutes),
-the [documentation map](https://github.com/mfahsold/lixity/blob/main/docs/README.md#find-a-task) and the
-[read-only demo](https://lixity.de/demo/report.html). The sections below are the
-task routes once a project or question is selected.
-
-Use this skill to work with Lixity's public interfaces. For source changes, follow the [repository guidance](https://github.com/mfahsold/lixity/blob/main/AGENTS.md).
-
-Keep private projects, source material, credentials and derived outputs outside public checkouts. Use synthetic material in public examples. Check the contents and metadata of prepared exports against the requested sharing scope before sending or publishing them. [Operating boundaries](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md#operating-boundaries)
+Use the [manuals by task](https://github.com/mfahsold/lixity/blob/main/docs/README.md#find-a-task)
+for product workflows and the [repository guidance](https://github.com/mfahsold/lixity/blob/main/AGENTS.md)
+for source changes. Keep private projects, source material, credentials and
+derived outputs outside public checkouts. Use synthetic material in examples
+and review content and metadata before sharing an export.
+[Operating boundaries](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md#operating-boundaries)
 
 ## Choose the entry point
 
-- For the **installed CLI**, use `lixity about --section commands --json` and the relevant command's `--help`. Use `.venv/bin/lixity` on POSIX when running from an installed checkout. Request the format and read the matching contract. Use `lixity project --project PATH --json` to check the project file roles. [CLI guide](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md)
-- For **MCP**, launch the intended executable with argument `mcp` over stdio. Use its absolute path when installations differ. Inspect `tools/list` for arguments, and use `lixity_about` to discover the build. Request a section if the tool advertises it. Check `isError` before decoding JSON text content. Supplied-text tools use their arguments and defaults. Confirm where the connected client sends text and results before sharing private passages. [MCP contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md#model-context-protocol-mcp-server)
-- In the **local browser**, fetch the API index at the selected page's `data-api` prefix. `GET /api` addresses the startup view. For another project use its `workspace_url`, `api_base` and returned context tokens on the same listener. The development desktop app owns a separate authenticated runtime. Use the installed CLI or MCP with an explicit project for automation alongside the desktop app. [Workspace and HTTP contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md#52-http-server-endpoints-for-web-ui-and-interactive-agent-loops) · [Desktop host boundary](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md#desktop-host-boundary)
+- **CLI.** Check the selected executable with `lixity about --section commands --json`
+  and the relevant `--help`. Inspect saved file roles with
+  `lixity project --project PATH --json`. [CLI guide](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md)
+- **MCP.** Verify the connected build with `lixity_about` and inspect the
+  installed tool schemas with `tools/list`. Check `isError` before decoding
+  JSON text content. Confirm where the client sends text and results before
+  supplying private passages. [Setup and tool contract](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md#model-context-protocol-mcp-server)
+- **Local browser.** Start with the API index at the selected page's `data-api`
+  prefix and keep that view's context and tokens through the operation.
+  `GET /api` addresses the startup view. The desktop app uses its own
+  authenticated runtime. [HTTP contract](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md#52-http-server-endpoints-for-web-ui-and-interactive-agent-loops) ·
+  [Desktop boundary](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md#desktop-host-boundary)
 
-Use the explicit project for saved settings. Use English for unconfigured analysis or request `auto` explicitly. For diagnosis, `lixity doctor --port PORT --json` reports the invoked module and interpreter separately from the listener's reported version and readiness. Preserve an unknown running state. After an authorized rollout, retry the affected action on the selected view to verify the change. [Configuration](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#configuration-corpusconfig) · [Service verification](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service)
+Use the explicit project for saved settings. Supplied-text MCP operations use
+their arguments and defaults. Use English for unconfigured analysis or request
+`auto` explicitly. For service diagnosis, `lixity doctor --port PORT --json`
+distinguishes the invoked installation from the running listener. Preserve an
+unknown running state. After an authorized rollout, repeat the affected action
+in the selected view. [Configuration](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#configuration-corpusconfig) ·
+[Service verification](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service)
 
 ## Explain the measured evidence
 

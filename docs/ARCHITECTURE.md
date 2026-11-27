@@ -14,6 +14,8 @@ behavior from unimplemented proposals.
   then [Presentation and trust boundaries](#presentation-and-trust-boundaries).
 - UI contributors: start with [Presentation and trust boundaries](#presentation-and-trust-boundaries),
   then [Shared document orientation](#shared-document-orientation-and-metric-presentation).
+- Website maintainers: see [Public website measurement](#public-website-measurement)
+  for the browser adapter, external counter and local read boundary.
 
 `lixity.research` owns explicit-project captures, immutable snapshots, citations,
 authored records and a rebuildable SQLite/FTS5 index. It does not import into
@@ -1180,25 +1182,16 @@ dialog boundaries retain their distinct roles. Reader composition and companion
 spacing remain in their existing stylesheet owners, without a second display
 state or altered reading preferences.
 
-**Since v0.7.3:** the overview wraps secondary KPIs in the native
-`analysis-measurements` disclosure, initially collapsed for interactive workspaces
-and expanded for standalone reports. Review routes, section navigation and flags
-remain outside it. Scene detail disclosures share a second reversible catalogue;
-comparison-row links target a scene's existing measurement table. The shared
-`scrollAndFlash` helper reveals disclosure ancestors before measuring the target.
-Native disclosure state survives view changes without a new preference store.
-Bounded flags/scene regions support keyboard scrolling, and wide comparisons
-retain chapter, character or scene identity while scrolling horizontally.
-
-**Since v0.7.6:** the overview's section links form one wrapping contents list
-inside the existing measured reader header, before review guidance and search.
-The current link uses an underline and `aria-current`; the horizontal list has
-no progress track because its sections are not completion steps or new tabs.
-The navigation shares the header's existing sticky and jump-clearance owner.
-At viewport heights of 600 px or less the overview header stays in normal flow,
-so a wrapped contents list cannot consume the reading viewport. Reports without
-reader controls retain one static instance of the same registry-backed links.
-Vertical dossier outlines keep their separate document-position indicator.
+The interactive analysis overview opens on `analysis-measurements`. Its four
+choices show one active report with a matching pressed state. The suggested
+passage belongs to the measurements view, where method help, readability,
+vocabulary and style details use native disclosures. Standalone reports start
+with visible measurements and registry-backed section links. Disclosures retain
+their state while a report stays mounted. The shared `scrollAndFlash` helper
+reveals ancestors before measuring the target. The overview header uses the
+reader's sticky clearance and returns to normal flow at short viewport heights.
+Bounded tables support keyboard scrolling. Wide comparisons keep the chapter,
+character or scene label visible during horizontal scrolling.
 
 These presentation changes keep quotation measurements in manuscript order,
 including measured zeros, and label pacing ASL units, bar scaling and the existing
@@ -1523,6 +1516,73 @@ development before staging. Release preparation and `make docs-sync` use the
 same generators for version pins, language-specific homepages, Markdown guide
 exports, the agent documentation bundle, and the seven metric references.
 The reference renderer shares the app's terminology and built-in defaults.
+
+### Public website measurement
+
+GitHub Pages serves static public files at `https://lixity.de/`. A small browser
+adapter classifies link activations and sends a measurement pixel to the hosted
+GoatCounter site. A separate local Python process reads provider aggregates.
+[GitHub Pages hosting](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)
+· [GoatCounter pixel protocol](https://www.goatcounter.com/help/pixel)
+
+```mermaid
+flowchart LR
+    subgraph Public[Public website]
+        Pages[GitHub Pages]
+        Browser[Visitor browser and Lixity adapter]
+        Pages -->|HTML, JavaScript and public site code| Browser
+    end
+    subgraph Hosted[Hosted GoatCounter site]
+        Pixel[Image GET /count]
+        Totals[Processed aggregates]
+        Stats[Statistics API]
+        Pixel --> Totals --> Stats
+    end
+    subgraph Local[Local maintainer environment]
+        Reader[Python metrics reader]
+        Snapshots[Private JSON snapshots and Markdown report]
+        Reader --> Snapshots
+    end
+    Browser -->|Page path or fixed action name| Pixel
+    Reader -->|HTTPS GET with statistics-read token| Stats
+    Stats -->|Totals and per-path rows| Reader
+```
+
+| Component | Responsibility |
+| --- | --- |
+| Pages loader and public config | `site.js` loads the adapter on ordinary instrumented pages. Public-domain work reports load it directly. Both use `analytics.json` for the public GoatCounter site code. [Loader](assets/site.js) · [Configuration](assets/analytics.json) |
+| Author-workspace demo | The public demo generator pins the same site code in `data-site-code` and permits the exact `/count` image URL in its Content Security Policy. The demo snapshot keeps `connect-src 'none'`. [Demo generator](https://github.com/mfahsold/lixity/blob/main/scripts/example_publications.py) |
+| Browser adapter | Checks the exact apex origin or legacy HTTPS project mount and stops before reading config for Do Not Track or Global Privacy Control. It activates once per document after a valid site code loads. [Adapter](assets/analytics.js) |
+| Hosted counter and local reader | GoatCounter receives the GIF request and processes it under its site settings. The local reader uses separate authenticated statistics endpoints and retains the reported aggregates. [Read procedure](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#public-website-measurement) |
+
+The adapter uses the native `Image` API to send a fire-and-forget GET. For an
+observed page load it sets `e=false`, `p` to the pathname, `t` to the public
+title capped at 200 characters, and `r` to the referring origin when available.
+For a matching `a[href]` click it sets `e=true`, `p` to the event name, `t` to
+its fixed label, and `r` to empty. The outgoing HTTP referrer is suppressed.
+`rnd` busts per-request caches. In-flight state stays in browser memory, with a
+limit of 20 images and a ten-second timeout. The payload excludes full link
+URLs, query strings, fragments, form entries and manuscript or research data.
+The sandbox, metric reference, curated reader and companion, local app and
+user exports operate outside this measurement path.
+[Visitor notice](https://lixity.de/#website-measurement)
+
+| Event | Recognized link action |
+| --- | --- |
+| `install-open` | Open the installation guide or reference, or select the download section of a supported homepage |
+| `demo-open`, `blog-open` | Open the author-workspace demo or an individual blog article |
+| `sandbox-open` | Follow a link to the browser exercise |
+| `social-clip-open`, `pdf-download` | Open a named social clip or activate one of the five prepared manuscript PDF links |
+| `repository-open`, `pypi-open`, `mastodon-open`, `bluesky-open` | Follow a recognized repository, package or profile link |
+
+Same-path jumps inside the demo, an article or the installation guide stay
+outside the corresponding opening events. The homepage download-section link
+is a measured action. A link action and a measured destination page load are
+separate observations. Event names carry neither the source page nor its
+language. Delivery requires JavaScript, an activated adapter and a reachable
+counter. Actions before activation are skipped. Provider session handling can
+combine repeat actions or page loads. [GoatCounter events](https://www.goatcounter.com/help/events)
+· [GoatCounter sessions](https://www.goatcounter.com/help/sessions)
 
 ## First-run journey (server contract)
 

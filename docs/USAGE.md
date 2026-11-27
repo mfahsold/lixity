@@ -1093,14 +1093,9 @@ defines the fields, exit codes and error states.
 
 ### `lixity mcp`
 
-Configure your client to launch the chosen `lixity` executable with the single
-argument `mcp`. The subprocess reads and writes JSON-RPC messages over stdio.
-Put manuscript text, language, thresholds and any required port in the tool
-arguments. The client can request `tools/list` to see the supported fields.
-Use `lixity_about` with `section` to retrieve the corresponding discovery
-subsection and build metadata when advertised.
-The browser app uses a separate local HTTP service.
-[Client configuration and tool contracts](AGENTS.md#model-context-protocol-mcp-server)
+`lixity mcp` starts the local automation server. Follow the
+[MCP contract](AGENTS.md#model-context-protocol-mcp-server) to configure a
+client, verify the selected process and discover its read-only tools.
 
 ### `lixity build`
 

@@ -5,7 +5,8 @@
 
 > [!NOTE]
 > This document specifies the external automation interface, HTTP endpoints, and JSON contracts for AI agents and tools that use Lixity.
-> For guidelines on contributing to or developing the Lixity codebase itself, see the repository root [`AGENTS.md`](https://github.com/mfahsold/lixity/blob/main/AGENTS.md) and [`CONTRIBUTING.md`](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
+> The [Lixity skill](https://github.com/mfahsold/lixity/blob/main/skills/lixity/SKILL.md) routes common tasks to these interfaces.
+> For changes to the checkout, start with the repository root [`AGENTS.md`](https://github.com/mfahsold/lixity/blob/main/AGENTS.md).
 
 ## Choose the interface
 
@@ -144,26 +145,31 @@ lixity doctor --port 8765 --json
 
 ### Model Context Protocol (MCP) Server
 
-Run `lixity mcp` as a JSON-RPC 2.0 stdio subprocess in your client. Use
-the absolute path to the intended executable when the client runs with a
-different PATH. The server accepts inputs in tool calls. Start it with
-`mcp` as its only argument. For example, configure the client with:
+Configure your MCP client to start a local JSON-RPC 2.0 stdio subprocess.
+Select the intended Lixity executable and pass `mcp` as its only argument.
+Use an absolute executable path if the client may resolve a different copy.
+The browser workspace has its own local HTTP API. A client that uses the
+`mcpServers` JSON layout can use this example.
 
 ```json
 {
   "mcpServers": {
     "lixity": {
-      "command": "lixity",
+      "command": "/absolute/path/to/lixity",
       "args": ["mcp"]
     }
   }
 }
 ```
 
-Query `tools/list` and `prompts/list` on the installed server for the available
-read-only operations and input schemas. Successful tools return the result as
-JSON inside a text content item. Check `isError` before decoding it. The client
-controls where it sends manuscript text and results.
+Complete `initialize` and `notifications/initialized` before discovery.
+Check `protocolVersion` and `serverInfo` in the initialization result. Query
+`tools/list` and `prompts/list` for the advertised operations and schemas,
+then call `lixity_about` without manuscript input to confirm the engine build.
+Successful tools return JSON in a text content item. Check `isError` before
+decoding. The client controls where it sends manuscript text and results.
+[MCP stdio transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports#stdio) ·
+[Local checkout verification](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#agent-setup-and-verification)
 Text analysis tools use their supplied arguments and built-in defaults
 regardless of the subprocess working directory or local user settings.
 For tools that accept a language, omit it for English or provide a supported

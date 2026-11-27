@@ -51,6 +51,12 @@ dmypy.json
 .local/
 .codex/
 .agents/
+!/.agents/
+/.agents/*
+!/.agents/skills/
+/.agents/skills/*
+!/.agents/skills/lixity
+!/.agents/skills/lixity-filmcraft
 .antigravity/
 .gemini/
 .aws/

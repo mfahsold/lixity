@@ -22,9 +22,9 @@ For a clue that arrives several scenes later, open **Story rehearsal**. Write â€
 
 The film follows a different scene in the same manuscript. Mara wonders why the receiving line was left blank. I inspect the marked sentence and the research linked from the next paragraph, then compare a shorter version, save it and open the exported reading copy.
 
-[Video walkthrough](../videos/product-tour.webm?v=3f2f355034d5)
+[Video walkthrough](../videos/product-tour.webm?v=e73024c18fbc)
 
-[Video walkthrough](../videos/product-tour.mp4?v=b98531b576ee)
+[Video walkthrough](../videos/product-tour.mp4?v=d77ffdb266a0)
 
 *Why is this sentence marked? A silent, 65-second film about checking a passage and preparing a reading copy in Lixity.*
 

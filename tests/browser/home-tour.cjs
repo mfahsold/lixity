@@ -10,7 +10,7 @@ const timeline = require('../../docs/videos/product-tour-timing.json');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-home-tour-'));
 const root = stagePages();
 const sceneStarts = timeline.scenes.map(scene => scene.start);
-const reviewTimes = [0.12, 2, 5, 10, 13.12, 17, 24, 26.12, 31, 35, 36.12, 40, 44, 46.12, 50, 53, 54.12, 57, 60, 63];
+const reviewTimes = timeline.scenes.flatMap(({start, end}) => [start + .12, (start + end) / 2, end - .12]);
 (async () => {
   const browser = await launchChromium();
   try {
@@ -54,12 +54,13 @@ const reviewTimes = [0.12, 2, 5, 10, 13.12, 17, 24, 26.12, 31, 35, 36.12, 40, 44
       await page.waitForTimeout(700);
       assert.ok(await video.evaluate(v => v.paused && v.currentTime === 0), 'Reduced motion never autoplays');
       const button = page.locator('.tour-toggle');
-      await button.click();
+      await button.press('Space');
       await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(.2);
       await expect(button).toHaveText('Rundgang pausieren');
-      await button.click();
+      await expect(button).toBeFocused();
+      await button.press('Space');
       await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);
-      await video.evaluate(v => { v.currentTime = 31; });
+      await video.evaluate((v, start) => { v.currentTime = start + 1; }, sceneStarts[3]);
       await expect(page.locator('.tour-caption')).toHaveText(await page.locator('#tour-transcript li').nth(3).textContent());
       await expect.poll(() => video.evaluate(v => ({seeking:v.seeking, ready:v.readyState}))).toEqual({seeking:false, ready:4});
       await expect(page.locator('.tour-caption')).toBeVisible();
@@ -104,7 +105,7 @@ const reviewTimes = [0.12, 2, 5, 10, 13.12, 17, 24, 26.12, 31, 35, 36.12, 40, 44
       await page.goto('https://tour.test/');
       await video.scrollIntoViewIfNeeded();
       await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(.2);
-      await video.evaluate(v => { v.currentTime = 10.1; });
+      await video.evaluate((v, start) => { v.currentTime = start + 1; }, sceneStarts[1]);
       await expect.poll(() => video.evaluate(v => ({seeking:v.seeking, ready:v.readyState}))).toEqual({seeking:false, ready:4});
       await expect(page.locator('.tour-caption')).toHaveText(await page.locator('#tour-transcript li').nth(1).textContent());
       assert.ok(await page.locator('.tour-caption span').evaluateAll(nodes =>
@@ -144,6 +145,13 @@ const reviewTimes = [0.12, 2, 5, 10, 13.12, 17, 24, 26.12, 31, 35, 36.12, 40, 44
       await video.scrollIntoViewIfNeeded();
       await expect(page.locator('.tour-error')).toBeVisible();
       await expect(page.locator('.tour-caption')).toBeHidden();
+      const walkthrough = page.locator('#tour-transcript summary');
+      await walkthrough.press('Enter');
+      await expect(walkthrough).toBeFocused();
+      const cueList = page.locator('#tour-transcript li');
+      await expect(cueList).toHaveCount(sceneStarts.length);
+      await expect(cueList.nth(1)).toBeVisible();
+      await expect(cueList.nth(1)).toContainText('22 of the 31');
       await page.unroute(tourSources);
       const unavailable = width === 390 ? 'product-tour-portrait.mp4' : 'product-tour.webm';
       await page.route(url => url.pathname.endsWith(`/videos/${unavailable}`), route => route.abort());
@@ -209,6 +217,6 @@ const reviewTimes = [0.12, 2, 5, 10, 13.12, 17, 24, 26.12, 31, 35, 36.12, 40, 44
       }
       await context.close();
     }
-    console.log(`Homepage tour: ${timeline.duration}s playback, ${sceneStarts.length} cues in seven languages, responsive layout, reduced motion, pause and fallback passed. Screenshots: ${artifacts}`);
+    console.log(`Homepage tour: ${timeline.duration}s playback, ${sceneStarts.length} cues in seven languages, keyboard controls, responsive layout, reduced motion, pause and fallback passed. Screenshots: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exitCode=1; });

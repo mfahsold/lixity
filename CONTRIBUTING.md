@@ -48,6 +48,7 @@ See [licensing](docs/LICENSING.md).
 | Public site and examples | `docs/templates/`, `docs/locales/` and approved Pages paths | Edit canonical sources and follow [generation and preview](#generate-and-preview) |
 | Repository-wide agent rules | `AGENTS.md` | Commit concise, durable guidance |
 | Agent operating rules that `AGENTS.md` delegates to | `AGENT_PROFILE.md` | Commit only durable rules; a session log belongs in `.planning/` |
+| Reusable agent workflows | `skills/<name>/SKILL.md` | Keep one canonical copy of each skill with links to the manuals that own implementation details |
 | Task plans, session notes, temporary implementation decisions | `.planning/` | Local only, ignored |
 | Browser screenshots, traces and diagnostic scratch output | `.artifacts/` or `/tmp` | Local only; reviewed public examples are a separate deliberate addition |
 | Private manuscripts, retained source material, applications, agreements, correspondence and backups | Separate private project storage | Local only, including exports and diagnostics derived from them |
@@ -79,6 +80,35 @@ speech environments.
 For the dashboard, follow the [service and rollout procedure](docs/INSTALLATION.md#running-the-server)
 and [verify the selected listener](docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service)
 after loading a change.
+
+### Agent setup and verification
+
+Start with [repository guidance](AGENTS.md) for checkout work. Open the
+[Lixity skill](skills/lixity/SKILL.md) for manuscript, research and workspace
+automation. Open the [FilmCraft skill](skills/lixity-filmcraft/SKILL.md) for
+capturing and reviewing product media in the checkout.
+
+The `skills/` directories use the portable `SKILL.md` format. Open the linked
+file directly or place a copy or supported link in your client's documented
+skill location. Repository links in `.agents/skills/` enable discovery in
+clients that scan that directory.
+Keep client-specific configuration local. [Agent Skills specification](https://agentskills.io/specification) ·
+[Codex discovery](https://learn.chatgpt.com/docs/build-skills#where-codex-loads-local-skills) ·
+[Claude Code discovery](https://code.claude.com/docs/en/skills#choose-where-skills-load) ·
+[VS Code discovery](https://code.visualstudio.com/docs/agent-customization/agent-skills)
+
+For MCP, configure the intended executable as a local stdio process using the
+[shipped startup and readback contract](docs/AGENTS.md#model-context-protocol-mcp-server).
+Run `make mcp-check` to smoke-test the local server. Use
+`make mcp-check MCP_CHECK_ARGS='--filmcraft-project PATH'` to include the
+headless FilmCraft connection for a generated project. Confirm the same server
+identity and advertised capabilities in the client that will use it.
+
+When revising a skill, check discovery in the intended client and exercise
+realistic requests in isolated sessions. The [FilmCraft evaluation scenarios](skills/lixity-filmcraft/evals/evals.json)
+cover fault isolation, a partial rebuild and a new capture. A manuscript-only
+edit exercises the boundary between the skills. Compare what each run inspects,
+rebuilds and delivers. [Agent Skills evaluation guidance](https://agentskills.io/skill-creation/evaluating-skills)
 
 ### Select the checks for your change
 
@@ -575,33 +605,70 @@ as separate observations; unavailable statistics remain unknown.
 
 ### Public website measurement
 
-Pages-only `docs/assets/analytics.js` uses GoatCounter's documented
-[pixel endpoint](https://www.goatcounter.com/help/pixel). The public site code
-lives in the explicitly staged `docs/assets/analytics.json`; `null` disables it.
-Only the two production website bases, `https://mfahsold.github.io/lixity/` and
-`https://lixity.de/`, are eligible. Respect browser Do Not Track / Global Privacy
-Control. Send only the visited public pathname, public title,
-origin-only referrer and fixed CTA names; exclude URL query/hash, form inputs,
-selection, manuscript/research data, local paths and persistent identifiers.
-The local app and generated user exports must never acquire this adapter.
+The [measurement architecture](docs/ARCHITECTURE.md#public-website-measurement)
+owns the component map, payload, event names and collection limits.
 
-CTA counts measure link activation. `install-open` covers opening the guide
-and selecting the download section from a homepage in any supported language.
-On-page jumps inside the guide, demo, and articles stay out of the page-opening
-events. Pageviews include direct visits. Playback completion and installation
-require separate evidence. Find event names and destination rules in the
-[public adapter](docs/assets/analytics.js). Check
-existing Search Console and GoatCounter read access before adding tools.
+To read the counts, sign in to the hosted dashboard or use the existing
+local reader. `outreach/metrics.py` and `outreach/MEASUREMENT.md` belong to the
+local outreach checkout. Store a **Read statistics** key as
+`GOATCOUNTER_API_TOKEN` in the ignored `outreach/env` file. The public site code
+in `docs/assets/analytics.json` selects the hosted property. [GoatCounter dashboard](https://mfahsold.goatcounter.com/)
+· [Statistics API](https://www.goatcounter.com/help/api)
 
-The shared site script loads it for normal Pages; public example metadata adds
-it to the reviewed synthetic/public-domain examples. Do not add the provider's
-ordinary auto-tracking snippet alongside it: that would double-count and include
-its default data. A pixel request is transmission evidence, not proof of a
-processed dashboard count. Verify pageviews and each named CTA after deployment
-against the actual statistics. Existing visits cannot be backfilled. API read
-credentials and outreach snapshots belong outside this repository; the site
-code is public, an API token is not. See the
-[visitor notice](https://lixity.de/#website-measurement).
+```mermaid
+sequenceDiagram
+    actor Operator as Maintainer or daily LaunchAgent
+    participant Reader as Local metrics.py
+    participant Site as Lixity Pages
+    participant Stats as GoatCounter
+    participant Files as Private metrics directory
+    Operator->>Reader: Choose rolling or fixed UTC dates
+    opt Rolling read
+        Reader->>Site: GET deployment.json
+        Site-->>Reader: Deployed commit at read time
+    end
+    Reader->>Stats: GET /api/v0/stats/total with read token
+    Stats-->>Reader: total, total_events, total_utc
+    loop Until all path rows are read
+        Reader->>Stats: GET /api/v0/stats/hits with read token
+        Stats-->>Reader: Path, event flag and count
+    end
+    Reader->>Files: Save rolling or fixed JSON snapshot
+    opt Rolling read
+        Reader->>Files: Update latest.md with counts and source status
+    end
+```
+
+Run from the repository root on the configured host.
+
+```sh
+.venv/bin/python outreach/metrics.py
+.venv/bin/python outreach/metrics.py --fixed goatcounter 2026-11-26 2026-11-26
+jq -r '.data.paths[] | select(.event) | [.path, .count] | @tsv' SNAPSHOT.json
+```
+
+The first command reads the last 14 complete UTC days for GoatCounter alongside
+other outreach sources. It writes a dated JSON file and `outreach/metrics/latest.md`.
+The fixed read takes inclusive complete UTC dates and prints the filename of a
+separate snapshot under `outreach/metrics/`. Replace `SNAPSHOT.json` with that
+path. Its console totals summarize canonical page paths. Read event totals from
+`.data.paths` in fixed snapshots or `.sources.goatcounter.data.paths` in rolling
+snapshots using the `event` flag. `--report SNAPSHOT` renders a saved rolling
+snapshot locally. Match dates and timezone when comparing to the dashboard.
+
+For a measurement change, regenerate the public demo with `make examples` when
+the site code changes, including when setting it to `null`. This updates the
+pinned demo code and image policy together. For a property change, align the
+local reader's pinned host and statistics key with the selected property. Use
+the repository's adapter as the sole emitter. Verify the release in this order.
+
+1. Run `node tests/browser/pages-analytics.cjs` to check path classification,
+   privacy controls and the generated demo with intercepted pixels.
+2. After an authorized Pages deploy, run `make pages-verify` and check the live
+   actions with the counter requests intercepted. This verifies delivered bytes
+   and the browser payloads.
+3. Read a completed provider window for processed counts. Record the deployment
+   time when event rules change so comparisons use matching definitions.
 
 ### Updating documentation and Pages
 
@@ -662,9 +729,10 @@ verification in Webmaster Tools.
 #### Generate and preview
 
 1. Run `make screenshots` and then `make examples` when UI assets or published
-   guides change. The examples use the captured image dimensions. Regenerate
-   videos with `make videos` when the reviewed walkthrough changes. Review the
+   guides change. The examples use the captured image dimensions. Review the
    captures. The docs tests compare the bundled UI assets with source bytes.
+   For a product film or walkthrough, use the [video runbook](docs/videos/README.md)
+   to select the capture, rebuild and review scope.
 2. Run `make docs-sync` to sync version pins and regenerate the public home
    pages, Markdown alternates, `llms-full.txt` and localized metric references.
 3. Run the [documentation and browser checks](#select-the-checks-for-your-change).

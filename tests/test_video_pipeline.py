@@ -11,11 +11,23 @@ import pytest
 
 from scripts import make_videos
 from scripts.build_public_site import render_pages
+from scripts.product_tour_edit import Take, _take
 
 FFMPEG = shutil.which("ffmpeg")
 FFPROBE = shutil.which("ffprobe")
 MEDIA_TOOLS = FFMPEG and FFPROBE
 PUBLISHED_VIDEOS = Path(__file__).resolve().parents[1] / "docs" / "videos"
+
+
+def test_reframing_uses_settled_footage_and_keeps_the_cue_duration() -> None:
+    segment = {"id": "reader", "startFrame": 1000, "frames": 225}
+    assert _take(segment, {"sourceSeconds": 0}, scene_frame=1350, begin=0, end=29,
+                 destination_frames=175, rate=25) == Take(1350, 1379, 1000, 3)
+    assert _take(segment, {"sourceSeconds": 1.84}, scene_frame=1350, begin=29, end=175,
+                 destination_frames=175, rate=25) == Take(1379, 1525, 1049)
+    comparison = {"id": "compare", "startFrame": 832, "frames": 300}
+    assert _take(comparison, {"sourceSeconds": 3.061, "comparison": {"current": {}}},
+                 scene_frame=650, begin=75, end=133, destination_frames=250, rate=25) == Take(725, 783, 912, 10)
 
 
 def test_all_homepage_transcripts_follow_the_full_tour() -> None:
@@ -41,7 +53,7 @@ def short_tour_recording(
     )
     plan = make_videos._tour_plan()
     timing = {
-        "schema_version": "lixity-product-tour-recording/4", "fps": plan["fps"], "duration": plan["duration"],
+        "schema_version": "lixity-product-tour-recording/5", "fps": plan["fps"], "duration": plan["duration"],
         "segments": [{"id": scene["id"], "theme": scene["theme"], "file": source.name, "startFrame": 2,
                       "frames": scene["record_duration"] * plan["fps"],
                       "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}
@@ -109,8 +121,13 @@ def test_partial_tour_refreshes_one_portrait_and_both_destinations(tmp_path: Pat
         def __init__(self, _project, width, height, _fps):
             rendered.append((width, height))
 
-        def render(self, frames, _preview_times, *, duration):
+        def export_markers(self, path, plan):
+            assert plan == make_videos._tour_plan()
+            path.write_bytes(b"FilmCraft marker report")
+
+        def render(self, frames, *, duration):
             assert duration == make_videos._tour_plan()["duration"]
+            self.review_frames = [0, duration * 25 - 1]
             return frames / "frame%04d.png"
 
     monkeypatch.setattr(make_videos, "BASE_DIR", tmp_path)
@@ -139,6 +156,12 @@ def test_partial_tour_refreshes_one_portrait_and_both_destinations(tmp_path: Pat
     receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
     portrait_hash = hashlib.sha256((output / master).read_bytes()).hexdigest()
     assert receipt["outputs_sha256"][master] == receipt["outputs_sha256"][alias] == portrait_hash
+    assert receipt["review_frames"][master] == receipt["review_frames"][alias] == [0, 1624]
+    assert (horizontal in receipt["review_frames"]) == (selection == "social")
+    marker_reports = receipt["filmcraft_marker_reports_sha256"]
+    assert len(marker_reports) == len(rendered)
+    assert all(hashlib.sha256((receipt_path.parent / name).read_bytes()).hexdigest() == digest
+               for name, digest in marker_reports.items())
     assert receipt["selection"] == selection
     assert "product-tour-timing.json" in receipt["inputs_sha256"]
 

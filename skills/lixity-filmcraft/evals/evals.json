@@ -1,0 +1,20 @@
+{
+  "skill_name": "lixity-filmcraft",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Bei etwa 55 Sekunden ist der Text auf dem iPhone abgeschnitten. Ich habe einen frischen Checkout ohne FilmCraft-Projekt. Finde zuerst heraus, welche Datei betroffen ist.",
+      "expected_output": "Inspect consecutive frames of the existing portrait MP4 and compare them with the asset and time selected by the staged page on Safari. Separate a browser-only suspicion from a confirmed media defect, and report any Safari check that was unavailable. Keep the delivered files intact during diagnosis."
+    },
+    {
+      "id": 2,
+      "prompt": "Der Titel über der Lesekopie sitzt im Hochformat zu weit rechts. Passe nur den Schnitt im Hochformat an. Die UI und der Ablauf im Video stimmen.",
+      "expected_output": "Reuse the verified take and adjust the existing FilmCraft composition. Review the title bounds and both sides of the cut. Rebuild the portrait master, its poster and identical social alias, and synchronize their page references."
+    },
+    {
+      "id": 3,
+      "prompt": "Der Exportdialog in Lixity hat jetzt andere Aktionen. Nimm die neue Klickfolge auf und prüfe auch, ob der stumme Ablauf verständlich bleibt.",
+      "expected_output": "Capture a real export in the disposable project with complete controls and separate action and settled-frame timing. Verify the resulting artifact. Check the delivered cuts and read the walkthrough with playback unavailable for the key choices and outcomes."
+    }
+  ]
+}

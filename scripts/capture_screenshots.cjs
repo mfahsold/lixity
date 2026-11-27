@@ -1,6 +1,6 @@
 const {selectMetric} = require('../tests/browser/support/analysis-controls.cjs');
 const {launchChromium} = require('./browser_tools.cjs');
-const {recordProductTour} = require('./product_tour_capture.cjs');
+const {anchoredFrames, digest, recordProductTour, shotAnchor} = require('./product_tour_capture.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
@@ -552,8 +552,14 @@ async function main() {
         await page.locator('#tab-view-analysis').click();
         if (flow === 'editorial-loop') await page.locator('#workbench-overview-open').click();
       }
+      if (flow === 'editorial-loop') await assertReviewConfirmed();
+      else await page.locator('#chapters .ptext').first().waitFor({state: 'visible'});
+      await page.evaluate(async () => {
+        await document.fonts.ready;
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      });
+      await shotAnchor(page);
       if (flow === 'editorial-loop') {
-        await assertReviewConfirmed();
         await page.waitForTimeout(1000);
         await say('Start with the manuscript review overview.');
         await page.locator('[data-analysis-workflow=review]').click();
@@ -661,8 +667,16 @@ async function main() {
       assert.deepEqual(errors, [], 'Walkthrough recording must be free of runtime errors');
       const video = page.video();
       await context.close();
-      fs.copyFileSync(await video.path(), capture.videoTarget);
-      results.push({video: path.basename(capture.videoTarget), bytes: fs.statSync(capture.videoTarget).size});
+      const source = await video.path();
+      const [startFrame] = anchoredFrames(source, [{id: flow, frames: 1}]);
+      const bytes = fs.readFileSync(source);
+      const file = path.basename(capture.videoTarget);
+      const sidecar = source.replace(/\.webm$/, '.json');
+      fs.writeFileSync(sidecar, JSON.stringify({schema_version: 'lixity-guide-recording/1',
+        file, sha256: digest(bytes), startFrame}, null, 2) + '\n');
+      fs.renameSync(source, capture.videoTarget);
+      fs.renameSync(sidecar, capture.videoTarget.replace(/\.webm$/, '.json'));
+      results.push({video: file, bytes: bytes.length, startFrame});
     }));
     const base = path.dirname(captures[0].source);
     assert.deepEqual(errors, []);

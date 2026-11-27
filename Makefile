@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate rc-verify release-check release-rehearsal release-prepare release-verify release-tools-ready screenshots videos examples brand-assets media clean-caches clean docs-check docs-generated-check docs-sync pages-deploy pages-verify run start serve stop restart status doctor
+.PHONY: help install install-dev test browser-tools browser browser-changed browser-full lint typecheck workflow-check check fast-check audit build github-check rc-gate rc-verify release-check release-rehearsal release-prepare release-verify release-tools-ready screenshots videos video-review mcp-check examples brand-assets media clean-caches clean docs-check docs-generated-check docs-sync pages-deploy pages-verify run start serve stop restart status doctor
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -114,9 +114,15 @@ release-verify: release-tools-ready ## Verify a published release (RELEASE_TAG=v
 screenshots: ## Regenerate docs/screenshots (needs headless Chromium)
 	PYTHONPATH=src $(VPY) scripts/make_screenshots.py
 
-videos: ## Regenerate public walkthrough media locally (needs Chromium and ffmpeg)
+videos: ## Regenerate public walkthrough media locally (needs Chromium, FilmCraft and FFmpeg)
 	PYTHONPATH=src $(VPY) scripts/make_screenshots.py --video
 	PYTHONPATH=src $(VPY) scripts/make_videos.py
+
+video-review: ## Decode receipt-matched product tour samples into local contact sheets
+	$(SCRIPT_PYTHON) scripts/review_product_tour.py
+
+mcp-check: ## Verify the local stdio MCP handshake and read-only tools (optional MCP_CHECK_ARGS)
+	PYTHONPATH=src $(VPY) scripts/check_local_mcp.py $(MCP_CHECK_ARGS)
 
 examples: ## Regenerate the published example reports and their PDFs
 	PYTHONPATH=src $(VPY) scripts/build_examples.py

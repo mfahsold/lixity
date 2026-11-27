@@ -471,6 +471,7 @@
     .manuscript-editor-toolbar .editor-versions-panel button.ctl {white-space:normal;text-align:start;line-height:var(--line-control);}
     #manuscript-recovery-note {margin:0;}
     .editor-group-status {margin-inline-start:auto;padding-inline-start:6px;gap:6px;}
+    .editor-group-status > button {flex-shrink:0;}
     .manuscript-editor-toolbar .reader-controls {display:inline-flex;align-items:center;flex-basis:auto;gap:4px;}
     .manuscript-editor-toolbar button.ctl {padding:.25rem .5rem;min-height:2rem;white-space:nowrap;}
     .manuscript-editor-toolbar button.editor-icon-only .editor-tool-label {display:none;}

@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -49,8 +50,8 @@ TOUR_VIDEO_FILTER = (
 #: name, poster timestamp, max MP4 bytes, max GIF bytes
 WALKTHROUGHS: tuple[tuple[str, str, int, int], ...] = (
     ("research-timeline", "6.0", 2_000_000, 4_000_000),
-    ("analysis-review", "5.5", 2_000_000, 4_000_000),
-    ("editorial-loop", "11.5", 2_000_000, 4_000_000),
+    ("analysis-review", "7.6", 2_000_000, 4_000_000),
+    ("editorial-loop", "13.4", 2_000_000, 4_000_000),
 )
 PUBLIC_VIDEO_FILES = {
     "README.md", "product-tour.mp4", "product-tour.webm", "product-tour.webp",
@@ -65,77 +66,47 @@ def run(command: list[str]) -> None:
 
 def convert(name: str, poster_at: str, max_mp4: int, max_gif: int) -> None:
     source = RAW_DIR / f"{name}.webm"
-    if not source.is_file():
+    sidecar = source.with_suffix(".json")
+    if not source.is_file() or not sidecar.is_file():
         raise SystemExit(
-            f"Missing recording: {source}. Run 'python scripts/make_screenshots.py --video' first."
+            f"Missing recording or frame anchor for {name}. "
+            f"Run 'python scripts/make_screenshots.py --video --only {name}' first."
         )
+    recording = json.loads(sidecar.read_text(encoding="utf-8"))
+    if (recording.get("schema_version") != "lixity-guide-recording/1" or recording.get("file") != source.name
+            or recording.get("sha256") != hashlib.sha256(source.read_bytes()).hexdigest()):
+        raise SystemExit(f"The {name} recording does not match its frame anchor. Record it again.")
+    video, _ = _video_info(source)
+    start = recording.get("startFrame")
+    rate = Fraction(video["avg_frame_rate"])
+    if rate != 25 or not isinstance(start, int) or not 0 < start < int(video["nb_read_frames"]):
+        raise SystemExit(f"The {name} recording has an invalid frame anchor or frame rate.")
+    poster_frame = start + math.ceil(Fraction(poster_at) * rate)
+    if poster_frame >= int(video["nb_read_frames"]):
+        raise SystemExit(f"The {name} recording does not reach its poster timestamp.")
+
     ffmpeg = shutil.which("ffmpeg")
     if ffmpeg is None:
         raise SystemExit("ffmpeg is required to publish walkthrough videos.")
+    command = [ffmpeg, "-y", "-loglevel", "error", "-i", str(source)]
+    trim = f"trim=start_frame={start},setpts=PTS-STARTPTS"
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    mp4 = OUT_DIR / f"{name}.mp4"
-    gif = OUT_DIR / f"{name}.gif"
-    poster = OUT_DIR / f"{name}.png"
-    run(
-        [
-            ffmpeg,
-            "-y",
-            "-loglevel",
-            "error",
-            "-i",
-            str(source),
-            "-an",
-            "-c:v",
-            "libx264",
-            "-preset",
-            "slow",
-            "-crf",
-            "23",
-            "-pix_fmt",
-            "yuv420p",
-            "-movflags",
-            "+faststart",
-            str(mp4),
-        ]
-    )
-    run(
-        [
-            ffmpeg,
-            "-y",
-            "-loglevel",
-            "error",
-            "-i",
-            str(source),
-            "-an",
-            "-vf",
-            "fps=5,scale=800:-1:flags=lanczos,split[s0][s1];"
-            "[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer",
-            "-loop",
-            "0",
-            str(gif),
-        ]
-    )
-    run(
-        [
-            ffmpeg,
-            "-y",
-            "-loglevel",
-            "error",
-            "-ss",
-            poster_at,
-            "-i",
-            str(source),
-            "-frames:v",
-            "1",
-            str(poster),
-        ]
-    )
-    for path, limit in ((mp4, max_mp4), (gif, max_gif)):
-        size = path.stat().st_size
-        if size > limit:
-            raise SystemExit(f"{path.name} is {size:,} bytes; the limit is {limit:,}.")
-        print(f"{path.relative_to(BASE_DIR)} {size:,} bytes")
-    print(f"{poster.relative_to(BASE_DIR)} {poster.stat().st_size:,} bytes")
+    with tempfile.TemporaryDirectory(prefix=f".{name}-", dir=OUT_DIR) as pending:
+        staging = Path(pending)
+        mp4, gif, poster = (staging / f"{name}.{extension}" for extension in ("mp4", "gif", "png"))
+        run([*command, "-vf", trim, "-an", "-c:v", "libx264", "-preset", "slow", "-crf", "23",
+             "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(mp4)])
+        run([*command, "-an", "-vf",
+             f"{trim},fps=5,scale=800:-1:flags=lanczos,split[s0][s1];"
+             "[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer", "-loop", "0", str(gif)])
+        run([*command, "-vf", f"trim=start_frame={poster_frame}", "-frames:v", "1", "-update", "1", str(poster)])
+        for path, limit in ((mp4, max_mp4), (gif, max_gif)):
+            size = path.stat().st_size
+            if size > limit:
+                raise SystemExit(f"{path.name} is {size:,} bytes; the limit is {limit:,}.")
+        for path in (mp4, gif, poster):
+            target = path.replace(OUT_DIR / path.name)
+            print(f"{target.relative_to(BASE_DIR)} {target.stat().st_size:,} bytes")
 
 
 def _tour_plan() -> dict:
@@ -214,9 +185,9 @@ def _read_source(filename: str, digest: str, base: Path) -> Path:
 
 def _tour_recordings(plan: dict) -> tuple[dict, list[tuple[dict, Path, Path]]]:
     recording = json.loads((RAW_DIR / "product-tour.json").read_text(encoding="utf-8"))
-    if (recording.get("schema_version") != "lixity-product-tour-recording/4" or
+    if (recording.get("schema_version") != "lixity-product-tour-recording/5" or
             recording.get("fps") != plan["fps"] or recording.get("duration") != plan["duration"]):
-        raise SystemExit("Recording metadata does not match the product-tour timing plan")
+        raise SystemExit("Recording metadata does not match the tour; record the complete tour again")
     segments = recording.get("segments", [])
     if [segment["id"] for segment in segments] != [scene["id"] for scene in plan["captures"]]:
         raise SystemExit("The recording needs one ordered segment per planned camera shot")
@@ -304,12 +275,14 @@ def convert_product_tour(selection: str | None = None) -> None:
     )
     input_hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in inputs}
 
-    def encode(width: int, height: int, exports: tuple, staging: Path) -> None:
-        edit = Edit(review / f"warehouse-4-{width}x{height}.fcproj", width, height, fps)
+    def encode(width: int, height: int, exports: tuple, staging: Path) -> tuple[dict[str, list[int]], Path]:
+        stem = f"warehouse-4-{width}x{height}"
+        edit = Edit(review / f"{stem}.fcproj", width, height, fps)
         compose(edit, BASE_DIR, plan, recordings)
+        markers = review / f"{stem}-markers-{staging.name.removeprefix('.tour-')}.csv"
+        edit.export_markers(markers, plan)
         with tempfile.TemporaryDirectory(prefix="frames-", dir=review) as temp:
-            sequence = edit.render(Path(temp), (2, 8, 12, 17, 24, 30, 34, 39, 44, 49, 53, 57, 60, 63),
-                                   duration=plan["duration"])
+            sequence = edit.render(Path(temp), duration=plan["duration"])
             for name, codec in exports:
                 target = staging / name
                 run([ffmpeg, "-y", "-loglevel", "error", "-framerate", str(fps), "-i", str(sequence),
@@ -328,14 +301,20 @@ def convert_product_tour(selection: str | None = None) -> None:
             if width == 1080:
                 run([ffmpeg, "-y", "-loglevel", "error", "-i", str(poster),
                      "-frames:v", "1", "-vf", "scale=540:960:flags=lanczos", str(staging / PORTRAIT_POSTER)])
+        return {name: edit.review_frames for name, _ in exports}, markers
 
     with tempfile.TemporaryDirectory(prefix=".tour-", dir=OUT_DIR) as pending:
         staging = Path(pending)
+        review_frames = {}
+        marker_reports = {}
         with ThreadPoolExecutor(max_workers=min(3, len(layouts))) as pool:
             futures = [pool.submit(encode, width, height, exports, staging) for width, height, exports in layouts]
             for future in futures:
-                future.result()
+                samples, markers = future.result()
+                review_frames.update(samples)
+                marker_reports[markers.name] = hashlib.sha256(markers.read_bytes()).hexdigest()
         shutil.copyfile(staging / PORTRAIT_MASTER, staging / PORTRAIT_SOCIAL)
+        review_frames[PORTRAIT_SOCIAL] = review_frames[PORTRAIT_MASTER]
         targets = sorted(staging.iterdir())
         outputs = {target.name: hashlib.sha256(target.read_bytes()).hexdigest() for target in targets}
         for target in targets:
@@ -353,6 +332,8 @@ def convert_product_tour(selection: str | None = None) -> None:
             },
             "encoders": {name: codec for _, _, exports in layouts for name, codec in exports},
             "outputs_sha256": outputs,
+            "review_frames": review_frames,
+            "filmcraft_marker_reports_sha256": marker_reports,
         })
 
 

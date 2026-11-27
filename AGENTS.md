@@ -23,8 +23,8 @@ and investigate reported bugs before changing behavior.
   the `lixity` Python distribution. `desktop/` holds the cross-platform
   Rust/Tauri v2 desktop host (`src-tauri/`), isolated Python 3.12 runtime
   bundling/verification scripts (`scripts/`), and macOS/Windows/Linux native
-  installer definitions (`packaging/`). Repository guides and the agent skill
-  live in `docs/` and `skills/`.
+  installer definitions (`packaging/`). Repository guides live in `docs/`.
+  Canonical Agent Skills live in `skills/`.
 - Analysis stays offline and deterministic on Python 3.10+. Runtime
   dependencies are `pydantic`, `rich`, `orjson` and `tomli` on Python 3.10.
   Statistical code uses the standard library. Discuss new required dependencies
@@ -51,6 +51,9 @@ and investigate reported bugs before changing behavior.
 | Verify UI behavior | `make browser` or `make browser-changed`. Inspect rendered desktop and mobile states using the [agent geometry checks](AGENT_PROFILE.md#prevent-ui-clipping-and-layout-collisions) and [browser instructions](tests/browser/README.md). |
 | Rehearse a release and reuse test results | `make release-rehearsal` exercises the reviewed author journeys and corpus, verifies the installed wheel and retains local evidence. [Maintainer workflow](CONTRIBUTING.md#rehearse-a-release-and-review-the-results) |
 | Update documentation and shared UI | `make docs-check`. For UI assets or published guides, regenerate screenshots before examples. Use the [generation and preview procedure](CONTRIBUTING.md#updating-documentation-and-pages). |
+| Use Lixity from an agent or program | Open the [Lixity skill](skills/lixity/SKILL.md) and the [automation contract](docs/AGENTS.md). |
+| Record or review product and website videos | Open the [FilmCraft skill](skills/lixity-filmcraft/SKILL.md) and follow the [video runbook](docs/videos/README.md). |
+| Verify an MCP connection | Run `make mcp-check`. See [agent setup and verification](CONTRIBUTING.md#agent-setup-and-verification). |
 | Change GitHub workflows | `make workflow-check` with `actionlint`. Keep everyday checks local-first; see [CI and workflow policy](CONTRIBUTING.md#ci-and-test-environments) and [release gates](CONTRIBUTING.md#preparing-a-release). |
 | Inspect or roll out the local browser app | Use one managed port for project views. Follow the [checkout or packaged rollout](docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service). |
 | Build or verify the Rust desktop host | Follow the [desktop maintainer guide](desktop/README.md). Use a synthetic project for native app checks. |

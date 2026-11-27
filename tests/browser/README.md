@@ -374,10 +374,11 @@ distinct from accepted empty results.
 The pages-analytics suite intercepts the public origin and GoatCounter pixel
 endpoint; no real counts are sent. It checks page paths and fixed link events,
 privacy preferences, disabled configuration, failures and untrusted query data.
-The actual generated demo runs with its unchanged CSP at desktop and mobile
-widths, including prepared PDF download, installation navigation and read-only
-controls. A download event records a successful prepared-file request, not proof
-that the user saved the file. Local reports and other hosts remain unmeasured.
+The actual generated demo runs under its reviewed CSP at desktop and mobile
+widths. The suite checks the event emitted when a prepared PDF link is activated,
+installation navigation and the read-only controls. The PDF click test cancels
+the browser download and asserts the pixel for the link activation.
+[Measurement architecture](../../docs/ARCHITECTURE.md#public-website-measurement)
 
 `scripts/browser_tools.cjs` probes common local Playwright and Chromium
 locations automatically; `PLAYWRIGHT_MODULE` and
