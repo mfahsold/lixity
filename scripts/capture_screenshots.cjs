@@ -123,9 +123,19 @@ async function main() {
             'backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);' +
             'z-index:2147483647;pointer-events:none;opacity:0;transition:opacity .25s ease,transform .25s ease;';
           document.body.appendChild(caption);
+          let hideTimer = null;
           window.setWalkthroughCaption = text => {
-            caption.textContent = text || '';
-            caption.style.opacity = text ? '1' : '0';
+            if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+            if (text) {
+              caption.textContent = text;
+              caption.style.opacity = '1';
+            } else {
+              caption.style.opacity = '0';
+              hideTimer = setTimeout(() => {
+                if (caption.style.opacity === '0') caption.textContent = '';
+                hideTimer = null;
+              }, 280);
+            }
           };
         };
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attach);
@@ -647,7 +657,7 @@ async function main() {
         if (holdMs > 0) await page.waitForTimeout(holdMs);
         if (!keep) {
           await setCaption('');
-          await page.waitForTimeout(220);
+          await page.waitForTimeout(280);
         }
       };
       const assertCaptionClear = async selector => {

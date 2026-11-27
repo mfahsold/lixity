@@ -160,6 +160,17 @@ def test_provider_schema_upgrade_requires_review_and_keeps_source(export_project
         assert rejected.status == 400
         applied = send(server.port, "/api/audio-schema", payload={**payload, "apply": True, "snapshot": proposal["snapshot"]})
         assert applied.status == 200, applied.body
+        applied_payload = json.loads(applied.body)
+        from lixity.server.pdf_context import manuscript_pdf_token
+        expected_manuscript = manuscript_pdf_token(
+            str(export_project), project_root=handler.workspace_root,
+            language=handler.language, title=handler.title, thresholds=handler.thresholds,
+        )
+        assert applied_payload["manuscript_project_token"] == expected_manuscript
+        assert applied_payload["manuscript_project_token"] != applied_payload["project_token"]
+        # Subsequent manuscript-token request using the returned token succeeds without 409.
+        review_check = send(server.port, "/api/analysis-review?project_token=" + expected_manuscript)
+        assert review_check.status == 200, review_check.body
     assert export_project.read_bytes() == before
     assert b"lixity-audio-settings/4" in config.read_bytes()
     from pathlib import Path

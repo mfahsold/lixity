@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from lixity.config import load_project_config, prepare_project_settings
-from lixity.server.pdf_context import project_settings_token
+from lixity.server.pdf_context import manuscript_pdf_token, project_settings_token
 from lixity.server.views import build_server_dashboard
 from tests.support import recording_handler
 
@@ -31,7 +31,13 @@ def test_settings_save_prepares_complete_metadata_and_returns_fresh_context(tmp_
     assert saved["title"] == "Saved Book"
     assert saved["publication"]["publisher_name"] == "Synthetic Publisher"
     current = project_settings_token(tmp_path, str(manuscript))
+    current_manuscript = manuscript_pdf_token(
+        str(manuscript), project_root=handler.workspace_root,
+        language="de", title="Saved Book", thresholds=handler.thresholds,
+    )
     assert handler.response[1]["project_token"] == current != previous
+    assert handler.response[1]["manuscript_project_token"] == current_manuscript
+    assert current_manuscript != current
     assert 'value="Saved Book"' in handler.dashboard_html
     assert 'value="Synthetic Publisher"' in handler.dashboard_html
     assert current in handler.dashboard_html

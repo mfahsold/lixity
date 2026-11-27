@@ -159,13 +159,7 @@ async function recordTour({browser, capture, prepareWorkspacePage, url: origin, 
   page.setDefaultTimeout(8000);
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => {
-    if (message.type() !== 'error') return;
-    const text = message.text();
-    // teleprompter.js passes settings project_token to research/manuscript-review
-    // & research/dossiers (which expect manuscript_pdf_token), yielding 409 on the
-    // optional dossier sidebar without affecting the teleprompter or recording flow.
-    if (currentShot === 'teleprompter' && text.includes('status of 409 (Conflict)')) return;
-    errors.push(text);
+    if (message.type() === 'error') errors.push(message.text());
   });
   await page.route('**/*', async route => {
     const request = route.request(), url = new URL(request.url());

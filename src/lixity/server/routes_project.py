@@ -273,10 +273,11 @@ class ProjectRoutesMixin(ResponseMixin):
             "reload": True,
             "project_token": project_settings_token(root, self.source_input),
         }
-        if "terms" in changes:
-            response["manuscript_project_token"] = manuscript_pdf_token(
-                self.source_input, project_root=self.workspace_root, language=lang, title=title, thresholds=thresholds,
-            )
+        manuscript_token = manuscript_pdf_token(
+            self.source_input, project_root=self.workspace_root, language=lang, title=title, thresholds=thresholds,
+        )
+        if manuscript_token:
+            response["manuscript_project_token"] = manuscript_token
         self._json(response)
 
     def _handle_load(self, payload: dict[str, Any]) -> None:

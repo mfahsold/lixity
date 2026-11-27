@@ -64,7 +64,7 @@ from ..speech_trim import MAX_TRIM_INPUT_SECONDS, configured_soundcraft, trim_au
 from ..speech_worker import reference_format
 from ..workspace_labels import workspace_labels_for
 from ._base import ResponseMixin
-from .pdf_context import project_settings_token
+from .pdf_context import manuscript_pdf_token, project_settings_token
 
 
 class _SpeechStale(ValueError):
@@ -213,14 +213,24 @@ class SpeechRoutesMixin(ResponseMixin):
                     if payload.get("snapshot") != prepared.snapshot:
                         raise ValueError("Migration snapshot changed; preview the upgrade again")
                     next_token = project_settings_token(root, self.source_input, config_bytes=prepared.candidate_config_bytes)
+                    next_manuscript_token = manuscript_pdf_token(
+                        self.source_input, project_root=self.workspace_root,
+                        language=self.language, title=self.title, thresholds=self.thresholds,
+                        config_bytes=prepared.candidate_config_bytes,
+                    )
                     data_root = Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share")))
                     backup_dir = data_root / "lixity" / "audio-backups"
                     backup_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
                     backup = backup_dir / f"audio-schema-{token_hex(12)}.zip"
                     result = prepared.apply(backup)
                 self.refresh()
-                self._json({"ok": True, "migration": result, "backup": str(backup), "settings": prepared.schema_audio,
-                            "project_token": next_token})
+                response: dict[str, Any] = {
+                    "ok": True, "migration": result, "backup": str(backup), "settings": prepared.schema_audio,
+                    "project_token": next_token,
+                }
+                if next_manuscript_token:
+                    response["manuscript_project_token"] = next_manuscript_token
+                self._json(response)
         except (OSError, ValueError, RuntimeError, UserWarning) as exc:
             self._speech_error(exc)
 

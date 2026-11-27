@@ -163,6 +163,14 @@
   }
   function context() { return [settingsForm.dataset.projectToken, body.dataset.manuscriptSourceSha256].join(":"); }
   function tokens() { return {project_token: settingsForm.dataset.projectToken, source_sha256: body.dataset.manuscriptSourceSha256}; }
+  function syncManuscriptProjectToken(nextToken) {
+    if (!/^[a-f0-9]{64}$/.test(nextToken || "")) return;
+    var previous = body.dataset.manuscriptProjectToken || "";
+    body.dataset.manuscriptProjectToken = nextToken;
+    document.querySelectorAll("#manuscript-pdf-form, #workspace-reader").forEach(function(host) {
+      if (!previous || host.dataset.projectToken === previous) host.dataset.projectToken = nextToken;
+    });
+  }
   function url(route, extra) { return API + "/" + route + "?" + new URLSearchParams(Object.assign(tokens(), extra || {})); }
   async function request(route, payload, extra, attempt) {
     var response = await fetch(payload ? API + "/" + route : url(route, extra), payload ? {
@@ -2209,6 +2217,7 @@
         savedSettings = result.settings;
         settings.schema_version = savedSettings.schema_version;
         settingsForm.dataset.projectToken = result.project_token;
+        syncManuscriptProjectToken(result.manuscript_project_token);
         openedContext = context();
         schemaReviewAvailable = false;
         fields.schema_review.hidden = fields.schema_apply.hidden = true;

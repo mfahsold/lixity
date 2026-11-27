@@ -66,6 +66,9 @@
     var form = document.getElementById("settings-form");
     return {project_token: form ? form.dataset.projectToken || "" : "", source_sha256: document.body.dataset.manuscriptSourceSha256 || ""};
   }
+  function researchProjectToken() {
+    return document.body.dataset.manuscriptProjectToken || "";
+  }
   function loadContextData() {
     var sequence = ++contextSequence, selected = selectedContext(), identity = JSON.stringify(selected);
     function current() { return sequence === contextSequence && modal && !modal.hidden && identity === JSON.stringify(selectedContext()); }
@@ -85,25 +88,29 @@
       });
     }
     // Research access shares the workspace's explicit archive boundary.
+    var manuscriptToken = researchProjectToken();
     if (typeof researchApiGet !== "function" || typeof researchContextToken !== "function" ||
-        !researchContextToken() || !selected.project_token) return;
+        !researchContextToken() || !manuscriptToken) return;
     if (!window.LixityDossierImages) { dossierFailure(); return; }
     var researchToken = researchContextToken();
-    var view = {state:"loading", project:null, token:selected.project_token, invalidated:false,
-      current:function() { return !view.invalidated && current() && researchContextToken() === researchToken; }};
+    var view = {state:"loading", project:null, token:manuscriptToken, invalidated:false,
+      current:function() {
+        return !view.invalidated && current() && researchContextToken() === researchToken &&
+          researchProjectToken() === manuscriptToken;
+      }};
     researchView = view;
     dossierNote("loading", "teleprompter_images_loading");
     researchApiGet("research/status", undefined, true).then(function(state) {
       if (!view.current()) return;
       if (!state.ok) throw new Error("Research status unavailable");
       if (!state.initialized) { view.state = "empty"; dossierNote("empty", "research_not_initialized"); return; }
-      var binding = "project_token=" + encodeURIComponent(selected.project_token);
+      var binding = "project_token=" + encodeURIComponent(manuscriptToken);
       return Promise.all([researchApiGet("research/manuscript-review?" + binding), researchApiGet("research/dossiers?" + binding)]).then(function(results) {
         if (!view.current()) return;
         var review = results[0], index = results[1], projection = review.passage_context;
         if (!review.ok || !index.ok || review.schema_version !== "research-manuscript-review-local/1" ||
             review.source_state !== "available" || review.current_source_sha256 !== selected.source_sha256 ||
-            !review.project_id || review.project_id !== index.project_id || !Array.isArray(index.dossiers) ||
+            !review.project_id || (index.project_id && review.project_id !== index.project_id) || !Array.isArray(index.dossiers) ||
             !projection || projection.schema_version !== "research-passage-context-local/1" || !Array.isArray(projection.paragraphs)) {
           throw new Error("Research context unavailable");
         }
@@ -365,7 +372,7 @@
       }
     });
     contextObserver.observe(document.body, {subtree:true, attributes:true,
-      attributeFilter:["data-project-token", "data-research-token", "data-manuscript-source-sha256"]});
+      attributeFilter:["data-project-token", "data-manuscript-project-token", "data-research-token", "data-manuscript-source-sha256"]});
 
     modal.style.setProperty("--teleprompter-font-size", fontSize + "px");
 

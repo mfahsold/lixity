@@ -955,12 +955,27 @@ server.serve_forever()
     assert.equal(applied.status(),200,await applied.text());
     const receipt=await applied.json();
     assert.equal(receipt.migration.applied,true);
+    assert.match(receipt.manuscript_project_token, /^[0-9a-f]{64}$/);
+    assert.notEqual(receipt.manuscript_project_token, receipt.project_token);
     assert.equal(path.dirname(receipt.backup),backupDirectory);
     assert.ok(fs.statSync(receipt.backup).size>0,'The confirmed migration created its backup');
     const migrated=fs.readFileSync(implicit.config,'utf8');
     assert.match(migrated,/lixity-audio-settings\/5/);
     assert.equal(migrated.includes(draftName),false,'Migration writes only the saved baseline');
     await migrationAction('schema_preview').waitFor({state:'hidden'});
+    const postMigrationTokens = await migrationPage.evaluate(() => ({
+      settings: document.getElementById('settings-form')?.dataset.projectToken || '',
+      body: document.body.dataset.manuscriptProjectToken || '',
+      pdfForm: document.getElementById('manuscript-pdf-form')?.dataset.projectToken || '',
+      workspaceReader: document.getElementById('workspace-reader')?.dataset.projectToken || '',
+    }));
+    assert.equal(postMigrationTokens.settings, receipt.project_token, 'Settings token stays bound to project_settings_token');
+    assert.equal(postMigrationTokens.body, receipt.manuscript_project_token, 'Non-reloading audio-schema updates body manuscript token');
+    if (postMigrationTokens.pdfForm) assert.equal(postMigrationTokens.pdfForm, receipt.manuscript_project_token);
+    if (postMigrationTokens.workspaceReader) assert.equal(postMigrationTokens.workspaceReader, receipt.manuscript_project_token);
+    const postMigrationReview = await migrationPage.request.get(
+      server.fixture.url + '/api/analysis-review?project_token=' + postMigrationTokens.body);
+    assert.equal(postMigrationReview.status(), 200, 'Manuscript-token endpoint must not 409 after non-reloading audio-schema save');
     assert.equal(await migrationDialog.isVisible(),true,'Migration leaves the editor open with the unsaved draft');
     assert.equal(await profileName.inputValue(),draftName);
     assert.equal(await engine.inputValue(),'ims-toucan');
@@ -973,6 +988,39 @@ server.serve_forever()
     await migrationPage.locator('#settings-speech').click();
     await migrationPage.waitForFunction(name=>document.querySelector('#speech-name')?.value===name,draftName);
     assert.equal(await duration.inputValue(),'1.2');
+    // Non-reloading /api/settings save (user edits during the 1200ms reload window)
+    // must also refresh manuscriptProjectToken and manuscript token hosts without 409.
+    await migrationPage.keyboard.press('Escape');
+    const beforeSettingsTokens = await migrationPage.evaluate(() => ({
+      settings: document.getElementById('settings-form')?.dataset.projectToken || '',
+      body: document.body.dataset.manuscriptProjectToken || '',
+    }));
+    const titleField = migrationPage.locator('#set-title');
+    await titleField.fill('Saved Without Reload');
+    const nonReloadSave = migrationPage.waitForResponse(response =>
+      response.url().endsWith('/api/settings') && response.request().method() === 'POST');
+    await migrationPage.locator('#settings-form [data-action="settings"]').click();
+    const savedSettingsResp = await nonReloadSave;
+    assert.equal(savedSettingsResp.status(), 200);
+    const savedSettingsJson = await savedSettingsResp.json();
+    assert.match(savedSettingsJson.manuscript_project_token, /^[0-9a-f]{64}$/);
+    assert.notEqual(savedSettingsJson.manuscript_project_token, beforeSettingsTokens.body);
+    // Keep editing immediately so unchanged() cancels the scheduled reload.
+    await titleField.fill('Saved Without Reload Next Draft');
+    await migrationPage.waitForTimeout(1350);
+    const afterSettingsTokens = await migrationPage.evaluate(() => ({
+      settings: document.getElementById('settings-form')?.dataset.projectToken || '',
+      body: document.body.dataset.manuscriptProjectToken || '',
+      pdfForm: document.getElementById('manuscript-pdf-form')?.dataset.projectToken || '',
+      workspaceReader: document.getElementById('workspace-reader')?.dataset.projectToken || '',
+    }));
+    assert.equal(afterSettingsTokens.settings, savedSettingsJson.project_token);
+    assert.equal(afterSettingsTokens.body, savedSettingsJson.manuscript_project_token);
+    if (afterSettingsTokens.pdfForm) assert.equal(afterSettingsTokens.pdfForm, savedSettingsJson.manuscript_project_token);
+    if (afterSettingsTokens.workspaceReader) assert.equal(afterSettingsTokens.workspaceReader, savedSettingsJson.manuscript_project_token);
+    const postSettingsReview = await migrationPage.request.get(
+      server.fixture.url + '/api/analysis-review?project_token=' + afterSettingsTokens.body);
+    assert.equal(postSettingsReview.status(), 200, 'Manuscript-token endpoint must not 409 after non-reloading /api/settings save');
     assert.deepEqual(fs.readFileSync(implicit.source),implicitSource);
     assert.deepEqual(migrationErrors,[]);
     await migrationPage.close();

@@ -10623,6 +10623,14 @@ function corpusNumber(text, decimalShift) {
   var [digits, exponent = "0"] = text.toLowerCase().split("e");
   return Number(digits + "e" + (Number(exponent) - decimalShift));
 }
+function syncManuscriptProjectToken(nextToken) {
+  if (!/^[a-f0-9]{64}$/.test(nextToken || "")) return;
+  var previous = document.body.dataset.manuscriptProjectToken || "";
+  document.body.dataset.manuscriptProjectToken = nextToken;
+  document.querySelectorAll("#manuscript-pdf-form, #workspace-reader").forEach(function(host) {
+    if (!previous || host.dataset.projectToken === previous) host.dataset.projectToken = nextToken;
+  });
+}
 async function submitSettings() {
   var settings = document.getElementById("settings-form");
   if (!settings) return;
@@ -10729,6 +10737,7 @@ async function submitSettings() {
         acceptedToken = result.project_token;
         settings.dataset.projectToken = acceptedToken;
       }
+      syncManuscriptProjectToken(result.manuscript_project_token);
       if (Object.prototype.hasOwnProperty.call(payload, "title")) settings.dataset.titleInitial = payload.title;
       if (Object.prototype.hasOwnProperty.call(payload, "author_name")) settings.dataset.authorInitial = payload.author_name;
       if (Object.prototype.hasOwnProperty.call(payload, "locations")) locationMode.dataset.initial = JSON.stringify(payload.locations);

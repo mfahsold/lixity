@@ -3,6 +3,84 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
+const {startNativeServer} = require('./support/native-server.cjs');
+
+async function nativeServerDossierBinding(browser, artifacts) {
+  const projectDir = fs.mkdtempSync(path.join(artifacts, 'native-'));
+  const server = await startNativeServer(`
+import json
+import sys
+from pathlib import Path
+from lixity.research import api as research_api
+from lixity.server.handler import LixityServerHandler
+from lixity.server.runtime import _LoopbackHTTPServer
+from lixity.server.workspaces import WorkspaceRegistry
+
+project = Path(sys.argv[1]).resolve() / 'synthetic-teleprompter'
+project.mkdir(parents=True, exist_ok=True)
+manuscript = project / 'manuscript.md'
+manuscript.write_text('# Chapter One\\n\\nHarbor walls remain steady in the morning fog.\\n', encoding='utf-8')
+research_api.init(project, title='Synthetic Teleprompter', language='en')
+research_api.create_dossier(project, title='Harbor', body='Notes on the harbor.', tags=['harbor'])
+LixityServerHandler.workspace_root = str(project)
+LixityServerHandler.source_input = str(manuscript)
+LixityServerHandler.exports_dir = str(project / 'exports')
+LixityServerHandler.language = 'en'
+with _LoopbackHTTPServer(('127.0.0.1', 0), LixityServerHandler) as srv:
+    srv.workspaces = WorkspaceRegistry(LixityServerHandler)
+    print(json.dumps({'url': f'http://127.0.0.1:{srv.server_port}'}), flush=True)
+    srv.serve_forever()
+`, projectDir);
+  const page = await browser.newPage({viewport: {width: 1440, height: 900}});
+  const errors = [], researchResponses = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  page.on('response', response => {
+    const url = new URL(response.url());
+    if (url.pathname.includes('/api/research/')) {
+      researchResponses.push({
+        pathname: url.pathname,
+        status: response.status(),
+        projectToken: url.searchParams.get('project_token'),
+      });
+    }
+  });
+  try {
+    await page.goto(server.fixture.url);
+    const tokens = await page.evaluate(() => ({
+      settings: document.getElementById('settings-form')?.dataset.projectToken || '',
+      manuscript: document.body.dataset.manuscriptProjectToken || '',
+    }));
+    assert.match(tokens.settings, /^[0-9a-f]{64}$/);
+    assert.match(tokens.manuscript, /^[0-9a-f]{64}$/);
+    assert.notEqual(tokens.settings, tokens.manuscript, 'Settings token and manuscript token must remain distinct');
+    const reviewResp = page.waitForResponse(r => new URL(r.url()).pathname.endsWith('/api/research/manuscript-review'));
+    const dossiersResp = page.waitForResponse(r => {
+      const u = new URL(r.url());
+      return u.pathname.endsWith('/api/research/dossiers') && !u.searchParams.has('id');
+    });
+    await page.locator('#reader-teleprompter').click();
+    const [review, dossiers] = await Promise.all([reviewResp, dossiersResp]);
+    assert.equal(review.status(), 200, 'Teleprompter manuscript-review must succeed without 409');
+    assert.equal(dossiers.status(), 200, 'Teleprompter dossiers index must succeed without 409');
+    assert.equal(new URL(review.url()).searchParams.get('project_token'), tokens.manuscript);
+    assert.equal(new URL(dossiers.url()).searchParams.get('project_token'), tokens.manuscript);
+    await page.waitForFunction(() => {
+      const state = document.querySelector('.teleprompter-sidebar-content')?.dataset.state;
+      return state && state !== 'loading';
+    });
+    assert.notEqual(await page.locator('.teleprompter-sidebar-content').getAttribute('data-state'), 'failed');
+    assert.ok(researchResponses.every(entry => entry.status < 400),
+      'Teleprompter research reads must produce zero 4xx/5xx responses: ' + JSON.stringify(researchResponses));
+    assert.deepEqual(errors, [], 'Opening Teleprompter on a real workspace must produce zero console/page errors');
+  } finally {
+    await page.close();
+    await server.close();
+    fs.rmSync(projectDir, {recursive: true, force: true});
+  }
+}
 
 async function dossierContext(browser, width, artifacts) {
   const page = await browser.newPage({viewport:{width,height:900}}), errors = [], requests = [];
@@ -14,8 +92,8 @@ async function dossierContext(browser, width, artifacts) {
     source_version_id:id(version),availability,media_type:'image/png',alt:'Retained synthetic image',title:'Pinned photograph',url:'https://invalid.example/untrusted-image.png'});
   await page.route('http://localhost:41739/**',async route => {
     const url=new URL(route.request().url());
-    if(url.pathname==='/') return route.fulfill({contentType:'text/html',body:`<!doctype html><body data-api="/view/synthetic/api" data-manuscript-source-sha256="source-one">
-      <form id="settings-form" data-project-token="project-one"></form><div id="research-manager" data-research-token="research-one"></div>
+    if(url.pathname==='/') return route.fulfill({contentType:'text/html',body:`<!doctype html><body data-api="/view/synthetic/api" data-manuscript-project-token="manuscript-project-one" data-manuscript-source-sha256="source-one">
+      <form id="settings-form" data-project-token="settings-project-one"></form><div id="research-manager" data-research-token="research-one"></div>
       <button id="reader-teleprompter">Teleprompter</button><main id="chapters"><section class="chapter" id="ch-1"><h2>One</h2>
       <div class="ptext" data-start="3" data-end="3" data-paragraph-sha256="same-text"><div class="ptext-inner"><p>Harbor walls remain.</p></div></div>
       <div class="ptext" data-start="7" data-end="7" data-paragraph-sha256="same-text"><div class="ptext-inner"><p>Harbor walls remain.</p></div></div>
@@ -30,7 +108,7 @@ async function dossierContext(browser, width, artifacts) {
     assert.equal(url.searchParams.get('research_token'),'research-one');
     if(url.pathname.endsWith('/status')) return route.fulfill({json:{ok:true,initialized:true,project_id:id(1)}});
     if(url.pathname.endsWith('/manuscript-review')) {
-      assert.equal(url.searchParams.get('project_token'),'project-one');
+      assert.equal(url.searchParams.get('project_token'),'manuscript-project-one');
       return route.fulfill({json:failReview?{ok:false}:{ok:true,schema_version:'research-manuscript-review-local/1',project_id:id(1),
         current_source_sha256:'source-one',source_state:'available',passage_context:{schema_version:'research-passage-context-local/1',paragraphs:[
           {start_line:3,end_line:3,paragraph_sha256:'same-text',state:unavailableAnchor?'unavailable':'ready',groups:[{dossier:{current:{id:id(2),title:'Old port',revision:2},pins:[{id:id(2),title:'Old port',revision:1}]},
@@ -39,7 +117,7 @@ async function dossierContext(browser, width, artifacts) {
           groups:[{dossier:{current:{id:id(100+n),title:'Cache example',revision:1},pins:[]},claims:[{versions:[{dossier_revision:1}]}]}]})))}}});
     }
     assert.ok(url.pathname.endsWith('/dossiers'));
-    assert.equal(url.searchParams.get('project_token'),'project-one');
+    assert.equal(url.searchParams.get('project_token'),'manuscript-project-one');
     if(!url.searchParams.has('id')) return route.fulfill({json:{ok:true,project_id:id(1),dossiers:[
       {id:id(2),title:'Old port',revision:2,tags:[]},{id:id(3),title:'Harbor',revision:3,tags:[]}]}});
     const cachePin=Array.from({length:cacheCount},(_,n)=>id(100+n)).includes(url.searchParams.get('id'));
@@ -94,18 +172,18 @@ async function dossierContext(browser, width, artifacts) {
     await page.evaluate(()=>{const pane=document.querySelector('.teleprompter-scroll-pane');pane.scrollTop=0;pane.dispatchEvent(new Event('scroll'));});
     await page.waitForFunction(()=>document.querySelectorAll('.teleprompter-sidebar-content img').length===2);
     assert.equal(requests.filter(url=>url.pathname.endsWith('/dossiers')&&url.searchParams.has('id')).length,2,'One detail read per pin, not per scroll');
-    await page.evaluate(()=>{document.querySelector('#settings-form').dataset.projectToken='project-two';});
+    await page.evaluate(()=>{document.body.dataset.manuscriptProjectToken='manuscript-project-two';});
     await page.waitForFunction(()=>document.querySelector('.teleprompter-sidebar-content')?.dataset.state==='failed');
     assert.equal(await page.locator('.teleprompter-sidebar-content img').count(),0,'Context change removes old images immediately');
-    await page.evaluate(()=>{window.LixityTeleprompter.close();document.querySelector('#settings-form').dataset.projectToken='project-one';});
+    await page.evaluate(()=>{window.LixityTeleprompter.close();document.body.dataset.manuscriptProjectToken='manuscript-project-one';});
     holdDetail=true;detailReady=new Promise(resolve=>{releaseDetail=resolve;});
     const pendingDetail=page.waitForRequest(request=>request.url().includes('/research/dossiers?id='));
     await page.locator('#reader-teleprompter').click();
     await pendingDetail;
-    await page.evaluate(()=>{document.querySelector('#settings-form').dataset.projectToken='project-two';});releaseDetail();
+    await page.evaluate(()=>{document.body.dataset.manuscriptProjectToken='manuscript-project-two';});releaseDetail();
     await page.waitForFunction(()=>document.querySelector('.teleprompter-sidebar-content')?.dataset.state==='failed');
     assert.equal(await page.locator('.teleprompter-sidebar-content img').count(),0,'Late details cannot populate another project');
-    await page.evaluate(()=>{window.LixityTeleprompter.close();document.querySelector('#settings-form').dataset.projectToken='project-one';});
+    await page.evaluate(()=>{window.LixityTeleprompter.close();document.body.dataset.manuscriptProjectToken='manuscript-project-one';});
     holdDetail=false;wrongProject=true;
     await page.locator('#reader-teleprompter').click();
     await page.waitForFunction(()=>document.querySelector('.teleprompter-sidebar-content')?.dataset.state==='failed');
@@ -272,6 +350,7 @@ async function dossierContext(browser, width, artifacts) {
     assert.deepEqual(errors, []);
     assert.deepEqual(lifecycleFailures, []);
     for(const width of [1440,320]) await dossierContext(browser,width,artifacts);
+    await nativeServerDossierBinding(browser, artifacts);
     console.log('Teleprompter context, capture cleanup, playback close, WAV download, guarded retained dossier images and centralized studio entry passed: '+artifacts);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
