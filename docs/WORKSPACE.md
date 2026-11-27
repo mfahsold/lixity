@@ -40,6 +40,13 @@ to reconnect an existing project, or confirm an import preview to create a
 copy at the selected destination. The manuscript stays in its project folder.
 [First session and offline example](ONBOARDING.md#choose-your-starting-point)
 
+To work on two projects at once, open the app's home address in a new browser
+tab and use **Project actions → Open Project**. Each project view has its own
+`/w/…/` address and uses the selected project's settings. Duplicating a tab at
+that address opens the same view. After a restart, return to the home address
+and reopen the projects you need.
+[Service commands and view limits](USAGE.md#lixity-service)
+
 The DOCX importer accepts at most 32 MiB of source bytes, 4,096 ZIP
 entries, 32 MiB of streamed document XML and 16 MiB of converted UTF-8 text.
 Larger inputs fail explicitly before publication. Conversion preserves the
@@ -158,13 +165,6 @@ uncooperative external editor.
 | Review website | Fixed manuscript/analysis copy with the explicitly included research; no live project writes |
 | Reader or companion website | Curated recipient view; no import, recalculation or local project editing |
 
-The live app separates **Manuscript**, **Research** and **Project**. To work on
-two projects at once, open the app's home address in a new browser tab and use
-**Project actions → Open Project**. Each new project view has its own
-`/w/…/` address. Duplicating a tab at that address shows the same view. One
-instance can keep up to 16 views. After a restart, return to the home address
-and reopen any additional projects you need.
-
 ## Explore language in the browser
 
 Start with one question: do sentence lengths vary between chapters, or does a
@@ -195,17 +195,9 @@ It does not automatically merge retained sources into the manuscript's analysis.
 
 In the local app, read in **Manuscript** and use **Analysis overview** for
 comparisons. The manuscript toolbar stays visible while analysis is active and
-while you browse the overview. The sections below describe navigation and the
-actions that need a running server. For a separate offline analysis snapshot:
-
-```bash
-lixity dashboard manuscript.md --language en -o dashboard.html
-```
-
-Open the file in a browser for offline analysis navigation. It embeds manuscript
-text and measurements, so treat it as manuscript material when sharing. Project
-settings, manuscript writes and research actions require a compatible local
-server; start the installed workspace with `lixity service start --open`.
+while you browse the overview. See [analysis navigation](#reading-settings-and-first-analysis-help)
+for the overview tasks and [Style area](#style-area) for chapter comparisons.
+For a separate offline analysis snapshot, see [`lixity dashboard`](USAGE.md#lixity-dashboard).
 
 **How it’s measured** opens the measurement reference in the interface
 language from the overview, evidence card, chapter inspector or version

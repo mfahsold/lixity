@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import errno
+import http.client
 import json
 import logging
 import math
@@ -61,18 +62,42 @@ def _valid_render_id(value: object) -> str | None:
     return value if isinstance(value, str) and re.fullmatch(r"[0-9a-f]{16}", value) else None
 
 
-def _connection_failure_category(error: OSError) -> str:
+def _connection_failure(error: OSError | http.client.HTTPException) -> tuple[str, str | None]:
     """Classify transport exceptions without retaining their text or destination."""
     reason = error.reason if isinstance(error, urllib.error.URLError) else error
     code = reason.errno if isinstance(reason, OSError) else None
+    os_error = errno.errorcode.get(code) if type(code) is int else None
+    if isinstance(reason, http.client.RemoteDisconnected):
+        return "remote_disconnected", os_error
+    if isinstance(reason, http.client.IncompleteRead):
+        return "incomplete_response", os_error
+    if isinstance(reason, http.client.HTTPException):
+        return "http_protocol_error", os_error
     # Socket failures can retain Winsock codes instead of their POSIX mappings.
     if isinstance(reason, ConnectionRefusedError) or code in (errno.ECONNREFUSED, 10061):
-        return "connection_refused"
+        return "connection_refused", os_error
+    if isinstance(reason, ConnectionResetError) or code in (errno.ECONNRESET, 10054):
+        return "connection_reset", os_error
+    if isinstance(reason, ConnectionAbortedError) or code in (errno.ECONNABORTED, 10053):
+        return "connection_aborted", os_error
+    if isinstance(reason, BrokenPipeError) or code == errno.EPIPE:
+        return "broken_pipe", os_error
     if isinstance(reason, TimeoutError) or code in (errno.ETIMEDOUT, 10060):
-        return "timeout"
+        return "timeout", os_error
     if code in (errno.ENETDOWN, errno.ENETUNREACH, errno.EHOSTUNREACH, 10050, 10051, 10065):
-        return "unreachable"
-    return "connection_error"
+        return "unreachable", os_error
+    if isinstance(reason, PermissionError) or code in (errno.EACCES, errno.EPERM, 10013):
+        return "access_denied", os_error
+    return "connection_error", os_error
+
+
+def _reported_engine(model: object) -> str | None:
+    if isinstance(model, str):
+        try:
+            return engine_for_model(model)
+        except ValueError:
+            pass
+    return None
 
 
 def worker_health(target: str, *, engine: str = "qwen3", opener: Any = None,
@@ -107,7 +132,7 @@ def worker_health(target: str, *, engine: str = "qwen3", opener: Any = None,
                     raise ValueError("Unexpected model idle timeout")
                 residency["idle_timeout_seconds"] = timeout
         state = "ready" if value["ready"] else "starting"
-    except (OSError, ValueError, urllib.error.URLError):
+    except (OSError, ValueError, http.client.HTTPException):
         state = "unavailable"
     return {"target": target, "state": state, "transport": "loopback" if target == "local" else "ssh", "model": model_id, **residency}
 
@@ -154,27 +179,33 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
     if render_id is not None:
         headers[_RENDER_ID_HEADER] = render_id
 
-    def transport_failed(category: str, http_status: int | None = None) -> None:
+    def transport_failed(category: str, http_status: int | None = None, *,
+                         observed_model: object = None, os_error: str | None = None) -> None:
         status = http_status if type(http_status) is int and 100 <= http_status <= 599 else None
         log_event(get_logger("speech.transport"), "speech_transport", logging.WARNING,
                   id=render_id, engine=profile.engine, target=target, category=category,
-                  http_status=status)
+                  http_status=status, observed_engine=_reported_engine(observed_model), os_error=os_error)
 
     request = urllib.request.Request(endpoints[target], data=payload,  # noqa: S310 - fixed loopback allowlist
                                      headers=headers)
     # Ignore proxy environment variables, even for localhost.
     client = no_redirect_opener(opener)
+    response_started = False
     try:
         with client.open(request, timeout=SYNTHESIS_TIMEOUT_SECONDS) as response:
+            response_started = True
             if response.status != 200:
                 transport_failed("http_error", response.status)
                 raise RuntimeError(f"{worker_name} worker rejected the synthesis request")
-            model_mismatch = response.headers.get("X-Lixity-Model") != model_id
+            actual_model = response.headers.get("X-Lixity-Model")
+            model_mismatch = actual_model != model_id
             if (model_mismatch or
                     response.headers.get("X-Lixity-Voice") != profile.voice):
-                transport_failed("model_mismatch" if model_mismatch else "voice_mismatch", 200)
+                transport_failed("model_mismatch" if model_mismatch else "voice_mismatch", 200,
+                                 observed_model=actual_model)
                 raise ValueError(f"{worker_name} worker model or voice mismatch")
             if response.headers.get_content_type() != "audio/wav":
+                transport_failed("unexpected_content_type", 200)
                 raise ValueError(f"{worker_name} worker returned an unexpected audio format")
             data = response.read(MAX_RESPONSE_BYTES + 1)
     except urllib.error.HTTPError as exc:
@@ -183,7 +214,7 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
         actual_model = exc.headers.get("X-Lixity-Model") if exc.headers else None
         exc.close()
         if actual_model is not None and actual_model != model_id:
-            transport_failed("model_mismatch", exc.code)
+            transport_failed("model_mismatch", exc.code, observed_model=actual_model)
             model_kind = "Qwen model" if worker_name == "Qwen" else "model"
             raise RuntimeError(f"{worker_name} worker ({target}) is running a different {model_kind}; select the matching worker variant") from exc
         transport_failed("http_error", exc.code)
@@ -194,16 +225,33 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
         if exc.code == 503:
             raise RuntimeError(f"{worker_name} worker ({target}) is busy (HTTP 503); retry after the current request finishes") from exc
         raise RuntimeError(f"{worker_name} worker ({target}) is unavailable or failed") from exc
-    except OSError as exc:
-        transport_failed(_connection_failure_category(exc))
+    except (OSError, http.client.HTTPException) as exc:
+        category, os_error = _connection_failure(exc)
+        observed_model = None
+        # A worker can close a large reference upload before urllib reads the
+        # rejection headers. Check only its current identity and never replay the POST.
+        if not response_started and category in {"connection_reset", "connection_aborted", "broken_pipe", "remote_disconnected"}:
+            health = worker_health(target, engine=profile.engine, opener=client, endpoints=endpoints)
+            if health["state"] in ("ready", "starting"):
+                observed_model = health["model"]
+        transport_failed(category, observed_model=observed_model, os_error=os_error)
+        if observed_model is not None and observed_model != model_id:
+            raise RuntimeError(f"{worker_name} worker ({target}) disconnected and now reports a different model; select the matching worker variant") from exc
         raise RuntimeError(f"{worker_name} worker ({target}) is unavailable or failed") from exc
     if not isinstance(data, bytes):
-        raise ValueError("Qwen worker returned invalid audio bytes")
+        transport_failed("invalid_audio", 200)
+        raise ValueError(f"{worker_name} worker returned invalid audio bytes")
     if len(data) > MAX_RESPONSE_BYTES:
-        raise ValueError("Qwen worker response exceeds the audio limit")
-    params, _frames = _read_pcm(data)
+        transport_failed("response_too_large", 200)
+        raise ValueError(f"{worker_name} worker response exceeds the audio limit")
+    try:
+        params, _frames = _read_pcm(data)
+    except ValueError:
+        transport_failed("invalid_audio", 200)
+        raise
     if params != (1, 2, SAMPLE_RATE):
-        raise ValueError("Unexpected Qwen audio format")
+        transport_failed("audio_format_mismatch", 200)
+        raise ValueError(f"Unexpected {worker_name} audio format")
     return data
 
 

@@ -76,7 +76,7 @@ def build(*, offline: bool, dmg: bool, revision: str | None = None) -> dict[str,
     import fcntl
 
     OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
-    output = Path(tempfile.mkdtemp(prefix="build-", dir=OUTPUT_ROOT))
+    output = Path(tempfile.mkdtemp(prefix="build-", suffix=".noindex", dir=OUTPUT_ROOT))
     print(f"Building in {output}", flush=True)
     target = host_target_triple()
     config_file = DESKTOP / "src-tauri" / "tauri.conf.json"

@@ -11,7 +11,7 @@ use cpal::Sample;
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::io::Cursor;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -22,6 +22,7 @@ const MIN_DURATION_SEC: f32 = 1.0;
 const MAX_DURATION_SEC: f32 = 60.0;
 const MAX_CALIBRATION_DURATION_SEC: f32 = 30.0;
 const NO_SIGNAL_DBFS: f64 = -120.0;
+static CAPTURE_COUNTER: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Debug, Serialize)]
 pub struct CaptureDeviceInfo {
@@ -93,7 +94,36 @@ impl Default for RecordingLiveStatus {
 
 type CaptureResult = Result<(Vec<f32>, u32), String>;
 
+struct CaptureStartError {
+    reason: &'static str,
+    message: String,
+}
+
+#[derive(Clone, Copy)]
+struct CaptureLog {
+    id: u64,
+    write: fn(&str, &str),
+}
+
+impl CaptureLog {
+    fn event(self, stage: &'static str, reason: &'static str, duration_ms: Option<u64>) {
+        // Only fixed labels and bounded numeric values enter the sidecar log.
+        let mut line = format!(
+            "event=desktop_audio_capture capture_id={} stage={stage}",
+            self.id
+        );
+        if !reason.is_empty() {
+            line.push_str(&format!(" reason={reason}"));
+        }
+        if let Some(duration_ms) = duration_ms {
+            line.push_str(&format!(" duration_ms={duration_ms}"));
+        }
+        (self.write)(if stage == "failed" { "WARN" } else { "INFO" }, &line);
+    }
+}
+
 struct ActiveCapture {
+    log: CaptureLog,
     window: String,
     max_duration_seconds: f32,
     stop_flag: Arc<AtomicBool>,
@@ -109,9 +139,18 @@ struct ActiveCapture {
 ///
 /// Owns the non-`Send` `cpal::Stream` strictly inside a dedicated capture thread so
 /// Tauri commands stay `Send + Sync` on CoreAudio, WASAPI and ALSA/PipeWire.
-#[derive(Default)]
 pub struct InteractiveRecorder {
     active: Mutex<Option<ActiveCapture>>,
+    log: fn(&str, &str),
+}
+
+impl Default for InteractiveRecorder {
+    fn default() -> Self {
+        Self {
+            active: Mutex::new(None),
+            log: crate::sidecar::log_desktop_event,
+        }
+    }
 }
 
 impl InteractiveRecorder {
@@ -122,14 +161,22 @@ impl InteractiveRecorder {
         filename: String,
         max_duration_seconds: Option<u32>,
     ) -> Result<(), String> {
+        let log = CaptureLog {
+            id: CAPTURE_COUNTER.fetch_add(1, Ordering::Relaxed),
+            write: self.log,
+        };
+        log.event("requested", "", None);
         let max_duration_seconds =
             max_duration_seconds.map_or(MAX_DURATION_SEC, |seconds| seconds as f32);
-        validate_duration(max_duration_seconds, MAX_DURATION_SEC)?;
-        let mut guard = self
-            .active
-            .lock()
-            .map_err(|_| "Recorder state lock poisoned".to_string())?;
+        validate_duration(max_duration_seconds, MAX_DURATION_SEC).inspect_err(|_| {
+            log.event("failed", "invalid_duration", None);
+        })?;
+        let mut guard = self.active.lock().map_err(|_| {
+            log.event("failed", "recorder_state", None);
+            "Recorder state lock poisoned".to_string()
+        })?;
         if guard.is_some() {
+            log.event("failed", "recording_already_active", None);
             return Err("A recording session is already running".to_string());
         }
 
@@ -137,12 +184,11 @@ impl InteractiveRecorder {
         let auto_stopped = Arc::new(AtomicBool::new(false));
         let live_peak_bits = Arc::new(AtomicU32::new(0.0_f32.to_bits()));
         let live_rms_bits = Arc::new(AtomicU32::new(0.0_f32.to_bits()));
-        let (ready_tx, ready_rx) = mpsc::sync_channel::<Result<(), String>>(1);
+        let (ready_tx, ready_rx) = mpsc::sync_channel::<Result<(), CaptureStartError>>(1);
 
         let thread_stop = Arc::clone(&stop_flag);
         let thread_auto = Arc::clone(&auto_stopped);
-        let thread_peak = Arc::clone(&live_peak_bits);
-        let thread_rms = Arc::clone(&live_rms_bits);
+        let thread_levels = (Arc::clone(&live_peak_bits), Arc::clone(&live_rms_bits));
 
         let join_handle = thread::spawn(move || {
             run_capture_loop(
@@ -150,13 +196,14 @@ impl InteractiveRecorder {
                 max_duration_seconds,
                 thread_stop,
                 thread_auto,
-                thread_peak,
-                thread_rms,
+                thread_levels,
                 ready_tx,
+                log,
             )
         });
 
         *guard = Some(ActiveCapture {
+            log,
             window,
             max_duration_seconds,
             stop_flag: Arc::clone(&stop_flag),
@@ -171,11 +218,25 @@ impl InteractiveRecorder {
         drop(guard);
         let result = ready_rx
             .recv_timeout(Duration::from_secs(5))
-            .unwrap_or_else(|_| Err("Timed out initializing microphone stream".to_string()));
+            .unwrap_or_else(|error| {
+                Err(match error {
+                    mpsc::RecvTimeoutError::Timeout => CaptureStartError {
+                        reason: "startup_timeout",
+                        message: "Timed out initializing microphone stream".to_string(),
+                    },
+                    mpsc::RecvTimeoutError::Disconnected => CaptureStartError {
+                        reason: "capture_thread",
+                        message: "Microphone capture stopped before it was ready".to_string(),
+                    },
+                })
+            });
         let same_session = |active: &ActiveCapture| Arc::ptr_eq(&active.stop_flag, &stop_flag);
-        if let Err(err) = result {
-            self.cancel_matching(same_session);
-            return Err(err);
+        if let Err(error) = result {
+            if let Ok(Some(active)) = self.take_matching(same_session) {
+                log.event("failed", error.reason, None);
+                let _ = active.join_handle.join();
+            }
+            return Err(error.message);
         }
         let mut guard = self
             .active
@@ -183,6 +244,7 @@ impl InteractiveRecorder {
             .map_err(|_| "Recorder state lock poisoned".to_string())?;
         if let Some(active) = guard.as_mut().filter(|active| same_session(active)) {
             active.started_at = Some(Instant::now());
+            log.event("started", "", None);
             Ok(())
         } else {
             Err("Recording was cancelled before the microphone was ready".to_string())
@@ -243,31 +305,55 @@ impl InteractiveRecorder {
         let session = self
             .take_matching(|active| active.window == window && active.started_at.is_some())?
             .ok_or_else(|| "No active recording session for this window".to_string())?;
+        let log = session.log;
         let (raw, rate) = session
             .join_handle
             .join()
-            .map_err(|_| "Audio capture thread panicked".to_string())??;
-        finalize_wav_take(&raw, rate, &session.filename)
+            .map_err(|_| {
+                log.event("failed", "capture_thread", None);
+                "Audio capture thread panicked".to_string()
+            })??;
+        let take = finalize_wav_take(&raw, rate, &session.filename).inspect_err(|_| {
+            let reason = if raw.is_empty() {
+                "empty_capture"
+            } else {
+                "wav_encoding"
+            };
+            log.event("failed", reason, None);
+        })?;
+        let duration_ms = (take.duration_seconds * 1000.0)
+            .round()
+            .clamp(0.0, 60_000.0) as u64;
+        let reason = if session.auto_stopped.load(Ordering::Relaxed) {
+            "duration_limit"
+        } else {
+            "stop_requested"
+        };
+        log.event("ready", reason, Some(duration_ms));
+        Ok(take)
     }
 
-    fn cancel_matching(&self, matches: impl FnOnce(&ActiveCapture) -> bool) {
+    fn cancel_matching(&self, matches: impl FnOnce(&ActiveCapture) -> bool, reason: &'static str) {
         if let Ok(Some(active)) = self.take_matching(matches) {
+            active.log.event("discarded", reason, None);
             let _ = active.join_handle.join();
         }
     }
 
     pub fn cancel(&self, window: &str) {
-        self.cancel_matching(|active| active.window == window);
+        self.cancel_matching(|active| active.window == window, "cancel_requested");
     }
 
     pub fn discard_window(&self, window: &str) {
         // Window events run on the GUI thread. Signal shutdown now and let
         // the capture thread finish without blocking its former window.
-        let _ = self.take_matching(|active| active.window == window);
+        if let Ok(Some(active)) = self.take_matching(|active| active.window == window) {
+            active.log.event("discarded", "window_closed", None);
+        }
     }
 
     pub fn cancel_all(&self) {
-        self.cancel_matching(|_| true);
+        self.cancel_matching(|_| true, "app_exit");
     }
 }
 
@@ -599,23 +685,28 @@ fn run_capture_loop(
     max_duration_seconds: f32,
     stop_flag: Arc<AtomicBool>,
     auto_stopped: Arc<AtomicBool>,
-    live_peak_bits: Arc<AtomicU32>,
-    live_rms_bits: Arc<AtomicU32>,
-    ready_tx: mpsc::SyncSender<Result<(), String>>,
+    live_levels: (Arc<AtomicU32>, Arc<AtomicU32>),
+    ready_tx: mpsc::SyncSender<Result<(), CaptureStartError>>,
+    log: CaptureLog,
 ) -> Result<(Vec<f32>, u32), String> {
+    let start_failed = |reason, message: String| {
+        let _ = ready_tx.send(Err(CaptureStartError {
+            reason,
+            message: message.clone(),
+        }));
+        Err(message)
+    };
     let device = match select_input_device(device_name) {
         Ok(d) => d,
-        Err(e) => {
-            let _ = ready_tx.send(Err(e.clone()));
-            return Err(e);
-        }
+        Err(e) => return start_failed("input_device", e),
     };
     let supported = match device.default_input_config() {
         Ok(cfg) => cfg,
         Err(e) => {
-            let msg = format!("Failed reading microphone configuration: {e}");
-            let _ = ready_tx.send(Err(msg.clone()));
-            return Err(msg);
+            return start_failed(
+                "input_configuration",
+                format!("Failed reading microphone configuration: {e}"),
+            );
         }
     };
     let sample_rate = supported.sample_rate().0;
@@ -638,27 +729,23 @@ fn run_capture_loop(
             max_samples,
             captured: Arc::clone(&captured),
             auto_stopped: Arc::clone(&auto_stopped),
-            peak_bits: live_peak_bits,
-            rms_bits: live_rms_bits,
+            peak_bits: live_levels.0,
+            rms_bits: live_levels.1,
             stream_err: Arc::clone(&stream_err),
         },
     ) {
         Ok(s) => s,
-        Err(e) => {
-            let _ = ready_tx.send(Err(e.clone()));
-            return Err(e);
-        }
+        Err(e) => return start_failed("stream_open", e),
     };
 
     if stop_flag.load(Ordering::SeqCst) {
-        let error = "Recording was cancelled".to_string();
-        let _ = ready_tx.send(Err(error.clone()));
-        return Err(error);
+        return start_failed("cancel_requested", "Recording was cancelled".to_string());
     }
     if let Err(e) = stream.play() {
-        let msg = format!("Failed starting microphone stream: {e}");
-        let _ = ready_tx.send(Err(msg.clone()));
-        return Err(msg);
+        return start_failed(
+            "stream_start",
+            format!("Failed starting microphone stream: {e}"),
+        );
     }
     let _ = ready_tx.send(Ok(()));
 
@@ -675,6 +762,12 @@ fn run_capture_loop(
         thread::sleep(Duration::from_millis(25));
     }
     finish_capture(stream, &captured, &stream_err, sample_rate)
+        .inspect(|_| {
+            if auto_stopped.load(Ordering::Relaxed) {
+                log.event("capture_ended", "duration_limit", None);
+            }
+        })
+        .inspect_err(|_| log.event("failed", "stream_error", None))
 }
 
 fn capture_frame_limit(sample_rate: u32, duration_seconds: f32) -> usize {
@@ -783,6 +876,19 @@ pub fn record_wav_take(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cell::RefCell;
+
+    thread_local! {
+        static CAPTURE_EVENTS: RefCell<Vec<(String, String)>> = const { RefCell::new(Vec::new()) };
+    }
+
+    fn record_capture_event(level: &str, event: &str) {
+        CAPTURE_EVENTS.with(|events| {
+            events
+                .borrow_mut()
+                .push((level.to_string(), event.to_string()))
+        });
+    }
 
     #[test]
     fn recording_status_and_buffer_share_the_sixty_second_limit() {
@@ -865,6 +971,10 @@ mod tests {
         let stop_flag = Arc::new(AtomicBool::new(false));
         let capture_stop = Arc::clone(&stop_flag);
         ActiveCapture {
+            log: CaptureLog {
+                id: 123,
+                write: record_capture_event,
+            },
             window: "recording-window".to_string(),
             max_duration_seconds: 37.0,
             stop_flag,
@@ -888,6 +998,7 @@ mod tests {
         let stopped = Arc::clone(&capture.stop_flag);
         let recorder = InteractiveRecorder {
             active: Mutex::new(Some(capture)),
+            log: record_capture_event,
         };
         assert_eq!(recorder.status("other"), RecordingLiveStatus::default());
         assert!(recorder.stop("other").is_err());
@@ -903,13 +1014,20 @@ mod tests {
 
         let take = recorder.stop("recording-window").unwrap();
         assert_eq!(take.frames, 240);
+        assert_eq!(CAPTURE_EVENTS.with(|events| events.take()), [(
+            "INFO".to_string(),
+            "event=desktop_audio_capture capture_id=123 stage=ready reason=stop_requested duration_ms=10".to_string(),
+        )]);
         assert!(stopped.load(Ordering::SeqCst));
         assert!(!recorder.owns_capture("recording-window"));
     }
 
     #[test]
     fn invalid_interactive_limits_are_rejected_before_opening_the_device() {
-        let recorder = InteractiveRecorder::default();
+        let recorder = InteractiveRecorder {
+            log: record_capture_event,
+            ..InteractiveRecorder::default()
+        };
         for seconds in [0, 61] {
             let error = recorder
                 .start(
@@ -921,6 +1039,18 @@ mod tests {
                 .unwrap_err();
             assert_eq!(error, "Recording duration must be between 1 and 60 seconds");
             assert!(!recorder.owns_capture("synthetic-window"));
+            let events = CAPTURE_EVENTS.with(|events| events.take());
+            assert_eq!(events.len(), 2);
+            let prefix = events[0].1.strip_suffix(" stage=requested").unwrap();
+            assert_eq!(events[0].0, "INFO");
+            assert_eq!(
+                events[1],
+                (
+                    "WARN".to_string(),
+                    format!("{prefix} stage=failed reason=invalid_duration")
+                )
+            );
+            assert!(prefix.starts_with("event=desktop_audio_capture capture_id="));
         }
     }
 
@@ -930,12 +1060,21 @@ mod tests {
         let stopped = Arc::clone(&capture.stop_flag);
         let recorder = InteractiveRecorder {
             active: Mutex::new(Some(capture)),
+            log: record_capture_event,
         };
         assert!(recorder.owns_capture("recording-window"));
         assert!(!recorder.status("recording-window").recording);
         recorder.discard_window("other");
         assert!(!stopped.load(Ordering::SeqCst));
         recorder.discard_window("recording-window");
+        assert_eq!(
+            CAPTURE_EVENTS.with(|events| events.take()),
+            [(
+                "INFO".to_string(),
+                "event=desktop_audio_capture capture_id=123 stage=discarded reason=window_closed"
+                    .to_string(),
+            )]
+        );
         assert!(stopped.load(Ordering::SeqCst));
         assert!(!recorder.owns_capture("recording-window"));
     }

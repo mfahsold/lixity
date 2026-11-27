@@ -59,15 +59,20 @@ reference after each cut.
 Dark ink frames the manuscript, lilac frames measured details and paper frames
 source evidence. The opening title and final demo link use eight-frame fades.
 The other changes use direct cuts, including the return to the same signature
-line. Phone and landscape frames have independent compositions. Short live
-workspace actions lead into held details or typed excerpts with space to read.
+line. Compact headings give more of each frame to the workspace. Tight crops
+follow the active passage, version columns, exhibit and download controls.
+Phone and landscape frames have independent compositions. A phone shows the
+current file and draft in the comparison, while landscape also fits the last
+acknowledged text. Short live actions lead into held details or typed excerpts.
 [FilmCraft graphics](https://github.com/storytold/filmcraft/blob/main/docs/graphics.md) · [Match cuts](https://www.adobe.com/creativecloud/video/post-production/cuts-in-film/match-cut.html)
 
 The homepage prefers the portrait source in portrait viewports and offers the
-landscape formats as fallbacks. It starts playback only when at least half of
-the player is visible and respects reduced motion, data saving and explicit
-pause. Leaving the viewport or hiding the tab pauses playback. Native controls,
-localized play/pause controls and a readable transcript remain available.
+landscape formats as fallbacks. The player takes the wider column on landscape
+desktops and can fill the content width on phones. It starts playback only
+when at least half of the player is visible and respects reduced motion, data
+saving and explicit pause. Leaving the viewport or hiding the tab pauses
+playback. Native controls, localized play/pause controls and a readable
+transcript remain available.
 A failed video offers the interactive demo instead.
 
 The six beats in `product-tour-timing.json` set cue boundaries for the seven
@@ -101,9 +106,11 @@ download links while keeping their base filenames stable.
 Editable local projects and 360-pixel review frames live under
 `.artifacts/filmcraft/warehouse-4-tour/`. Use the program monitor to confirm
 that the opening receipt, explanations, before/after text, ledger and PDF can
-be read. Verify that the brand stays within the left gutter and social overlays
-or page captions leave the final link clear. Check the intended destination on
-a phone because controls differ by placement.
+be read. At 22 seconds, check the current and draft columns. At 54 seconds,
+check that the download control sits clear of the player's controls. Verify
+that the brand stays within the left gutter and the final link clears social
+overlays and page captions. Check the intended destination on a phone because
+controls differ by placement.
 [FilmCraft CLI guide](https://github.com/storytold/filmcraft/blob/main/docs/agents.md) · [Portrait placement overlays](https://support.google.com/google-ads/answer/9128498?hl=en-1-2)
 
 ```sh

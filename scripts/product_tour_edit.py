@@ -44,7 +44,7 @@ class Edit:
         self.path = path
         self.width, self.height = width, height
         self.port = width < height
-        self.left = 96 if self.port else 88
+        self.left = 84 if self.port else 76
         self.fps = fps
         self.command("file.newSequence", {"name": f"Warehouse 4 | {width}x{height}",
                                          "width": width, "height": height, "fps": fps,
@@ -93,17 +93,17 @@ class Edit:
         self.background(start, end, background)
         warm = background == INK
         foreground, accent = (PAPER, GOLD) if warm else (INK, VIOLET)
-        wordmark = self.text(start, end, "Lixity", self.left + (78 if self.port else 54),
-                             210 if self.port else 96, 46 if self.port else 34, foreground)
-        self.text(start, end, kicker, self.left, 405 if self.port else 206 if poster else 180,
-                  36 if self.port else 26, accent, clip=wordmark)
+        wordmark = self.text(start, end, "Lixity", self.left + (72 if self.port else 50),
+                             207 if self.port else 93, 42 if self.port else 32, foreground)
+        self.text(start, end, kicker, self.left, 375 if self.port else 190 if poster else 160,
+                  33 if self.port else 25, accent, clip=wordmark)
         self.text(start, end, title, self.left - int(serif) * 3,
-                  550 if self.port else 318 if poster else 253,
-                  (109 if serif else 72) if self.port else (77 if serif else 56),
+                  492 if self.port else 283 if poster else 224,
+                  (96 if serif else 64) if self.port else (68 if serif else 50),
                   foreground, serif=serif, clip=wordmark, fade=start == 0)
         if subtitle:
-            self.text(start, end, subtitle, self.left, 637 if self.port else 312,
-                      43 if self.port else 28, accent, clip=wordmark)
+            self.text(start, end, subtitle, self.left, 573 if self.port else 280,
+                      37 if self.port else 26, accent, clip=wordmark)
         return wordmark
 
     def parameter(self, clip: int, effect: int | str, name: str, value: Any) -> None:
@@ -178,12 +178,12 @@ def compose(edit: Edit, root: Path, plan: dict, recording: dict,
         details[segment["id"]] = tuple(segment["detail"][axis] for axis in ("x", "y", "width", "height"))
     width, port = edit.width, edit.port
     middle = width / 2
-    span = width - 2 * edit.left
-    panel = (middle, 1050, span, 720) if port else (middle, 563, span, 496)
+    picture_span = width - 2 * (54 if port else 48)
+    panel = (middle, 1030, picture_span, 840) if port else (middle, 553, picture_span, 576)
 
-    def moving(name: str, start: int, end: int, crop=None) -> None:
+    def moving(name: str, start: int, end: int, crop: tuple[float, float, float, float], *, box=panel) -> None:
         segment, video, _ = clips[name]
-        edit.picture(video, start, end, panel, crop=crop, source_frame=segment["startFrame"])
+        edit.picture(video, start, end, box, crop=crop, source_frame=segment["startFrame"])
 
     def detail(name: str, start: int, end: int, *, pad: int = 0, box=panel,
                keep_height: float = 1) -> None:
@@ -193,84 +193,90 @@ def compose(edit: Edit, root: Path, plan: dict, recording: dict,
         edit.picture(source, start, end, box, crop=crop)
 
     def tag(start: int, end: int, group: int, label: str, x: float, y: float, *, color: str = VIOLET) -> None:
-        edit.text(start, end, label, x, y, 43 if port else 32, color, clip=group)
+        edit.text(start, end, label, x, y, 37 if port else 29, color, clip=group)
 
     opening = edit.heading(0, 5, "WAREHOUSE 4  /  FICTION", "The Blank Line", serif=True, poster=True)
-    receipt_box = (middle, 1045, span, 600) if port else (width * .73, 469, width * .46, 530)
+    receipt_box = (middle, 1005, picture_span, 630) if port else (width * .71, 469, width * .50, 570)
     paper_crop = (114, 100, 872, 516)
     edit.picture(receipt, 0, 5, receipt_box, crop=paper_crop)
-    tag(0, 5, opening, "The receiving signature is missing.", edit.left, 1480 if port else 411, color=GOLD)
+    tag(0, 5, opening, "The receiving signature is missing.", edit.left, 1410 if port else 382, color=GOLD)
 
     edit.heading(5, 9, "01  /  MANUSCRIPT", "Read the passage")
-    moving("read", 5, 9, (449, 70, 765, 640))
+    moving("read", 5, 9, (466, 111, 757, 620) if port else (430, 100, 840, 425))
     reading = edit.heading(9, 14, "01  /  MANUSCRIPT", "From the draft")
     excerpt = recording["originalSentence"].split(" that she began", 1)[0]
     excerpt = excerpt.replace(" at it", "\nat it") if port else excerpt
-    edit.text(9, 14, f"“{excerpt}…”", edit.left, 840 if port else 470, 61 if port else 55, PAPER,
+    edit.text(9, 14, f"“{excerpt}…”", edit.left, 740 if port else 409, 55 if port else 49, PAPER,
               serif=True, clip=reading)
-    detail("read", 9, 14, pad=12, box=(middle, 1280, span, 245) if port else (middle, 688, span, 194))
+    detail("read", 9, 14, pad=12,
+           box=(middle, 1110, picture_span, 245) if port else (middle, 625, picture_span, 206))
 
     edit.heading(14, 20, "02  /  EXPLANATION", "22 of 31 words", background=LILAC, subtitle="Counted as function words")
     x, y, w, h = details["passage"]
     if port:
-        moving("passage", 14, 17, (x - 16, max(0, y - 70), w + 32, min(650, h + 90)))
+        moving("passage", 14, 17, (x - 52, y - 68, w + 112, h + 78))
     else:
-        moving("passage", 14, 17)
-    analysis_panel = (middle, 1086, span, 745) if port else (width * .714, 504, width * .48, 534)
+        moving("passage", 14, 17, (x - 62, y - 79, w + 417, h + 14))
+    analysis_panel = (middle, 1020, picture_span, 790) if port else (width * .704, 495, width * .52, 590)
     detail("passage", 17, 20, box=analysis_panel, keep_height=.60)
 
     edit.heading(20, 23, "03  /  REVISION", "Compare the draft", background=LILAC)
-    moving("compare", 20, 23, (127, 207, 1186, 550) if port else None)
+    # The current file and draft both fit on a phone when cropped at their column boundaries.
+    moving("compare", 20, 23, (522, 183, 795, 531) if port else (124, 179, 1190, 499))
     compared = edit.heading(23, 27, "UNSAVED DRAFT  /  SAME SETTINGS", "31 to 12 words", background=LILAC)
     before = recording["originalSentence"].split(" that she began", 1)[0] + "…"
     after = recording["draftSentence"]
     second_column = edit.left if port else width * .53
-    tag(23, 27, compared, "ORIGINAL EXCERPT", edit.left, 838 if port else 430)
-    tag(23, 27, compared, "DRAFT", second_column, 1160 if port else 430)
+    tag(23, 27, compared, "ORIGINAL EXCERPT", edit.left, 760 if port else 403)
+    tag(23, 27, compared, "DRAFT", second_column, 1055 if port else 403)
     lines = (before.replace(" at it", "\nat it"), after.replace("why he", "\nwhy he")) if port else (
         before.replace(" she looked", "\nshe looked"), after.replace("why he", "\nwhy he"),
     )
     for line, column, row in zip(
-        lines, (edit.left, second_column), (939, 1260) if port else (530, 530), strict=True,
+        lines, (edit.left, second_column), (846, 1141) if port else (487, 487), strict=True,
     ):
-        edit.text(23, 27, line, column, row, 56 if port else 41, INK, serif=True, clip=compared)
+        edit.text(23, 27, line, column, row, 51 if port else 38, INK, serif=True, clip=compared)
 
     edit.heading(27, 31, "04  /  RESEARCH", "The exhibit book", background=PAPER)
-    moving("dossier", 27, 31, (285, 130, 960, 680) if port else None)
+    x, y, w, h = details["dossier"]
+    moving("dossier", 27, 31, (x - 22, y - 53, w + 70, h + 69) if port else (x - 45, y - 75, w + 300, h + 70))
     returned = edit.heading(31, 36, "OFFICE LEDGER", "18:40", background=PAPER, subtitle="Cart 17 returned")
-    edit.picture(ledger, 31, 36, panel, crop=(114, 126, 872, 470))
-    tag(31, 36, returned, "Fictional working exhibit", edit.left, 1500 if port else 818)
+    ledger_box = panel if port else (middle, 550, picture_span, 510)
+    edit.picture(ledger, 31, 36, ledger_box, crop=(114, 126, 872, 470 if port else 445))
+    tag(31, 36, returned, "Fictional working exhibit", edit.left, 1480 if port else 841)
 
     joined = edit.heading(36, 42, "LEDGER  /  RECEIPT", "The same number", background=PAPER)
-    edit.picture(ledger, 36, 42, (middle, 872, span, 276) if port else (width * .28, 558, width * .40, 290),
+    edit.picture(ledger, 36, 42, (middle, 840, picture_span, 276) if port else (width * .268, 553, width * .43, 290),
                  crop=(148, 294, 801, 186))
-    edit.picture(receipt, 36, 42, (middle, 1280, span, 276) if port else (width * .72, 558, width * .40, 290),
+    edit.picture(receipt, 36, 42, (middle, 1240, picture_span, 276) if port else (width * .732, 553, width * .43, 290),
                  crop=(148, 276, 801, 179), track="V3")
-    tag(36, 42, joined, "18:40   /   RETURN", edit.left, 720 if port else 432)
-    tag(36, 42, joined, "20:00   /   DISPATCH", edit.left if port else width * .52, 1128 if port else 432)
+    tag(36, 42, joined, "18:40   /   RETURN", edit.left, 690 if port else 416)
+    tag(36, 42, joined, "20:00   /   DISPATCH", edit.left if port else width * .52, 1090 if port else 416)
 
     edit.heading(42, 47, "05  /  MANUSCRIPT", "Return to the text")
-    moving("decision", 42, 44, (285, 110, 1060, 705) if port else None)
+    moving("decision", 42, 44, (445, 230, 824, 465) if port else (450, 260, 785, 405))
     detail("decision", 44, 47, pad=22)
     signed = edit.heading(47, 52, "WAREHOUSE 4  /  MANUSCRIPT", "The final line", serif=True, poster=True)
     quote = recording["closingSentence"]
     edit.text(47, 52, "“" + (quote.replace(" stayed", "\nstayed") if port else quote) + "”",
-              edit.left, 910 if port else 502, 66 if port else 57, PAPER, serif=True, clip=signed)
+              edit.left, 809 if port else 453, 58 if port else 51, PAPER, serif=True, clip=signed)
     edit.picture(receipt, 47, 52,
-                 (middle, 1190, span, 310) if port else (width * .71, 675, width * .47, 240),
+                 (middle, 1135, picture_span, 310) if port else (width * .69, 647, width * .50, 240),
                  crop=(148, 445, 801, 80))
 
     edit.heading(52, 56, "06  /  EXPORT", "Share the evidence", background=PAPER)
-    moving("pdf", 52, 56, (265, 219, 1000, 650) if port else None)
+    # Keep the download action above the bottom edge where player controls appear.
+    export_box = panel if port else (middle, 521, picture_span, 510)
+    moving("pdf", 52, 56, (277, 316, 924, 497) if port else (286, 319, 1080, 472), box=export_box)
     end = edit.heading(56, 60, "WAREHOUSE 4  /  EXHIBIT BOOK", "A saved dossier", background=PAPER)
-    edit.picture(pdf, 56, 60, (middle, 838, span, 236) if port else (middle, 415, span, 150),
+    edit.picture(pdf, 56, 60, (middle, 825, picture_span, 236) if port else (middle, 406, picture_span, 194),
                  crop=(.11 * pdf.width, .084 * pdf.height, .78 * pdf.width, .1 * pdf.height))
-    edit.picture(pdf, 56, 60, (middle, 1180, span, 290) if port else (middle, 647, span, 185),
+    edit.picture(pdf, 56, 60, (middle, 1160, picture_span, 290) if port else (middle, 640, picture_span, 208),
                  crop=(.11 * pdf.width, .79 * pdf.height, .78 * pdf.width, .1 * pdf.height), track="V3")
-    edit.text(56, 60, "Try the demo at lixity.de", edit.left, 1490 if port else 824, 44 if port else 32,
+    edit.text(56, 60, "Try the demo at lixity.de", edit.left, 1430 if port else 829, 39 if port else 30,
               VIOLET, clip=end, fade=True)
-    edit.picture(logo, 0, 60, (edit.left + (29 if port else 21), 191 if port else 83, 58 if port else 42,
-                              58 if port else 42), track="V5")
+    logo_size = 54 if port else 40
+    edit.picture(logo, 0, 60, (edit.left + logo_size / 2, 191 if port else 82, logo_size, logo_size), track="V5")
 
     for scene in plan["scenes"]:
         edit.marker(scene["id"], scene["start"])

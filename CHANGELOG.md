@@ -9,6 +9,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Keep audio diagnostic requests bound to their local origin in macOS WebKit.
+  Log native capture stages, terminal job reads, and worker disconnect details
+  without retaining manuscript text, device names or reference audio.
+- Record invalid WAV responses from a native speech worker with the render ID
+  and worker type, including wrong content types, oversized bodies and PCM
+  format mismatches.
+- Put new local macOS build copies and rollback bundles in directories excluded
+  from Spotlight indexing. Document the exact installed app to reopen.
+- Make the Audio and Workspace manuals the main references for their workflows.
+  Preserve the installation and CLI links to those procedures.
 - Route onboarding, configuration, export, troubleshooting and interpretation
   to their maintained manuals. Keep existing bookmarks valid, synchronize the
   source version across the references and use the wiki as a short entry to
@@ -30,6 +40,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   editable FilmCraft titles, separately framed portrait and landscape views,
   and the actual exhibit-book PDF. Synchronize the poster, the product-site
   captions in all seven languages and the downloadable videos with that cut.
+- Give the Warehouse 4 film more room on the homepage. Use smaller titles
+  and larger workspace details in the edit.
 - Clarify the paths from the website to the first exercise, the read-only
   example and the desktop download. Update the English and German guides and
   articles, verify research references and align terminology with the app.

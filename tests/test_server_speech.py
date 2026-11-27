@@ -671,6 +671,33 @@ def test_finished_chapter_survives_temporary_job_cleanup(speech_server):
     assert read_project_audio(source.parent, entries[0]) == generate_silence_wav(.01)
 
 
+def test_terminal_poll_logs_one_correlated_status_without_render_error_text(speech_server, monkeypatch, caplog):
+    def fail_render(*_args, **_kwargs):
+        raise RuntimeError("SYNTHETIC_PRIVATE_WORKER_DETAIL")
+
+    monkeypatch.setattr("lixity.speech_jobs.render_speech_audio", fail_render)
+    port, source, handler, _observed = speech_server
+    bound = context(source, handler)
+    with caplog.at_level("INFO", logger="lixity.speech.jobs"):
+        response = send(port, "/api/speech-render", payload={**bound, "mode": "preview", "chapter": 1})
+        assert response.status == 202
+        diagnostic_id = response.headers["x-lixity-diagnostic-id"]
+        query = urlencode({**bound, "id": json.loads(response.body)["job"]["id"]})
+        status_url = "/api/speech-job?" + query
+        for _ in range(100):
+            state = json.loads(send(port, status_url).body)["job"]["state"]
+            if state == "error":
+                break
+            time.sleep(.01)
+        assert state == "error"
+        assert json.loads(send(port, status_url).body)["job"]["state"] == "error"
+
+    events = [record.lixity_event for record in caplog.records
+              if getattr(record, "lixity_event", {}).get("stage") == "status_read"]
+    assert events == [{"event": "audio_job", "id": diagnostic_id, "stage": "status_read", "status": "error"}]
+    assert "SYNTHETIC_PRIVATE_WORKER_DETAIL" not in caplog.text
+
+
 def test_explicit_chapter_import_is_bound_and_does_not_create_voice_reference(speech_server):
     import base64
 

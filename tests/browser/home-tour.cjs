@@ -168,6 +168,33 @@ const sceneStarts = [0, 5, 14, 27, 42, 52];
         }
       }
       assert.deepEqual(errors, []);
+      if (width === 1440) {
+        for (const [viewportWidth, viewportHeight] of [[320, 568], [390, 640], [820, 1180], [1056, 900], [1440, 950], [2560, 1440]]) {
+          await page.setViewportSize({width: viewportWidth, height: viewportHeight});
+          const {available, player, horizontalGap, verticalGap, overflowing} = await page.locator('.home-film').evaluate(section => {
+            const style = getComputedStyle(section);
+            const intro = section.querySelector('.film-intro').getBoundingClientRect();
+            const figure = section.querySelector('.product-tour');
+            const box = figure.getBoundingClientRect();
+            return {
+              available: section.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+              player: box.width,
+              horizontalGap: box.left - intro.right,
+              verticalGap: box.top - intro.bottom,
+              overflowing: document.documentElement.scrollWidth > document.documentElement.clientWidth ||
+                figure.scrollWidth > figure.clientWidth,
+            };
+          });
+          const size = `${viewportWidth}×${viewportHeight}`;
+          assert.ok(!overflowing && player <= available + 1, `Tour fits at ${size}`);
+          if (viewportWidth >= 1056) {
+            assert.ok(horizontalGap > 0 && player >= available * .71, `Player leads the two-column layout at ${size}`);
+          } else {
+            assert.ok(verticalGap > 0 && player >= Math.min(available, viewportHeight * 9 / 16) - 1,
+              `Portrait player fills the available space at ${size}`);
+          }
+        }
+      }
       await context.close();
     }
     console.log('Homepage tour: 60-second playback, six cues in all seven languages, static readable captions, reduced motion, pause/offscreen, mobile layout and codec/error fallback passed. Screenshots: ' + artifacts);

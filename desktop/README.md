@@ -145,7 +145,8 @@ JSON reports the app path and runtime smoke result. Use `--offline` once build
 inputs are cached. Omit it on an initial build that needs to fetch dependencies.
 Use the same absolute `CARGO_TARGET_DIR` for temporary worktrees to reuse one
 compilation cache. The build locks that cache through app assembly and copies
-each completed bundle to its own build directory under the current checkout.
+each completed bundle to its own `.noindex` build directory under the current
+checkout to keep these standalone copies out of Spotlight results.
 The default cache is `desktop/build/macos-local/target`.
 Add `--dmg` to package the app with the CI disk-image script. It mounts the
 image read-only, verifies the embedded signature and exercises the embedded
@@ -437,6 +438,8 @@ build of the same test version. The `local_update` result records the commit,
 both code hashes and the backup path in `rollout.json`. If the staged or
 installed bundle fails verification, the previous bundle is preserved or
 restored. Keep the backup for manual rollback.
+New rollback copies are stored in `.noindex` directories and remain available
+at the path in the receipt.
 
 After the replacement, open the installed app from **Applications → Lixity** or
 run the following command. Use this same app when reopening the test build.
@@ -444,6 +447,13 @@ run the following command. Use this same app when reopening the test build.
 ```sh
 open -a /Applications/Lixity.app
 ```
+
+If Spotlight still offers old development copies, add the checkout's
+`desktop/build` and `desktop/target` directories and the Lixity rollback folder
+`~/Library/Application Support/local-installation-backups/Lixity` to **System
+Settings → Spotlight → Search Privacy**. Open the installed copy from
+**Applications**, and open a development copy from the path in its build report.
+[Apple's Spotlight instructions](https://support.apple.com/en-euro/guide/mac-help/mchl1bb43b84/27/mac/27)
 
 Open **Tools → System Status & Extensions** and match **Build** (**Build-Stand**
 in German) to the source commit in `rollout.json`. Different test builds can share

@@ -2547,7 +2547,7 @@ The worker accepts bounded requests for its configured model at
 size, and rejects redirects. To use another endpoint, explicitly configure an
 eligible provider profile. Heavy dependencies and weights are separate machine
 resources. There is no automatic backend fallback. See the
-[native worker setup](INSTALLATION.md#native-audio-model-lifecycle-unreleased).
+[native worker setup](AUDIO.md#native-audio-model-lifecycle).
 Worker-only `--codec-device cpu` explicitly places decoding on CPU while a CUDA
 talker remains on GPU. Its default `model` follows `--device`; browser payloads
 and portable voice profiles cannot change this machine configuration. The same
@@ -2684,7 +2684,7 @@ never start inference or extend the idle interval. The raw worker `/health`
 includes `runtime` only when the loaded renderer provides resolved values.
 All native worker entrypoints share configurable 300-second completion-based
 idle release; lifecycle policy belongs to the shared worker/service, not the
-project profile. See [worker configuration](INSTALLATION.md#native-audio-model-lifecycle-unreleased).
+project profile. See [worker configuration](AUDIO.md#native-audio-model-lifecycle).
 
 `read-aloud --preview` or `--preview-line N` selects a bounded source paragraph,
 uses a fresh render and a separate preview output by default; `--plan-only`

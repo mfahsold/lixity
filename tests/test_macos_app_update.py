@@ -41,6 +41,7 @@ def test_same_version_update_and_repeat_have_one_rollback_copy(bundles):
     assert result["state"] == "updated"
     assert identity(installed).code_hash == "new"
     assert identity(previous).code_hash == "old"
+    assert previous.parent.suffix == ".noindex"
     assert json.loads((previous.parent / "rollout.json").read_text(encoding="utf-8")) == result
 
     repeated = update.update_installed_app(incoming, "revision", destination=installed, backup_root=backups)

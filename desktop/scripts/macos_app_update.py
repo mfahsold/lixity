@@ -92,7 +92,7 @@ def update_installed_app(
             if _verified_identity(staged) != incoming:
                 raise ValueError("The staged copy differs from the verified build")
             _require_closed_app()
-            backup = Path(tempfile.mkdtemp(prefix="before-desktop-update-", dir=backups))
+            backup = Path(tempfile.mkdtemp(prefix="before-desktop-update-", suffix=".noindex", dir=backups))
             previous = backup / destination.name
             receipt = backup / "rollout.json"
             result.update(state="prepared", backup_app=str(previous))

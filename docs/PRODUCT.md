@@ -81,9 +81,9 @@ new exports. Use the same passage and task when assessing other tools.
 ## Installation and availability
 
 The [download guide](guides/installation.html#desktop) leads with the desktop
-app and the setup steps for each system. It identifies which downloads are
-qualified public releases and which are Actions test builds. The local browser
-app and CLI are published on GitHub and PyPI. The first project funding is
+app and the setup steps for each system. It identifies the public preview
+installers, their checksums and their signing status. The local browser app
+and CLI are published on GitHub and PyPI. The first project funding is
 intended for the public desktop installer rollout and the Android and iOS /
 iPadOS ports. [Project funding and payment status](guides/support.html)
 [Desktop distribution](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#public-desktop-downloads) ·

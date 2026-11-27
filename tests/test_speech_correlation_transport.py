@@ -1,5 +1,6 @@
 """Synthetic checks for worker correlation and its privacy boundary."""
 import errno
+import http.client
 import io
 import json
 import re
@@ -13,9 +14,9 @@ import pytest
 
 from lixity import log, speech_qwen
 from lixity.speech import generate_silence_wav
-from lixity.speech_profiles import QWEN_MODEL, AudioProfile
+from lixity.speech_profiles import COQUI_MODEL, QWEN_MODEL, AudioProfile
 from lixity.speech_references import save_reference
-from lixity.speech_worker import synthesize_native
+from lixity.speech_worker import MAX_REQUEST_BYTES, synthesize_native
 
 
 @pytest.fixture
@@ -63,6 +64,9 @@ def test_client_sends_correlation_only_with_render_scope():
     ("qwen3-base", TimeoutError("PRIVATE_EXCEPTION"), "timeout"),
     ("coqui-reference", urllib.error.URLError(OSError(errno.EHOSTUNREACH, "PRIVATE_EXCEPTION")),
      "unreachable"),
+    ("qwen3-base", PermissionError(errno.EACCES, "PRIVATE_EXCEPTION"), "access_denied"),
+    ("qwen3-base", http.client.BadStatusLine("PRIVATE_EXCEPTION"), "http_protocol_error"),
+    ("qwen3-base", http.client.IncompleteRead(b"PRIVATE_EXCEPTION", 10), "incomplete_response"),
     ("qwen3-base", urllib.error.URLError("PRIVATE_EXCEPTION"), "connection_error"),
 ])
 def test_native_reference_transport_classifies_connection_errors(
@@ -84,6 +88,46 @@ def test_native_reference_transport_classifies_connection_errors(
     assert (event["event"], event["level"], event["id"], event["engine"], event["target"],
             event["category"]) == ("speech_transport", "WARNING", "0123456789abcdef", engine,
                                     "local", category)
+    assert "http_status" not in event
+    assert "PRIVATE_" not in recorded.getvalue() + str(failure.value)
+    assert reference.id not in recorded.getvalue()
+
+
+@pytest.mark.parametrize("socket_failure, category, os_error, declared_model, observed_engine", [
+    (BrokenPipeError(errno.EPIPE, "PRIVATE_SOCKET_ERROR"), "broken_pipe", "EPIPE", QWEN_MODEL, "qwen3"),
+    (ConnectionResetError(errno.ECONNRESET, "PRIVATE_SOCKET_ERROR"), "connection_reset", "ECONNRESET",
+     "PRIVATE_MODEL", None),
+    (http.client.RemoteDisconnected("PRIVATE_SOCKET_ERROR"), "remote_disconnected", None, None, None),
+])
+def test_abrupt_reference_upload_checks_worker_identity_without_replaying_synthesis(
+        recorded, tmp_path, socket_failure, category, os_error, declared_model, observed_engine):
+    log.configure(stream=recorded, level="INFO", force=True, json_format=True)
+    reference = save_reference(tmp_path, generate_silence_wav(1), "PRIVATE_TRANSCRIPT")
+    profile = AudioProfile(engine="coqui-reference", voice="reference", language="de", reference_id=reference.id)
+    requests = []
+
+    def open_request(request, timeout):
+        requests.append(request.get_method())
+        if request.get_method() == "POST":
+            assert len(request.data) > MAX_REQUEST_BYTES
+            raise urllib.error.URLError(socket_failure)
+        assert timeout == 1.5
+        assert request.full_url.endswith("/health")
+        assert request.data is None
+        assert not request.header_items()
+        if declared_model is None:
+            raise http.client.BadStatusLine("PRIVATE_HEALTH_RESPONSE")
+        return io.BytesIO(json.dumps({"ready": True, "model": declared_model}).encode())
+
+    message = "now reports a different model" if observed_engine is not None else "unavailable or failed"
+    with pytest.raises(RuntimeError, match=message) as failure:
+        synthesize_native("PRIVATE_MANUSCRIPT", profile, reference=reference,
+                          opener=SimpleNamespace(open=open_request), diagnostic_id="0123456789abcdef")
+    assert requests == ["POST", "GET"]
+    event = json.loads(recorded.getvalue())
+    assert (event["engine"], event["category"]) == ("coqui-reference", category)
+    assert event.get("observed_engine") == observed_engine
+    assert event.get("os_error") == os_error
     assert "http_status" not in event
     assert "PRIVATE_" not in recorded.getvalue() + str(failure.value)
     assert reference.id not in recorded.getvalue()
@@ -129,6 +173,55 @@ def test_native_transport_logs_http_status_and_identity_mismatch_without_respons
             )
     assert all(secret not in recorded.getvalue() + str(failure.value)
                for secret in ("PRIVATE_", QWEN_MODEL, "Ryan", "127.0.0.1", "8770"))
+
+
+@pytest.mark.parametrize("content_type, body, limit, category, message", [
+    ("application/private_response_type", b"PRIVATE_RESPONSE_BODY", None, "unexpected_content_type",
+     "Coqui worker returned an unexpected audio format"),
+    ("audio/wav", b"PRIVATE_RESPONSE_BODY", None, "invalid_audio", "Invalid WAV audio segment"),
+    ("audio/wav", generate_silence_wav(.01), 128, "response_too_large", "Coqui worker response exceeds the audio limit"),
+    ("audio/wav", generate_silence_wav(.01, sample_rate=22050), None, "audio_format_mismatch",
+     "Unexpected Coqui audio format"),
+    ("audio/wav", generate_silence_wav(.01), None, None, None),
+])
+def test_native_transport_correlates_bad_audio_replies_without_payload_details(
+        recorded, monkeypatch, content_type, body, limit, category, message):
+    log.configure(stream=recorded, level="INFO", force=True, json_format=True)
+    if limit is not None:
+        monkeypatch.setattr("lixity.speech_worker.MAX_RESPONSE_BYTES", limit)
+    response = io.BytesIO(body)
+    response.status = 200
+    response.headers = Message()
+    response.headers["Content-Type"] = content_type
+    response.headers["X-Lixity-Model"] = COQUI_MODEL
+    response.headers["X-Lixity-Voice"] = "thorsten"
+    profile = AudioProfile(engine="coqui", voice="thorsten", language="de")
+    calls = []
+
+    def open_request(request, timeout):
+        calls.append(request.get_method())
+        return response
+
+    def synthesize():
+        return synthesize_native("PRIVATE_MANUSCRIPT", profile, opener=SimpleNamespace(open=open_request),
+                                 diagnostic_id="0123456789abcdef")
+
+    if category is None:
+        assert synthesize() == body
+        assert recorded.getvalue() == ""
+    else:
+        with pytest.raises(ValueError, match=message) as failure:
+            synthesize()
+        event = json.loads(recorded.getvalue())  # A second event would not decode as a single object.
+        assert (event["event"], event["level"], event["id"], event["engine"], event["target"],
+                event["category"], event["http_status"]) == (
+                    "speech_transport", "WARNING", "0123456789abcdef", "coqui", "local", category, 200,
+                )
+        diagnostic = recorded.getvalue() + str(failure.value)
+        assert all(secret not in diagnostic
+                   for secret in ("PRIVATE_", "private_response_type", COQUI_MODEL, "thorsten", "127.0.0.1"))
+    assert calls == ["POST"]
+    assert response.closed
 
 
 @pytest.mark.parametrize("header, expected", [

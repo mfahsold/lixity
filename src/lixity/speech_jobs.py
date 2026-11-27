@@ -108,6 +108,7 @@ class _Job:
     message: str = ""
     created: float = field(default_factory=time.monotonic)
     finished: float | None = None
+    last_reported_terminal_state: str | None = None
     cancel: threading.Event = field(default_factory=threading.Event)
     retain: Callable[[Path, Callable[[], bool]], None] | None = field(default=None, repr=False)
     stale_reason: Callable[[], SpeechStaleReason | None] | None = field(default=None, repr=False)
@@ -308,7 +309,11 @@ class SpeechJobs:
 
     def status(self, identifier: str, context_key: str) -> dict[str, Any]:
         with self._lock:
-            return self._report(self._find(identifier, context_key))
+            job = self._find(identifier, context_key)
+            if job.state not in ("pending", "running") and job.state != job.last_reported_terminal_state:
+                job.last_reported_terminal_state = job.state
+                log_event(self._log, "audio_job", id=job.diagnostic_id, stage="status_read", status=job.state)
+            return self._report(job)
 
     def cancel(self, identifier: str, context_key: str) -> dict[str, Any]:
         with self._lock:

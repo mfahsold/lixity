@@ -42,7 +42,11 @@ server.serve_forever()
       const expectClientEvent=async (response,event)=>{
         const result=await response;
         assert.equal(result.status(),204);
-        assert.deepEqual(result.request().postDataJSON(),{event});
+        const request=result.request();
+        const headers=await request.allHeaders();
+        assert.equal(headers.origin,new URL(clientRoute).origin,'The sidecar receives a verifiable origin');
+        assert.equal(headers.referer,undefined,'Diagnostics do not send the workspace page URL');
+        assert.deepEqual(request.postDataJSON(),{event});
       };
       const nextClientEvent=()=>page.waitForResponse(response=>response.url()===clientRoute);
       try {

@@ -200,16 +200,15 @@ writing. A separate written commercial license covers closed-source integrations
 | Start automatically after login | [Optional login startup](#optional-startup-at-login) |
 | Add PDF/OCR or Zotero support | [Research prerequisites](#optional-research-prerequisites) · [Server access](#server-environment-and-project-access) |
 | Configure an author voice or speech provider | [Speech synthesis setup](#speech-synthesis-setup) |
-| Set up transcription on Apple Silicon | [MLX-Audio](#mlx-audio-on-apple-silicon) |
-| Check a native speech worker | [Model lifecycle and health](#native-audio-model-lifecycle) |
-| Use a separate Jetson worker | [Authenticated forward](#jetson-audio-worker) |
+| Set up transcription on Apple Silicon | [MLX-Audio](AUDIO.md#run-local-transcription) |
+| Check a native speech worker | [Model lifecycle and health](AUDIO.md#native-audio-model-lifecycle) |
+| Use a separate Jetson worker | [Authenticated forward](AUDIO.md#jetson-audio-worker) |
 | Use Lixity from Python or develop it | [Python API environment](#python-api-project-environment) · [Editable checkout](#editable-checkout) |
 | Resolve a setup problem | [Troubleshooting](#troubleshooting) · [Offline help](#read-documentation-offline) |
 
-The normal application install is enough for analysis and the workspace. Choose
-optional tools only for the task that needs them. Audio operations, recordings
-and voice settings are documented in [the audio manual](AUDIO.md); this page owns
-runtime installation and lifecycle.
+The normal application install is enough for analysis and the workspace. Follow
+the [audio manual](AUDIO.md) when you need voice settings, a recording workflow
+or an optional speech runtime.
 
 ## Where Lixity is published
 
@@ -388,333 +387,21 @@ for all readers and writers. Installing Lixity does not download an OCR model.
 
 </details>
 
-<a id="external-speech-providers-and-local-audio-inspection-unreleased"></a>
-<a id="external-speech-providers-and-local-audio-inspection"></a>
-
 ### Speech synthesis setup
 
-Choose the runtime for the audio controls you need. Recording an author take,
-editing direction and exporting a plan work without installing a synthesis
-model.
+[Choose a synthesis route](AUDIO.md#choose-a-synthesis-route) in the audio
+manual. It covers optional runtimes and provider configuration. For diagnosing
+audio in a running installation, see [Logs](#logs).
 
-| Need | Setup |
+| Runtime or task | Audio manual |
 | --- | --- |
-| Use a local reference voice on Apple Silicon | [MLX-Audio ZONOS3](#mlx-audio-on-apple-silicon) |
-| Use a local reference voice with IPA and structured delivery in German or English | [IMS-Toucan](#ims-toucan-author-voice-and-phonetic-direction) |
-| Send free-text instructions to a compatible local or remote service | [OpenAI-compatible provider](#external-speech-providers-and-local-audio-inspection) |
-| Use another existing profile | [Qwen](#optional-qwen-audio-worker) · [Coqui/OpenVoice](#experimental-coqui-and-openvoice-audio) · [Jetson worker](#jetson-audio-worker) |
-
-Then [save a reference and hear a short preview](AUDIO.md#author-voice-recording-and-listening).
-The three listed adapters are in v0.9.3. The checkout adds
-[project-wide IPA and alternate spellings](AUDIO.md#project-pronunciations).
-Use profile pronunciation controls when working with v0.9.3.
-
-### External speech providers and local audio inspection
-
-Speech-plan and SSML export work without a model, worker or API key. To render
-with a separate service exposing `POST /v1/audio/speech`, configure an
-`openai-compatible` profile with its base URL, model and voice.
-Lixity accepts HTTPS and explicitly configured local HTTP addresses
-(localhost, loopback or private LAN IPs). Use `api_key_env` for the name of the
-environment variable. Supply the secret to the process that will render. The
-managed systemd launcher forwards variables with the `LIXITY_` prefix by name,
-so use a name such as `LIXITY_SPEECH_API_KEY` when launching that service.
-A running app keeps the environment it received at startup. Enable **Provider
-accepts delivery instructions** in **Voice profiles** after confirming the
-endpoint and model can use the `instructions` field. Rendering sends the
-effective spoken text to the configured address.
-[Provider configuration](AUDIO.md#audio-export-and-external-providers)
-
-Install FFmpeg for audio workflows that use WAV normalization, MP3 export or
-FLAC/MP3 inspection. [Audio formats and limits](AUDIO.md#troubleshooting-and-limits)
-
-### MLX-Audio on Apple Silicon
-
-For local ZONOS3 synthesis or optional transcription, create a separate Python
-3.11+ environment.
-
-```sh
-uv venv --python 3.11 "$HOME/.local/share/lixity/runtimes/mlx-audio"
-uv pip install --python "$HOME/.local/share/lixity/runtimes/mlx-audio/bin/python" \
-  'mlx-audio[stt,tts,server]'
-```
-
-Lixity uses that environment to start an isolated worker for synthesis with
-`mlx-community/ZONOS3-Mini`. The `mlx-audio` profile supports a saved project
-reference or a fixed voice and uses the model's pace control. For a first
-setup, fetch the model into the Hugging Face cache used by the app. This
-download is a separate step so the synthesis worker can run offline. If you
-set `HF_HOME`, `HF_HUB_CACHE` or `XDG_CACHE_HOME`, use the same values for the
-download and the Lixity process.
-
-```sh
-"$HOME/.local/share/lixity/runtimes/mlx-audio/bin/hf" download mlx-community/ZONOS3-Mini
-lixity audio-status --project ./novel --engine mlx-audio --json
-```
-
-Confirm `runtime_available` and `model_cached` are true before starting a
-preview. These checks inspect prerequisites. A preview tests model loading
-and inference.
-
-For optional transcription, run the MLX-Audio HTTP service in that environment.
-
-```sh
-"$HOME/.local/share/lixity/runtimes/mlx-audio/bin/python" -m mlx_audio.server \
-  --host 127.0.0.1 --port 8000
-```
-
-Try a [reference voice preview](AUDIO.md#use-a-reference-with-zonos3) to check
-word fidelity and timbre. The [MLX-Audio workflow](AUDIO.md#mlx-audio-on-apple-silicon)
-covers fixed voices, render examples and transcription.
-
-<a id="native-audio-model-lifecycle-unreleased"></a>
-<a id="native-audio-model-lifecycle"></a>
-
-### Native audio model lifecycle
-
-Qwen (all three variants), Coqui/OpenVoice and IMS Toucan share one worker
-lifecycle. Starting a worker binds its loopback service and validates local
-settings/assets without importing the inference stack or loading weights. The
-first validated synthesis request loads the model in an owned child process.
-Keep the worker's separate optional environment and complete local checkpoints.
-
-The default idle interval is **300 seconds after the last completed synthesis**.
-The child exits after that interval, releasing model allocations and its inference
-runtime. Active synthesis is protected; subsequent requests reuse a resident
-model and start a new interval only after completion. Health/capability probes
-neither load the model nor extend the interval. The lightweight service remains
-available. The next render can therefore take longer while the model loads.
-
-Configure the same option on every supported worker, for example:
-
-```sh
-python -m lixity.speech_qwen --model /path/to/CustomVoice --idle-timeout-seconds 900
-```
-
-`--idle-timeout-seconds` accepts finite values from 0 to 86400; 0 releases the
-model after each completed request. Persist the option in the worker's service
-command and restart that worker after changing it. This is shared worker policy,
-not a project profile or a setting inferred from whichever manuscript is open.
-Existing explicit library loaders remain available to callers that own a model.
-
-`GET /health` distinguishes service readiness (`ready`) from residency
-(`model_state`: `unloaded`, `loading`, `loaded`, `failed`), reports `active` and
-actual `idle_timeout_seconds`, and includes resolved `runtime` metadata only
-while a loaded renderer supplies it. Cold asset validation checks local files;
-checkpoint integrity, optional dependencies and hardware compatibility are
-resolved on first synthesis. A failed load/render is explicit and a subsequent
-request can retry in a fresh child. No checkpoint is downloaded automatically.
-
-### Optional Qwen audio worker
-
-The Qwen worker supports `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` and separate
-VoiceDesign and reference-based Base checkpoints. The application and CLI share
-the same project profiles and rendering controls.
-
-Run the loopback-only worker explicitly on this computer, or on a configured
-Jetson reached through an authenticated SSH forward. Neither target is an
-automatic fallback. Start with a short preview and verify actual synthesis and
-memory headroom; model size and machine memory do not establish throughput.
-Install FFmpeg on the Lixity computer for MP3 export and Qwen tempo changes.
-[Tempo controls and profile defaults](AUDIO.md#cache-tempo-and-saved-settings)
-
-For a project with Piper profiles, use the reviewed migration before rendering.
-[Replace removed Piper profiles](AUDIO.md#replace-removed-piper-profiles)
-
-Qwen runs in an optional isolated Python 3.12 environment with `qwen-tts` and a
-hardware-appropriate PyTorch installation. Install the same Lixity version as
-the browser app in that environment. For a published package, replace `VERSION`
-in `python -m pip install 'lixity==VERSION'` with your version. For a source build,
-use `python -m pip install /path/to/lixity-checkout` with your checkout. Obtain the
-complete local CustomVoice checkpoint, including its speech tokenizer, using the
-[upstream setup instructions](https://github.com/QwenLM/Qwen3-TTS). Choose the CPU
-build of PyTorch for CPU-only use. Neither opening Lixity nor starting the worker
-downloads weights or sends manuscript text to an inference provider.
-
-Start the worker explicitly from that environment:
-
-```bash
-python -m lixity.speech_qwen --model /path/to/CustomVoice --device cpu --threads 1
-```
-
-It binds only to `127.0.0.1:8769` and serializes synthesis through the
-[shared on-demand lifecycle](#native-audio-model-lifecycle). CPU operation
-supports full chapters. Generation can be much slower than the
-result's duration, so use a short preview to choose the voice. Match Torch threads
-to the CPU budget assigned to the worker. A heavily throttled four-thread worker
-can waste time contending within a one-core quota. Keep workstation CPU/memory
-headroom through the operating system rather than silently reducing model size. GPU operation is
-optional via `--device cuda`, with an explicit error when unavailable. Worker-only `--attention auto|eager|sdpa` selects the attention implementation.
-The default `auto` uses eager attention on CPU and SDPA on CUDA. An operator can
-compare an explicit override on the same checkpoint and workload; measure actual
-synthesis, memory and output before selecting it. This flag does not establish a
-performance improvement and cannot be set by browser input or a voice profile.
-
-On a memory-constrained CUDA machine, an operator can explicitly keep the
-talker on the GPU and run audio decoding on the CPU with the same checkpoint:
-
-```bash
-python -m lixity.speech_qwen --model /path/to/CustomVoice --device cuda --codec-device cpu --threads 4
-```
-
-The default `--codec-device model` keeps the decoder on the selected main device.
-Worker-only `--codec-chunk-frames N` accepts 16–300 audio-code frames. The default
-300 preserves the installed upstream decoder behavior. A smaller explicit value
-uses that decoder's existing chunk algorithm with its 25-frame left context;
-it can reduce per-chunk activation memory without changing model weights.
-For example, test `--device cuda --codec-device model --codec-chunk-frames 32`
-on the actual machine before adopting it. Unsupported decoder interfaces fail
-explicitly. Chunking does not bound all model, KV-cache or output allocations,
-and this option does not guarantee that a checkpoint fits in RAM.
-
-CPU decoding uses float32 and trades GPU allocations for CPU work; this is an
-explicit machine setting, not a voice profile or an automatic fallback. Shared
-RAM remains finite. Suitable SSD-backed swap is a separate operating-system
-decision; see [NVIDIA's Jetson memory guidance](https://www.jetson-ai-lab.com/tutorials/ram-optimization/).
-Validate actual synthesis and memory headroom before scheduling long jobs.
-
-#### Choose the Qwen checkpoint
-
-CustomVoice, VoiceDesign and Base are separate checkpoints. Use a complete local
-checkpoint with its tokenizer and the corresponding worker variant:
-
-```sh
-python -m lixity.speech_qwen --variant voice-design --model /path/to/VoiceDesign --device cpu --threads 4
-python -m lixity.speech_qwen --variant base --model /path/to/Base --device cpu --threads 4
-```
-
-These are alternatives, not commands to run simultaneously. Check that no audio
-job is active, stop the previous worker through its process manager, and start
-the selected variant. All use `127.0.0.1:8769`; changing a profile does not switch
-the running model. Check with `lixity audio-status --engine qwen3-base` (or the
-matching engine), then follow [reference voices](AUDIO.md#experimental-reference-voices)
-for the first short test. No checkpoint is downloaded automatically.
-
-### Jetson audio worker
-
-Machine setup is explicit: run the same Qwen worker on the Jetson with its
-supported CUDA environment and complete local checkpoint. Keep that worker on
-`127.0.0.1:8769` there, and forward laptop port `8770` over authenticated SSH:
-
-```bash
-ssh -N -T -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 \
-  -o ServerAliveCountMax=3 -L 127.0.0.1:8770:127.0.0.1:8769 USER@JETSON
-```
-
-Use your normal verified SSH host key and account. The local CPU worker continues
-to use port `8769`; selecting Jetson uses only the fixed loopback forward `8770`.
-These native target values cannot supply a host address or inference URL; external
-providers use their separately validated explicit profile bindings. Lixity does
-not install or start the remote worker or SSH connection. GPU compatibility and
-available shared memory must be checked on the actual device; 8 GB does not
-guarantee that every input fits.
-
-<a id="experimental-coqui-and-openvoice-audio-unreleased"></a>
-<a id="experimental-coqui-and-openvoice-audio"></a>
-
-### Experimental Coqui and OpenVoice audio
-
-Set up a separate Python environment following the
-[maintained Coqui installation guide](https://coqui-tts.readthedocs.io/en/latest/installation.html).
-Install `coqui-tts`, matching CPU versions of `torch` and `torchaudio`,
-`gruut[de]`, and this Lixity checkout in that environment. For example, this
-isolated CPU setup was tested on Linux ARM64:
-
-```sh
-uv venv --python 3.11 /path/to/coqui-env
-uv pip install --python /path/to/coqui-env/bin/python --torch-backend cpu \
-  'torch==2.8.0' 'torchaudio==2.8.0' 'coqui-tts==0.28.0' 'gruut[de]' -e /path/to/lixity
-```
-
-For other PyTorch/Coqui versions, check the upstream requirements (including
-`torchcodec` where required) before changing this tested combination. Obtain the
-[Thorsten VITS model](https://huggingface.co/Thorsten-Voice/VITS) and the
-[OpenVoice V2 converter](https://huggingface.co/myshell-ai/OpenVoiceV2/tree/main/converter)
-and keep their complete local model directories. Model downloads are an explicit
-setup step. The worker does not download models or send manuscript text or
-references over the network.
-
-After ensuring no active audio job uses the local worker, start one of these
-workers on the same loopback port used by Qwen:
-
-```sh
-/path/to/coqui-env/bin/python -m lixity.speech_coqui --model /path/to/thorsten-vits
-/path/to/coqui-env/bin/python -m lixity.speech_coqui --model /path/to/thorsten-vits --converter /path/to/OpenVoiceV2/converter
-```
-
-The Thorsten directory must contain `model_file.pth` and `config.json`; the
-converter directory must contain `checkpoint.pth` and `config.json`. The first
-command serves `coqui`, the second `coqui-reference`. Start only one worker at
-a time. A reference profile uses `voice = "reference"` and an existing
-`reference_id`; a Thorsten profile uses `voice = "thorsten"`. Both require
-`language = "de"`. Select the matching profile in the UI or use `--engine` on
-the CLI. `audio-status --engine coqui-reference` checks the actual worker.
-
-For settings migration, recording requirements and a first preview, continue with
-[Coqui/OpenVoice operation](AUDIO.md#experimental-coqui-and-openvoice-audio).
-
-### IMS-Toucan author voice and phonetic direction
-
-The optional `ims-toucan` worker supports German and English with
-an explicitly saved author reference, IPA overrides and structured prosody. It
-runs in its own environment on local loopback port **8772**. CPU inference is
-supported. Check speed and speaker similarity on the intended computer with
-the intended recording.
-
-Use a separate Python 3.11 environment and an eSpeak-NG shared library. The
-previous inference recipe used PyTorch 2.4.1, which is affected by CVE-2025-32434
-even with `weights_only=True`. The current worker checks for a stable PyTorch
-release at or above 2.6.0 before loading checkpoints. Select a patched
-PyTorch and TorchAudio pair for the platform. Treat the environment as
-operator-managed until the complete dependencies and a render are verified
-together. [PyTorch advisory](https://github.com/pytorch/pytorch/security/advisories/GHSA-53q9-r3pm-6pq6) ·
-[TorchAudio compatibility matrix](https://docs.pytorch.org/audio/stable/installation.html)
-
-The previously tested upstream IMS-Toucan checkout used revision
-`3cc2094d9c7123336eda7e299ac0bc90319ca9ff`. Its acoustic assets were
-`ToucanTTS.pt` and `Vocoder.pt` from `Flux9665/ToucanTTS` at revision
-`e0afe0ef703d2178dd7dc74ec298693ddb10e720`. Its speaker assets came from
-`speechbrain/spkrec-ecapa-voxceleb` at revision
-`0f99f2d0ebe89ac095bcc5903c4dd8f72b367286`. Keep `hyperparams.yaml`,
-`embedding_model.ckpt`, `classifier.ckpt`, `mean_var_norm_emb.ckpt` and
-`label_encoder.txt` together in the speaker directory. A macOS Apple Silicon
-CPU check used Python 3.11, PyTorch and TorchAudio 2.8.0 and SpeechBrain 1.1.2
-with these assets. Verify the provenance of your local source, model and
-speaker configuration before use. The worker expects a local copy of every
-file and disables Hugging Face network access during startup.
-
-Install the Lixity package or the checkout in the isolated environment so
-that its Python can run `lixity.speech_toucan`. Point the worker at the prepared
-source tree, acoustic directory and complete speaker directory.
-
-```sh
-TOUCAN_ENV="$HOME/.local/share/lixity/runtimes/toucan-venv"
-TOUCAN_SOURCE="$HOME/.local/share/lixity/runtimes/IMS-Toucan"
-TOUCAN_MODELS="$HOME/.local/share/lixity/models/toucan"
-"$TOUCAN_ENV/bin/python" -m lixity.speech_toucan \
-  --source "$TOUCAN_SOURCE" --model "$TOUCAN_MODELS/acoustic" \
-  --speaker "$TOUCAN_MODELS/speaker" --device cpu --threads 4
-```
-
-If the library is installed outside the system search path, set
-`PHONEMIZER_ESPEAK_LIBRARY` to its actual shared-library file. Missing eSpeak,
-unknown IPA symbols and incomplete checkpoints fail explicitly; the adapter never
-falls back to a downloaded phonemizer or silently drops unsupported phones.
-The reference acoustic and speaker assets total approximately 395 MiB,
-excluding Python packages.
-Check the service with `lixity audio-status --engine ims-toucan`.
-
-In **Voice profiles**, review and apply the backed-up settings upgrade if the
-project uses a schema before `/5`. Create an IMS-Toucan reference profile, choose a
-saved recording and listen to a paragraph. Use the [phonetics and direction
-workflow](AUDIO.md#ims-toucan-phonetics-and-structured-direction) to set
-pronunciation, duration or prosodic variation. Export free-text acting
-instructions for a service that supports them.
-
-The upstream code and published Toucan/ECAPA weights are labeled Apache-2.0.
-The Toucan maintainers discuss a training-data provenance question in
-[issue 174](https://github.com/DigitalPhonetics/IMS-Toucan/issues/174); this setup
-records the published licenses and does not resolve that separate question.
+| <a id="mlx-audio-on-apple-silicon"></a> Apple Silicon synthesis or transcription | [MLX-Audio](AUDIO.md#mlx-audio-on-apple-silicon) |
+| <a id="ims-toucan-author-voice-and-phonetic-direction"></a> Reference voice with IPA or structured delivery | [IMS-Toucan](AUDIO.md#ims-toucan-author-voice-and-phonetic-direction) |
+| <a id="external-speech-providers-and-local-audio-inspection"></a><a id="external-speech-providers-and-local-audio-inspection-unreleased"></a> External speech or recording inspection | [Provider configuration](AUDIO.md#configure-an-openai-compatible-provider) · [Recording inspection](AUDIO.md#inspect-and-compare-externally-generated-audio) |
+| <a id="native-audio-model-lifecycle"></a><a id="native-audio-model-lifecycle-unreleased"></a> Native worker readiness and model lifetime | [Native worker lifecycle](AUDIO.md#native-audio-model-lifecycle) |
+| <a id="optional-qwen-audio-worker"></a><a id="choose-the-qwen-checkpoint"></a> Qwen runtime and checkpoints | [Qwen setup](AUDIO.md#optional-qwen-audio-worker) · [Checkpoint selection](AUDIO.md#choose-the-qwen-checkpoint) |
+| <a id="jetson-audio-worker"></a> Jetson synthesis | [Authenticated forward](AUDIO.md#jetson-audio-worker) |
+| <a id="experimental-coqui-and-openvoice-audio"></a><a id="experimental-coqui-and-openvoice-audio-unreleased"></a> Experimental Coqui and OpenVoice | [Coqui and OpenVoice worker setup](AUDIO.md#coqui-and-openvoice-worker-setup) |
 
 ### Development builds instead
 
@@ -1034,20 +721,31 @@ The events describe the requested engine, not the model weight bytes or hardware
 that produced a cached segment. Existing WAV files acquire no retroactive log.
 
 On newer builds, native worker failures add `speech_transport` with the fixed
-engine, target, failure category and HTTP status where available. Match its
-diagnostic ID to `audio_job` or `render_end`. A ready preview is temporary.
-`audio_job` reports whether a chapter render was retained and gives a reason
-when the job no longer matches its workspace. `audio_reference_saved`
-identifies a stored recording separately from activation and view refresh.
-`capture_failed` distinguishes missing capture tools from failed attempts.
+engine, target, failure category and, when available, an HTTP status or a
+symbolic OS error. After an abrupt disconnect before the response headers, a
+read-only health check can identify the engine currently listening in
+`observed_engine`. The health check carries no manuscript or reference audio.
+Match the diagnostic ID to `audio_job` or `render_end`. A ready preview is
+temporary. `audio_job` reports whether a chapter render was retained and gives a
+reason when the job no longer matches its workspace. `status_read` records the
+first server-side read of each terminal job state. `render_error_shown` and
+`generated_audio_playing` describe what the audio interface then did.
 
-The audio tools report allowlisted `audio_client` observations for blocked
-render requests, microphone capture, save failures and generated playback.
-A recording ready for review is still a draft. `audio_reference_saved`
-confirms that the project has a saved reference.
-`generated_audio_playing` means playback began in the browser. When the render
-request supplied a diagnostic ID, playback uses that same ID. These observations
-contain no text, reference identities, URLs, device names or raw errors.
+The native desktop recorder writes `desktop_audio_capture` with a local capture
+ID. Its stages cover a requested start, microphone readiness, the capture
+limit, a temporary WAV available for review, errors and discards. Use the
+desktop startup entry to locate the session, then follow the capture ID.
+`audio_reference_saved` identifies a stored project reference and gives the
+activation result. `capture_failed` records command-line or service recording
+failures such as missing capture tools.
+
+The audio tools send allowlisted `audio_client` observations for blocked render
+requests, microphone capture, save failures and generated playback to the same
+local origin. The request includes the origin for validation and omits the
+workspace referrer. `generated_audio_playing` means playback began in the
+browser. When the render request supplied a diagnostic ID, playback uses that
+same ID. These observations contain no text, reference identities, URLs, device
+names or raw errors.
 
 The managed application captures its own stderr in `service-PORT.log`. A separate
 CLI or speech-worker process writes to its own stderr and is not automatically

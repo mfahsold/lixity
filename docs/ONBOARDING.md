@@ -237,7 +237,7 @@ preview with your own voice in a writable project, use one paragraph first.
    profile that accepts a **Reference recording**, select the take and choose
    **Save profiles**. Use **Speech service** to check the engine setup. Recording
    works with microphone access. Generation requires a separate
-   [runtime or provider](INSTALLATION.md#speech-synthesis-setup).
+   [runtime or provider](AUDIO.md#choose-a-synthesis-route).
 3. Return to **Manuscript → Listen and direct**, select a paragraph and choose
    **Preview paragraph** to hear the selected voice. To correct a recurring
    name, v0.9.3 stores pronunciation in the voice profile. The development

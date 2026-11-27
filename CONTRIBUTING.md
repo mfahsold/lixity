@@ -72,8 +72,9 @@ with the maintainer. Rotate credentials that have been exposed.
 ## Development setup
 
 Use `make install-dev` to create the checkout's isolated `.venv` with dev tools.
-The [installation guide](docs/INSTALLATION.md) covers prerequisites, Windows
-setup and the separate optional environments for audio inference.
+The [installation guide](docs/INSTALLATION.md) covers platform prerequisites.
+The [audio manual](docs/AUDIO.md#choose-a-synthesis-route) covers optional
+speech environments.
 
 For the dashboard, follow the [service and rollout procedure](docs/INSTALLATION.md#running-the-server)
 and [verify the selected listener](docs/INSTALLATION.md#refresh-a-checkout-or-a-packaged-service)

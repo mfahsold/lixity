@@ -51,8 +51,11 @@
           !/^\/(?:w\/[a-f0-9]{32}\/)?api$/.test(workspace.api || '') || !/^https?:$/.test(location.protocol)) return;
       var payload = {event: event};
       if (typeof correlation === 'string' && /^[a-f0-9]{16}$/.test(correlation)) payload.diagnostic_id = correlation;
-      void fetch(workspace.api + '/audio-client-diagnostic', {
-        method: 'POST', mode: 'same-origin', credentials: 'same-origin', redirect: 'error', referrerPolicy: 'no-referrer', keepalive: true,
+      var endpoint = new URL(workspace.api + '/audio-client-diagnostic', location.origin);
+      // WebKit sends Origin: null on a no-referrer POST in same-origin mode.
+      // Pin the URL to this origin and use normal CORS mode to preserve Origin.
+      void fetch(endpoint, {
+        method: 'POST', mode: 'cors', credentials: 'same-origin', redirect: 'error', referrerPolicy: 'no-referrer', keepalive: true,
         headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
       }).catch(function () {});
     },

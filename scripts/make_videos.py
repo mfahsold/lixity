@@ -268,7 +268,7 @@ def convert_product_tour(selection: str | None = None) -> None:
         edit = Edit(review / f"warehouse-4-{width}x{height}.fcproj", width, height, fps)
         compose(edit, BASE_DIR, plan, recording, recordings, exhibit)
         with tempfile.TemporaryDirectory(prefix="frames-", dir=review) as temp:
-            sequence = edit.render(Path(temp), (2, 10, 18, 25, 34, 39, 49, 58))
+            sequence = edit.render(Path(temp), (2, 7, 10, 16, 18, 22, 25, 30, 34, 39, 43, 49, 54, 58))
             for name, codec in exports:
                 target = staging / name
                 run([ffmpeg, "-y", "-loglevel", "error", "-framerate", str(fps), "-i", str(sequence),

@@ -34,8 +34,10 @@ study with **5–8 authors and editors** to evaluate:
 
 ## 3. Environment and materials
 
-- **Build:** Record the exact Lixity version (`lixity --version` or **About
-  Lixity**), operating system, desktop vs. browser surface and viewport width.
+- **Build:** Record the Lixity version, operating system, surface and viewport
+  width. On Desktop, record **Build** from **Tools → System Status & Extensions**
+  or the installer checksum when the build identifier is unavailable. In a
+  browser session, record the deployed revision or local launch source.
 - **Fixture:** Use a synthetic or public-domain project (never a participant's
   unpublished private manuscript during a recorded study session):
   - **English sessions:** an editable local copy of the synthetic *Warehouse 4*
@@ -44,6 +46,11 @@ study with **5–8 authors and editors** to evaluate:
     public-domain German chapter fixture (e.g., *Effi Briest* opening chapters).
 - **Reset:** Start every session from a fresh, unmodified copy of the fixture
   with default settings (`Analysis Off` on initial load).
+
+Rehearse the synthetic author journey and verify the installation from the
+same source before the first session. Use the rehearsal record to diagnose
+environment problems. Keep participant observations in the study record.
+[Local release rehearsal](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#rehearse-a-release-and-review-the-results)
 
 ## 4. Session procedure and participant prompts
 

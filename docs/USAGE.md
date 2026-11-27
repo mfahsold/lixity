@@ -899,21 +899,12 @@ The output is one self-contained HTML file with manuscript text, measurements
 and offline navigation; it needs no CDN or external requests. Identical input
 and settings produce identical output. The panels cover sentence rhythm,
 dialogue, curated character presence, scenes, motifs, word-pattern signal groups,
-chapter style, paragraph profiles and work markers as data permits. See the
-[workspace manual](WORKSPACE.md) to move from measurements to passages.
-A compatible server provides explicit project actions and marker saves.
+chapter style, paragraph profiles and work markers as data permits. The report
+remains readable without JavaScript. It embeds the source, so review the
+contents before sharing the file.
 
-In the local overview, choose **Review passages**, **Compare chapters**
-or **Explore patterns** based on the question you have about the manuscript.
-For example, compare words per sentence across chapters to locate a change in
-rhythm, then read those chapters in context. Selecting a style comparison cell
-opens the chapter's value and the manuscript's typical value. Expand **All
-measurements and comparisons** for the full table and statistical scores.
-
-The initial overview shows status and the next passage. One selected analysis
-section is visible at a time, and deep links reveal their target section.
-Inputs persist when switching sections. The complete standalone report remains
-readable without JavaScript.
+For live project actions and analysis navigation, follow the
+[dashboard workflow](WORKSPACE.md#dashboard-workflow).
 Archived-source reports identify their source-only reference and show pinned
 provenance separately from unverified context.
 If a projection cutoff is missing or invalid, the plot reports unavailability
@@ -1052,17 +1043,6 @@ the [workspace manual](WORKSPACE.md) for browser tasks.
 
 ### `lixity service`
 
-A single port supports independent project views. Open the app home address in
-a new tab to select another project. At most 16 views are retained, including the
-startup view. Expired URLs return HTTP 410. Open the project again from home
-after an app restart. New views use the selected project's settings. Explicit
-launch overrides apply to the startup view.
-
-Use **Project → Settings → Audio and services → Services & audio queue** to
-inspect queued jobs and worker status. Use **Voice profiles → Speech service**
-for the selected engine's readiness. See [Audio status](AUDIO.md#audio-status)
-for inspection from the terminal.
-
 Start the installed workspace without keeping a terminal open:
 
 ```sh
@@ -1078,10 +1058,15 @@ lixity doctor --port 8765 --json
 
 For an owned instance, `start` takes fresh settings and `restart` reuses saved
 settings with explicit overrides. Set the startup project with the positional
-path or `LIXITY_DIR`. Launch environment values are inherited on each run.
+path or `LIXITY_DIR`. Launch environment values are inherited on each run and
+explicit launch overrides apply to the startup view.
 Set `--min-chapters N` for the minimum available style reference chapters
 (default 2, at least 2). The [installation guide](INSTALLATION.md#running-the-server)
 covers the service backends, ports, startup and logs.
+
+A single port supports up to 16 project views, including the startup view.
+Expired view URLs return HTTP 410. See [opening projects and views](WORKSPACE.md#before-you-begin)
+and [speech-worker and queue status](AUDIO.md#audio-status) for those workflows.
 
 `status --json` reports `lixity-service-status/1` without changing app state.
 Check `running: true` to identify a ready instance. For a local HTTP smoke
