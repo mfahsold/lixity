@@ -1121,6 +1121,34 @@ class TestPublicLanguages(unittest.TestCase):
                 self.assertIn('href="demo/warehouse-4-dossier.pdf"', text)
                 self.assertIn('href="demo/reader/index.html#publication-audio-player" hreflang="en"', text)
 
+    def test_release_article_player_follows_shared_tour_bytes(self):
+        from scripts.build_public_site import ROOT, _sync_article_tour
+
+        relative = "blog/lixity-093-manuscript-revision.html"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            article = root / "docs" / relative
+            article.parent.mkdir(parents=True)
+            original = (ROOT / "docs" / relative).read_text(encoding="utf-8")
+            article.write_text(original, encoding="utf-8")
+            videos = root / "docs/videos"
+            videos.mkdir()
+            references = {"product-tour.mp4": "src", "product-tour.webm": "src", "product-tour.webp": "poster"}
+            for name in references:
+                (videos / name).write_bytes(name.encode())
+
+            self.assertEqual(_sync_article_tour(root, check_only=True), [relative])
+            self.assertEqual(article.read_text(encoding="utf-8"), original)
+            self.assertEqual(_sync_article_tour(root, check_only=False), [relative])
+            self.assertEqual(_sync_article_tour(root, check_only=True), [])
+
+            updated = article.read_text(encoding="utf-8")
+            for name, attribute in references.items():
+                digest = hashlib.sha256(name.encode()).hexdigest()[:12]
+                self.assertIn(f'{attribute}="../videos/{name}?v={digest}"', updated)
+            self.assertIn('href="../#product-tour-preview"', updated)
+            self.assertIn('href="../#tour-transcript"', updated)
+
     def test_analysis_links_open_the_guides_and_localized_methods(self):
         from scripts.build_public_site import LANGUAGES, ROOT, page_path, render_pages
 

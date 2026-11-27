@@ -170,6 +170,9 @@ def test_published_video_has_complete_constant_frame_timing_and_geometry(
     assert video["codec_name"] == ("av1" if filename.endswith(".webm") else "h264")
     assert (video["width"], video["height"]) == (width, height)
     assert video["sample_aspect_ratio"] == "1:1"
+    assert video["color_range"] == "tv"
+    assert video["color_space"] == video["color_primaries"] == "bt709"
+    assert video["color_transfer"] == "iec61966-2-1"
     assert video["avg_frame_rate"] == "25/1"
     assert int(video["nb_read_frames"]) == frames
     assert float(media["format"]["duration"]) == pytest.approx(frames / 25, abs=.002)

@@ -22,9 +22,9 @@ For a clue that arrives several scenes later, open **Story rehearsal**. Write â€
 
 The film follows a different scene in the same manuscript. Mara wonders why the receiving line was left blank. I compare an unsaved, shorter version of that sentence, then check the dispatch receipt against the office ledger.
 
-[Video walkthrough](../videos/product-tour.webm)
+[Video walkthrough](../videos/product-tour.webm?v=5d696c75bedf)
 
-[Video walkthrough](../videos/product-tour.mp4)
+[Video walkthrough](../videos/product-tour.mp4?v=639d955411dd)
 
 *The Blank Line. A silent, 60-second tour of a fictional scene, its records and the saved exhibit book in PDF.*
 

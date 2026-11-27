@@ -9,7 +9,7 @@ const {stagePages} = require('./support/staged-pages.cjs');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-home-tour-'));
 const root = stagePages();
 const sceneStarts = [0, 5, 14, 27, 42, 52];
-const reviewTimes = [0.12, 2, 16.5, 18.5, 21.5, 25, 30, 39, 49, 54.5, 55.8, 57.5, 59];
+const reviewTimes = [0.12, 2, 5.12, 10, 16.5, 18.5, 21.5, 25, 30, 32, 39, 43, 45, 49, 52.4, 54.5, 55.8, 57.5, 59];
 (async () => {
   const browser = await launchChromium();
   try {

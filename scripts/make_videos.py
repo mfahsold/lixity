@@ -41,6 +41,10 @@ SOCIAL_CLIPS = (
 )
 TOUR_VIDEO_LIMITS = {name: limit for name, _, _, limit in SOCIAL_CLIPS}
 DEFAULT_TOUR_VIDEO_LIMIT = 4_000_000
+TOUR_VIDEO_FILTER = (
+    "scale=in_range=pc:out_color_matrix=bt709:out_range=tv,format=yuv420p,"
+    "setparams=range=tv:colorspace=bt709:color_primaries=bt709:color_trc=iec61966-2-1,setsar=1"
+)
 
 #: name, poster timestamp, max MP4 bytes, max GIF bytes
 WALKTHROUGHS: tuple[tuple[str, str, int, int], ...] = (
@@ -184,6 +188,9 @@ def _verify_export(path: Path, *, fps: int, frames: int, width: int, height: int
             abs(float(media["format"]["duration"]) - frames / fps) > .002 or
             len(media["streams"]) != 1):
         raise SystemExit(f"{path.name} has incomplete timing, unexpected geometry or audio")
+    if (video.get("color_range"), video.get("color_space"), video.get("color_primaries"),
+            video.get("color_transfer")) != ("tv", "bt709", "bt709", "iec61966-2-1"):
+        raise SystemExit(f"{path.name} needs the RGB capture's sRGB transfer and explicit video color metadata")
     max_bytes = TOUR_VIDEO_LIMITS.get(path.name, DEFAULT_TOUR_VIDEO_LIMIT)
     if path.stat().st_size > max_bytes:
         raise SystemExit(f"{path.name} exceeds its {max_bytes:,} byte budget")
@@ -291,13 +298,13 @@ def convert_product_tour(selection: str | None = None) -> None:
 
     def encode(width: int, height: int, exports: tuple, staging: Path) -> None:
         edit = Edit(review / f"warehouse-4-{width}x{height}.fcproj", width, height, fps)
-        compose(edit, BASE_DIR, plan, recording, recordings, exhibit)
+        compose(edit, BASE_DIR, plan, recordings, exhibit)
         with tempfile.TemporaryDirectory(prefix="frames-", dir=review) as temp:
             sequence = edit.render(Path(temp), (2, 7, 10, 16, 18, 22, 25, 30, 34, 39, 43, 49, 54, 58))
             for name, codec in exports:
                 target = staging / name
                 run([ffmpeg, "-y", "-loglevel", "error", "-framerate", str(fps), "-i", str(sequence),
-                     "-vf", "setsar=1", "-an", "-map_metadata", "-1",
+                     "-vf", TOUR_VIDEO_FILTER, "-an", "-map_metadata", "-1",
                      "-frames:v", str(frames), "-r", str(fps), "-fps_mode", "cfr",
                      *codec, "-pix_fmt", "yuv420p", str(target)])
                 _verify_export(target, fps=fps, frames=frames, width=width, height=height)

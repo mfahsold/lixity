@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import html
 import json
+import re
 import struct
 from pathlib import Path
 from string import Template
@@ -35,6 +36,30 @@ def page_url(language: str) -> str:
     return BASE if language == 'en' else BASE + page_path(language)
 
 
+def _tour_media_url(base: Path, path: str) -> str:
+    fingerprint = hashlib.sha256((base / 'docs' / path).read_bytes()).hexdigest()[:12]
+    return f'{path}?v={fingerprint}'
+
+
+def _sync_article_tour(base: Path, *, check_only: bool) -> list[str]:
+    """Use the current shared film in the release article's existing player."""
+    relative = 'blog/lixity-093-manuscript-revision.html'
+    article = base / 'docs' / relative
+    if not article.is_file():
+        return []
+
+    original = article.read_text(encoding='utf-8')
+    updated = original
+    for path in (TOUR_MEDIA[field] for field in ('tour_landscape_mp4', 'tour_landscape_webm', 'tour_landscape_poster')):
+        updated = re.sub(rf'"\.\./{re.escape(path)}(?:\?v=[a-fA-F0-9]+)?"',
+                         f'"../{_tour_media_url(base, path)}"', updated)
+    if updated == original:
+        return []
+    if not check_only:
+        article.write_text(updated, encoding='utf-8')
+    return [relative]
+
+
 def render_pages(root: Path | None = None) -> dict[str, str]:
     """Require complete translations rather than silently shipping English fallback."""
     from lixity.site import FUNDING_DETAILS_PATH
@@ -48,10 +73,7 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
     dictionaries = {lang: json.loads((base / f'docs/locales/{lang}.json').read_text(encoding="utf-8"))
                     for lang in LANGUAGES}
     tour = json.loads((base / 'docs/videos/product-tour-timing.json').read_text(encoding='utf-8'))
-    tour_urls = {}
-    for field, path in TOUR_MEDIA.items():
-        fingerprint = hashlib.sha256((base / 'docs' / path).read_bytes()).hexdigest()[:12]
-        tour_urls[field] = f'{path}?v={fingerprint}'
+    tour_urls = {field: _tour_media_url(base, path) for field, path in TOUR_MEDIA.items()}
     template = Template((base / 'docs/templates/home.html.template').read_text(encoding="utf-8"))
     footer = Template((base / 'docs/templates/home-footer.html.template').read_text(encoding="utf-8"))
     version = source_version(base)
@@ -131,7 +153,7 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
 
 
 def build(*, check_only: bool = False, root: Path | None = None) -> list[str]:
-    """Render localized homepages and public download links."""
+    """Render localized homepages, shared film links and public download links."""
     try:
         from desktop_downloads import build as build_downloads
     except ModuleNotFoundError:
@@ -146,7 +168,7 @@ def build(*, check_only: bool = False, root: Path | None = None) -> list[str]:
             stale.append(name)
             if not check_only:
                 target.write_text(text, encoding="utf-8")
-    return stale + build_downloads(check_only=check_only, root=base)
+    return stale + _sync_article_tour(base, check_only=check_only) + build_downloads(check_only=check_only, root=base)
 
 
 def main() -> int:

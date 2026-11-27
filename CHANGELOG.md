@@ -9,6 +9,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Enlarge workspace captures in the Warehouse 4 film and hold one readable
+  comparison with both sentences and their counts. Tighten the document crops
+  and remove repeat shots in the manuscript, source review and export beats.
+  Keep browser colors consistent across codecs and give the final manuscript
+  line and the PDF download distinct visual focus.
 - Store local release rehearsal and macOS build evidence under a configurable
   shared root. Fingerprint untracked source files, record the verified app
   identity and require a clean source checkout for release artifact promotion.
