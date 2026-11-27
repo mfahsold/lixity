@@ -83,7 +83,8 @@ from .site_preflight import media_summary, preflight_report
 from .site_publications import resolve_site_publication
 from .style_fingerprint import FingerprintThresholds
 from .ui import render_analysis
-from .ui.dashboard import _script_json
+from .ui.asset_bundle import REPORT_STYLES, bundle_assets
+from .ui.components import script_json
 from .ui.manuscript_document import ReaderBlock, reader_blocks
 from .ui.render_contracts import DashboardContent, DashboardOptions
 from .workspace import resolve_manuscript_target
@@ -99,7 +100,7 @@ _SITE_CONTENT_POLICY = (
 def _publication_html(document: str, data: Mapping[str, Any] | None = None) -> bytes:
     if data is not None:
         # The first executable script is the provider, which needs this data at load time.
-        script = '<script type="application/json" id="lixity-site-data">' + _script_json(data) + '</script>\n'
+        script = '<script type="application/json" id="lixity-site-data">' + script_json(data) + '</script>\n'
         document = document.replace('<script>', script + '<script>', 1)
     return document.replace('<head>', '<head>\n' + _SITE_CONTENT_POLICY, 1).encode('utf-8')
 
@@ -109,7 +110,7 @@ def _json(value: Any) -> bytes:
 
 
 def _site_data_size(value: Any) -> int:
-    return len(_script_json(value).encode("utf-8"))
+    return len(script_json(value).encode("utf-8"))
 
 
 def _checksum(content: bytes) -> str:
@@ -447,7 +448,6 @@ def _reader_analysis(text: str, config: CorpusConfig, language: str, cap: int, t
         metric_reference_link,
         panel_formatters,
     )
-    from .ui.dashboard import _REPORT_CSS_FILES, _bundle
     from .workspace_labels import workspace_labels_for
 
     selected = [(_without_comments(chapter_title), _without_comments(body))
@@ -509,7 +509,7 @@ def _reader_analysis(text: str, config: CorpusConfig, language: str, cap: int, t
             '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
             f'<link rel="icon" type="image/svg+xml" href="{FAVICON_DATA_URI}"/>',
             f'<title>{L("publication_analysis_title")} · {esc(title)}</title>',
-            f'<style>{_bundle(_REPORT_CSS_FILES)}\n.reader-analysis-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr));gap:.5rem 1rem}} .reader-analysis-grid dt{{font-weight:600}} .reader-analysis-grid dd{{margin:0}} .reader-analysis-grid div{{min-width:0}} .reader-analysis-chapter h3{{overflow-wrap:anywhere}}</style></head>',
+            f'<style>{bundle_assets(REPORT_STYLES)}\n.reader-analysis-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr));gap:.5rem 1rem}} .reader-analysis-grid dt{{font-weight:600}} .reader-analysis-grid dd{{margin:0}} .reader-analysis-grid div{{min-width:0}} .reader-analysis-chapter h3{{overflow-wrap:anywhere}}</style></head>',
             '<body class="lixity-report" data-read-only="true"><main class="page">',
             f'<a href="index.html">{L("publication_analysis_back")}</a>',
             f'<h1>{L("publication_analysis_title")}</h1>', f'<p>{L("publication_analysis_cap_note")}</p>']

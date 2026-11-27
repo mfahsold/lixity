@@ -9,7 +9,7 @@ to test builds. The app includes the runtime it needs.
 
 | Build | Where to find it | How to verify its identity |
 | --- | --- | --- |
-| Local macOS development build | Checkout build output or the app replaced by the local rollout command | Exact checkout commit for a rollout, app bundle path and ad-hoc code signature |
+| Local macOS development build | Build output or the app replaced by the local rollout command | `build.json` with source state, verified app identity and wheel checksum |
 | Hosted desktop test build | Selected GitHub Actions run | Run source commit, platform target, installer SHA-256 and build manifest |
 | Public desktop installer | Published release and desktop download catalog | Published tag, installer SHA-256, attestation and accepted platform trust evidence |
 
@@ -140,14 +140,20 @@ standalone Python build used by the installer matrix.
 ```
 
 The script builds a fresh wheel and runtime, packages a local development app,
-applies an ad-hoc signature and smoke-tests the embedded runtime. Its final
-JSON reports the app path and runtime smoke result. Use `--offline` once build
-inputs are cached. Omit it on an initial build that needs to fetch dependencies.
-Use the same absolute `CARGO_TARGET_DIR` for temporary worktrees to reuse one
-compilation cache. The build locks that cache through app assembly and copies
-each completed bundle to its own `.noindex` build directory under the current
-checkout to keep these standalone copies out of Spotlight results.
-The default cache is `desktop/build/macos-local/target`.
+applies an ad-hoc signature and smoke-tests the embedded runtime. Each build
+retains `build.json` with the source before and after the build, the app path,
+signed code hash, wheel checksum and runtime result. A clean build embeds its
+commit in the app. Use `--offline` once build inputs are cached. Omit it on an
+initial build that needs to fetch dependencies.
+
+Builds go under `desktop/build/macos-local/` by default. Set
+`LIXITY_BUILD_OUTPUT_ROOT` or pass `--output-root` to put build folders under
+`macos-local/` in a shared evidence directory. Each app goes in its own
+`.noindex` directory to keep standalone copies out of Spotlight results.
+The default compilation cache `desktop/target` also serves the Cargo checks
+below. Pass the main checkout's absolute cache path as `CARGO_TARGET_DIR`
+when building from a temporary worktree. The builder locks the compilation
+cache through app assembly. Keep completed bundles and their receipts together.
 Add `--dmg` to package the app with the CI disk-image script. It mounts the
 image read-only, verifies the embedded signature and exercises the embedded
 runtime again. The runtime smoke checks an authenticated welcome workspace

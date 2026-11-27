@@ -199,7 +199,7 @@ writing. A separate written commercial license covers closed-source integrations
 | Start, stop, restart, inspect logs or change ports | [Running the server](#running-the-server) |
 | Start automatically after login | [Optional login startup](#optional-startup-at-login) |
 | Add PDF/OCR or Zotero support | [Research prerequisites](#optional-research-prerequisites) · [Server access](#server-environment-and-project-access) |
-| Configure an author voice or speech provider | [Speech synthesis setup](#speech-synthesis-setup) |
+| Configure an author voice or speech provider | [Synthesis routes and setup](AUDIO.md#choose-a-synthesis-route) |
 | Set up transcription on Apple Silicon | [MLX-Audio](AUDIO.md#run-local-transcription) |
 | Check a native speech worker | [Model lifecycle and health](AUDIO.md#native-audio-model-lifecycle) |
 | Use a separate Jetson worker | [Authenticated forward](AUDIO.md#jetson-audio-worker) |

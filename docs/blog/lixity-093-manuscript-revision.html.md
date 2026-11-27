@@ -1,6 +1,6 @@
 # Who sees the scratches first?
 
-By [Matthias Fahsold](https://github.com/mfahsold) · Published 26 November 2026 · 4 minutes
+By [Matthias Fahsold](https://github.com/mfahsold) · Published 26 November 2026 · Updated 27 November 2026 · 4 minutes
 
 Here is the first paragraph of the Warehouse 4 draft:
 
@@ -20,27 +20,15 @@ In a local project, choose **Write → Versions → Compare versions**. Try the 
 
 For a clue that arrives several scenes later, open **Story rehearsal**. Write “Who tried the gate?” on a **Question** card and give the clue its own **Revelation** card. Move the cards to see how long you would leave the question open. The manuscript and its measurements stay in their original order while you try it. [Story rehearsal](https://github.com/mfahsold/lixity/blob/v0.9.3/docs/WORKSPACE.md#compare-scene-evidence-and-rehearse-an-intent)
 
+The film follows a different scene in the same manuscript. Mara wonders why the receiving line was left blank. I compare an unsaved, shorter version of that sentence, then check the dispatch receipt against the office ledger.
+
 [Video walkthrough](../videos/product-tour.webm)
 
 [Video walkthrough](../videos/product-tour.mp4)
 
-*A silent tour of Warehouse 4. From 16 to 24 seconds, it shows a draft beside the manuscript.*
+*The Blank Line. A silent, 60-second tour of a fictional scene, its records and the saved exhibit book in PDF.*
 
-[Watch the captioned tour](../#product-tour-preview) · [Open the MP4](../videos/product-tour.mp4)
-
-**Read the six steps in the tour**
-
-- 0–8 seconds · Follow a review suggestion to the passage.
-
-- 8–16 seconds · Open the explanation to see the counted words.
-
-- 16–24 seconds · Compare an unsaved draft with the manuscript.
-
-- 24–32 seconds · Open a chapter’s sentence-length measurement.
-
-- 32–40 seconds · Open Mara’s dossier and inspect its passages.
-
-- 40–48 seconds · Download the displayed dossier version as a PDF.
+[Watch with captions](../#product-tour-preview) · [Read the written walkthrough](../#tour-transcript)
 
 <a id="hear-the-clue"></a>
 

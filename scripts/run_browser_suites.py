@@ -4,7 +4,8 @@
 Every ``tests/browser/*.cjs`` file is an independent suite. ``--group fast``
 runs the everyday core surfaces; ``--group full`` (the default) runs every
 suite and belongs before a release. ``--area NAME`` runs the suites for one
-surface (``docs``, ``research``, ``analysis``, ``project``, ``sharing``, ``tokens``), and
+surface (``analysis``, ``audio``, ``docs``, ``project``, ``research``, ``sharing``,
+``tokens``), and
 ``--changed`` maps changed git paths to the affected areas (falling back to the
 full set when a shared renderer or unknown UI path changed). ``--jobs N`` runs
 N independent suites in parallel and keeps the machine reasonably busy; the
@@ -64,9 +65,38 @@ GROUPS: dict[str, tuple[str, ...]] = {
     ),
 }
 
+AUDIO_STUDIO_SUITES = (
+    "audio-chapter-import.cjs",
+    "audio-take.cjs",
+    "audio-take-studio.cjs",
+    "audio-phonetics.cjs",
+    "audio-loading.cjs",
+    "audio-microphone.cjs",
+    "audio-permission.cjs",
+    "audio-player.cjs",
+    "audio-references.cjs",
+    "audio-recording-diagnostics.cjs",
+    "audio-studio.cjs",
+    "teleprompter-context.cjs",
+    "teleprompter-plan.cjs",
+    "teleprompter-scroll.cjs",
+    "teleprompter-take.cjs",
+    "audio-pronunciations.cjs",
+    "audio-profile-delete.cjs",
+)
+
 # Surface areas for targeted runs (--area and --changed). Every suite belongs
 # to at least one area; tests/test_ci_selection.py verifies complete coverage.
 AREAS: dict[str, tuple[str, ...]] = {
+    "audio": (
+        *AUDIO_STUDIO_SUITES,
+        "audio-export.cjs",
+        "project-controls.cjs",
+        "reader-audio.cjs",
+        "settings.cjs",
+        "typography-localization.cjs",
+        "workbench.cjs",
+    ),
     "sharing": (
         "reader-audio.cjs",
         "site-preflight.cjs",
@@ -142,23 +172,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "visual-consistency.cjs",
     ),
     "project": (
-        "audio-chapter-import.cjs",
-        "audio-take.cjs",
-        "audio-take-studio.cjs",
-        "audio-phonetics.cjs",
-        "audio-loading.cjs",
-        "audio-microphone.cjs",
-        "audio-permission.cjs",
-        "audio-player.cjs",
-        "audio-references.cjs",
-        "audio-recording-diagnostics.cjs",
-        "audio-studio.cjs",
-        "teleprompter-context.cjs",
-        "teleprompter-plan.cjs",
-        "teleprompter-scroll.cjs",
-        "teleprompter-take.cjs",
-        "audio-pronunciations.cjs",
-        "audio-profile-delete.cjs",
+        *AUDIO_STUDIO_SUITES,
         "read-only-site.cjs",
         "overlay-layout.cjs",
         "debug.cjs",
@@ -219,9 +233,21 @@ PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("scripts/run_browser_suites.py", ("full",)),
     ("scripts/browser_tools.cjs", ("full",)),
     ("scripts/browser-vendor.json", ("full",)),
+    ("src/lixity/config.py", ("full",)),
+    ("src/lixity/server/desktop.py", ("full",)),
+    ("src/lixity/ui/assets/desktop-bridge.js", ("full",)),
+    ("desktop/src-tauri/src/lib.rs", ("full",)),
+    ("desktop/src-tauri/src/sidecar.rs", ("full",)),
     ("docs/*", ("docs",)),
     ("scripts/stage_pages.py", ("docs",)),
+    ("scripts/build_public_site.py", ("docs",)),
+    ("scripts/capture_screenshots.cjs", ("docs",)),
+    ("scripts/make_screenshots.py", ("docs",)),
+    ("scripts/make_videos.py", ("docs",)),
+    ("scripts/product_tour_capture.cjs", ("docs",)),
+    ("scripts/product_tour_edit.py", ("docs",)),
     ("scripts/build_examples.py", ("docs", "sharing")),
+    ("scripts/build_demo_audio.py", ("audio", "docs")),
     ("scripts/example_project.py", ("docs", "sharing", "research")),
     ("samples/first-look.md", ("docs", "sharing", "analysis", "research")),
     ("scripts/example_publications.py", ("docs", "sharing")),
@@ -231,6 +257,14 @@ PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("src/lixity/ui/assets/read-only-site.js", ("sharing",)),
     ("src/lixity/ui/assets/reader-publication.*", ("sharing",)),
     ("src/lixity/ui/assets/reader-audio.js", ("sharing",)),
+    ("src/lixity/speech*.py", ("audio",)),
+    ("src/lixity/audio_audit.py", ("audio",)),
+    ("src/lixity/server/routes_speech.py", ("audio",)),
+    ("src/lixity/ui/assets/audio-*.js", ("audio",)),
+    ("src/lixity/ui/assets/speech*.*", ("audio",)),
+    ("src/lixity/ui/assets/teleprompter.*", ("audio",)),
+    ("desktop/src-tauri/src/audio_capture.rs", ("audio",)),
+    ("desktop/src-tauri/src/commands.rs", ("audio", "project", "sharing")),
     ("src/lixity/ui/assets/design-tokens.css", ("tokens",)),
     ("src/lixity/ui/assets/components.css", ("tokens", "analysis", "project")),
     ("src/lixity/ui/assets/research*", ("research",)),
@@ -310,7 +344,7 @@ def changed_git_paths(base: str | None = None) -> list[str]:
 def suites_for_paths(paths: list[str], available: list[str] | None = None) -> list[str]:
     """Map repo-relative paths to the browser suites they can affect.
 
-    Returns the fast group when no UI/docs/server/research path is present, and
+    Returns the fast group when no mapped path is present, and
     the full set when a shared foundation or an unmapped UI path changed.
     """
     names = available if available is not None else suite_names()

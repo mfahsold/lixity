@@ -132,7 +132,7 @@ server.serve_forever()
         assert.equal(await page.locator('#speech-status').textContent(), labels.speech_profile_remove_last_schema,
           'Older audio settings explain the review needed before removing the last profile');
         assert.equal(await page.locator('#speech-engine option[value=qwen3-base]').evaluate(option => option.parentElement.label),
-          labels.speech_engine_group_reference);
+          labels.speech_engine_group_retained);
         assert.equal(await page.locator('#speech-recording_duration').isVisible(), false,
           'Project recording preferences stay with Author’s Voice');
         assert.equal(await page.locator('#speech-worker-status').isVisible(), false,

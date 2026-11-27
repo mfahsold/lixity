@@ -430,6 +430,7 @@ def resolve_audio_profile(
 def audio_capabilities() -> dict[str, Any]:
     """Describe supported controls independently of optional runtime readiness.
 
+    Existing profiles keep their engine identities and rendering contracts.
     Qwen timbres are multilingual; native-language quality requires auditioning.
     """
     capabilities: dict[str, Any] = {
@@ -517,6 +518,8 @@ def audio_capabilities() -> dict[str, Any]:
         },
     }
     for engine, capability in capabilities.items():
+        if engine not in {"mlx-audio", "ims-toucan", "openai-compatible"}:
+            capability["creation_enabled"] = False
         support = speech_control_support(engine)
         capability["instructions"] = support.direction == "model_interpreted"
         capability["control_support"] = support.as_dict()

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from build_runtime_bundle import host_target_triple
-from macos_app_update import update_installed_app
+from macos_app_update import _verified_identity, update_installed_app
 from smoke_desktop_runtime import verify_bundle
 from verify_desktop_artifacts import (
     DesktopArtifact,
@@ -29,20 +29,17 @@ DESKTOP = ROOT / "desktop"
 OUTPUT_ROOT = DESKTOP / "build" / "macos-local"
 sys.path.insert(0, str(ROOT))
 
+from scripts.build_evidence import (  # noqa: E402
+    build_output_parent,
+    source_state,
+    utc_now,
+    write_build_receipt,
+)
 from scripts.check_release import validate  # noqa: E402
 
 
 def _run(command: list[str], *, cwd: Path = ROOT, env: dict[str, str] | None = None) -> None:
     subprocess.run(command, cwd=cwd, env=env, check=True)  # noqa: S603 - fixed local build tools
-
-
-def _clean_revision() -> str:
-    git = shutil.which("git")
-    if not git:
-        raise ValueError("Git is required when updating the installed app")
-    if subprocess.check_output([git, "status", "--porcelain"], cwd=ROOT):  # noqa: S603 - fixed Git query
-        raise ValueError("Commit the checkout before updating the installed app")
-    return subprocess.check_output([git, "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()  # noqa: S603
 
 
 def _verify_app(app: Path, prepared_runtime: Path, identifier: str, version: str) -> dict[str, Any]:
@@ -64,7 +61,7 @@ def _verify_app(app: Path, prepared_runtime: Path, identifier: str, version: str
     return smoke
 
 
-def build(*, offline: bool, dmg: bool, revision: str | None = None) -> dict[str, Any]:
+def build(output: Path, *, offline: bool, dmg: bool, revision: str | None) -> dict[str, Any]:
     if sys.platform != "darwin":
         raise ValueError("Local .app builds require macOS")
     required_tools = ("uv", "npx", "cargo", "codesign")
@@ -75,9 +72,6 @@ def build(*, offline: bool, dmg: bool, revision: str | None = None) -> dict[str,
             raise ValueError(f"Required build tool is unavailable: {tool}")
     import fcntl
 
-    OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
-    output = Path(tempfile.mkdtemp(prefix="build-", suffix=".noindex", dir=OUTPUT_ROOT))
-    print(f"Building in {output}", flush=True)
     target = host_target_triple()
     config_file = DESKTOP / "src-tauri" / "tauri.conf.json"
     config = json.loads(config_file.read_text(encoding="utf-8"))
@@ -131,7 +125,7 @@ def build(*, offline: bool, dmg: bool, revision: str | None = None) -> dict[str,
     override = output / "tauri-local.json"
     override.write_text(json.dumps({"bundle": {"resources": resources}}), encoding="utf-8")
     target_dir = os.environ.get("CARGO_TARGET_DIR")
-    cache = (DESKTOP / Path(target_dir).expanduser()).resolve() if target_dir else OUTPUT_ROOT / "target"
+    cache = (DESKTOP / Path(target_dir).expanduser()).resolve() if target_dir else DESKTOP / "target"
     cache.mkdir(parents=True, exist_ok=True)
     name = f"{config['productName']}.app"
     app = output / name
@@ -165,8 +159,13 @@ def build(*, offline: bool, dmg: bool, revision: str | None = None) -> dict[str,
         shutil.copytree(cache / target / "debug" / "bundle" / "macos" / name, app, symlinks=True)
     _run(["bash", str(DESKTOP / "scripts" / "sign_macos_bundle.sh"), "--adhoc", str(app)])
     smoke = _verify_app(app, runtime, config["identifier"], version)
-    _run(["codesign", "--verify", "--deep", "--strict", str(app)])
-    report: dict[str, Any] = {"app": str(app), "runtime_smoke": smoke}
+    identity = _verified_identity(app)
+    report: dict[str, Any] = {
+        "app": str(app),
+        "app_identity": {"version": identity.version, "code_hash": identity.code_hash},
+        "runtime_smoke": smoke,
+        "wheel": {"path": str(wheel), "sha256": sha256_file(wheel)},
+    }
     if dmg:
         chip = "Apple-Silicon" if target == "aarch64-apple-darwin" else "Intel"
         image = output / f"{app.stem}-{version}-macOS-{chip}.dmg"
@@ -202,14 +201,43 @@ def main() -> int:
     )
     parser.add_argument("--dmg", action="store_true", help="Build and verify a local disk image")
     parser.add_argument("--update-installed", action="store_true", help="Update the closed local app in /Applications")
+    parser.add_argument("--output-root", type=Path,
+                        help="Evidence root (overrides LIXITY_BUILD_OUTPUT_ROOT)")
     args = parser.parse_args()
     try:
-        revision = _clean_revision() if args.update_installed else None
-        report = build(offline=args.offline, dmg=args.dmg, revision=revision)
-        if revision is not None:
-            if _clean_revision() != revision:
+        before = source_state(ROOT)
+        if args.update_installed and before["dirty"]:
+            raise ValueError("Commit the checkout before updating the installed app")
+        revision = before["commit"] if not before["dirty"] else None
+        parent = build_output_parent(ROOT, OUTPUT_ROOT, args.output_root)
+        parent.mkdir(parents=True, exist_ok=True)
+        output = Path(tempfile.mkdtemp(prefix="build-", suffix=".noindex", dir=parent))
+        receipt = output / "build.json"
+        print(f"Building in {output}", flush=True)
+        report: dict[str, Any] = {
+            "schema_version": "lixity-macos-local-build/1",
+            "status": "running",
+            "checkout": str(ROOT),
+            "source": before,
+            "started_at": utc_now(),
+            "receipt": str(receipt),
+        }
+        write_build_receipt(receipt, report)
+        try:
+            report.update(build(output, offline=args.offline, dmg=args.dmg, revision=revision))
+            report["source_after"] = source_state(ROOT)
+            if report["source_after"] != before:
                 raise ValueError("The checkout changed during the build")
+            report["status"] = "passed"
+        except (OSError, ValueError, subprocess.CalledProcessError):
+            report["status"] = "failed"
+            raise
+        finally:
+            report["finished_at"] = utc_now()
+            write_build_receipt(receipt, report)
+        if args.update_installed:
             report["local_update"] = update_installed_app(Path(report["app"]), revision)
+            write_build_receipt(receipt, report)
     except (OSError, ValueError, subprocess.CalledProcessError) as exc:
         parser.exit(1, f"macOS app build failed: {exc}\n")
     print(json.dumps(report, indent=2))

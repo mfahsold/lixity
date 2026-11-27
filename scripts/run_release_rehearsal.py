@@ -7,20 +7,20 @@ import argparse
 import hashlib
 import json
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
 import time
-from datetime import datetime, timezone
 from pathlib import Path
 
 if __package__:
     from .benchmark_pipeline import DEFAULT_CORPUS
+    from .build_evidence import build_output_parent, source_state, utc_now, write_build_receipt
     from .check_release import promote_artifacts, source_version
     from .run_browser_suites import diagnostic_counts
 else:
     from benchmark_pipeline import DEFAULT_CORPUS
+    from build_evidence import build_output_parent, source_state, utc_now, write_build_receipt
     from check_release import promote_artifacts, source_version
     from run_browser_suites import diagnostic_counts
 
@@ -30,34 +30,8 @@ JOURNEYS = ("warehouse-author.cjs", "linguistic-reference.cjs", "home-tour.cjs")
 STAGES = ("browser", "corpus", "wheel")
 
 
-def source_state() -> dict:
-    git = shutil.which("git")
-    if git is None:
-        raise ValueError("Git is required to record the rehearsal source")
-    revision = subprocess.check_output(  # noqa: S603 - fixed Git command and checkout
-        [git, "rev-parse", "--verify", "HEAD"], cwd=ROOT, text=True,
-    ).strip()
-    changes = subprocess.check_output(  # noqa: S603 - fixed Git command and checkout
-        [git, "status", "--porcelain", "--untracked-files=normal"], cwd=ROOT,
-    )
-    if not changes:
-        return {"commit": revision, "dirty": False}
-    tracked_diff = subprocess.check_output(  # noqa: S603 - fixed Git command, no diff plugins
-        [git, "diff", "--binary", "--no-ext-diff", "--no-textconv", "HEAD", "--"], cwd=ROOT,
-    )
-    return {"commit": revision, "dirty": True,
-            "tracked_diff_sha256": hashlib.sha256(tracked_diff).hexdigest(),
-            "status_sha256": hashlib.sha256(changes).hexdigest()}
-
-
-def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-
 def write_receipt(directory: Path, receipt: dict) -> None:
-    pending = directory / "results.json.tmp"
-    pending.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
-    pending.replace(directory / "results.json")
+    write_build_receipt(directory / "results.json", receipt)
 
 
 def run_stage(directory: Path, receipt: dict, name: str, command: list[str], *,
@@ -92,12 +66,14 @@ def run_stage(directory: Path, receipt: dict, name: str, command: list[str], *,
 
 
 def rehearse(*, jobs: int, tag: str | None, dist: Path | None, skip_wheel: bool,
-             expected_commit: str | None = None) -> int:
-    before = source_state()
+             expected_commit: str | None = None, output_root: Path | None = None) -> int:
+    before = source_state(ROOT)
     if expected_commit is not None and before["commit"] != expected_commit:
         raise ValueError("HEAD changed after the release checks began")
+    if dist is not None and before["dirty"]:
+        raise ValueError("Promote release artifacts from a clean checkout of the reviewed commit")
     version = source_version(ROOT, tag)
-    parent = ROOT / ".artifacts" / "release-rehearsal"
+    parent = build_output_parent(ROOT, ROOT / ".artifacts/release-rehearsal", output_root)
     parent.mkdir(parents=True, exist_ok=True)
     directory = Path(tempfile.mkdtemp(prefix="run-", dir=parent))
     receipt = {
@@ -113,7 +89,7 @@ def rehearse(*, jobs: int, tag: str | None, dist: Path | None, skip_wheel: bool,
     wheel = receipt["stages"]["wheel"]
     target = directory / "dist"
     write_receipt(directory, receipt)
-    print(f"Rehearsal evidence: {directory.relative_to(ROOT)}", flush=True)
+    print(f"Rehearsal evidence: {directory}", flush=True)
     try:
         ui_ok = run_stage(directory, receipt, "browser", [
             "scripts/run_browser_suites.py", "--only", *JOURNEYS, "--jobs", str(jobs),
@@ -123,7 +99,7 @@ def rehearse(*, jobs: int, tag: str | None, dist: Path | None, skip_wheel: bool,
             "scripts/benchmark_pipeline.py", "--workspace", "--json",
             "--iterations", "3", "--synthetic-chapters", "0",
         ], json_output=directory / "corpus.json")
-        same_state = source_state() == before
+        same_state = source_state(ROOT) == before
         wheel_ok = skip_wheel
         if skip_wheel:
             wheel.update(status="skipped", reason="development run requested without a build")
@@ -137,9 +113,11 @@ def rehearse(*, jobs: int, tag: str | None, dist: Path | None, skip_wheel: bool,
             if wheel_ok:
                 lines = (target / "SHA256SUMS").read_text(encoding="ascii").splitlines()
                 receipt["wheel_checksums"] = {filename: digest for digest, filename in map(str.split, lines)}
-        after = source_state()
+        after = source_state(ROOT)
         receipt["source_after"] = after
         ok = ui_ok and corpus_ok and wheel_ok and same_state and before == after
+        if not same_state or before != after:
+            print("The checkout changed during rehearsal.", file=sys.stderr)
         if dist is not None:
             receipt["promotion"] = "not_run"
             if ok:
@@ -151,7 +129,7 @@ def rehearse(*, jobs: int, tag: str | None, dist: Path | None, skip_wheel: bool,
                     ok = False
                 else:
                     receipt["promotion"] = "passed"
-        receipt["reviewed_commit"] = before["commit"] if ok and not before["dirty"] else None
+        receipt["reviewed_commit"] = before["commit"] if ok and not skip_wheel and not before["dirty"] else None
         receipt["status"] = "passed" if ok else "failed"
         return 0 if ok else 1
     finally:
@@ -159,7 +137,7 @@ def rehearse(*, jobs: int, tag: str | None, dist: Path | None, skip_wheel: bool,
             receipt["status"] = "incomplete"
         receipt["finished_at"] = utc_now()
         write_receipt(directory, receipt)
-        print(f"Rehearsal {receipt['status']}: {directory.relative_to(ROOT)}/results.json")
+        print(f"Rehearsal {receipt['status']}: {directory / 'results.json'}")
 
 
 def read_receipt(directory: Path) -> dict:
@@ -227,6 +205,8 @@ def main() -> int:
     parser.add_argument("--tag", help="Version tag when rehearsing a prepared release")
     parser.add_argument("--expected-commit", help="Commit recorded before the full source checks")
     parser.add_argument("--dist", type=Path, help="Promote checksummed artifacts to this directory")
+    parser.add_argument("--output-root", type=Path,
+                        help="Evidence root (overrides LIXITY_BUILD_OUTPUT_ROOT)")
     parser.add_argument("--skip-wheel", action="store_true", help="Run the source journeys and corpus only")
     parser.add_argument("--compare", nargs=2, metavar=("PREVIOUS", "CURRENT"), type=Path,
                         help="Compare two recorded runs without starting checks")
@@ -238,7 +218,7 @@ def main() -> int:
             compare(*args.compare)
             return 0
         return rehearse(jobs=args.jobs, tag=args.tag, dist=args.dist, skip_wheel=args.skip_wheel,
-                        expected_commit=args.expected_commit)
+                        expected_commit=args.expected_commit, output_root=args.output_root)
     except (OSError, subprocess.CalledProcessError, ValueError, KeyError, TypeError) as exc:
         print(f"Release rehearsal failed: {exc}", file=sys.stderr)
         return 1

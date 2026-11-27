@@ -9,8 +9,6 @@ import html
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
-from functools import lru_cache
-from pathlib import Path as _Path
 from typing import Any
 
 from ..diversity import MIN_TOKENS_LD
@@ -38,6 +36,20 @@ from ..style_profile import (
 from ..workspace_labels import workspace_labels_for
 from .analysis_identity import render_analysis_identity
 from .analysis_navigation import analysis_workflow_sections, render_analysis_workflows
+from .asset_bundle import (
+    ASSET_DIR,
+    DIAGRAM_LIBRARY_FILE,
+    DIAGRAM_LIBRARY_ROUTE,
+    NATIVE_AUDIO_SCRIPTS,
+    PASSAGE_NAVIGATION_SCRIPT,
+    PUBLICATION_SCRIPTS,
+    PUBLICATION_STYLES,
+    REPORT_SCRIPTS,
+    REPORT_STYLES,
+    WORKSPACE_SCRIPTS,
+    WORKSPACE_STYLES,
+    bundle_assets,
+)
 from .components import (
     ANALYSIS_SECTIONS,
     FAVICON_DATA_URI,
@@ -113,117 +125,16 @@ from .scene_review import render_rehearsal
 from .settings import settings_form
 from .structural import style_structural
 
-_ASSET_DIR = _Path(__file__).with_name("assets")
-DIAGRAM_LIBRARY_FILE = "vendor/mermaid-tiny-12.3.0.min.js"
-DIAGRAM_LIBRARY_ROUTE = "/api/" + DIAGRAM_LIBRARY_FILE
-_PASSAGE_NAVIGATION_SCRIPT = "analysis-passage-navigation.js"
-_DOSSIER_CHARACTER_SCRIPT = "research-dossier-character.js"
-_DOSSIER_CHARACTER_STYLE = "research-dossier-character.css"
-_CSS_FILES = (
-    "design-tokens.css",
-    "components.css",
-    "dashboard.css",
-    "vendor/photoswipe-5.4.4.css",
-    "research-media.css",
-    "research-navigation.css",
-    "research-tools.css",
-    "research-collections.css",
-    _DOSSIER_CHARACTER_STYLE,
-    "dossier-images.css",
-    "vendor/leaflet-1.9.4.css",
-    "dossier-geography.css",
-    "workspace-reader.css",
-    "manuscript-links.css",
-    "manuscript-reader.css",
-    "decision-review.css",
-    "analysis-scope.css",
-    "analysis-navigation.css",
-    "section-navigation.css",
-    "analysis-evidence.css",
-    "reader-publication.css",
-    "project-overview.css",
-    "teleprompter.css",
-)
-_JS_FILES = (
-    "read-only-site.js",
-    "vendor/preact-10.29.8.min.js",
-    "vendor/htm-3.1.1.umd.js",
-    "vendor/leaflet-1.9.4.min.js",
-    "vendor/photoswipe-5.4.4.umd.min.js",
-    "research-media.js",
-    "icons.js",
-    "component-layer.js",
-    "logging.js",
-    "tooltips.js",
-    "analysis-navigation.js",
-    "interactions.js",
-    "command-palette.js",
-    "section-navigation.js",
-    "register-settings.js",
-    "site-publication-settings.js",
-    "dashboard.js",
-    _PASSAGE_NAVIGATION_SCRIPT,
-    "analysis-scope.js",
-    "zotero-results.js",
-    "research-cards.js",
-    "research-core.js",
-    _DOSSIER_CHARACTER_SCRIPT,
-    "research-content.js",
-    "research-evidence.js",
-    "research-lists.js",
-    "research-collections.js",
-    "research-review.js",
-    "research-workspace.js",
-    "research-dossier-drafts.js",
-    "research-tools.js",
-    "markdown-editor.js",
-    "research-revisions.js",
-    "workspace-state.js",
-    "workspace-motion.js",
-    "project-ui.js",
-    "project-overview.js",
-    "dossier-images.js",
-    "dossier-geography.js",
-    "style-space.js",
-    "metric-context.js",
-    "workspace-reader.js",
-    "manuscript-links.js",
-    "manuscript-reader.js",
-    "analysis-evidence.js",
-    "analysis-review.js",
-    "reader-publication.js",
-    "audio-take.js",
-    "speech-presentation.js",
-    "teleprompter.js",
-)
-_NATIVE_JS_FILES = ("speech-direction.js", "speech-player.js", "speech.js",)
-# Standalone analysis reports have no workspace research or map controls.
-_REPORT_JS_FILES = tuple(name for name in _JS_FILES if name not in (
-    "manuscript-reader.js", "teleprompter.js", "speech-presentation.js",
-    "audio-take.js", "register-settings.js", "site-publication-settings.js", "research-collections.js", "research-tools.js", "analysis-navigation.js",
-    "research-dossier-drafts.js", "research-revisions.js", "project-overview.js",
-    "vendor/leaflet-1.9.4.min.js", "dossier-geography.js",
-    _PASSAGE_NAVIGATION_SCRIPT, _DOSSIER_CHARACTER_SCRIPT,
-))
-_REPORT_CSS_FILES = tuple(
-    name for name in _CSS_FILES if name not in {
-        "teleprompter.css", "research-collections.css", "research-tools.css", "analysis-navigation.css",
-        _DOSSIER_CHARACTER_STYLE,
-    }
-)
-
-# Curated publications reuse the shared renderers without dormant workspace controls.
-_PUBLICATION_CSS_FILES = tuple(name for name in _REPORT_CSS_FILES if name != "analysis-evidence.css")
-_PUBLICATION_JS_FILES = tuple(
-    name for name in _JS_FILES if name not in {
-        "register-settings.js", "site-publication-settings.js", "analysis-scope.js",
-        "project-overview.js", "style-space.js", "metric-context.js", "workspace-reader.js",
-        "manuscript-reader.js", "manuscript-links.js", "analysis-evidence.js", "analysis-review.js",
-        "teleprompter.js", "speech-presentation.js", "audio-take.js",
-        "research-collections.js", "research-dossier-drafts.js", "research-tools.js",
-        _PASSAGE_NAVIGATION_SCRIPT, _DOSSIER_CHARACTER_SCRIPT,
-    }
-)
+# Keep the dashboard's existing asset inspection and patch points.
+_ASSET_DIR = ASSET_DIR
+_CSS_FILES = WORKSPACE_STYLES
+_JS_FILES = WORKSPACE_SCRIPTS
+_PASSAGE_NAVIGATION_SCRIPT = PASSAGE_NAVIGATION_SCRIPT
+_PUBLICATION_CSS_FILES = PUBLICATION_STYLES
+_PUBLICATION_JS_FILES = PUBLICATION_SCRIPTS
+_REPORT_CSS_FILES = REPORT_STYLES
+_REPORT_JS_FILES = REPORT_SCRIPTS
+_bundle = bundle_assets
 
 
 _PROJECT_RIBBON_SPEC: tuple[tuple[str, str, str, str | None], ...] = (
@@ -237,12 +148,6 @@ _PROJECT_RIBBON_SPEC: tuple[tuple[str, str, str, str | None], ...] = (
     ("project-results", "project_nav_results", "download", "results"),
     ("nda-draft", "project_nav_nda", "file-text", "nda"),
 )
-
-
-@lru_cache(maxsize=16)
-def _bundle(files: tuple[str, ...]) -> str:
-    """Join packaged assets on first use; importing the module does no I/O."""
-    return "\n".join((_ASSET_DIR / name).read_text(encoding="utf-8") for name in files)
 
 
 _script_json = script_json
@@ -2118,7 +2023,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             ("<footer></footer>" if controls else
              f"<footer><span>{esc(engine_name)}</span> · <span>{esc(title)}</span></footer>"),
             diagram_library,
-            f"<script>{_bundle(scripts + (('desktop-bridge.js',) if can_edit else ()) + (_NATIVE_JS_FILES if speech_enabled else ()))}</script>",
+            f"<script>{_bundle(scripts + (('desktop-bridge.js',) if can_edit else ()) + (NATIVE_AUDIO_SCRIPTS if speech_enabled else ()))}</script>",
             "</body>",
             "</html>",
         ]

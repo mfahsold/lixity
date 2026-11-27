@@ -163,6 +163,7 @@ make browser          # everyday core surfaces (fast group, 3 workers)
 make browser-changed  # only the suites affected by modified git paths
 make browser-full     # every suite, run before a release (3 workers)
 # or: python3 scripts/run_browser_suites.py --area research --jobs 3
+# or: python3 scripts/run_browser_suites.py --area audio --jobs 2
 ```
 
 `warehouse-author.cjs` exercises the complete, disposable Warehouse 4 example
@@ -173,10 +174,17 @@ to its pinned version. Run it with `--only warehouse-author` or as part of the
 
 `--list` prints the suite names, `--group fast|full` selects the everyday core
 surfaces or everything, `--area NAME` runs one surface (`docs`, `research`,
-`analysis`, `project`, `sharing`, `tokens`), `--changed [BASE]` maps modified git paths
+`analysis`, `audio`, `project`, `sharing`, `tokens`), `--changed [BASE]` maps modified git paths
 to the affected areas (falling back to the full set when a shared foundation
 changed), `--jobs N` runs independent suites in parallel, `--only NAME`
 selects suites and `--start NAME` resumes after a failure.
+Audio profile, provider and capture changes select the audio area, including
+the Teleprompter, recording, playback and settings. Product tour sources
+select the website area, including playback, captions and media links.
+Shared project configuration and the desktop host, sidecar and bridge select
+all suites even in a mixed change. Native desktop commands select the audio,
+project and sharing areas. Use the [native desktop checks](../../desktop/README.md#rust-and-native-webview-checks)
+to verify the actual OS bridge and WebView.
 After a parallel run, the runner reports all failed suites with an `--only`
 command; completion order does not define a safe `--start` position. Repeat
 the full suite before a release after fixing a failure.

@@ -120,10 +120,15 @@ introducing a second incompatible checker configuration. For edited JavaScript,
 `node --check path/to/file.js` catches syntax errors before a browser run.
 These checks complement focused behavior tests; they do not prove runtime behavior.
 
-Clean up disposable checkouts with `git worktree remove <path>` after checking
-their status, including ignored build output. Preserve uncommitted changes and
-release evidence before removing a checkout. Keep one reusable native build
-cache when several temporary worktrees share it. For a direct check of the
+Create disposable checkouts under the ignored `.worktrees/` directory. Keep
+results, receipts and review artifacts under the main checkout's `.artifacts/`.
+Set `LIXITY_BUILD_OUTPUT_ROOT` to an absolute shared directory there for
+release rehearsals and local macOS builds. Both scripts accept an explicit
+`--output-root` override and create a subdirectory for their own output.
+Use `git worktree remove <path>` after checking the checkout status, ignored
+files and evidence references. Preserve uncommitted changes and release evidence
+before removal. Pass the main checkout's absolute `desktop/target` as
+`CARGO_TARGET_DIR` to reuse its native build cache. For a direct check of the
 installed desktop's bundled Python, use `-I -B` to protect the app signature
 from new bytecode files.
 
@@ -188,13 +193,17 @@ installed. The browser run connects the following author-facing checks.
 
 The same run measures analysis and supplementary reports on Warehouse 4,
 *Effi Briest* and *Pride and Prejudice*. It writes an incremental
-`results.json` with source commit, working-tree state, fixture digests and
-step outcomes under a new ignored `.artifacts/release-rehearsal/run-*`
-directory. Browser diagnostics, corpus digests and medians, and distribution
+`results.json` with source commit, working-tree fingerprints, fixture digests and
+step outcomes under a new `.artifacts/release-rehearsal/run-*` directory by
+default. `LIXITY_BUILD_OUTPUT_ROOT` or `--output-root` moves the run under
+`release-rehearsal/` in the chosen directory. Output inside the checkout must
+be Git-ignored so it stays outside the source snapshot. Browser diagnostics,
+corpus digests and medians, and distribution
 checksums belong to that run. Use `make release-rehearsal REHEARSAL_ARGS=--skip-wheel`
 for the shorter iteration after a change. A run from an edited checkout is
-development evidence. Compare it with a clean run before assigning a result
-to a specific commit.
+development evidence and fingerprints tracked differences and the actual bytes
+of untracked files. Use a clean checkout for `make release-check` or to promote
+distribution artifacts with `--dist`.
 
 ```sh
 .venv/bin/python scripts/run_browser_suites.py --summary <run>/browser

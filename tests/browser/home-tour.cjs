@@ -9,6 +9,7 @@ const {stagePages} = require('./support/staged-pages.cjs');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-home-tour-'));
 const root = stagePages();
 const sceneStarts = [0, 5, 14, 27, 42, 52];
+const reviewTimes = [0.12, 2, 16.5, 18.5, 21.5, 25, 30, 39, 49, 54.5, 55.8, 57.5, 59];
 (async () => {
   const browser = await launchChromium();
   try {
@@ -81,6 +82,15 @@ const sceneStarts = [0, 5, 14, 27, 42, 52];
         }
       });
       assert.ok(enlarged, 'At 200% text size the complete caption fits below the video');
+      if (process.argv.includes('--review-frames')) {
+        for (const time of reviewTimes) {
+          await video.evaluate((node, seconds) => { node.currentTime = seconds; }, time);
+          await expect.poll(() => video.evaluate(node => !node.seeking && node.readyState >= 2)).toBe(true);
+          const cue = sceneStarts.findLastIndex(start => start <= time);
+          await expect(page.locator('.tour-caption')).toHaveText(await page.locator('#tour-transcript li').nth(cue).textContent());
+          await page.locator('.tour-screen').screenshot({path: path.join(artifacts, `review-${width}-${time}s.png`)});
+        }
+      }
       await button.click();
       await page.locator('#impressum').scrollIntoViewIfNeeded();
       await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);

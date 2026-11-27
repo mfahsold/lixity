@@ -21,9 +21,11 @@ from fractions import Fraction
 from pathlib import Path
 
 if __package__:
-    from .product_tour_edit import Edit, compose
+    from .build_evidence import utc_now, write_build_receipt
+    from .product_tour_edit import ICON, LEDGER, RECEIPT, Edit, compose
 else:
-    from product_tour_edit import Edit, compose
+    from build_evidence import utc_now, write_build_receipt
+    from product_tour_edit import ICON, LEDGER, RECEIPT, Edit, compose
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 RAW_DIR = BASE_DIR / ".artifacts" / "screenshots" / "videos"
@@ -37,6 +39,8 @@ SOCIAL_CLIPS = (
     (LANDSCAPE_SOCIAL, 1600, 900, 3_500_000),
     (PORTRAIT_SOCIAL, 1080, 1920, 4_000_000),
 )
+TOUR_VIDEO_LIMITS = {name: limit for name, _, _, limit in SOCIAL_CLIPS}
+DEFAULT_TOUR_VIDEO_LIMIT = 4_000_000
 
 #: name, poster timestamp, max MP4 bytes, max GIF bytes
 WALKTHROUGHS: tuple[tuple[str, str, int, int], ...] = (
@@ -171,8 +175,7 @@ def _video_info(path: Path) -> tuple[dict, dict]:
     return videos[0], media
 
 
-def _verify_export(path: Path, *, fps: int, frames: int, width: int, height: int,
-                   max_bytes: int = 4_000_000) -> None:
+def _verify_export(path: Path, *, fps: int, frames: int, width: int, height: int) -> None:
     video, media = _video_info(path)
     if (int(video["nb_read_frames"]) != frames or
             Fraction(video["avg_frame_rate"]) != fps or
@@ -181,6 +184,7 @@ def _verify_export(path: Path, *, fps: int, frames: int, width: int, height: int
             abs(float(media["format"]["duration"]) - frames / fps) > .002 or
             len(media["streams"]) != 1):
         raise SystemExit(f"{path.name} has incomplete timing, unexpected geometry or audio")
+    max_bytes = TOUR_VIDEO_LIMITS.get(path.name, DEFAULT_TOUR_VIDEO_LIMIT)
     if path.stat().st_size > max_bytes:
         raise SystemExit(f"{path.name} exceeds its {max_bytes:,} byte budget")
     print(f"{path.relative_to(BASE_DIR)} {path.stat().st_size:,} bytes")
@@ -228,10 +232,18 @@ def _tour_recordings(plan: dict) -> tuple[dict, list[tuple[dict, Path, Path]], P
 
 def _webm_codec(encoders: str) -> list[str]:
     if "libsvtav1" in encoders:
-        return ["-c:v", "libsvtav1", "-preset", "9", "-crf", "34"]
+        return ["-c:v", "libsvtav1", "-preset", "9", "-crf", "36"]
     if "libaom-av1" in encoders:
-        return ["-c:v", "libaom-av1", "-cpu-used", "7", "-crf", "34", "-b:v", "0", "-row-mt", "1"]
+        return ["-c:v", "libaom-av1", "-cpu-used", "7", "-crf", "36", "-b:v", "0", "-row-mt", "1"]
     raise SystemExit("FFmpeg needs an AV1 encoder (libsvtav1 or libaom-av1) for the homepage WebM.")
+
+
+def _tour_tool_versions(tools: dict[str, tuple[str, str]]) -> dict[str, str]:
+    versions = {}
+    for name, (executable, flag) in tools.items():
+        output = subprocess.check_output([executable, flag], text=True)  # noqa: S603 - version query for selected tools
+        versions[name] = output.splitlines()[0]
+    return versions
 
 
 def convert_product_tour(selection: str | None = None) -> None:
@@ -252,19 +264,32 @@ def convert_product_tour(selection: str | None = None) -> None:
             ("product-tour.mp4", h264),
             ("product-tour.webm", _webm_codec(encoders)),
         )))
-    if selection in (None, "product-tour", "portrait", "social"):
-        layouts.append((1080, 1920, ((PORTRAIT_SOCIAL if selection == "social" else PORTRAIT_MASTER, h264),)))
+    # All tour modes refresh the same portrait master, poster and social alias.
+    layouts.append((1080, 1920, ((PORTRAIT_MASTER, h264),)))
     if selection in (None, "product-tour", "social"):
         layouts.append((1600, 900, ((LANDSCAPE_SOCIAL, h264),)))
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     fps = plan["fps"]
     frames = plan["duration"] * fps
-    budgets = {name: limit for name, _, _, limit in SOCIAL_CLIPS}
+    review = BASE_DIR / ".artifacts" / "filmcraft" / "warehouse-4-tour"
+    review.mkdir(parents=True, exist_ok=True)
+    filmcraft = shutil.which("filmcraft-cli")
+    ffprobe = shutil.which("ffprobe")
+    if filmcraft is None or ffprobe is None:
+        raise SystemExit("FilmCraft CLI and ffprobe are required to build the product tour.")
+    tools = {"filmcraft": (filmcraft, "--version"), "ffmpeg": (ffmpeg, "-version"), "ffprobe": (ffprobe, "-version")}
+    if cwebp and selection in (None, "product-tour"):
+        tools["cwebp"] = (cwebp, "-version")
+    versions = _tour_tool_versions(tools)
+    script = Path(__file__).resolve()
+    inputs = (
+        TOUR_TIMING_PATH, RAW_DIR / "product-tour.json", script, script.with_name("product_tour_edit.py"),
+        *(BASE_DIR / asset for asset in (RECEIPT, LEDGER, ICON)),
+    )
+    input_hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in inputs}
 
     def encode(width: int, height: int, exports: tuple, staging: Path) -> None:
-        review = BASE_DIR / ".artifacts" / "filmcraft" / "warehouse-4-tour"
-        review.mkdir(parents=True, exist_ok=True)
         edit = Edit(review / f"warehouse-4-{width}x{height}.fcproj", width, height, fps)
         compose(edit, BASE_DIR, plan, recording, recordings, exhibit)
         with tempfile.TemporaryDirectory(prefix="frames-", dir=review) as temp:
@@ -275,8 +300,7 @@ def convert_product_tour(selection: str | None = None) -> None:
                      "-vf", "setsar=1", "-an", "-map_metadata", "-1",
                      "-frames:v", str(frames), "-r", str(fps), "-fps_mode", "cfr",
                      *codec, "-pix_fmt", "yuv420p", str(target)])
-                _verify_export(target, fps=fps, frames=frames, width=width, height=height,
-                               max_bytes=budgets.get(name, 4_000_000))
+                _verify_export(target, fps=fps, frames=frames, width=width, height=height)
             poster = sequence.with_name(sequence.name % (2 * fps))
             if width == 1440:
                 target = staging / "product-tour.webp"
@@ -285,7 +309,7 @@ def convert_product_tour(selection: str | None = None) -> None:
                 else:
                     run([ffmpeg, "-y", "-loglevel", "error", "-i", str(poster),
                          "-frames:v", "1", "-c:v", "libwebp", "-quality", "85", str(target)])
-            if width == 1080 and selection != "social":
+            if width == 1080:
                 run([ffmpeg, "-y", "-loglevel", "error", "-i", str(poster),
                      "-frames:v", "1", "-vf", "scale=540:960:flags=lanczos", str(staging / PORTRAIT_POSTER)])
 
@@ -295,10 +319,25 @@ def convert_product_tour(selection: str | None = None) -> None:
             futures = [pool.submit(encode, width, height, exports, staging) for width, height, exports in layouts]
             for future in futures:
                 future.result()
-        if selection in (None, "product-tour"):
-            shutil.copyfile(staging / PORTRAIT_MASTER, staging / PORTRAIT_SOCIAL)
-        for target in staging.iterdir():
+        shutil.copyfile(staging / PORTRAIT_MASTER, staging / PORTRAIT_SOCIAL)
+        targets = sorted(staging.iterdir())
+        outputs = {target.name: hashlib.sha256(target.read_bytes()).hexdigest() for target in targets}
+        for target in targets:
             target.replace(OUT_DIR / target.name)
+        write_build_receipt(review / f"receipt-{staging.name.removeprefix('.tour-')}.json", {
+            "schema_version": "lixity-product-tour-build/1",
+            "built_at": utc_now(),
+            "selection": selection or "product-tour",
+            "tools": versions,
+            "inputs_sha256": input_hashes,
+            "recording_sha256": {
+                name: digest
+                for segment in recording["segments"]
+                for name, digest in ((segment["file"], segment["sha256"]), (segment["still"], segment["stillSha256"]))
+            } | {recording["exhibitPage"]["file"]: recording["exhibitPage"]["sha256"]},
+            "encoders": {name: codec for _, _, exports in layouts for name, codec in exports},
+            "outputs_sha256": outputs,
+        })
 
 
 def main() -> int:

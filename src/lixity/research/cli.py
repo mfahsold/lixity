@@ -874,109 +874,10 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 "--output",
                 help="Optional output .md file path (default: stdout)",
             )
-        if name == "zotero-backup":
-            command.add_argument(
-                "--data-dir",
-                required=True,
-                help="Closed Zotero data directory containing zotero.sqlite",
-            )
-            command.add_argument(
-                "--output", required=True, help="New directory for the paired backup"
-            )
-            command.add_argument(
-                "--confirm-zotero-closed",
-                action="store_true",
-                help="Required acknowledgement that Zotero is closed",
-            )
-        elif name == "zotero-restore":
-            command.add_argument(
-                "--from",
-                dest="archive_source",
-                required=True,
-                help="Paired backup directory created by zotero-backup",
-            )
-            command.add_argument(
-                "--to",
-                dest="target_dir",
-                required=True,
-                help="New directory for restored project and Zotero data",
-            )
-        if name == "zotero-export":
-            command.add_argument(
-                "--output",
-                required=True,
-                help="New directory for RIS, files and provenance manifest",
-            )
-            command.add_argument(
-                "--allow-retention",
-                action="store_true",
-                help="Required permission to copy retained source bytes, also with --dry-run",
-            )
-            command.add_argument(
-                "--dry-run",
-                action="store_true",
-                help="Validate the export without writing its output directory",
-            )
-        if name in ("zotero", "zotero-ingest"):
-            command.add_argument(
-                "--library", required=True, help="Explicit Zotero library: users/0 or groups/<id>"
-            )
-            if name == "zotero":
-                choice = command.add_mutually_exclusive_group()
-                choice.add_argument(
-                    "--query",
-                    default="",
-                    help="Filter local library items by query text (default: all)",
-                )
-                choice.add_argument("--item-key", help="Inspect an item and its attachments")
-                choice.add_argument("--collections", action="store_true", help="List collections")
-                command.add_argument(
-                    "--collection-key", help="Restrict item search to this collection"
-                )
-                command.add_argument(
-                    "--limit",
-                    type=int,
-                    choices=range(1, 101),
-                    default=20,
-                    metavar="1..100",
-                    help="Maximum items per page (default: 20)",
-                )
-                command.add_argument("--start", type=int, default=0, help="Zero-based page offset")
-            else:
-                key_group = command.add_mutually_exclusive_group(required=True)
-                key_group.add_argument(
-                    "--attachment-key", nargs="+", help="One or more Zotero attachment keys"
-                )
-                key_group.add_argument(
-                    "--item-key", help="Zotero parent item key to ingest all eligible attachments"
-                )
-                command.add_argument(
-                    "--source-id",
-                    help="Explicitly refresh a matching prior capture (single attachment only)",
-                )
-                command.add_argument(
-                    "--expected-server-id", help="Require the previewed Zotero instance"
-                )
-                command.add_argument(
-                    "--language",
-                    choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"),
-                    help="Language of retained source text (default: research project language)",
-                )
-                command.add_argument(
-                    "--allow-retention",
-                    action="store_true",
-                    help="Required permission to retain attachment bytes, also with --dry-run",
-                )
-                command.add_argument(
-                    "--dry-run",
-                    action="store_true",
-                    help="Validate selected attachments without accepting captures",
-                )
-                command.add_argument(
-                    "--progress",
-                    action="store_true",
-                    help="Report real-time progress phases on stderr",
-                )
+        if name == "zotero" or name.startswith("zotero-"):
+            from . import _zotero_cli
+
+            _zotero_cli.configure(command, name)
         if name in ("dossier", "claim", "link-evidence", "decision", "relate"):
             command.add_argument(
                 "--update",
@@ -3275,98 +3176,10 @@ def run(args: argparse.Namespace) -> int:
                     allow_fallback=getattr(args, "fallback", False),
                     progress_callback=_cli_progress,
                 )
-        elif command in ("zotero-backup", "zotero-restore"):
-            from . import zotero_backup
+        elif command == "zotero" or command.startswith("zotero-"):
+            from . import _zotero_cli
 
-            if command == "zotero-backup":
-                result = zotero_backup.backup(
-                    args.project,
-                    args.data_dir,
-                    args.output,
-                    confirm_closed=args.confirm_zotero_closed,
-                )
-            else:
-                result = zotero_backup.restore(args.archive_source, args.target_dir)
-        elif command == "zotero-export":
-            from . import zotero
-
-            result = zotero.export_library(
-                args.project,
-                args.output,
-                allow_retention=args.allow_retention,
-                dry_run=args.dry_run,
-            )
-        elif command in ("zotero", "zotero-ingest"):
-            from . import zotero
-
-            if command == "zotero" and args.collections:
-                result = zotero.collections(args.project, library=args.library, start=args.start)
-            elif command == "zotero":
-                result = zotero.browse(
-                    args.project,
-                    library=args.library,
-                    query=args.query,
-                    item_key=args.item_key,
-                    limit=args.limit,
-                    start=args.start,
-                    collection_key=args.collection_key,
-                )
-            else:
-                start_time = time.monotonic()
-
-                def _zotero_progress(stage: str, message: str) -> None:
-                    if getattr(args, "progress", False) or sys.stderr.isatty():
-                        elapsed = time.monotonic() - start_time
-                        print(f"[{stage}] ({elapsed:.1f}s) {message}", file=sys.stderr, flush=True)
-
-                if getattr(args, "item_key", None):
-                    if getattr(args, "source_id", None):
-                        raise ResearchError(
-                            "--source-id cannot be used when ingesting an item with multiple attachments"
-                        )
-                    result = zotero.ingest_item(
-                        args.project,
-                        library=args.library,
-                        item_key=args.item_key,
-                        language=args.language,
-                        expected_server_id=args.expected_server_id,
-                        allow_retention=args.allow_retention,
-                        dry_run=args.dry_run,
-                        progress_callback=_zotero_progress,
-                    )
-                else:
-                    att_keys = (
-                        args.attachment_key
-                        if isinstance(args.attachment_key, list)
-                        else [args.attachment_key]
-                    )
-                    if len(att_keys) == 1:
-                        result = zotero.ingest(
-                            args.project,
-                            library=args.library,
-                            attachment_key=att_keys[0],
-                            source_id=args.source_id,
-                            language=args.language,
-                            expected_server_id=args.expected_server_id,
-                            allow_retention=args.allow_retention,
-                            dry_run=args.dry_run,
-                            progress_callback=_zotero_progress,
-                        )
-                    else:
-                        if getattr(args, "source_id", None):
-                            raise ResearchError(
-                                "--source-id cannot be used when ingesting multiple attachments"
-                            )
-                        result = zotero.ingest_attachments(
-                            args.project,
-                            library=args.library,
-                            attachment_keys=att_keys,
-                            language=args.language,
-                            expected_server_id=args.expected_server_id,
-                            allow_retention=args.allow_retention,
-                            dry_run=args.dry_run,
-                            progress_callback=_zotero_progress,
-                        )
+            result = _zotero_cli.run(args)
         elif command == "manuscript-links":
             result = api.list_manuscript_links(
                 args.project, claim_id=args.claim_id, include_retracted=args.include_retracted

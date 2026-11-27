@@ -16,7 +16,7 @@ from .speech_profiles import (
     mlx_audio_uses_model_speed,
     profile_uses_reference,
 )
-from .speech_qwen import MAX_RESPONSE_BYTES
+from .speech_worker import MAX_RESPONSE_BYTES
 
 CACHE_BYTES = 2 * 1024**3
 _SCHEMA = "lixity-speech-segment/1"

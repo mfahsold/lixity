@@ -21,7 +21,7 @@ from ..research import api as research_api
 from ..speech_status import native_worker_inventory
 from ..speech_trim import MAX_TRIM_REQUEST_BYTES
 from ..status import LANGUAGE_CODES
-from ..ui.dashboard import DIAGRAM_LIBRARY_FILE, DIAGRAM_LIBRARY_ROUTE, _bundle
+from ..ui.asset_bundle import DIAGRAM_LIBRARY_FILE, DIAGRAM_LIBRARY_ROUTE, bundle_assets
 from ..ui.metric_reference import METRIC_REFERENCE_PATH, metric_reference_document
 from ..workspace_labels import workspace_labels_for
 from ._state import RefreshOutcome
@@ -270,7 +270,7 @@ class LixityServerHandler(
         self._json({"ok": False, "message": "Not found"}, 404)
 
     def _handle_diagram_library(self) -> None:
-        self._send(200, _bundle((DIAGRAM_LIBRARY_FILE,)).encode("utf-8"),
+        self._send(200, bundle_assets((DIAGRAM_LIBRARY_FILE,)).encode("utf-8"),
                    "application/javascript; charset=utf-8", headers={"Cache-Control": "private, max-age=86400"})
 
     def _handle_paragraph_evidence(self) -> None:
@@ -292,7 +292,7 @@ class LixityServerHandler(
             self._send(200, body, "application/json; charset=utf-8")
 
     def _handle_audio_capture_asset(self) -> None:
-        self._send(200, _bundle(("audio-capture.js",)).encode("utf-8"), MIME_TYPES[".js"])
+        self._send(200, bundle_assets(("audio-capture.js",)).encode("utf-8"), MIME_TYPES[".js"])
 
     def _handle_workspace_close(self, payload: dict[str, Any]) -> None:
         registry = getattr(self.server, "workspaces", None)

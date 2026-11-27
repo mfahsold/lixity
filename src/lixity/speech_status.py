@@ -13,7 +13,7 @@ from .speech_profiles import (
     audio_capabilities,
     parse_audio_settings,
 )
-from .speech_qwen import worker_health
+from .speech_worker import worker_health
 
 
 def _probe_native(engine: str, target: str) -> dict[str, Any]:

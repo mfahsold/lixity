@@ -1777,181 +1777,55 @@ diagnostics require debug mode. API diagnostics include the request method,
 route, status and duration. Backend debug lines carry UTC timestamps. Review
 logs before sharing them, since errors may mention local paths or source text.
 
-## Dashboard workflow
+## Browser workspace bookmarks
 
-The [browser workspace manual](WORKSPACE.md) owns reading, review, project controls
-and sharing. These topic links preserve earlier bookmarks.
+The [browser workspace manual](WORKSPACE.md) owns reading, review, project
+controls and sharing. Earlier bookmarks lead to the corresponding sections.
 
-### A connected first session
+<a id="dashboard-workflow"></a>
 
-See [A connected first session](WORKSPACE.md#a-connected-first-session).
+- <a id="a-connected-first-session"></a>[A connected first session](WORKSPACE.md#a-connected-first-session)
+- <a id="inspect-project-structure"></a>[Inspect project structure](WORKSPACE.md#inspect-project-structure)
+- <a id="download-a-manuscript-pdf-since-v240"></a><a id="download-a-manuscript-pdf"></a>[Download a manuscript PDF](WORKSPACE.md#download-a-manuscript-pdf)
+- <a id="export-a-reading-website"></a>[Export a reading website](WORKSPACE.md#export-a-reading-website)
+- <a id="include-existing-chapter-recordings-unreleased"></a><a id="include-existing-chapter-recordings"></a>[Include existing chapter recordings](WORKSPACE.md#include-existing-chapter-recordings-unreleased)
+- <a id="curate-a-reader-publication"></a>[Curate a reader publication](WORKSPACE.md#curate-a-reader-publication)
+- <a id="sharing-limits-and-automation"></a>[Sharing limits and automation](WORKSPACE.md#sharing-limits-and-automation)
+- <a id="check-a-reading-website-before-exporting"></a>[Check a reading website before exporting](WORKSPACE.md#check-a-reading-website-before-exporting)
+- <a id="start-a-review-since-v230"></a><a id="start-a-review"></a>[Start a review](WORKSPACE.md#start-a-review)
+- <a id="read-a-dossier-beside-the-manuscript-since-v240"></a><a id="read-a-dossier-beside-the-manuscript"></a>[Read a dossier beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript)
+- <a id="link-a-manuscript-quote-to-a-claim-v030"></a><a id="link-a-manuscript-quote-to-a-claim"></a>[Link a manuscript quote to a claim](WORKSPACE.md#link-a-manuscript-quote-to-a-claim)
+- <a id="reading-paragraphs-since-v230"></a><a id="reading-paragraphs"></a>[Reading paragraphs](WORKSPACE.md#reading-paragraphs)
+- <a id="searching-the-manuscript"></a>[Searching the manuscript](WORKSPACE.md#searching-the-manuscript)
+- <a id="source-availability-and-saved-analysis"></a>[Source availability and saved analysis](WORKSPACE.md#source-availability-and-saved-analysis)
+- <a id="style-area-since-v230"></a><a id="style-area"></a>[Style area](WORKSPACE.md#style-area)
+- <a id="settings-and-interpretation"></a>[Settings and interpretation](WORKSPACE.md#settings-and-interpretation)
+- <a id="style-space-navigation"></a>[Style-space navigation](WORKSPACE.md#style-space-navigation)
 
-### Inspect project structure
-
-See [Inspect project structure](WORKSPACE.md#inspect-project-structure).
-
-<a id="download-a-manuscript-pdf-since-v240"></a>
-
-### Download a manuscript PDF
-
-See [Download a manuscript PDF](WORKSPACE.md#download-a-manuscript-pdf).
-
-### Export a reading website
-
-See [Export a reading website](WORKSPACE.md#export-a-reading-website).
-
-<a id="include-existing-chapter-recordings-unreleased"></a>
-<a id="include-existing-chapter-recordings"></a>
-
-#### Include existing chapter recordings
-
-See [Include existing chapter recordings](WORKSPACE.md#include-existing-chapter-recordings-unreleased).
-
-#### Curate a reader publication
-
-See [Curate a reader publication](WORKSPACE.md#curate-a-reader-publication).
-
-#### Sharing limits and automation
-
-See [Sharing limits and automation](WORKSPACE.md#sharing-limits-and-automation).
-
-#### Check a reading website before exporting
-
-See [Check a reading website before exporting](WORKSPACE.md#check-a-reading-website-before-exporting).
-
-<a id="start-a-review-since-v230"></a>
-
-### Start a review
-
-See [Start a review](WORKSPACE.md#start-a-review).
-
-<a id="read-a-dossier-beside-the-manuscript-since-v240"></a>
-
-### Read a dossier beside the manuscript
-
-See [Read a dossier beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript).
-
-<a id="link-a-manuscript-quote-to-a-claim-v030"></a>
-
-### Link a manuscript quote to a claim
-
-See [Link a manuscript quote to a claim](WORKSPACE.md#link-a-manuscript-quote-to-a-claim).
-
-<a id="reading-paragraphs-since-v230"></a>
-
-### Reading paragraphs
-
-See [Reading paragraphs](WORKSPACE.md#reading-paragraphs).
-
-### Searching the manuscript
-
-See [Searching the manuscript](WORKSPACE.md#searching-the-manuscript).
-
-### Source availability and saved analysis
-
-See [Source availability and saved analysis](WORKSPACE.md#source-availability-and-saved-analysis).
-
-<a id="style-area-since-v230"></a>
-
-### Style area
-
-See [Style area](WORKSPACE.md#style-area).
-
-### Settings and interpretation
-
-See [Settings and interpretation](WORKSPACE.md#settings-and-interpretation).
-
-### Style-space navigation
-
-See [Style-space navigation](WORKSPACE.md#style-space-navigation).
-
-## Audio commands and workflows
+## Audio bookmarks
 
 The [audio manual](AUDIO.md#getting-started) owns recording, voice profiles,
-direction, synthesis and playback. The headings below preserve earlier bookmarks;
-behavior is defined in the linked audio sections, not here.
-See [Project pronunciations](AUDIO.md#project-pronunciations)
-for the saved dictionary and engine-specific routes, and
-[Audio status](AUDIO.md#audio-status) for runtime checks before rendering.
+direction, synthesis and playback. See the [project pronunciation
+dictionary](AUDIO.md#project-pronunciations) for engine-specific routes.
 
-<a id="audio-export-and-external-providers-unreleased"></a>
-<a id="audio-export-and-external-providers"></a>
+<a id="audio-commands-and-workflows"></a>
 
-### Audio export and external providers
-
-See [Audio export and external providers](AUDIO.md#audio-export-and-external-providers-unreleased).
-
-<a id="inspect-and-compare-externally-generated-audio-unreleased"></a>
-<a id="inspect-and-compare-externally-generated-audio"></a>
-
-### Inspect and compare externally generated audio
-
-See [Inspect and compare externally generated audio](AUDIO.md#inspect-and-compare-externally-generated-audio-unreleased).
-
-### Audio status
-
-See [Audio status](AUDIO.md#audio-status).
-
-### `lixity read-aloud`
-
-See [lixity read-aloud](AUDIO.md#lixity-read-aloud).
-
-<a id="author-voice-recording-and-listening"></a>
-
-See [Author voice recording and listening](AUDIO.md#author-voice-recording-and-listening).
-
-### Experimental Qwen VoiceDesign
-
-See [Experimental Qwen VoiceDesign](AUDIO.md#experimental-qwen-voicedesign).
-
-<a id="experimental-coqui-and-openvoice-audio-unreleased"></a>
-<a id="experimental-coqui-and-openvoice-audio"></a>
-
-### Experimental Coqui and OpenVoice audio
-
-See [Experimental Coqui and OpenVoice audio](AUDIO.md#experimental-coqui-and-openvoice-audio-unreleased).
-
-### Experimental reference voices
-
-See [Experimental reference voices](AUDIO.md#experimental-reference-voices).
-
-### Microphone settings and calibration (`audio-microphone`, `audio-calibrate`, `audio-reference record`)
-
-See [Microphone settings and calibration (audio-microphone, audio-calibrate, audio-reference record)](AUDIO.md#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record).
-
-### Manuscript Teleprompter: Direction cues, phonetics, and synchronized dossier images
-
-See [Manuscript Teleprompter: Direction cues, phonetics, and synchronized dossier images](AUDIO.md#manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images).
-
-### Audio and video playback
-
-See [Audio and video playback](AUDIO.md#audio-and-video-playback).
-
-<a id="retained-f5-tts-profiles-unreleased"></a>
-<a id="retained-f5-tts-profiles"></a>
-
-### Retained F5-TTS profiles
-
-See [Retained F5-TTS profiles](AUDIO.md#retained-f5-tts-profiles-unreleased).
-
-<a id="ims-toucan-phonetics-and-structured-direction-unreleased"></a>
-<a id="ims-toucan-phonetics-and-structured-direction"></a>
-
-### IMS-Toucan phonetics and structured direction
-
-See [IMS-Toucan phonetics and structured direction](AUDIO.md#ims-toucan-phonetics-and-structured-direction-unreleased).
-
-### Single narrator and delivery variation
-
-See [Single narrator and delivery variation](AUDIO.md#single-narrator-and-delivery-variation).
-
-### Check narration continuity before a chapter render
-
-See [Check narration continuity before a chapter render](AUDIO.md#check-narration-continuity-before-a-chapter-render).
-
-### Passage direction
-
-See [Passage direction](AUDIO.md#passage-direction).
+- <a id="audio-export-and-external-providers-unreleased"></a><a id="audio-export-and-external-providers"></a>[Audio export and external providers](AUDIO.md#audio-export-and-external-providers-unreleased)
+- <a id="inspect-and-compare-externally-generated-audio-unreleased"></a><a id="inspect-and-compare-externally-generated-audio"></a>[Inspect and compare externally generated audio](AUDIO.md#inspect-and-compare-externally-generated-audio-unreleased)
+- <a id="audio-status"></a>[Audio status](AUDIO.md#audio-status)
+- <a id="lixity-read-aloud"></a>[lixity read-aloud](AUDIO.md#lixity-read-aloud)
+- <a id="author-voice-recording-and-listening"></a>[Author voice recording and listening](AUDIO.md#author-voice-recording-and-listening)
+- <a id="experimental-qwen-voicedesign"></a>[Experimental Qwen VoiceDesign](AUDIO.md#experimental-qwen-voicedesign)
+- <a id="experimental-coqui-and-openvoice-audio-unreleased"></a><a id="experimental-coqui-and-openvoice-audio"></a>[Experimental Coqui and OpenVoice audio](AUDIO.md#experimental-coqui-and-openvoice-audio-unreleased)
+- <a id="experimental-reference-voices"></a>[Experimental reference voices](AUDIO.md#experimental-reference-voices)
+- <a id="microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record"></a>[Microphone settings and calibration (audio-microphone, audio-calibrate, audio-reference record)](AUDIO.md#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record)
+- <a id="manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images"></a>[Manuscript Teleprompter: Direction cues, phonetics, and synchronized dossier images](AUDIO.md#manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images)
+- <a id="audio-and-video-playback"></a>[Audio and video playback](AUDIO.md#audio-and-video-playback)
+- <a id="retained-f5-tts-profiles-unreleased"></a><a id="retained-f5-tts-profiles"></a>[Retained F5-TTS profiles](AUDIO.md#retained-f5-tts-profiles-unreleased)
+- <a id="ims-toucan-phonetics-and-structured-direction-unreleased"></a><a id="ims-toucan-phonetics-and-structured-direction"></a>[IMS-Toucan phonetics and structured direction](AUDIO.md#ims-toucan-phonetics-and-structured-direction-unreleased)
+- <a id="single-narrator-and-delivery-variation"></a>[Single narrator and delivery variation](AUDIO.md#single-narrator-and-delivery-variation)
+- <a id="check-narration-continuity-before-a-chapter-render"></a>[Check narration continuity before a chapter render](AUDIO.md#check-narration-continuity-before-a-chapter-render)
+- <a id="passage-direction"></a>[Passage direction](AUDIO.md#passage-direction)
 
 ## Development
 

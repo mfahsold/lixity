@@ -10,7 +10,7 @@ and Dutch. The technical manuals are maintained in English.
 | Starting point | Read or try |
 | --- | --- |
 | Try a passage before installing | [Browser exercise in German or English](sandbox/index.html) · [Read-only example project in English](demo/report.html) |
-| Find the installer or check your version | [Installation and updates](INSTALLATION.md) |
+| Download Lixity or check your installed version | [Desktop downloads](guides/installation.html#desktop) · [Browser app and CLI](guides/installation.html#install) · [Installation and updates](INSTALLATION.md) |
 | Open your first manuscript and inspect a finding | [Find a marked sentence in the demo](guides/first-look.html#passage) · [First session in your project](ONBOARDING.md) |
 
 Use **Tools → System Status & Extensions** to identify a desktop build, or
@@ -53,6 +53,9 @@ explains offline help.
 | First session, commands, data boundaries or analysis methods | Use the maintained manuals above. Check the command help, response contract or visible interface label for the installed version. |
 | Product website and localized homepages | Edit `templates/` and `locales/`. These sources generate the public homepages. |
 | Illustrated guides and articles | Edit the HTML source under `guides/` or `blog/`. `make docs-sync` regenerates the paired `.html.md` alternates and the blog feed. |
+| Installer cards in the installation guide | Update the reviewed [release catalog](desktop-downloads.json) or [preview record](https://github.com/mfahsold/lixity/blob/main/docs/desktop-test-build.json) through the [desktop download procedure](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#public-desktop-downloads). `make docs-sync` generates the download cards and installer checksums in the HTML. |
+| Localized metric reference | The app and Pages share the [metric reference renderer](https://github.com/mfahsold/lixity/blob/main/src/lixity/ui/metric_reference.py). `make docs-sync` generates `guides/metrics/` from it. |
+| Shared styles | [Packaged design tokens and components](https://github.com/mfahsold/lixity/tree/main/src/lixity/ui/assets) also ship on Pages. `assets/home.css` and `assets/site.css` own website layout. |
 | Demo, example reports, screenshots and videos | Follow the [demo maintenance guide](https://github.com/mfahsold/lixity/blob/main/docs/demo/README.md), [screenshot](screenshots/README.md) and [video](videos/README.md) procedures. They identify the source fixture, reviewed outputs and generation order. |
 | Wiki and offline reference bundle | `wiki/` provides short entries into the manuals. The `llms-full.txt` bundle is generated from maintained documentation. |
 

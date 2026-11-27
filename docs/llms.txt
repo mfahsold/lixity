@@ -43,11 +43,11 @@ source version. Product versions, response schemas and archive schemas are separ
 ## Choose a maintained reference
 
 - [Documentation map](https://lixity.de/README.md): tasks, manual ownership and historical records.
-- [Installation](https://lixity.de/INSTALLATION.md): environments, service lifecycle, updates and optional workers.
+- [Installation](https://lixity.de/INSTALLATION.md): desktop and CLI setup, service lifecycle and updates.
 - [First session](https://lixity.de/ONBOARDING.md) and [Workspace](https://lixity.de/WORKSPACE.md): open, write, review, recover and share.
 - [CLI and configuration](https://lixity.de/USAGE.md): commands, settings, scoped analysis and exports.
 - [Automation contracts](https://lixity.de/AGENTS.md): JSON versions, MCP, Python, HTTP, guarded writes and error semantics.
-- [Audio](https://lixity.de/AUDIO.md): planning, synthesis, recordings, teleprompter and audio exchange.
+- [Audio](https://lixity.de/AUDIO.md): planning, [synthesis routes and worker setup](https://lixity.de/AUDIO.md#choose-a-synthesis-route), recordings, teleprompter and audio exchange.
 - [Research usage](https://lixity.de/research/USAGE.md) and [data model](https://lixity.de/research/DATA_MODEL.md): retained evidence, Zotero, dossiers, archival formats and recovery.
 - [Project backup and restore](https://lixity.de/PROJECT_BACKUP.md): included files, separate audio preservation and fresh-directory restoration.
 - [Measurement reference](https://lixity.de/guides/metrics/en.html), [Methods](https://lixity.de/METHODS.md) and [Stability](https://lixity.de/STABILITY.md): measured scope, formulas and limits.
@@ -60,7 +60,7 @@ source version. Product versions, response schemas and archive schemas are separ
 
 - [Blog](https://lixity.de/blog/index.html): articles on revision, measurement, research workflow and the example project; every page has a Markdown twin at the same path plus `.md`. The [Atom feed](https://lixity.de/blog/feed.xml) carries the same articles. Recent: [Who sees the scratches first? Manuscript revision in Lixity 0.9.3](https://lixity.de/blog/lixity-093-manuscript-revision.html), [A board moved. Should Mara turn in the same sentence?](https://lixity.de/blog/lixity-093-one-passage-revision.html) and [a reference corridor from Effi Briest](https://lixity.de/blog/effi-briest-case-study.html).
 - Interactive examples from [Effi Briest](https://lixity.de/examples/effi-briest.html) and [Pride and Prejudice](https://lixity.de/examples/pride-and-prejudice.html): selected chapters, with PDF analysis of each novel.
-- [Screenshots](https://lixity.de/screenshots/README.md) and [recorded tours](https://lixity.de/videos/README.md): checked stills, a 48-second product tour and two social clips with their review notes.
+- [Screenshots](https://lixity.de/screenshots/README.md) and [recorded tours](https://lixity.de/videos/README.md): reviewed stills, the 60-second Warehouse 4 tour in landscape and portrait formats, and short task walkthroughs.
 - [Changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): released changes and the unreleased section, kept outside the published site root.
 - Localized homepages: [Deutsch](https://lixity.de/index-de.html), [Español](https://lixity.de/index-es.html), [Français](https://lixity.de/index-fr.html), [Italiano](https://lixity.de/index-it.html), [Nederlands](https://lixity.de/index-nl.html), [Português](https://lixity.de/index-pt.html).
 - Measurement reference in all seven languages: [de](https://lixity.de/guides/metrics/de.html), [en](https://lixity.de/guides/metrics/en.html), [es](https://lixity.de/guides/metrics/es.html), [fr](https://lixity.de/guides/metrics/fr.html), [it](https://lixity.de/guides/metrics/it.html), [nl](https://lixity.de/guides/metrics/nl.html), [pt](https://lixity.de/guides/metrics/pt.html). These reference pages use `noindex,follow` and are linked from the product website and the workspace.

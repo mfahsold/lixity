@@ -5,9 +5,18 @@
   <subtitle>Articles on revision, measurement, research workflow and the example project.</subtitle>
   <link rel="alternate" type="text/html" href="https://lixity.de/blog/index.html"/>
   <link rel="self" type="application/atom+xml" href="https://lixity.de/blog/feed.xml"/>
-  <updated>2026-11-26T00:00:00Z</updated>
+  <updated>2026-11-27T00:00:00Z</updated>
   <icon>https://lixity.de/favicon.ico</icon>
   <author><name>Matthias Fahsold</name><uri>https://github.com/mfahsold</uri></author>
+  <entry>
+    <id>https://lixity.de/blog/lixity-093-manuscript-revision.html</id>
+    <title xml:lang="en">Who sees the scratches first? Manuscript revision in Lixity 0.9.3: Lixity blog</title>
+    <link rel="alternate" type="text/html" href="https://lixity.de/blog/lixity-093-manuscript-revision.html"/>
+    <published>2026-11-26T00:00:00Z</published>
+    <updated>2026-11-27T00:00:00Z</updated>
+    <author><name>Matthias Fahsold</name></author>
+    <summary xml:lang="en" type="text">Move one sentence in the Warehouse 4 opening and see when the clue reaches the reader. Try both versions side by side in Lixity 0.9.3.</summary>
+  </entry>
   <entry>
     <id>https://lixity.de/blog/speech-direction-and-style-space.html</id>
     <title xml:lang="en">From chapter comparisons to spoken direction: 3D style space and speech-plan export | Lixity blog</title>
@@ -43,15 +52,6 @@
     <updated>2026-11-26T00:00:00Z</updated>
     <author><name>Matthias Fahsold</name></author>
     <summary xml:lang="en" type="text">Read two versions of the same action in Warehouse 4 and decide whether Mara needs a beat before she turns.</summary>
-  </entry>
-  <entry>
-    <id>https://lixity.de/blog/lixity-093-manuscript-revision.html</id>
-    <title xml:lang="en">Who sees the scratches first? Manuscript revision in Lixity 0.9.3: Lixity blog</title>
-    <link rel="alternate" type="text/html" href="https://lixity.de/blog/lixity-093-manuscript-revision.html"/>
-    <published>2026-11-26T00:00:00Z</published>
-    <updated>2026-11-26T00:00:00Z</updated>
-    <author><name>Matthias Fahsold</name></author>
-    <summary xml:lang="en" type="text">Move one sentence in the Warehouse 4 opening and see when the clue reaches the reader. Try both versions side by side in Lixity 0.9.3.</summary>
   </entry>
   <entry>
     <id>https://lixity.de/blog/literary-quality-and-editorial-metrics.html</id>

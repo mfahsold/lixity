@@ -93,6 +93,8 @@ server.serve_forever()
         await openProfile('Retained voice');
         await page.locator('[data-speech-action=create]').click();
         assert.equal(await page.locator('#speech-engine').inputValue(),'ims-toucan','IMS-Toucan is the German default when ZONOS3 is unavailable');
+        assert.deepEqual(await page.locator('#speech-engine option').evaluateAll(options => options.map(option => option.value).sort()),
+          ['ims-toucan', 'mlx-audio', 'openai-compatible'], 'New profiles show the three current synthesis routes');
         assert.equal(await page.locator('#speech-language').inputValue(),'de');
         await page.locator('#speech-name').fill('Synthetic author voice');
         await page.locator('#speech-reference_id').selectOption(server.fixture.reference);

@@ -65,10 +65,12 @@ synthesizes audio.
 | Your own voice with specific IPA or structured delivery in German or English | [Local IMS-Toucan](#ims-toucan-author-voice-and-phonetic-direction) | A saved reference, IPA, duration, intonation and energy variation, and explicit pauses |
 | Free-text direction through a service you choose | [OpenAI-compatible endpoint](#configure-an-openai-compatible-provider) | The provider's voice and model, with documented and explicitly enabled instruction support |
 
-For a preset voice or an existing worker, see [Qwen](#optional-qwen-audio-worker)
-and [experimental Coqui/OpenVoice](#coqui-and-openvoice-worker-setup). The
-[profile table](#voice-profiles) includes their controls and retained F5-TTS
-settings.
+The workspace offers these three routes when creating a profile. Existing
+[Qwen](#optional-qwen-audio-worker) and
+[Coqui/OpenVoice](#coqui-and-openvoice-worker-setup) profiles keep their voice
+and remain available with their configured workers. Retained profiles appear
+under their own engine group. The [profile table](#voice-profiles) also covers
+F5-TTS settings retained for export and cached audio.
 
 For the CLI, inspect the plan and worker status before synthesis.
 

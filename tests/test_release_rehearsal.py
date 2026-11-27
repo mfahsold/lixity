@@ -1,25 +1,83 @@
 """Release evidence records the observed source and comparable corpus results."""
 
 import json
+import shutil
+import subprocess
 
 import pytest
 
 from scripts import run_release_rehearsal as rehearsal
+from scripts.build_evidence import build_output_parent, source_state
+
+
+@pytest.fixture
+def checkout(tmp_path):
+    git = shutil.which("git")
+    if git is None:
+        pytest.skip("Git is required for build evidence")
+    root = tmp_path / "source"
+    root.mkdir()
+    (root / ".gitignore").write_text("/.artifacts/\n", encoding="utf-8")
+    for args in (("init",), ("add", ".gitignore"), (
+        "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
+        "-c", "commit.gpgsign=false", "commit", "-m", "Add ignore rules",
+    )):
+        subprocess.run([git, *args], cwd=root, check=True, capture_output=True)  # noqa: S603
+    return root
+
+
+def test_source_state_hashes_same_name_untracked_edits_and_ignores_output(checkout):
+    assert source_state(checkout)["dirty"] is False
+    new_source = checkout / "new module.py"
+    new_source.write_text("x = 1\n", encoding="utf-8")
+    before = source_state(checkout)
+    assert before["dirty"] is True
+    new_source.write_text("x = 2\n", encoding="utf-8")
+    after = source_state(checkout)
+    assert before["status_sha256"] == after["status_sha256"]
+    assert before["tracked_diff_sha256"] == after["tracked_diff_sha256"]
+    assert before["untracked_files_sha256"] != after["untracked_files_sha256"]
+    (checkout / ".artifacts").mkdir()
+    (checkout / ".artifacts/results.json").write_text("ignored", encoding="utf-8")
+    assert source_state(checkout) == after
+
+
+def test_build_output_root_precedence_and_git_boundary(checkout, tmp_path, monkeypatch):
+    default = checkout / ".artifacts/release-rehearsal"
+    monkeypatch.delenv("LIXITY_BUILD_OUTPUT_ROOT", raising=False)
+    assert build_output_parent(checkout, default, None) == default.resolve()
+    outside = (tmp_path / "shared evidence").resolve()
+    monkeypatch.setenv("LIXITY_BUILD_OUTPUT_ROOT", str(outside))
+    assert build_output_parent(checkout, default, None) == outside / "release-rehearsal"
+    explicit = checkout / ".artifacts/shared"
+    assert build_output_parent(checkout, default, explicit) == explicit.resolve() / "release-rehearsal"
+    with pytest.raises(ValueError, match="Git-ignored build output"):
+        build_output_parent(checkout, default, checkout / "docs")
+
+
+def test_rehearsal_rejects_dirty_promotion_before_creating_artifacts(checkout, monkeypatch):
+    monkeypatch.setattr(rehearsal, "ROOT", checkout)
+    (checkout / "untracked.py").write_text("x = 1\n", encoding="utf-8")
+    dist = checkout / "dist"
+    with pytest.raises(ValueError, match="clean checkout of the reviewed commit"):
+        rehearsal.rehearse(jobs=1, tag=None, dist=dist, skip_wheel=False)
+    assert not dist.exists()
+    assert not (checkout / ".artifacts").exists()
 
 
 @pytest.mark.parametrize("drift", ["none", "before wheel", "after wheel"])
 def test_rehearsal_keeps_independent_results_and_skips_drifted_candidate(
-    tmp_path, monkeypatch, drift,
+    tmp_path, checkout, monkeypatch, drift,
 ):
-    monkeypatch.setattr(rehearsal, "ROOT", tmp_path)
+    monkeypatch.setattr(rehearsal, "ROOT", checkout)
     monkeypatch.setattr(rehearsal, "source_version", lambda *_: "0.9.3")
     clean = {"commit": "a" * 40, "dirty": False}
     changed = {**clean, "dirty": True}
     states = iter([clean, changed if drift == "before wheel" else clean,
                    clean if drift == "none" else changed])
-    monkeypatch.setattr(rehearsal, "source_state", lambda: next(states))
+    monkeypatch.setattr(rehearsal, "source_state", lambda _: next(states))
     for name in ("samples/first-look.md", "scripts/example_project.py", "tests/fixtures/literary_reference.json"):
-        fixture = tmp_path / name
+        fixture = checkout / name
         fixture.parent.mkdir(parents=True, exist_ok=True)
         fixture.write_text(name, encoding="utf-8")
     called, promotions = [], []
@@ -37,8 +95,10 @@ def test_rehearsal_keeps_independent_results_and_skips_drifted_candidate(
     monkeypatch.setattr(rehearsal, "run_stage", observe)
     monkeypatch.setattr(rehearsal, "promote_artifacts", lambda *args: promotions.append(args))
     final_dist = tmp_path / "final-dist"
-    result = rehearsal.rehearse(jobs=1, tag=None, dist=final_dist, skip_wheel=False)
-    run, = (tmp_path / ".artifacts/release-rehearsal").iterdir()
+    output_root = tmp_path / "shared"
+    result = rehearsal.rehearse(jobs=1, tag=None, dist=final_dist, skip_wheel=False,
+                                output_root=output_root)
+    run, = (output_root / "release-rehearsal").iterdir()
     receipt = rehearsal.read_receipt(run)
     assert result == int(drift != "none")
     assert receipt["stages"]["browser"]["status"] == receipt["stages"]["corpus"]["status"] == "passed"
@@ -57,7 +117,7 @@ def test_rehearsal_keeps_independent_results_and_skips_drifted_candidate(
         assert called == ["browser", "corpus", "wheel"]
         assert receipt["wheel_checksums"] == {"lixity-0.9.3.whl": "b" * 64}
         assert receipt["promotion"] == "passed"
-        assert promotions == [(tmp_path, run / "dist", final_dist, None)]
+        assert promotions == [(checkout, run / "dist", final_dist, None)]
 
 
 def test_comparison_rejects_different_inputs_and_separates_timing_environment(tmp_path, capsys):

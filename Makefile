@@ -72,6 +72,8 @@ release-check: ## Validate the tag first, then test once, check generated docs, 
 	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to match the source version"; exit 1)
 	$(VPY) scripts/check_release.py --source-only --require-release-notes --tag "$(RELEASE_TAG)"
 	@commit=$$(git rev-parse --verify HEAD) && \
+		status=$$(git status --porcelain=v1 --untracked-files=all --ignore-submodules=none) && \
+		{ test -z "$$status" || { echo "Use a clean checkout for release-check." >&2; exit 1; }; } && \
 		$(MAKE) check docs-generated-check audit && \
 		$(VPY) scripts/run_release_rehearsal.py --expected-commit "$$commit" \
 		--tag "$(RELEASE_TAG)" --dist "$(RELEASE_DIST)" --jobs "$(BROWSER_JOBS)"

@@ -464,6 +464,76 @@ def test_ci_summary_reports_unknown_results_when_manifest_is_missing_or_invalid(
     assert "Suite body:" not in result.stdout
 
 
+@pytest.mark.parametrize("path", [
+    "src/lixity/speech_worker.py",
+    "src/lixity/speech_profiles.py",
+    "src/lixity/audio_audit.py",
+    "src/lixity/server/routes_speech.py",
+    "src/lixity/ui/assets/audio-capture.js",
+    "src/lixity/ui/assets/speech.js",
+    "src/lixity/ui/assets/teleprompter.css",
+    "desktop/src-tauri/src/audio_capture.rs",
+])
+def test_changed_audio_paths_select_audio_workflows(path):
+    from scripts.run_browser_suites import suite_names, suites_for_paths
+
+    selected = suites_for_paths([path])
+    assert {"audio-loading.cjs", "audio-permission.cjs", "audio-recording-diagnostics.cjs",
+            "audio-references.cjs", "audio-studio.cjs", "reader-audio.cjs", "settings.cjs",
+            "teleprompter-take.cjs"} <= set(selected)
+    assert "home-tour.cjs" not in selected
+    assert "research.cjs" not in selected
+    assert suites_for_paths([path, "src/lixity/ui/unmapped.py"]) == suite_names()
+
+
+@pytest.mark.parametrize("path", [
+    "scripts/build_public_site.py",
+    "scripts/capture_screenshots.cjs",
+    "scripts/make_screenshots.py",
+    "scripts/make_videos.py",
+    "scripts/product_tour_capture.cjs",
+    "scripts/product_tour_edit.py",
+])
+def test_changed_tour_generation_selects_homepage_workflows(path):
+    from scripts.run_browser_suites import suites_for_paths
+
+    selected = suites_for_paths([path])
+    assert {"docs.cjs", "home-tour.cjs", "pages-language.cjs"} <= set(selected)
+    assert "audio-studio.cjs" not in selected
+
+
+def test_changed_project_config_preserves_settings_coverage_in_mixed_changes():
+    from scripts.run_browser_suites import suite_names, suites_for_paths
+
+    config = "src/lixity/config.py"
+    site_export = "src/lixity/site_export.py"
+    assert suites_for_paths([config]) == suite_names()
+    selected = suites_for_paths([site_export, config])
+    assert {"reader-publication.cjs", "settings.cjs"} <= set(selected)
+    assert selected == suite_names()
+
+
+def test_changed_desktop_commands_select_native_project_audio_and_sharing_workflows():
+    from scripts.run_browser_suites import suites_for_paths
+
+    selected = suites_for_paths(["desktop/src-tauri/src/commands.rs"])
+    assert {"audio-microphone.cjs", "audio-recording-diagnostics.cjs",
+            "project-switch-native.cjs", "reader-publication-native.cjs", "settings.cjs"} <= set(selected)
+    assert "analysis-workflow.cjs" not in selected
+
+
+@pytest.mark.parametrize("path", [
+    "desktop/src-tauri/src/lib.rs",
+    "desktop/src-tauri/src/sidecar.rs",
+    "src/lixity/server/desktop.py",
+    "src/lixity/ui/assets/desktop-bridge.js",
+])
+def test_changed_desktop_foundations_select_all_workflows(path):
+    from scripts.run_browser_suites import suite_names, suites_for_paths
+
+    assert suites_for_paths(["scripts/product_tour_edit.py", path]) == suite_names()
+
+
 def test_shard_selection_balances_estimated_duration_instead_of_suite_count(monkeypatch):
     from scripts import run_browser_suites as runner
 

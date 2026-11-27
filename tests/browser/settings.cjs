@@ -233,6 +233,18 @@ server.serve_forever()
 
 async function verifyNativeSpeech(browser) {
   const artifacts=fs.mkdtempSync('/tmp/lixity-speech-native-');
+  const voiceDescription='A natural German narrator with a calm voice.';
+  const newEngines=['ims-toucan','mlx-audio','openai-compatible'];
+  async function assertEngineChoices(page, retainedEngine) {
+    const engine=page.locator('#speech-engine');
+    const expected=retainedEngine ? [...newEngines,retainedEngine].sort() : newEngines;
+    assert.deepEqual(await engine.locator('option').evaluateAll(options=>options.map(option=>option.value).sort()),
+      expected, 'Only current engines and the selected saved engine belong in the picker');
+    for (const id of expected) {
+      const capability=data.audioCapabilities[id];
+      assert.equal(await engine.locator(`option[value="${id}"]`).textContent(),capability.short_name||capability.name);
+    }
+  }
   let fixtureClosing = false;
   const server=await startNativeServer(`
 import json, os, sys, threading
@@ -264,9 +276,19 @@ for locale in LOCALES:
     config.write_text('language = "' + locale + '"\\n', encoding='utf-8')
     # Explicit English narrator also makes Dutch UI testing independent of
     # unsupported default Dutch synthesis; no language is guessed or converted.
-    prepare_project_settings(project, {'audio': {'selected':'narrator', 'profiles':{
-        'narrator': {'name':'Narrator', 'engine':'qwen3', 'language':'en', 'voice':'Ryan'}}}}).commit()
-    reference_ids[locale] = save_reference(project, generate_silence_wav(2), 'Synthetic reference recording.').id
+    reference = save_reference(project, generate_silence_wav(2), 'Synthetic reference recording.').id
+    reference_ids[locale] = reference
+    prepare_project_settings(project, {'audio': {'schema_version':'lixity-audio-settings/3',
+        'selected':'narrator', 'profiles':{
+        'narrator': {'name':'Narrator', 'engine':'qwen3', 'language':'en', 'voice':'Ryan'},
+        'coqui_preset': {'name':'Coqui preset', 'engine':'coqui', 'language':'de', 'voice':'thorsten'},
+        'coqui_reference': {'name':'Coqui reference', 'engine':'coqui-reference', 'language':'de',
+                            'voice':'reference', 'reference_id':reference},
+        'designed_voice': {'name':'Designed voice', 'engine':'qwen3-design', 'language':'en',
+                           'voice':'design', 'voice_description':${JSON.stringify(voiceDescription)}},
+        'reference_voice': {'name':'Reference narrator', 'engine':'qwen3-base', 'language':'en',
+                            'voice':'reference', 'reference_id':reference},
+    }}}).commit()
     projects.append({'locale':locale, 'root':str(project), 'source':str(source), 'config':str(config)})
 implicit = base / 'implicit-narrator'
 implicit.mkdir()
@@ -370,15 +392,13 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-worker-guide').textContent(),labels.speech_worker_guide);
       assert.ok((await page.locator('#speech-worker-guide').getAttribute('href')).endsWith('/USAGE.md#lixity-read-aloud'));
       assert.equal(await page.locator('#speech-worker-guide').getAttribute('rel'),'noopener noreferrer');
-      for (const engine of ['qwen3', 'qwen3-design', 'qwen3-base', 'coqui', 'coqui-reference']) {
-        assert.equal(await page.locator('#speech-engine option[value=' + engine + ']').textContent(),
-          data.audioCapabilities[engine].short_name,
-          'The picker uses the short model name');
-      }
+      await assertEngineChoices(page,'qwen3');
       assert.ok((await page.locator('#speech-engine').getAttribute('data-help')).includes(data.audioCapabilities.qwen3.name),
         'Full model name remains available in help');
       const originalSpeechLanguage = await page.locator('#speech-language').inputValue();
-      await page.locator('#speech-engine').selectOption('coqui');
+      const profilePicker=page.locator('#speech-profile');
+      await profilePicker.selectOption('coqui_preset');
+      await assertEngineChoices(page,'coqui');
       assert.ok((await page.locator('#speech-worker-guide').getAttribute('href')).endsWith('/USAGE.md#experimental-coqui-and-openvoice-audio-unreleased'));
       assert.equal(await page.locator('#speech-language').inputValue(),'de');
       assert.equal(await page.locator('#speech-voice').inputValue(),'thorsten');
@@ -390,10 +410,12 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-instructions').isVisible(),false);
       assert.equal(await page.locator('#speech-runtime-hint').textContent(),labels.speech_runtime_hint);
       assert.equal(await page.locator('#speech-direction-hint').textContent(),labels.speech_direction_export_hint);
-      await page.locator('#speech-engine').selectOption('coqui-reference');
+      await profilePicker.selectOption('coqui_reference');
+      await assertEngineChoices(page,'coqui-reference');
       assert.equal(await page.locator('#speech-voice').inputValue(),'reference');
       assert.equal(await page.locator('#speech-reference_id').isVisible(),true);
-      await page.locator('#speech-engine').selectOption('qwen3');
+      assert.equal(await page.locator('#speech-reference_id').inputValue(),server.fixture.reference_ids[locale]);
+      await profilePicker.selectOption('narrator');
       assert.ok((await page.locator('#speech-worker-guide').getAttribute('href')).endsWith('/USAGE.md#lixity-read-aloud'));
       assert.equal(await page.locator('#speech-direction-hint').textContent(),labels.speech_direction_hint);
       await page.locator('#speech-language').selectOption(originalSpeechLanguage);
@@ -441,19 +463,34 @@ server.serve_forever()
       await page.locator('#speech-engine').evaluate(el=>el.scrollIntoView({block:'center'}));
       await dialog.screenshot({path:path.join(artifacts,`voice-preset-${locale}-${width}.png`)});
       assert.equal(await page.locator('#speech-voice_description').isVisible(),false);
-      await page.locator('#speech-instructions').fill('A synthetic retained delivery.');
-      await page.locator('#speech-engine').selectOption('qwen3-design');
+      await profilePicker.selectOption('designed_voice');
+      await assertEngineChoices(page,'qwen3-design');
       assert.equal(await page.locator('#speech-voice').isVisible(),false);
       assert.equal(await page.locator('#speech-voice_description').isVisible(),true);
+      assert.equal(await page.locator('#speech-voice_description').inputValue(),voiceDescription);
       assert.equal(await page.locator('#speech-voice_description').getAttribute('aria-describedby'),'speech-design-hint');
       assert.equal(await page.locator('#speech-design-hint').textContent(), labels.speech_design_hint);
       const beforeEmptyDescription = await page.locator('#speech-profile option').count();
+      await page.locator('#speech-voice_description').fill('');
       await page.locator('[data-speech-action=create]').click();
       assert.equal(await page.locator('#speech-profile option').count(),beforeEmptyDescription, 'An incomplete VoiceDesign profile cannot be stashed');
       assert.equal(await dialog.locator('#speech-status').textContent(),labels.speech_model_need_description);
-      await page.locator('#speech-voice_description').fill('A natural German narrator with a calm voice.');
+      await page.locator('#speech-voice_description').fill(voiceDescription);
       await dialog.screenshot({path:path.join(artifacts,`voice-design-${locale}-${width}.png`)});
-      await page.locator('#speech-engine').selectOption('qwen3-base');
+      await page.locator('#speech-instructions').fill('A synthetic retained delivery.');
+      await page.locator('#speech-engine').selectOption('mlx-audio');
+      assert.equal(await page.locator('#speech-voice_description').isVisible(),true,'Incompatible draft stays visible until explicitly cleared');
+      assert.equal(await page.locator('#speech-voice_description').inputValue(),voiceDescription);
+      assert.equal(await page.locator('#speech-instructions').inputValue(),'A synthetic retained delivery.');
+      assert.equal(await page.locator('#speech-voice_description').evaluate(el=>el.validity.customError),true);
+      assert.equal(await page.locator('#speech-instructions').evaluate(el=>el.validity.customError),true);
+      await page.locator('[data-speech-action=save]').click();
+      assert.equal(await dialog.isVisible(),true,'Incompatible draft must be resolved before saving');
+      assert.equal(await page.locator('#speech-instructions').inputValue(),'A synthetic retained delivery.');
+      assert.deepEqual(fs.readFileSync(project.config),originalConfig,'Invalid model switch cannot write project settings');
+      await page.locator('#speech-engine').selectOption('qwen3-design');
+      await profilePicker.selectOption('reference_voice');
+      await assertEngineChoices(page,'qwen3-base');
       assert.equal(await page.locator('#speech-worker-status').textContent(),workerText('mismatch',data.audioCapabilities.qwen3.name));
       workerModel = data.audioCapabilities['qwen3-base'].model;
       await page.locator('[data-speech-action=worker_refresh]').click();
@@ -471,18 +508,9 @@ server.serve_forever()
           workerText('match',data.audioCapabilities['qwen3-base'].name));
       }
       assert.equal(await page.locator('#speech-voice').isVisible(),false, 'Base uses its reference rather than a preset');
-      assert.equal(await page.locator('#speech-voice_description').isVisible(),true, 'Incompatible draft stays visible until explicitly cleared');
-      assert.equal(await page.locator('#speech-voice_description').inputValue(),'A natural German narrator with a calm voice.');
-      assert.equal(await page.locator('#speech-instructions').inputValue(),'A synthetic retained delivery.');
-      assert.equal(await page.locator('#speech-voice_description').evaluate(el=>el.validity.customError),true);
-      assert.equal(await page.locator('#speech-instructions').evaluate(el=>el.validity.customError),true);
-      await page.locator('[data-speech-action=save]').click();
-      assert.equal(await dialog.isVisible(),true, 'Incompatible draft must be resolved before saving');
-      assert.equal(await page.locator('#speech-instructions').inputValue(),'A synthetic retained delivery.');
-      assert.deepEqual(fs.readFileSync(project.config), originalConfig, 'Invalid model switch cannot write project settings');
-      await page.locator('#speech-voice_description').fill('');
-      await page.locator('#speech-instructions').fill('');
-      assert.equal(await page.locator('#speech-instructions').isVisible(),false, 'Base hides unsupported text direction after the draft is cleared');
+      assert.equal(await page.locator('#speech-instructions').isVisible(),false,'Base hides unsupported text direction');
+      assert.equal(await page.locator('#speech-reference_id').inputValue(),server.fixture.reference_ids[locale]);
+      assert.equal(await page.locator('#speech-reference_id').getAttribute('aria-describedby'),'speech-reference-hint');
       await page.locator('#speech-reference_id').selectOption('');
       const profileCount = await page.locator('#speech-profile option').count();
       await page.locator('[data-speech-action=create]').click();
@@ -491,12 +519,13 @@ server.serve_forever()
       assert.equal(await page.locator('#speech-reference_id').inputValue(),'', 'The incomplete draft is retained');
       await page.locator('#speech-reference_id').selectOption(server.fixture.reference_ids[locale]);
       await dialog.screenshot({path:path.join(artifacts,`voice-base-${locale}-${width}.png`)});
-      await page.locator('#speech-engine').selectOption('qwen3');
+      await page.locator('#speech-engine').selectOption('openai-compatible');
       assert.equal(await page.locator('#speech-reference_id').isVisible(),true, 'An unused reference stays visible until explicitly removed');
       assert.equal(await page.locator('#speech-reference_id').inputValue(),server.fixture.reference_ids[locale]);
       assert.equal(await page.locator('#speech-reference_id').evaluate(el=>el.validity.customError),true);
-      await page.locator('#speech-reference_id').selectOption('');
-      await page.locator('#speech-engine').selectOption('qwen3');
+      await page.locator('#speech-engine').selectOption('qwen3-base');
+      await profilePicker.selectOption('narrator');
+      workerModel = data.audioCapabilities.qwen3.model;
       assert.equal(await page.locator('#speech-voice').isVisible(),true);
       assert.equal(await dialog.getByText(/Piper/i).count(),0,
         JSON.stringify(await dialog.getByText(/Piper/i).allTextContents()));
@@ -971,6 +1000,7 @@ server.serve_forever()
     await savedPage.locator('#speech-language').selectOption('de');
     await savedPage.locator('[data-speech-action=create]').click();
     assert.equal(await savedPage.locator('#speech-engine').inputValue(),'mlx-audio');
+    await assertEngineChoices(savedPage);
     assert.equal(await savedPage.locator('#speech-voice').inputValue(),'reference', 'An existing recording makes the author voice the first choice');
     assert.equal(await savedPage.locator('#speech-voice option[value=liesel]').count(),1,'The German preset remains available');
     assert.equal(await savedPage.locator('#speech-reference_id').inputValue(),'', 'A new profile does not bind a saved recording');
@@ -985,11 +1015,11 @@ server.serve_forever()
     await savedPage.locator('[data-speech-action=create]').click();
     assert.equal(await savedPage.locator('#speech-language').inputValue(),'de','New author profiles retain the supported chosen language');
     assert.equal(await savedPage.locator('#speech-engine').inputValue(),'ims-toucan');
+    await assertEngineChoices(savedPage);
     assert.equal(await savedPage.locator('#speech-speed').inputValue(),String(data.audioCapabilities['ims-toucan'].speed.default));
     await savedPage.locator('#speech-speed').fill('1.3');
     await savedPage.locator('#speech-name').fill('Saved synthetic narrator');
-    await savedPage.locator('#speech-engine').selectOption('qwen3-design');
-    await savedPage.locator('#speech-voice_description').fill('A natural German narrator with a calm voice.');
+    await savedPage.locator('#speech-reference_id').selectOption(server.fixture.reference_id);
     const saveRequest=savedPage.waitForRequest(request=>request.url().endsWith('/api/settings'));
     await Promise.all([savedPage.waitForNavigation(),savedPage.locator('[data-speech-action=save]').click()]);
     const savedPayload=(await saveRequest).postDataJSON();
@@ -997,19 +1027,19 @@ server.serve_forever()
     assert.ok(Object.values(savedPayload.audio.profiles).every(profile=>!Object.hasOwn(profile,'target')));
     assert.equal(savedPayload.audio.profiles.narrator.speed,1);
     assert.equal(savedPayload.audio.profiles[savedPayload.audio.selected].speed,1.3);
+    assert.equal(savedPayload.audio.profiles[savedPayload.audio.selected].engine,'ims-toucan');
+    assert.equal(savedPayload.audio.profiles.designed_voice.voice_description,voiceDescription);
     await savedPage.locator('#tab-view-project').click();
     await savedPage.locator('#settings-speech').click();
     await savedPage.waitForFunction(()=>document.querySelector('#speech-name').value==='Saved synthetic narrator');
-    assert.equal(await savedPage.locator('#speech-engine').inputValue(),'qwen3-design');
+    assert.equal(await savedPage.locator('#speech-engine').inputValue(),'ims-toucan');
     assert.equal(await savedPage.locator('#speech-speed').inputValue(),'1.3');
-    assert.equal(await savedPage.locator('#speech-voice_description').inputValue(),'A natural German narrator with a calm voice.');
-    await savedPage.locator('[data-speech-action=create]').click();
-    await savedPage.locator('#speech-name').fill('Reference narrator');
-    await savedPage.locator('#speech-engine').selectOption('qwen3-base');
+    assert.equal(await savedPage.locator('#speech-reference_id').inputValue(),server.fixture.reference_id);
+    await savedPage.locator('#speech-profile').selectOption('reference_voice');
+    await assertEngineChoices(savedPage,'qwen3-base');
     assert.ok(await savedPage.locator('#speech-reference_id').isVisible());
     assert.equal(await savedPage.locator('#speech-reference_id').getAttribute('aria-describedby'), 'speech-reference-hint');
-    await savedPage.locator('#speech-reference_id').selectOption(server.fixture.reference_id);
-    assert.equal(await savedPage.locator('#speech-engine option:checked').textContent(), data.audioCapabilities['qwen3-base'].short_name);
+    assert.equal(await savedPage.locator('#speech-reference_id').inputValue(),server.fixture.reference_id);
     assert.ok((await savedPage.locator('#speech-engine').getAttribute('data-help')).includes(data.audioCapabilities['qwen3-base'].name));
     await Promise.all([savedPage.waitForNavigation(),savedPage.locator('[data-speech-action=save]').click()]);
     await savedPage.locator('#tab-view-project').click();
@@ -1073,7 +1103,7 @@ server.serve_forever()
       assert.deepEqual(fs.readFileSync(legacyProject.source),legacySource,'Migration guidance never changes source');
       await page.close();
     }
-    console.log(`Native Qwen audio: synthetic WAV over real HTTP, ${server.fixture.projects.length} locales at 1440/320, VoiceDesign profiles, paragraph previews, cache/target controls, cancellation, stale results, keyboard/Escape and unchanged sources passed. ${artifacts}`);
+    console.log(`Native audio: three creation engines, retained profiles, and synthetic WAV over real HTTP across ${server.fixture.projects.length} locales at 1440/320. Paragraph previews, cache/target controls, cancellation, stale results, keyboard/Escape and unchanged sources passed. ${artifacts}`);
   } finally { fixtureClosing = true; await server.close(); }
 }
 

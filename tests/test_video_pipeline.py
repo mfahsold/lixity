@@ -15,6 +15,7 @@ from scripts.build_public_site import render_pages
 FFMPEG = shutil.which("ffmpeg")
 FFPROBE = shutil.which("ffprobe")
 MEDIA_TOOLS = FFMPEG and FFPROBE
+PUBLISHED_VIDEOS = Path(__file__).resolve().parents[1] / "docs" / "videos"
 
 
 def test_all_homepage_transcripts_follow_the_full_minute_tour() -> None:
@@ -84,6 +85,69 @@ def test_export_validation_rejects_non_square_pixels(tmp_path: Path, monkeypatch
         make_videos._verify_export(source, fps=25, frames=10, width=160, height=100)
 
 
+@pytest.mark.parametrize("selection", ["portrait", "social"])
+def test_partial_tour_refreshes_one_portrait_and_both_destinations(tmp_path: Path, monkeypatch, selection: str) -> None:
+    master = make_videos.PORTRAIT_MASTER
+    alias = make_videos.PORTRAIT_SOCIAL
+    poster = make_videos.PORTRAIT_POSTER
+    horizontal = make_videos.LANDSCAPE_SOCIAL
+    output = tmp_path / "videos"
+    output.mkdir()
+    untouched = output / "product-tour.webm"
+    untouched.write_bytes(b"untouched website landscape")
+    for name in (master, alias, poster, horizontal):
+        (output / name).write_bytes(b"old " + name.encode())
+    for asset in (make_videos.RECEIPT, make_videos.LEDGER, make_videos.ICON):
+        source = tmp_path / asset
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_bytes(b"test artwork")
+    recording = {"segments": [], "exhibitPage": {"file": "exhibit.png", "sha256": "example"}}
+    (tmp_path / "product-tour.json").write_text(json.dumps(recording), encoding="utf-8")
+    rendered = []
+
+    class FakeEdit:
+        def __init__(self, _project, width, height, _fps):
+            rendered.append((width, height))
+
+        def render(self, frames, _preview_times):
+            return frames / "frame%04d.png"
+
+    monkeypatch.setattr(make_videos, "BASE_DIR", tmp_path)
+    monkeypatch.setattr(make_videos, "OUT_DIR", output)
+    monkeypatch.setattr(make_videos, "RAW_DIR", tmp_path)
+    monkeypatch.setattr(make_videos, "_tour_recordings", lambda _plan: (recording, [], None))
+    monkeypatch.setattr(make_videos, "Edit", FakeEdit)
+    monkeypatch.setattr(make_videos, "compose", lambda *_args: None)
+    monkeypatch.setattr(make_videos, "run", lambda command: Path(command[-1]).write_bytes(b"new " + Path(command[-1]).name.encode()))
+    monkeypatch.setattr(make_videos, "_verify_export", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(make_videos.shutil, "which", lambda name: name)
+    monkeypatch.setattr(make_videos, "_tour_tool_versions", lambda tools: dict.fromkeys(tools, "test version"))
+    make_videos.convert_product_tour(selection)
+
+    if selection == "social":
+        assert sorted(rendered) == [(1080, 1920), (1600, 900)]
+        assert (output / horizontal).read_bytes() == b"new " + horizontal.encode()
+    else:
+        assert rendered == [(1080, 1920)]
+        assert (output / horizontal).read_bytes() == b"old " + horizontal.encode()
+    assert untouched.read_bytes() == b"untouched website landscape"
+    assert (output / alias).read_bytes() == (output / master).read_bytes() == b"new " + master.encode()
+    assert (output / poster).read_bytes() == b"new " + poster.encode()
+
+    receipt_path, = (tmp_path / ".artifacts/filmcraft/warehouse-4-tour").glob("receipt-*.json")
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    portrait_hash = hashlib.sha256((output / master).read_bytes()).hexdigest()
+    assert receipt["outputs_sha256"][master] == receipt["outputs_sha256"][alias] == portrait_hash
+    assert receipt["selection"] == selection
+    assert "product-tour-timing.json" in receipt["inputs_sha256"]
+
+
+def test_published_portrait_destinations_are_byte_identical() -> None:
+    assert (PUBLISHED_VIDEOS / make_videos.PORTRAIT_MASTER).read_bytes() == (
+        PUBLISHED_VIDEOS / make_videos.PORTRAIT_SOCIAL
+    ).read_bytes()
+
+
 @pytest.mark.skipif(not MEDIA_TOOLS, reason="ffmpeg and ffprobe are required for video validation")
 @pytest.mark.parametrize(
     ("filename", "frames", "width", "height"),
@@ -94,7 +158,7 @@ def test_export_validation_rejects_non_square_pixels(tmp_path: Path, monkeypatch
 def test_published_video_has_complete_constant_frame_timing_and_geometry(
     filename: str, frames: int, width: int, height: int,
 ) -> None:
-    path = Path(__file__).resolve().parents[1] / "docs" / "videos" / filename
+    path = PUBLISHED_VIDEOS / filename
     assert FFPROBE
     result = subprocess.run(  # noqa: S603 - fixed local published video validation
         [FFPROBE, "-v", "error", "-count_frames", "-show_streams", "-show_format",
@@ -109,4 +173,4 @@ def test_published_video_has_complete_constant_frame_timing_and_geometry(
     assert video["avg_frame_rate"] == "25/1"
     assert int(video["nb_read_frames"]) == frames
     assert float(media["format"]["duration"]) == pytest.approx(frames / 25, abs=.002)
-    assert int(media["format"]["size"]) <= 4_000_000
+    assert int(media["format"]["size"]) <= make_videos.TOUR_VIDEO_LIMITS.get(filename, make_videos.DEFAULT_TOUR_VIDEO_LIMIT)

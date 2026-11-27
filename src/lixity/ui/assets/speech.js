@@ -1071,9 +1071,7 @@
       workers.some(function(item) { return item.engines?.includes("mlx-audio") && item.state === "ready"; });
     var mlxReference = referenceSupported(mlx) && mlx.languages.includes(language);
     var authorEngine = mlxReady && (mlxReference || mlxPreset) ? "mlx-audio" : "ims-toucan", cap = capabilities[authorEngine];
-    var engine = cap && cap.creation_enabled !== false && cap.languages.includes(language) ? authorEngine : Object.keys(capabilities).find(function(key) {
-      return key !== "mlx-audio" && capabilities[key].creation_enabled !== false && capabilities[key].languages.includes(language) && !capabilities[key].reference_required && !capabilities[key].voice_design;
-    }) || "openai-compatible";
+    var engine = cap && cap.creation_enabled !== false && cap.languages.includes(language) ? authorEngine : "openai-compatible";
     cap = capabilities[engine];
     var external = !!cap.configurable_model;
     if (external && !["lixity-audio-settings/4", currentAudioSchema].includes(settings.schema_version)) { guideToSchemaReview("provider_schema_required"); return; }

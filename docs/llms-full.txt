@@ -65,11 +65,11 @@ source version. Product versions, response schemas and archive schemas are separ
 ## Choose a maintained reference
 
 - [Documentation map](https://lixity.de/README.md): tasks, manual ownership and historical records.
-- [Installation](https://lixity.de/INSTALLATION.md): environments, service lifecycle, updates and optional workers.
+- [Installation](https://lixity.de/INSTALLATION.md): desktop and CLI setup, service lifecycle and updates.
 - [First session](https://lixity.de/ONBOARDING.md) and [Workspace](https://lixity.de/WORKSPACE.md): open, write, review, recover and share.
 - [CLI and configuration](https://lixity.de/USAGE.md): commands, settings, scoped analysis and exports.
 - [Automation contracts](https://lixity.de/AGENTS.md): JSON versions, MCP, Python, HTTP, guarded writes and error semantics.
-- [Audio](https://lixity.de/AUDIO.md): planning, synthesis, recordings, teleprompter and audio exchange.
+- [Audio](https://lixity.de/AUDIO.md): planning, [synthesis routes and worker setup](https://lixity.de/AUDIO.md#choose-a-synthesis-route), recordings, teleprompter and audio exchange.
 - [Research usage](https://lixity.de/research/USAGE.md) and [data model](https://lixity.de/research/DATA_MODEL.md): retained evidence, Zotero, dossiers, archival formats and recovery.
 - [Project backup and restore](https://lixity.de/PROJECT_BACKUP.md): included files, separate audio preservation and fresh-directory restoration.
 - [Measurement reference](https://lixity.de/guides/metrics/en.html), [Methods](https://lixity.de/METHODS.md) and [Stability](https://lixity.de/STABILITY.md): measured scope, formulas and limits.
@@ -82,7 +82,7 @@ source version. Product versions, response schemas and archive schemas are separ
 
 - [Blog](https://lixity.de/blog/index.html): articles on revision, measurement, research workflow and the example project; every page has a Markdown twin at the same path plus `.md`. The [Atom feed](https://lixity.de/blog/feed.xml) carries the same articles. Recent: [Who sees the scratches first? Manuscript revision in Lixity 0.9.3](https://lixity.de/blog/lixity-093-manuscript-revision.html), [A board moved. Should Mara turn in the same sentence?](https://lixity.de/blog/lixity-093-one-passage-revision.html) and [a reference corridor from Effi Briest](https://lixity.de/blog/effi-briest-case-study.html).
 - Interactive examples from [Effi Briest](https://lixity.de/examples/effi-briest.html) and [Pride and Prejudice](https://lixity.de/examples/pride-and-prejudice.html): selected chapters, with PDF analysis of each novel.
-- [Screenshots](https://lixity.de/screenshots/README.md) and [recorded tours](https://lixity.de/videos/README.md): checked stills, a 48-second product tour and two social clips with their review notes.
+- [Screenshots](https://lixity.de/screenshots/README.md) and [recorded tours](https://lixity.de/videos/README.md): reviewed stills, the 60-second Warehouse 4 tour in landscape and portrait formats, and short task walkthroughs.
 - [Changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): released changes and the unreleased section, kept outside the published site root.
 - Localized homepages: [Deutsch](https://lixity.de/index-de.html), [Español](https://lixity.de/index-es.html), [Français](https://lixity.de/index-fr.html), [Italiano](https://lixity.de/index-it.html), [Nederlands](https://lixity.de/index-nl.html), [Português](https://lixity.de/index-pt.html).
 - Measurement reference in all seven languages: [de](https://lixity.de/guides/metrics/de.html), [en](https://lixity.de/guides/metrics/en.html), [es](https://lixity.de/guides/metrics/es.html), [fr](https://lixity.de/guides/metrics/fr.html), [it](https://lixity.de/guides/metrics/it.html), [nl](https://lixity.de/guides/metrics/nl.html), [pt](https://lixity.de/guides/metrics/pt.html). These reference pages use `noindex,follow` and are linked from the product website and the workspace.
@@ -132,7 +132,7 @@ and Dutch. The technical manuals are maintained in English.
 | Starting point | Read or try |
 | --- | --- |
 | Try a passage before installing | [Browser exercise in German or English](sandbox/index.html) · [Read-only example project in English](demo/report.html) |
-| Find the installer or check your version | [Installation and updates](INSTALLATION.md) |
+| Download Lixity or check your installed version | [Desktop downloads](guides/installation.html#desktop) · [Browser app and CLI](guides/installation.html#install) · [Installation and updates](INSTALLATION.md) |
 | Open your first manuscript and inspect a finding | [Find a marked sentence in the demo](guides/first-look.html#passage) · [First session in your project](ONBOARDING.md) |
 
 Use **Tools → System Status & Extensions** to identify a desktop build, or
@@ -175,6 +175,9 @@ explains offline help.
 | First session, commands, data boundaries or analysis methods | Use the maintained manuals above. Check the command help, response contract or visible interface label for the installed version. |
 | Product website and localized homepages | Edit `templates/` and `locales/`. These sources generate the public homepages. |
 | Illustrated guides and articles | Edit the HTML source under `guides/` or `blog/`. `make docs-sync` regenerates the paired `.html.md` alternates and the blog feed. |
+| Installer cards in the installation guide | Update the reviewed [release catalog](desktop-downloads.json) or [preview record](https://github.com/mfahsold/lixity/blob/main/docs/desktop-test-build.json) through the [desktop download procedure](https://github.com/mfahsold/lixity/blob/main/desktop/README.md#public-desktop-downloads). `make docs-sync` generates the download cards and installer checksums in the HTML. |
+| Localized metric reference | The app and Pages share the [metric reference renderer](https://github.com/mfahsold/lixity/blob/main/src/lixity/ui/metric_reference.py). `make docs-sync` generates `guides/metrics/` from it. |
+| Shared styles | [Packaged design tokens and components](https://github.com/mfahsold/lixity/tree/main/src/lixity/ui/assets) also ship on Pages. `assets/home.css` and `assets/site.css` own website layout. |
 | Demo, example reports, screenshots and videos | Follow the [demo maintenance guide](https://github.com/mfahsold/lixity/blob/main/docs/demo/README.md), [screenshot](screenshots/README.md) and [video](videos/README.md) procedures. They identify the source fixture, reviewed outputs and generation order. |
 | Wiki and offline reference bundle | `wiki/` provides short entries into the manuals. The `llms-full.txt` bundle is generated from maintained documentation. |
 
@@ -1974,181 +1977,55 @@ diagnostics require debug mode. API diagnostics include the request method,
 route, status and duration. Backend debug lines carry UTC timestamps. Review
 logs before sharing them, since errors may mention local paths or source text.
 
-## Dashboard workflow
+## Browser workspace bookmarks
 
-The [browser workspace manual](WORKSPACE.md) owns reading, review, project controls
-and sharing. These topic links preserve earlier bookmarks.
+The [browser workspace manual](WORKSPACE.md) owns reading, review, project
+controls and sharing. Earlier bookmarks lead to the corresponding sections.
 
-### A connected first session
+<a id="dashboard-workflow"></a>
 
-See [A connected first session](WORKSPACE.md#a-connected-first-session).
+- <a id="a-connected-first-session"></a>[A connected first session](WORKSPACE.md#a-connected-first-session)
+- <a id="inspect-project-structure"></a>[Inspect project structure](WORKSPACE.md#inspect-project-structure)
+- <a id="download-a-manuscript-pdf-since-v240"></a><a id="download-a-manuscript-pdf"></a>[Download a manuscript PDF](WORKSPACE.md#download-a-manuscript-pdf)
+- <a id="export-a-reading-website"></a>[Export a reading website](WORKSPACE.md#export-a-reading-website)
+- <a id="include-existing-chapter-recordings-unreleased"></a><a id="include-existing-chapter-recordings"></a>[Include existing chapter recordings](WORKSPACE.md#include-existing-chapter-recordings-unreleased)
+- <a id="curate-a-reader-publication"></a>[Curate a reader publication](WORKSPACE.md#curate-a-reader-publication)
+- <a id="sharing-limits-and-automation"></a>[Sharing limits and automation](WORKSPACE.md#sharing-limits-and-automation)
+- <a id="check-a-reading-website-before-exporting"></a>[Check a reading website before exporting](WORKSPACE.md#check-a-reading-website-before-exporting)
+- <a id="start-a-review-since-v230"></a><a id="start-a-review"></a>[Start a review](WORKSPACE.md#start-a-review)
+- <a id="read-a-dossier-beside-the-manuscript-since-v240"></a><a id="read-a-dossier-beside-the-manuscript"></a>[Read a dossier beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript)
+- <a id="link-a-manuscript-quote-to-a-claim-v030"></a><a id="link-a-manuscript-quote-to-a-claim"></a>[Link a manuscript quote to a claim](WORKSPACE.md#link-a-manuscript-quote-to-a-claim)
+- <a id="reading-paragraphs-since-v230"></a><a id="reading-paragraphs"></a>[Reading paragraphs](WORKSPACE.md#reading-paragraphs)
+- <a id="searching-the-manuscript"></a>[Searching the manuscript](WORKSPACE.md#searching-the-manuscript)
+- <a id="source-availability-and-saved-analysis"></a>[Source availability and saved analysis](WORKSPACE.md#source-availability-and-saved-analysis)
+- <a id="style-area-since-v230"></a><a id="style-area"></a>[Style area](WORKSPACE.md#style-area)
+- <a id="settings-and-interpretation"></a>[Settings and interpretation](WORKSPACE.md#settings-and-interpretation)
+- <a id="style-space-navigation"></a>[Style-space navigation](WORKSPACE.md#style-space-navigation)
 
-### Inspect project structure
-
-See [Inspect project structure](WORKSPACE.md#inspect-project-structure).
-
-<a id="download-a-manuscript-pdf-since-v240"></a>
-
-### Download a manuscript PDF
-
-See [Download a manuscript PDF](WORKSPACE.md#download-a-manuscript-pdf).
-
-### Export a reading website
-
-See [Export a reading website](WORKSPACE.md#export-a-reading-website).
-
-<a id="include-existing-chapter-recordings-unreleased"></a>
-<a id="include-existing-chapter-recordings"></a>
-
-#### Include existing chapter recordings
-
-See [Include existing chapter recordings](WORKSPACE.md#include-existing-chapter-recordings-unreleased).
-
-#### Curate a reader publication
-
-See [Curate a reader publication](WORKSPACE.md#curate-a-reader-publication).
-
-#### Sharing limits and automation
-
-See [Sharing limits and automation](WORKSPACE.md#sharing-limits-and-automation).
-
-#### Check a reading website before exporting
-
-See [Check a reading website before exporting](WORKSPACE.md#check-a-reading-website-before-exporting).
-
-<a id="start-a-review-since-v230"></a>
-
-### Start a review
-
-See [Start a review](WORKSPACE.md#start-a-review).
-
-<a id="read-a-dossier-beside-the-manuscript-since-v240"></a>
-
-### Read a dossier beside the manuscript
-
-See [Read a dossier beside the manuscript](WORKSPACE.md#read-a-dossier-beside-the-manuscript).
-
-<a id="link-a-manuscript-quote-to-a-claim-v030"></a>
-
-### Link a manuscript quote to a claim
-
-See [Link a manuscript quote to a claim](WORKSPACE.md#link-a-manuscript-quote-to-a-claim).
-
-<a id="reading-paragraphs-since-v230"></a>
-
-### Reading paragraphs
-
-See [Reading paragraphs](WORKSPACE.md#reading-paragraphs).
-
-### Searching the manuscript
-
-See [Searching the manuscript](WORKSPACE.md#searching-the-manuscript).
-
-### Source availability and saved analysis
-
-See [Source availability and saved analysis](WORKSPACE.md#source-availability-and-saved-analysis).
-
-<a id="style-area-since-v230"></a>
-
-### Style area
-
-See [Style area](WORKSPACE.md#style-area).
-
-### Settings and interpretation
-
-See [Settings and interpretation](WORKSPACE.md#settings-and-interpretation).
-
-### Style-space navigation
-
-See [Style-space navigation](WORKSPACE.md#style-space-navigation).
-
-## Audio commands and workflows
+## Audio bookmarks
 
 The [audio manual](AUDIO.md#getting-started) owns recording, voice profiles,
-direction, synthesis and playback. The headings below preserve earlier bookmarks;
-behavior is defined in the linked audio sections, not here.
-See [Project pronunciations](AUDIO.md#project-pronunciations)
-for the saved dictionary and engine-specific routes, and
-[Audio status](AUDIO.md#audio-status) for runtime checks before rendering.
+direction, synthesis and playback. See the [project pronunciation
+dictionary](AUDIO.md#project-pronunciations) for engine-specific routes.
 
-<a id="audio-export-and-external-providers-unreleased"></a>
-<a id="audio-export-and-external-providers"></a>
+<a id="audio-commands-and-workflows"></a>
 
-### Audio export and external providers
-
-See [Audio export and external providers](AUDIO.md#audio-export-and-external-providers-unreleased).
-
-<a id="inspect-and-compare-externally-generated-audio-unreleased"></a>
-<a id="inspect-and-compare-externally-generated-audio"></a>
-
-### Inspect and compare externally generated audio
-
-See [Inspect and compare externally generated audio](AUDIO.md#inspect-and-compare-externally-generated-audio-unreleased).
-
-### Audio status
-
-See [Audio status](AUDIO.md#audio-status).
-
-### `lixity read-aloud`
-
-See [lixity read-aloud](AUDIO.md#lixity-read-aloud).
-
-<a id="author-voice-recording-and-listening"></a>
-
-See [Author voice recording and listening](AUDIO.md#author-voice-recording-and-listening).
-
-### Experimental Qwen VoiceDesign
-
-See [Experimental Qwen VoiceDesign](AUDIO.md#experimental-qwen-voicedesign).
-
-<a id="experimental-coqui-and-openvoice-audio-unreleased"></a>
-<a id="experimental-coqui-and-openvoice-audio"></a>
-
-### Experimental Coqui and OpenVoice audio
-
-See [Experimental Coqui and OpenVoice audio](AUDIO.md#experimental-coqui-and-openvoice-audio-unreleased).
-
-### Experimental reference voices
-
-See [Experimental reference voices](AUDIO.md#experimental-reference-voices).
-
-### Microphone settings and calibration (`audio-microphone`, `audio-calibrate`, `audio-reference record`)
-
-See [Microphone settings and calibration (audio-microphone, audio-calibrate, audio-reference record)](AUDIO.md#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record).
-
-### Manuscript Teleprompter: Direction cues, phonetics, and synchronized dossier images
-
-See [Manuscript Teleprompter: Direction cues, phonetics, and synchronized dossier images](AUDIO.md#manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images).
-
-### Audio and video playback
-
-See [Audio and video playback](AUDIO.md#audio-and-video-playback).
-
-<a id="retained-f5-tts-profiles-unreleased"></a>
-<a id="retained-f5-tts-profiles"></a>
-
-### Retained F5-TTS profiles
-
-See [Retained F5-TTS profiles](AUDIO.md#retained-f5-tts-profiles-unreleased).
-
-<a id="ims-toucan-phonetics-and-structured-direction-unreleased"></a>
-<a id="ims-toucan-phonetics-and-structured-direction"></a>
-
-### IMS-Toucan phonetics and structured direction
-
-See [IMS-Toucan phonetics and structured direction](AUDIO.md#ims-toucan-phonetics-and-structured-direction-unreleased).
-
-### Single narrator and delivery variation
-
-See [Single narrator and delivery variation](AUDIO.md#single-narrator-and-delivery-variation).
-
-### Check narration continuity before a chapter render
-
-See [Check narration continuity before a chapter render](AUDIO.md#check-narration-continuity-before-a-chapter-render).
-
-### Passage direction
-
-See [Passage direction](AUDIO.md#passage-direction).
+- <a id="audio-export-and-external-providers-unreleased"></a><a id="audio-export-and-external-providers"></a>[Audio export and external providers](AUDIO.md#audio-export-and-external-providers-unreleased)
+- <a id="inspect-and-compare-externally-generated-audio-unreleased"></a><a id="inspect-and-compare-externally-generated-audio"></a>[Inspect and compare externally generated audio](AUDIO.md#inspect-and-compare-externally-generated-audio-unreleased)
+- <a id="audio-status"></a>[Audio status](AUDIO.md#audio-status)
+- <a id="lixity-read-aloud"></a>[lixity read-aloud](AUDIO.md#lixity-read-aloud)
+- <a id="author-voice-recording-and-listening"></a>[Author voice recording and listening](AUDIO.md#author-voice-recording-and-listening)
+- <a id="experimental-qwen-voicedesign"></a>[Experimental Qwen VoiceDesign](AUDIO.md#experimental-qwen-voicedesign)
+- <a id="experimental-coqui-and-openvoice-audio-unreleased"></a><a id="experimental-coqui-and-openvoice-audio"></a>[Experimental Coqui and OpenVoice audio](AUDIO.md#experimental-coqui-and-openvoice-audio-unreleased)
+- <a id="experimental-reference-voices"></a>[Experimental reference voices](AUDIO.md#experimental-reference-voices)
+- <a id="microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record"></a>[Microphone settings and calibration (audio-microphone, audio-calibrate, audio-reference record)](AUDIO.md#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record)
+- <a id="manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images"></a>[Manuscript Teleprompter: Direction cues, phonetics, and synchronized dossier images](AUDIO.md#manuscript-teleprompter-direction-cues-phonetics-and-synchronized-dossier-images)
+- <a id="audio-and-video-playback"></a>[Audio and video playback](AUDIO.md#audio-and-video-playback)
+- <a id="retained-f5-tts-profiles-unreleased"></a><a id="retained-f5-tts-profiles"></a>[Retained F5-TTS profiles](AUDIO.md#retained-f5-tts-profiles-unreleased)
+- <a id="ims-toucan-phonetics-and-structured-direction-unreleased"></a><a id="ims-toucan-phonetics-and-structured-direction"></a>[IMS-Toucan phonetics and structured direction](AUDIO.md#ims-toucan-phonetics-and-structured-direction-unreleased)
+- <a id="single-narrator-and-delivery-variation"></a>[Single narrator and delivery variation](AUDIO.md#single-narrator-and-delivery-variation)
+- <a id="check-narration-continuity-before-a-chapter-render"></a>[Check narration continuity before a chapter render](AUDIO.md#check-narration-continuity-before-a-chapter-render)
+- <a id="passage-direction"></a>[Passage direction](AUDIO.md#passage-direction)
 
 ## Development
 
@@ -3715,10 +3592,12 @@ synthesizes audio.
 | Your own voice with specific IPA or structured delivery in German or English | [Local IMS-Toucan](#ims-toucan-author-voice-and-phonetic-direction) | A saved reference, IPA, duration, intonation and energy variation, and explicit pauses |
 | Free-text direction through a service you choose | [OpenAI-compatible endpoint](#configure-an-openai-compatible-provider) | The provider's voice and model, with documented and explicitly enabled instruction support |
 
-For a preset voice or an existing worker, see [Qwen](#optional-qwen-audio-worker)
-and [experimental Coqui/OpenVoice](#coqui-and-openvoice-worker-setup). The
-[profile table](#voice-profiles) includes their controls and retained F5-TTS
-settings.
+The workspace offers these three routes when creating a profile. Existing
+[Qwen](#optional-qwen-audio-worker) and
+[Coqui/OpenVoice](#coqui-and-openvoice-worker-setup) profiles keep their voice
+and remain available with their configured workers. Retained profiles appear
+under their own engine group. The [profile table](#voice-profiles) also covers
+F5-TTS settings retained for export and cached audio.
 
 For the CLI, inspect the plan and worker status before synthesis.
 
