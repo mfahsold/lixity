@@ -3,7 +3,7 @@
 from collections.abc import Mapping, Sequence
 from html import escape
 
-from .components import label, panel_guide
+from .components import label, ui_icon
 
 _WORKFLOW_SECTIONS = {
     "review": ("flags", "markers"),
@@ -16,9 +16,10 @@ _WORKFLOW_SECTIONS = {
         "showing",
         "characters",
         "motifs",
-        "analysis-measurements",
     ),
 }
+
+_WORKFLOW_ICONS = {"review": "file-text", "compare": "git-compare", "explore": "search"}
 
 
 def analysis_workflow_sections(
@@ -29,7 +30,6 @@ def analysis_workflow_sections(
 ) -> tuple[tuple[str, str], ...]:
     """Project the available panels into the shared order for overview routes."""
     available = dict(active_sections)
-    available["analysis-measurements"] = "analysis_measurements"
     if has_markers:
         available["markers"] = "markers"
     if has_register_targets:
@@ -54,21 +54,22 @@ def render_analysis_workflows(
     }
     parts = [
         '<div class="analysis-workflows" id="analysis-workflows" data-analysis-workflows>',
-        panel_guide(escape(label(labels, "workflow_choose_hint"))),
-        '<div class="analysis-workflow-entries">',
+        '<div class="analysis-workflow-entries" role="group" '
+        f'aria-label="{escape(label(labels, "workflow_choose_section"))}">',
+        '<button type="button" class="ctl analysis-workflow-entry" id="analysis-measurements-tab" '
+        'aria-pressed="false" aria-controls="analysis-measurements">'
+        f'{ui_icon("layout-grid")}<span>{escape(label(labels, "analysis_measurements"))}</span></button>',
     ]
     for workflow, sections in groups.items():
         if not sections:
             continue
         title = escape(label(labels, f"workflow_{workflow}"))
         hint = escape(label(labels, f"workflow_{workflow}_hint"))
-        preview_items = [escape(label(labels, available[section])) for section in sections]
-        preview = f'<small class="analysis-workflow-preview" aria-hidden="true">{" · ".join(preview_items)}</small>'
         parts.append(
             f'<button type="button" class="ctl analysis-workflow-entry" '
-            f'data-analysis-workflow="{workflow}" aria-pressed="false" '
+            f'data-analysis-workflow="{workflow}" data-help="{hint}" aria-pressed="false" '
             f'aria-controls="analysis-workflow-sections manuscript-analysis-panels">'
-            f'<strong>{title}</strong><span>{hint}</span>{preview}</button>'
+            f'{ui_icon(_WORKFLOW_ICONS[workflow])}<span>{title}</span></button>'
         )
     parts.append(
         '</div><div class="analysis-workflow-sections" id="analysis-workflow-sections" role="group" '

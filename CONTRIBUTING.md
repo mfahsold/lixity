@@ -585,9 +585,12 @@ origin-only referrer and fixed CTA names; exclude URL query/hash, form inputs,
 selection, manuscript/research data, local paths and persistent identifiers.
 The local app and generated user exports must never acquire this adapter.
 
-CTA counts measure link activation. Pageviews include direct visits. Playback
-completion and installation require separate evidence. Find event names and
-destination rules in the [public adapter](docs/assets/analytics.js). Check
+CTA counts measure link activation. `install-open` covers opening the guide
+and selecting the download section from a homepage in any supported language.
+On-page jumps inside the guide, demo, and articles stay out of the page-opening
+events. Pageviews include direct visits. Playback completion and installation
+require separate evidence. Find event names and destination rules in the
+[public adapter](docs/assets/analytics.js). Check
 existing Search Console and GoatCounter read access before adding tools.
 
 The shared site script loads it for normal Pages; public example metadata adds

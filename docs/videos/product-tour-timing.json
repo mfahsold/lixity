@@ -1,21 +1,23 @@
 {
-  "schema_version": "lixity-product-tour-timing/2",
+  "schema_version": "lixity-product-tour-timing/3",
   "fps": 25,
-  "duration": 60,
+  "duration": 65,
   "scenes": [
-    {"id": "receipt", "start": 0, "end": 5},
-    {"id": "read", "start": 5, "end": 14},
-    {"id": "revision", "start": 14, "end": 27},
-    {"id": "dossier", "start": 27, "end": 42},
-    {"id": "decision", "start": 42, "end": 52},
-    {"id": "pdf", "start": 52, "end": 60}
+    {"id": "opening", "start": 0, "end": 4},
+    {"id": "passage", "start": 4, "end": 13},
+    {"id": "research", "start": 13, "end": 26},
+    {"id": "compare", "start": 26, "end": 36},
+    {"id": "save", "start": 36, "end": 46},
+    {"id": "export", "start": 46, "end": 54},
+    {"id": "reader", "start": 54, "end": 61},
+    {"id": "demo", "start": 61, "end": 65}
   ],
   "captures": [
-    {"id": "read", "duration": 9, "theme": "dark"},
-    {"id": "passage", "duration": 7, "theme": "light"},
-    {"id": "compare", "duration": 10, "theme": "light"},
-    {"id": "dossier", "duration": 9, "theme": "light"},
-    {"id": "decision", "duration": 8, "theme": "dark"},
-    {"id": "pdf", "duration": 8, "theme": "light"}
+    {"id": "passage", "duration": 13, "record_duration": 15, "theme": "dark"},
+    {"id": "research", "duration": 13, "record_duration": 15, "theme": "dark"},
+    {"id": "compare", "duration": 10, "record_duration": 12, "theme": "light"},
+    {"id": "save", "duration": 10, "record_duration": 12, "theme": "light"},
+    {"id": "export", "duration": 8, "record_duration": 12, "theme": "light"},
+    {"id": "reader", "duration": 7, "record_duration": 9, "theme": "light"}
   ]
 }

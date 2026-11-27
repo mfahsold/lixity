@@ -82,7 +82,7 @@ source version. Product versions, response schemas and archive schemas are separ
 
 - [Blog](https://lixity.de/blog/index.html): articles on revision, measurement, research workflow and the example project; every page has a Markdown twin at the same path plus `.md`. The [Atom feed](https://lixity.de/blog/feed.xml) carries the same articles. Recent: [Who sees the scratches first? Manuscript revision in Lixity 0.9.3](https://lixity.de/blog/lixity-093-manuscript-revision.html), [A board moved. Should Mara turn in the same sentence?](https://lixity.de/blog/lixity-093-one-passage-revision.html) and [a reference corridor from Effi Briest](https://lixity.de/blog/effi-briest-case-study.html).
 - Interactive examples from [Effi Briest](https://lixity.de/examples/effi-briest.html) and [Pride and Prejudice](https://lixity.de/examples/pride-and-prejudice.html): selected chapters, with PDF analysis of each novel.
-- [Screenshots](https://lixity.de/screenshots/README.md) and [recorded tours](https://lixity.de/videos/README.md): reviewed stills, the 60-second Warehouse 4 tour in landscape and portrait formats, and short task walkthroughs.
+- [Screenshots](https://lixity.de/screenshots/README.md) and [recorded tours](https://lixity.de/videos/README.md): reviewed stills, a 65-second Warehouse 4 author workflow in landscape and portrait, and short task walkthroughs.
 - [Changelog](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): released changes and the unreleased section, kept outside the published site root.
 - Localized homepages: [Deutsch](https://lixity.de/index-de.html), [Español](https://lixity.de/index-es.html), [Français](https://lixity.de/index-fr.html), [Italiano](https://lixity.de/index-it.html), [Nederlands](https://lixity.de/index-nl.html), [Português](https://lixity.de/index-pt.html).
 - Measurement reference in all seven languages: [de](https://lixity.de/guides/metrics/de.html), [en](https://lixity.de/guides/metrics/en.html), [es](https://lixity.de/guides/metrics/es.html), [fr](https://lixity.de/guides/metrics/fr.html), [it](https://lixity.de/guides/metrics/it.html), [nl](https://lixity.de/guides/metrics/nl.html), [pt](https://lixity.de/guides/metrics/pt.html). These reference pages use `noindex,follow` and are linked from the product website and the workspace.
@@ -2355,10 +2355,11 @@ Happy path for an author or lector (no technical setup beyond the local app):
    `Shift+Enter`) or **Back to passage** to stay oriented.
 2. Turn **Analysis On** for exactly one question. Use **Underline counted passages** or
    **Mark differing paragraphs**, then return to the unmarked passage before deciding.
-3. In **Analysis overview**, choose one task: **Review passages**
+3. Open **Analysis overview** to see **Manuscript measurements** and the
+   first suggested passage. Choose **Review passages**
    (**Textstellen prüfen**), **Compare chapters** (**Kapitel vergleichen**) or
-   **Explore patterns** (**Muster erkunden**). Pick a secondary view when needed;
-   the next-passage action remains available above the views.
+   **Explore patterns** (**Muster erkunden**) for a report. Pick a secondary
+   view within the task when needed.
 4. Follow research beside the text via **Dossiers** or **Paragraph details →
    Research for this passage**. Distinguish the exact retained quotation from
    the current dossier record; a changed source never silently updates a saved link.
@@ -2538,11 +2539,13 @@ for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
 browser preferences; display changes do not edit the source.
 
-The local overview opens with **Manuscript
-measurements**, manuscript status, the next passage and three task choices.
-Selecting **Review passages**, **Compare
-chapters** or **Explore patterns** reveals one existing analysis section.
-Secondary choices switch sections within that task and retain your inputs.
+The local overview starts on **Manuscript measurements**. The four choices
+above it switch between the measurements and the three report tasks.
+The suggested passage appears with the measurements. **How it’s measured**
+expands a brief explanation in place and links to the full reference.
+Readability formulas, vocabulary measures and style details each expand separately.
+Selecting **Review passages**, **Compare chapters** or **Explore patterns**
+opens one report. Secondary choices switch reports within that task and retain your inputs.
 Use **Sections** in the overview toolbar to reach the choices again
 from a long table or chart. Opening the overview again starts at manuscript
 measurements, with your previous choices still available inside each task.

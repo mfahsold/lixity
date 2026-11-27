@@ -93,13 +93,15 @@
         let name;
         if (destination.origin === origin && destination.pathname.startsWith(mount + '/')) {
           const path = destination.pathname.slice(mount.length);
-          if (path === '/demo/report.html') name = 'demo-open';
+          const opensPage = destination.pathname !== pathname;
+          if (opensPage && path === '/demo/report.html') name = 'demo-open';
           else if (['/sandbox/', '/sandbox/index.html'].includes(path)) name = 'sandbox-open';
           else if (/^\/videos\/social-hook-(9x16|16x9)\.mp4$/.test(path)) name = 'social-clip-open';
-          else if (['/INSTALLATION.md', '/guides/installation.html'].includes(path) ||
-                   (path === '/' && ['#install', '#installation'].includes(destination.hash))) name = 'install-open';
+          else if ((opensPage && ['/INSTALLATION.md', '/guides/installation.html'].includes(path)) ||
+                   ((path === '/' || /^\/index(?:-(?:de|es|fr|it|nl|pt))?\.html$/.test(path)) &&
+                    ['#install', '#installation'].includes(destination.hash))) name = 'install-open';
           else if (/^\/demo\/warehouse-4-(book|editor|sheet|report|document)\.pdf$/.test(path)) name = 'pdf-download';
-          else if (path.startsWith('/blog/') && path.endsWith('.html') && path !== '/blog/index.html') name = 'blog-open';
+          else if (opensPage && path.startsWith('/blog/') && path.endsWith('.html') && path !== '/blog/index.html') name = 'blog-open';
         } else if (destination.origin === 'https://github.com' &&
                    /^\/mfahsold\/lixity\/?$/.test(destination.pathname)) name = 'repository-open';
         else if (destination.origin === 'https://pypi.org' && destination.pathname.startsWith('/project/lixity')) name = 'pypi-open';

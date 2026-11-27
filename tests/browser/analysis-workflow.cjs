@@ -34,8 +34,8 @@ const script = fs.readFileSync('src/lixity/ui/assets/analysis-navigation.js', 'u
 const interactions = fs.readFileSync('src/lixity/ui/assets/interactions.js', 'utf8');
 const css = fs.readFileSync('src/lixity/ui/assets/analysis-navigation.css', 'utf8');
 const html = `<!doctype html><title>Analysis workflow regression</title><style>${css}</style>
-<div id="analysis-outline-document" data-guided-analysis="1"><section id="analysis-review"><p>Status and next passage</p>${controls}</section>
-<div id="manuscript-analysis-panels"><details id="analysis-measurements"><summary>Manuscript measurements</summary><p>Measured manuscript scope</p></details><section id="flags"><h2>Flags</h2><input aria-label="Draft" value="Unsaved"><a href="#p-0" id="passage-link">Read passage</a></section><section id="matrix">Chapters<button id="open-metric">Inspect metric</button></section><section id="register-targets">Project register targets</section><dialog id="analysis-metric-context">Measured evidence</dialog><section id="style"><div id="dimensions">Dimensions</div></section><section id="pacing">Pacing</section><section id="scenes">Scenes</section></div></div>
+<div id="analysis-outline-document" data-guided-analysis="1"><section id="analysis-review">${controls}<p id="analysis-next-passage">Status and next passage</p></section>
+<div id="manuscript-analysis-panels"><section id="analysis-measurements" aria-labelledby="analysis-measurements-heading"><div><h2 id="analysis-measurements-heading">Manuscript measurements</h2></div><p>Measured manuscript scope</p></section><section id="flags"><h2>Flags</h2><input aria-label="Draft" value="Unsaved"><a href="#p-0" id="passage-link">Read passage</a></section><section id="matrix">Chapters<button id="open-metric">Inspect metric</button></section><section id="register-targets">Project register targets</section><dialog id="analysis-metric-context">Measured evidence</dialog><section id="style"><div id="dimensions">Dimensions</div></section><section id="pacing">Pacing</section><section id="scenes">Scenes</section></div></div>
 <nav id="analysis-sections"><a data-section-link="flags" href="#flags">Flags</a></nav><nav id="analysis-outline-nav"><a data-section-link="style" href="#style">Style</a></nav><main id="chapters"><p id="p-0">Actual manuscript passage</p></main>
 <script>${interactions}
 ${script}
@@ -53,18 +53,19 @@ async function checkNativeOverview(page, fragment, target = '') {
     assert.equal(await page.locator(fragment).isVisible(), true);
     assert.equal(await page.locator('[data-analysis-workflow="compare"]').getAttribute('aria-pressed'), 'true');
   } else {
-    const measurements = page.locator('#analysis-measurements[open]');
+    const measurements = page.locator('section#analysis-measurements');
     const total = measurements.locator('.kpi > b').first();
     assert.equal(await total.isVisible(), true);
     assert.equal(await total.textContent(), words);
     assert.equal(await page.locator('[data-analysis-workflow][aria-pressed="true"]').count(), 0);
+    assert.equal(await page.locator('#analysis-measurements-tab').getAttribute('aria-pressed'), 'true');
     assert.equal(await page.locator('.analysis-workflow-sections').isVisible(), false);
-    const compareName = await page.evaluate(() => `${uiLabel('workflow_compare')} ${uiLabel('workflow_compare_hint')}`);
+    const compareName = await page.evaluate(() => uiLabel('workflow_compare'));
     assert.ok(await page.getByRole('button', {name: compareName, exact: true}).isVisible(),
-      'The workflow is addressable by its displayed title and hint');
+      'The workflow is addressable by its displayed title');
     if (fragment) {
       await page.waitForFunction(() => {
-        const title = document.querySelector('#analysis-measurements > summary').getBoundingClientRect();
+        const title = document.getElementById('analysis-measurements-heading').getBoundingClientRect();
         const toolbar = document.getElementById('manuscript-reader-controls');
         const inset = getComputedStyle(toolbar).position === 'sticky'
           ? Math.max(0, toolbar.getBoundingClientRect().bottom) : 0;
@@ -88,11 +89,13 @@ async function checkNativeOverview(page, fragment, target = '') {
       await page.goto('http://workflow.test/');
       assert.equal(await page.title(), 'Analysis workflow regression');
       assert.equal(await page.locator('[data-analysis-workflow]:visible').count(), 3);
-      assert.equal(await page.locator('#analysis-measurements[open] p').isVisible(), true);
+      assert.equal(await page.locator('#analysis-measurements p').isVisible(), true);
+      assert.equal(await page.locator('#analysis-next-passage').isVisible(), true);
       assert.equal(await page.locator('#manuscript-analysis-panels > :visible').count(), 1);
       await page.locator('[data-analysis-workflow="review"]').focus();
       await page.keyboard.press('Enter');
       assert.equal(await page.locator('#flags').isVisible(), true);
+      assert.equal(await page.locator('#analysis-next-passage').isVisible(), false);
       await page.locator('#flags input').fill('Retain my draft');
       await page.locator('[data-analysis-workflow="compare"]').click();
       assert.equal(await page.locator('#matrix').isVisible(), true);
@@ -123,11 +126,12 @@ async function checkNativeOverview(page, fragment, target = '') {
       assert.equal(await page.evaluate(() => Array.from(document.querySelectorAll('[data-analysis-workflow]')).every(button => button.scrollWidth <= button.clientWidth)), true);
       await checkNativeOverview(page, '');
       await checkNativeOverview(page, '#manuscript-analysis-panels');
+      await checkNativeOverview(page, '#analysis-measurements');
       await checkNativeOverview(page, '#matrix', 'matrix');
       await checkNativeOverview(page, '#heatmap', 'style');
       await page.goto('http://workflow.test/native?landing=unknown#%5B');
       await page.locator('#workbench-overview-open').click();
-      assert.ok(await page.locator('#analysis-measurements[open]').isVisible(),
+      assert.ok(await page.locator('#analysis-measurements .kpi').first().isVisible(),
         'An unrecognized link fragment leaves the overview reachable');
       assert.deepEqual(errors, []);
       await page.close();

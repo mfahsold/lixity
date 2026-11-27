@@ -9,11 +9,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
-- Enlarge workspace captures in the Warehouse 4 film and hold one readable
-  comparison with both sentences and their counts. Tighten the document crops
-  and remove repeat shots in the manuscript, source review and export beats.
-  Keep browser colors consistent across codecs and give the final manuscript
-  line and the PDF download distinct visual focus.
+- Count the download section links on all localized homepages. Keep in-page
+  jumps inside public reports, articles and the installation guide out of the
+  corresponding website opening events.
+- Arrange the analysis overview around four compact choices and one active
+  report. Put the suggested passage on the measurements view and open method
+  help and readability formulas in place.
+- Recut the Warehouse 4 film as a 65-second author workflow that starts in the
+  manuscript view. Open sentence evidence and the next paragraph's research
+  link, compare and save an actual edit, then check and open the generated
+  reading copy. Use larger workspace details and separately framed FilmCraft
+  sequences. Match homepage captions in seven languages, the release article,
+  posters and social downloads to the same cut, with consistent browser colors
+  across codecs.
 - Store local release rehearsal and macOS build evidence under a configurable
   shared root. Fingerprint untracked source files, record the verified app
   identity and require a clean source checkout for release artifact promotion.
@@ -27,9 +35,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   its research integration. Select the relevant browser suites for audio and
   product tour changes. Reuse the standard desktop Cargo cache for local macOS
   app builds.
-- Link directly to desktop downloads and audio setup. Match the release article
-  to the current 60-second product tour and retain CLI manual bookmarks for
-  browser and audio topics in a compact index.
+- Link directly to desktop downloads and audio setup. Retain CLI manual
+  bookmarks for browser and audio topics in a compact index.
 
 - Keep audio diagnostic requests bound to their local origin in macOS WebKit.
   Log native capture stages, terminal job reads, and worker disconnect details
@@ -58,17 +65,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   public-domain reference checks, corpus comparison and isolated wheel smoke.
   Retain source, fixture, result and artifact identities for the next
   development pass. Pin manual Pages builds to the reviewed commit.
-- Recut the 60-second Warehouse 4 film around the unsigned receipt. Use
-  editable FilmCraft titles, separately framed portrait and landscape views,
-  and the actual exhibit-book PDF. Synchronize the poster, the product-site
-  captions in all seven languages and the downloadable videos with that cut.
-- Give the Warehouse 4 film more room on the homepage. Use smaller titles
-  and larger workspace details in the edit.
-- Open the tour on the question the missing signature poses. Keep headings
-  steady, frame the scrolled draft comparison and both entries for cart 17,
-  then show the PDF export and return to the blank line. Review encoded frames
-  with captions at actual phone and desktop player sizes. Keep the website and
-  social portrait files aligned through full and partial builds.
+- Give the Warehouse 4 film more room on the homepage. Keep both portrait
+  destinations aligned through full and partial builds, and review the encoded
+  frames with captions at phone and desktop player sizes.
 - Clarify the paths from the website to the first exercise, the read-only
   example and the desktop download. Update the English and German guides and
   articles, verify research references and align terminology with the app.

@@ -1169,9 +1169,11 @@ class TestPublicLanguages(unittest.TestCase):
                     )
                     self.assertIn(f'id="{fragment}"', guide)
                 self.assertIn(f'href="guides/metrics/{language}.html" hreflang="{language}"', rendered)
-                receipt = "quittung" if language == "de" else "receipt"
-                self.assertIn(f'href="{guide_path}#{receipt}" hreflang="{guide_lang}"', rendered)
-                self.assertIn(f'id="{receipt}"', guide)
+                self.assertIn(
+                    f'class="ctl tour-explore" href="{guide_path}#{passage}" hreflang="{guide_lang}">'
+                    f'{html.escape(content["research_case_link"], quote=True)} '
+                    '<span aria-hidden="true">→</span></a>', rendered,
+                )
 
     def test_generated_languages_are_complete_and_reciprocal(self):
         from scripts.build_public_site import (

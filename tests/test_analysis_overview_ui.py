@@ -45,23 +45,26 @@ class TestAnalysisOverview(unittest.TestCase):
         counts = [re.findall(r"<td\b[^>]*>(.*?)</td>", row, re.DOTALL)[-1] for row in rows]
         self.assertEqual(counts, ["0", "0", "0", "–"])
 
-    def test_measurements_start_collapsed_without_removing_values(self):
+    def test_measurements_keep_values_and_fold_method_details(self):
         html = self.render()
-        disclosure = re.search(
-            r'<details\b([^>]*\bid="analysis-measurements"[^>]*)>(.*?)</details>',
+        measurements = re.search(
+            r'<section\b[^>]*\bid="analysis-measurements"[^>]*>(.*?)</section></section>',
             html, re.DOTALL,
         )
-        self.assertIsNotNone(disclosure)
-        attributes, contents = disclosure.groups()
-        self.assertNotRegex(attributes, r"\bopen\b")
-        self.assertIn("<summary>", contents)
+        self.assertIsNotNone(measurements)
+        contents = measurements[1]
+        self.assertIn('id="analysis-measurements-heading"', contents)
+        self.assertIn('<details id="analysis-measurement-method"><summary class="ctl"', contents)
+        formulas = re.search(r'<details\b([^>]*\bid="readability-measurements"[^>]*)>', contents)
+        self.assertIsNotNone(formulas)
+        self.assertNotRegex(formulas[1], r"\bopen\b")
         for metric in ("Average words per sentence", "Share of short sentences", "Flesch", "LIX"):
             self.assertIn(metric, contents)
         vocabulary = contents.split('id="kpi-lexis-drawer"', 1)[1]
         for metric in ("TTR", "Guiraud R", "HD-D", "MTLD", "MATTR", "Maas a²"):
             self.assertIn(metric, vocabulary)
-        self.assertIn('id="flags"', html[disclosure.end():])
-        self.assertIn('id="matrix"', html[disclosure.end():])
+        self.assertIn('id="flags"', html[measurements.end():])
+        self.assertIn('id="matrix"', html[measurements.end():])
         flags = html.split('id="flags"', 1)[1].split("</h2>", 1)[0]
         self.assertIn('class="badge"', flags)
 
@@ -69,7 +72,7 @@ class TestAnalysisOverview(unittest.TestCase):
         text = "## Overwhelming chapter title\n\nA garden rests. A gardener works."
         analysis = analyze_document(text, CorpusConfig(language="en"), FingerprintThresholds())
         html = render_dashboard(analysis.chapters, analysis.paragraphs, metrics=analysis.metrics)
-        measurements = html.split('id="analysis-measurements"', 1)[1].split("</details>", 1)[0]
+        measurements = html.split('id="readability-measurements"', 1)[1].split("</details>", 1)[0]
         self.assertEqual(measurements.count("Flesch Reading Ease"), 1)
         self.assertEqual(measurements.count("LIX"), 1)
         self.assertIn("Readability formulas (heuristic)", measurements)
@@ -83,7 +86,7 @@ class TestAnalysisOverview(unittest.TestCase):
         # Older payloads still render their formula values and known inputs.
         restored = CorpusMetrics.model_validate(analysis.metrics.model_dump())
         legacy_html = render_dashboard(analysis.chapters, analysis.paragraphs, metrics=restored)
-        legacy = legacy_html.split('id="analysis-measurements"', 1)[1].split("</details>", 1)[0]
+        legacy = legacy_html.split('id="readability-measurements"', 1)[1].split("</details>", 1)[0]
         self.assertIn("<b>76.9</b>", legacy)
         self.assertIn("<b>19.7</b>", legacy)
         self.assertIn("Estimated syllables · 1.50 per word", legacy)

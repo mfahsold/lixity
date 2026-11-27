@@ -93,11 +93,17 @@ async function pinnedIdentity(page, panel, cellIndex) {
   try {
     for (const [locale, html] of Object.entries(fixtures.locales)) for (const width of
       (locale === 'en' ? [2560,1440,1280,1024,768,390,320] : [1440,320])) {
-      const page = await browser.newPage({viewport: {width, height: 900}, hasTouch: true, reducedMotion: 'reduce'});
+      const shortLanding = locale === 'de' && width === 320;
+      const height = shortLanding ? 640 : 900;
+      const page = await browser.newPage({viewport: {width, height}, hasTouch: true, reducedMotion: 'reduce'});
       page.on('pageerror', error => errors.push(error.message));
-      await page.route('http://lixity.test/**', route => {
+      await page.context().route('http://lixity.test/**', route => {
         if (route.request().method() !== 'GET') writes++;
-        return route.fulfill(route.request().url().includes('/api/')
+        const requestPath = new URL(route.request().url()).pathname;
+        if (requestPath === `/guides/metrics/${locale}.html`) {
+          return route.fulfill({path: path.join(root, 'docs', 'guides', 'metrics', `${locale}.html`)});
+        }
+        return route.fulfill(requestPath.includes('/api/')
           ? {json: {ok: true, locked: true, records: []}} : {contentType: 'text/html', body: html});
       });
       await page.addInitScript(() => localStorage.setItem('lixity:hide-review-guide', '1'));
@@ -109,22 +115,29 @@ async function pinnedIdentity(page, panel, cellIndex) {
         (await page.locator('.workspace-shell .product-name').textContent()).trim(),
         'Browser history identifies the manuscript and product without repeating an analysis slogan');
       await page.locator('#workbench-overview-open').click();
-      await assertMetricLink(page.locator('#analysis-review-body > p a[href*="/guides/metrics/"]'),
-        `${guideBase}#analysis-review`, guideLabel);
       const navigation = page.locator('[data-analysis-workflows]');
       const entries = navigation.locator('[data-analysis-workflow]');
+      const landing = navigation.locator('#analysis-measurements-tab');
+      const recommendation = page.locator('#analysis-next-passage');
       const visiblePanels = () => page.locator('#manuscript-analysis-panels > :visible').count();
-      assert.equal(await entries.count(), 3, 'The overview starts with three editorial workflows');
+      assert.equal(await entries.count(), 3, 'The summary has three editorial workflows alongside it');
       assert.deepEqual(await entries.evaluateAll(nodes => nodes.map(n => n.dataset.analysisWorkflow)),
         ['review', 'compare', 'explore']);
+      assert.equal(await landing.getAttribute('aria-controls'), 'analysis-measurements');
+      assert.equal(await landing.getAttribute('aria-pressed'), 'true');
+      assert.equal(await page.locator('#analysis-review-body > p a').count(), 0,
+        'The introductory area does not repeat the measurement shortcut or guide');
+      assert.equal(await navigation.locator('.analysis-workflow-preview').count(), 0);
+      assert.equal(await navigation.locator('[data-analysis-section-target="analysis-measurements"]').count(), 0);
+      assert.ok(await recommendation.isVisible(), 'The initial summary can suggest a passage to inspect');
       assert.equal(await visiblePanels(), 1, 'The initial overview shows one measured summary');
-      const initialMeasurements = page.locator('#analysis-measurements');
-      assert.equal(await initialMeasurements.getAttribute('open'), '');
+      const initialMeasurements = page.locator('section#analysis-measurements');
+      const measurementHeading = initialMeasurements.locator('h2#analysis-measurements-heading');
       assert.equal(await initialMeasurements.locator('.kpi').first().isVisible(), true);
       assert.equal(await page.locator('#text-search').isVisible(), false,
         'Manuscript search stays with the reading view');
-      const initialSummary = await initialMeasurements.locator(':scope > summary').boundingBox();
-      assert.ok(initialSummary.y >= 0 && initialSummary.y + initialSummary.height <= 900,
+      const initialSummary = await measurementHeading.boundingBox();
+      assert.ok(initialSummary.y >= 0 && initialSummary.y + initialSummary.height <= height,
         `${locale}/${width}: the default measurement heading is visible on arrival`);
       assert.equal(await page.locator('#analysis-sections').isVisible(), false,
         'The exhaustive section navigation is replaced by the workflow chooser');
@@ -135,26 +148,48 @@ async function pinnedIdentity(page, panel, cellIndex) {
       const orientation = await navigation.evaluate(nav => {
         const bounds = nav.getBoundingClientRect();
         return {bounds:bounds.toJSON(), width:nav.clientWidth, content:nav.scrollWidth,
-          entries:[...nav.querySelectorAll('[data-analysis-workflow]')].map(a=>a.getBoundingClientRect().toJSON())};
+          entries:[...nav.querySelectorAll('#analysis-measurements-tab, [data-analysis-workflow]')]
+            .map(button=>({id:button.id, bounds:button.getBoundingClientRect().toJSON(),
+              width:button.clientWidth, content:button.scrollWidth}))};
       });
       assert.ok(orientation.content <= orientation.width + 1, 'Workflow choices fit without horizontal clipping');
-      assert.ok(orientation.entries.every(rect=>rect.left>=orientation.bounds.left-1 && rect.right<=orientation.bounds.right+1),
+      assert.equal(orientation.entries[0].id, 'analysis-measurements-tab', 'The summary is the first choice');
+      assert.ok(orientation.entries.every(entry=>entry.bounds.left>=orientation.bounds.left-1 &&
+        entry.bounds.right<=orientation.bounds.right+1 && entry.content<=entry.width+1),
         'Every workflow label is wholly visible');
-      const previews = navigation.locator('.analysis-workflow-preview:visible');
+      const rows = new Set(orientation.entries.map(entry=>Math.round(entry.bounds.top)));
       if (width<=390) {
-        assert.equal(new Set(orientation.entries.map(rect=>Math.round(rect.top))).size,3,
-          'Mobile workflow entries form a readable single column');
-        assert.equal(await previews.count(), 0, 'Compact task choices fit above the measured overview');
+        assert.equal(rows.size, 2, 'Mobile choices fit in two rows of two');
+        const scopeValues = await initialMeasurements.locator('.kpi').evaluateAll(tiles =>
+          tiles.slice(0, 2).map(tile => tile.getBoundingClientRect().top));
+        assert.ok(Math.abs(scopeValues[0] - scopeValues[1]) <= 1, 'The first two scope values share a row on mobile');
       } else if (width>=1280) {
-        assert.equal(await previews.count(), 3, 'Wide task choices show which analysis sections they contain');
+        assert.equal(rows.size, 1, 'All four choices share one wide row');
       }
-      if (locale === 'de' && width === 320) {
-        await page.setViewportSize({width, height: 640});
-        const jump = page.locator('#analysis-review-body a[href="#analysis-measurements"]');
-        await jump.press('Enter');
+      if (shortLanding) {
+        const initialValue = await initialMeasurements.locator('.kpi').first().boundingBox();
+        assert.ok(initialValue.y >= 0 && initialValue.y + initialValue.height <= height,
+          'The first measured value is fully visible on entry to the overview');
+        const shortHelp = initialMeasurements.locator('#analysis-measurement-method');
+        const helpControl = shortHelp.locator('summary.ctl');
+        const helpLabel = helpControl.locator('.reader-control-label');
+        assert.ok(await helpLabel.isVisible(), 'The method label remains visible on a narrow screen');
+        assert.equal((await helpLabel.textContent()).trim(), guideLabel);
+        const before = await helpControl.boundingBox();
+        assert.ok(before.height >= 44, 'The method disclosure has a full-size touch target');
+        await helpControl.tap();
+        assert.equal(await shortHelp.evaluate(element => element.open), true);
+        const after = await helpControl.boundingBox();
+        assert.ok(Math.abs(after.x - before.x) <= 1 && Math.abs(after.y - before.y) <= 1,
+          `Opening the method keeps its touch target in place: ${JSON.stringify({before, after})}`);
+        await helpControl.tap();
+        assert.equal(await shortHelp.evaluate(element => element.open), false);
+        await landing.press('Enter');
         const firstValue = await initialMeasurements.locator('.kpi').first().boundingBox();
-        assert.ok(firstValue.y >= 0 && firstValue.y + firstValue.height <= 640,
+        assert.ok(firstValue.y >= 0 && firstValue.y + firstValue.height <= height,
           'The overview shortcut reaches measured values on a short screen');
+        assert.ok(await measurementHeading.evaluate(heading => heading === document.activeElement),
+          'The keyboard shortcut moves focus to the destination');
         await page.setViewportSize({width, height: 900});
       }
       async function selectSection(target, scroll = true) {
@@ -166,6 +201,8 @@ async function pinnedIdentity(page, panel, cellIndex) {
         assert.equal(await page.locator(`#${target}`).isVisible(), true, `${target}: selected panel is visible`);
         assert.equal(await choice.getAttribute('aria-pressed'), 'true');
         assert.equal(await navigation.locator('[data-analysis-workflow][aria-pressed=true]').count(), 1);
+        assert.equal(await landing.getAttribute('aria-pressed'), 'false');
+        assert.equal(await recommendation.isVisible(), false, 'The suggested passage belongs to the landing view');
         if (scroll) await page.locator(`#${target}`).scrollIntoViewIfNeeded();
       }
       if ((locale === 'en' || locale === 'de') && [1440, 320].includes(width)) {
@@ -256,15 +293,36 @@ async function pinnedIdentity(page, panel, cellIndex) {
           await signalPanel.screenshot({path:path.join(artifacts, `signals-${locale}-${width}-dark.png`)});
       }
       await page.emulateMedia({colorScheme:'light'});
-      await selectSection('analysis-measurements');
+      await landing.click();
       const measurements = page.locator('#analysis-measurements');
-      assert.equal(await measurements.getAttribute('open'), '', 'Selecting measurements opens the overview');
-      await assertMetricLink(measurements.locator('.kpis > p a[href*="/guides/metrics/"]'),
-        `${guideBase}#measurements`, guideLabel);
+      assert.equal(await landing.getAttribute('aria-pressed'), 'true');
+      assert.equal(await visiblePanels(), 1, 'Choosing the summary closes the active report');
+      assert.ok(await recommendation.isVisible());
+      const method = measurements.locator('details#analysis-measurement-method');
+      const methodSummary = method.locator(':scope > summary.ctl');
+      const fullGuide = method.locator(`a[href$="${guideBase}#measurements"]`);
+      assert.equal((await methodSummary.textContent()).trim(), guideLabel);
+      assert.equal(await method.evaluate(element => element.open), false);
+      assert.equal(await fullGuide.isVisible(), false);
+      if (width === 320) await methodSummary.tap();
+      else await methodSummary.press('Enter');
+      assert.equal(await method.evaluate(element => element.open), true);
+      assert.ok(await method.locator('.panel-guide').first().isVisible(), 'The workspace displays its explanation inline');
+      await assertMetricLink(fullGuide, `${guideBase}#measurements`,
+        await page.evaluate(() => uiLabel('measurement_reference')));
+      if (locale === 'de' && width === 1440) {
+        const popup = page.waitForEvent('popup');
+        await fullGuide.click();
+        const guide = await popup;
+        await guide.waitForURL(`**${guideBase}#measurements`);
+        await guide.locator('section#measurements').waitFor({state:'visible'});
+        await guide.close();
+      }
+      if (width === 320) await methodSummary.tap();
+      else await methodSummary.press('Enter');
+      assert.equal(await method.evaluate(element => element.open), false);
       assert.ok(await measurements.locator('.kpi').first().isVisible());
       assert.equal(await page.locator('#flags').isVisible(), false, 'The measurement view does not also expand flag review');
-      const summary = measurements.locator(':scope > summary');
-      assert.ok((await summary.textContent()).trim().length > 0);
       const vocabulary = measurements.locator('#kpi-lexis-drawer');
       assert.equal(await vocabulary.locator('.kpi').first().isVisible(), false, 'Vocabulary indices stay folded');
       if (locale === 'de' && [1440, 320].includes(width))
@@ -275,8 +333,10 @@ async function pinnedIdentity(page, panel, cellIndex) {
       const measurementClipping = await measurements.locator('.kpi:visible, summary:visible, .panel-guide:visible').evaluateAll(nodes =>
         nodes.filter(node => node.scrollWidth > node.clientWidth + 1).map(node => node.textContent));
       assert.deepEqual(measurementClipping, [], `${locale}/${width}: measurement labels and instructions fit`);
-      const readability = measurements.locator('#readability-measurements');
-      assert.ok(await readability.isVisible(), 'Readability formulas appear when measurements open');
+      const readability = measurements.locator('details#readability-measurements');
+      assert.equal(await readability.locator('dl').isVisible(), false, 'Formula inputs begin folded');
+      await readability.locator(':scope > summary').press('Enter');
+      assert.ok(await readability.locator('dl').isVisible(), 'Opening readability reveals the measured formula inputs');
       assert.deepEqual(await readability.locator('dt').allTextContents(), ['Flesch Reading Ease', 'LIX'],
         'Each formula appears once and retains its measured formula name in every interface locale');
       const clipped = await readability.locator('h3, p, dl, dl > div, dt, dd').evaluateAll(nodes =>
@@ -286,10 +346,9 @@ async function pinnedIdentity(page, panel, cellIndex) {
         await readability.screenshot({path:path.join(artifacts, `readability-${locale}-${width}.png`)});
       await page.locator('#workbench-overview-back').click();
       await page.locator('#workbench-overview-open').click();
-      assert.equal(await measurements.evaluate(element => element.open), true, 'Returning preserves the native disclosure state');
-      await summary.focus();
-      await page.keyboard.press('Enter');
-      assert.equal(await measurements.evaluate(element => element.open), false);
+      assert.equal(await readability.evaluate(element => element.open), true, 'Returning preserves the formula disclosure state');
+      await readability.locator(':scope > summary').press('Enter');
+      assert.equal(await readability.evaluate(element => element.open), false);
 
       await selectSection('flags');
       const flags = page.locator('#flags .flags-wrap');
@@ -356,6 +415,8 @@ async function pinnedIdentity(page, panel, cellIndex) {
         assert.equal(await page.locator('#manuscript-reader-controls').evaluate(node=>getComputedStyle(node).position),'static',
           'Short enlarged overview headers scroll naturally instead of covering the content');
         assert.ok(await navigation.evaluate(nav=>nav.scrollWidth<=nav.clientWidth+1), 'Enlarged labels still wrap');
+        assert.ok(await navigation.locator('.analysis-workflow-entries button').evaluateAll(buttons=>
+          buttons.every(button=>button.scrollWidth<=button.clientWidth+1)), 'Enlarged labels remain inside their controls');
         await selectSection('matrix', false);
         assert.ok(await page.locator('#matrix').evaluate(node=>{
           const rect=node.getBoundingClientRect(); return rect.top>=0 && rect.top<innerHeight;

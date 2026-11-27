@@ -153,7 +153,9 @@ _PROJECT_RIBBON_SPEC: tuple[tuple[str, str, str, str | None], ...] = (
 _script_json = script_json
 
 
-def _readability_formulas(metrics: CorpusMetrics, labels: Mapping[str, str] | None, language_key: str) -> str:
+def _readability_formulas(
+    metrics: CorpusMetrics, labels: Mapping[str, str] | None, language_key: str, *, collapsible: bool = False,
+) -> str:
     L, N, P = panel_formatters(labels, language_key)
     available = metrics.tokens > 0 and metrics.total_sentences > 0
     flesch_available = available and metrics.asw > 0
@@ -167,9 +169,14 @@ def _readability_formulas(metrics: CorpusMetrics, labels: Mapping[str, str] | No
     if long_count is not None and metrics.tokens:
         long_words += f" ({P(long_count / metrics.tokens * 100.0)})"
     variant = html.escape(metrics.flesch_variant or "Flesch")
+    title = L("readability_formulas")
+    opening = (
+        details_start(title, element_id="readability-measurements", extra_class="readability kpi-drawer")
+        if collapsible else f'<div class="readability" id="readability-measurements"><h3>{title}</h3>'
+    )
+    closing = "</details>" if collapsible else "</div>"
     return (
-        '<div class="readability" id="readability-measurements">'
-        f'<h3>{L("readability_formulas")}</h3>'
+        opening +
         f'<p class="hint">{L("readability_tokens")} {N(metrics.tokens, 0)} · '
         f'{L("readability_sentences")} {N(metrics.total_sentences, 0)} · {asl} {L("readability_asl")}</p>'
         '<dl>'
@@ -179,7 +186,7 @@ def _readability_formulas(metrics: CorpusMetrics, labels: Mapping[str, str] | No
         f'<div><dt>{help_term(labels, "lix", "LIX")}</dt>'
         f'<dd><b>{N(metrics.lix, 1) if available else "–"}</b>'
         f'<span>{L("readability_long_words")} {long_words}</span></dd></div>'
-        '</dl></div>'
+        '</dl>' + closing
     )
 
 
@@ -1171,27 +1178,28 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         else []
     )
     if has_chapters:
-        hide_lbl = L("review_toggle_hide")
-        show_lbl = L("review_toggle_show")
-        manuscript_intro = esc(
-            label(labels, "review_manuscript_intro").format(
-                chapters=len(chapters),
-                words=N(total_words, 0),
-                flagged=len(flagged),
+        if controls:
+            parts.append(
+                f'<section class="panel analysis-review-chooser" id="analysis-review" aria-label="{L("workflow_sections")}">'
+                '<div id="analysis-review-body">'
+                + render_analysis_workflows(workflow_sections, labels)
+                + '<div class="review-routes" id="analysis-next-passage">'
             )
-        )
-        parts.append(
-            f'<section class="panel" id="analysis-review">'
-            f'<div class="analysis-review-head"><h2>{L("review_title")}</h2>'
-            + (f'<button type="button" class="ctl ctl-sm" id="analysis-review-toggle" '
-               f'aria-expanded="true" aria-controls="analysis-review-body" '
-               f'data-hide-label="{hide_lbl}" data-show-label="{show_lbl}">{hide_lbl}</button>'
-               if not controls else "") + '</div>'
-        )
-        parts.append(
-            '<div id="analysis-review-body">' + panel_guide(manuscript_intro)
-            + '<div class="review-routes">'
-        )
+        else:
+            manuscript_intro = esc(
+                label(labels, "review_manuscript_intro").format(
+                    chapters=len(chapters), words=N(total_words, 0), flagged=len(flagged),
+                )
+            )
+            parts.append(
+                '<section class="panel" id="analysis-review">'
+                f'<div class="analysis-review-head"><h2>{L("review_title")}</h2>'
+                '<button type="button" class="ctl ctl-sm" id="analysis-review-toggle" '
+                'aria-expanded="true" aria-controls="analysis-review-body" '
+                f'data-hide-label="{L("review_toggle_hide")}" data-show-label="{L("review_toggle_show")}">'
+                f'{L("review_toggle_hide")}</button></div><div id="analysis-review-body">'
+                + panel_guide(manuscript_intro) + '<div class="review-routes">'
+            )
         if paragraphs:
             candidates = flagged
             first = (
@@ -1268,14 +1276,8 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
                 f'data-help="{L("analysis_nav_help_characters")}" data-jump="#characters">{L("panel_characters")}</a></article>'
             )
         parts.append("</div>")
-        if controls:
-            parts.append(render_analysis_workflows(workflow_sections, labels))
-        parts.append(
-            '<p class="ctl-note">'
-            + (f'<a href="#analysis-measurements" data-jump="#analysis-measurements">{L("analysis_measurements")}</a>'
-               ' <span aria-hidden="true">·</span> ' if controls else "")
-            + f'{metric_reference_link(labels, "analysis-review")}</p>'
-        )
+        if not controls:
+            parts.append(f'<p class="ctl-note">{metric_reference_link(labels, "analysis-review")}</p>')
         parts.append("</div></section>")
 
     # --- Toolbar ----------------------------------------------------------
@@ -1701,16 +1703,34 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
             )
         )
 
-    parts.append(details_start(L("analysis_measurements"), element_id="analysis-measurements", opened=not controls))
+    if controls:
+        parts.append(
+            '<section class="panel" id="analysis-measurements" aria-labelledby="analysis-measurements-heading">'
+            '<div class="analysis-measurement-head">'
+            f'<h2 id="analysis-measurements-heading">{L("analysis_measurements")}</h2>'
+            '<details id="analysis-measurement-method">'
+            + compact_control(label(labels, "metric_reference_link"), "help-circle", tag="summary", css_class="ctl")
+            + '<div class="analysis-measurement-method-body">'
+            + panel_guide(L("measurement_rhythm_guide"))
+            + panel_guide(L("measurement_language_guide"))
+            + metric_reference_link(labels, "measurements", label_key="measurement_reference")
+            + '</div></details></div>'
+        )
+    else:
+        parts.append(details_start(L("analysis_measurements"), element_id="analysis-measurements", opened=True))
     parts.append('<section class="kpis">')
-    parts.append(f'<p class="ctl-note">{metric_reference_link(labels, "measurements")}</p>')
+    if not controls:
+        parts.append(f'<p class="ctl-note">{metric_reference_link(labels, "measurements")}</p>')
     parts.append(kpi_group(scope_tiles, label(labels, "group_scope")))
-    parts.append(kpi_group(rhythm_tiles, label(labels, "group_rhythm"), hint=label(labels, "measurement_rhythm_guide")))
+    parts.append(kpi_group(rhythm_tiles, label(labels, "group_rhythm"),
+                           hint=label(labels, "measurement_rhythm_guide") if not controls else ""))
     parts.append(kpi_group(
         language_tiles, label(labels, "group_language"),
-        hint=label(labels, "measurement_language_guide") if metrics is not None else "",
-        footer=_readability_formulas(metrics, labels, language_key) if metrics is not None else "",
+        hint=label(labels, "measurement_language_guide") if metrics is not None and not controls else "",
+        footer=_readability_formulas(metrics, labels, language_key) if metrics is not None and not controls else "",
     ))
+    if controls and metrics is not None:
+        parts.append(_readability_formulas(metrics, labels, language_key, collapsible=True))
     if lexis_tiles and metrics is not None:
         parts.append(details_start(L("group_lexis"), element_id="kpi-lexis-drawer",
                                    extra_class="kpi-drawer"))
@@ -1724,7 +1744,7 @@ def render_prepared_dashboard(data: DashboardRenderInput, options: DashboardOpti
         parts.append(details_start(L("measurement_style_details"), extra_class="kpi-drawer"))
         parts.append(kpi_row(style_details))
         parts.append("</details>")
-    parts.append("</section></details>")
+    parts.append("</section></section>" if controls else "</section></details>")
 
     # --- Flagged passages (list → paragraph → marker) ----------------------
     review_capable = bool(controls and not read_only and allowed_actions is not None and action_enabled("analysis-review"))

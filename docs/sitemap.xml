@@ -27,10 +27,10 @@
     </image:image>
     <video:video>
       <video:thumbnail_loc>https://lixity.de/videos/product-tour.webp</video:thumbnail_loc>
-      <video:title>The blank line: a 60-second Lixity product film</video:title>
-      <video:description>Follow Mara's unsigned receipt from a marked sentence and draft comparison to two fictional records, an author's decision and the saved dossier PDF.</video:description>
+      <video:title>Why is this sentence marked? A 65-second Lixity product film</video:title>
+      <video:description>Follow a Warehouse 4 sentence through a checked measurement, a linked source, a draft comparison, an explicit save and a reading website.</video:description>
       <video:content_loc>https://lixity.de/videos/product-tour.mp4</video:content_loc>
-      <video:duration>60</video:duration>
+      <video:duration>65</video:duration>
       <video:publication_date>2026-11-26</video:publication_date>
     </video:video>
   </url>

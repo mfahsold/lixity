@@ -1,45 +1,32 @@
 .analysis-workflow-entries {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
 }
 button.ctl.analysis-workflow-entry {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-start;
   white-space: normal;
   text-align: start;
   min-width: 0;
-  padding: var(--space-3) var(--space-4);
-  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  gap: var(--space-2);
   background: var(--surface);
+  color: var(--fg);
   border-color: var(--line);
 }
 button.ctl.analysis-workflow-entry:hover {
   background: var(--surface-alt);
   border-color: var(--accent);
 }
-.analysis-workflow-entry strong,
-.analysis-workflow-entry span,
-.analysis-workflow-entry .analysis-workflow-preview { overflow-wrap: anywhere; }
-.analysis-workflow-entry strong { color: var(--fg); font-weight: var(--weight-semibold); }
-.analysis-workflow-entry span { font-size: var(--text-note); color: var(--fg-secondary); line-height: var(--line-compact); font-weight: normal; }
-.analysis-workflow-preview {
-  margin-top: auto;
-  padding-block-start: var(--space-1);
-  font-size: var(--text-caption);
-  line-height: var(--line-tight);
-  color: var(--muted);
-  font-weight: var(--weight-medium);
-}
+.analysis-workflow-entry .lixity-icon { flex: none; }
+.analysis-workflow-entry span { min-width: 0; overflow-wrap: anywhere; }
 button.ctl.analysis-workflow-entry[aria-pressed="true"] {
   background: var(--accent-light);
-  color: var(--fg);
+  color: var(--accent);
   border-color: var(--accent);
 }
-button.ctl.analysis-workflow-entry[aria-pressed="true"] strong { color: var(--accent); }
-button.ctl.analysis-workflow-entry[aria-pressed="true"] .analysis-workflow-preview { color: var(--fg-secondary); }
 .analysis-workflow-sections {
   display: flex;
   flex-wrap: wrap;
@@ -50,9 +37,10 @@ button.ctl.analysis-workflow-entry[aria-pressed="true"] .analysis-workflow-previ
 }
 .analysis-workflow-sections > .ctl { white-space: normal; text-align: start; }
 @container analysis-outline (max-width: 42rem) {
-  .analysis-workflow-entries { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
-  button.ctl.analysis-workflow-entry { padding: var(--space-2) var(--space-3); }
-  .analysis-workflow-preview { display: none; }
+  .analysis-workflow-entries { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container analysis-outline (max-width: 24rem) {
+  button.ctl.analysis-workflow-entry { padding-inline: var(--space-2); }
 }
 
 body:not(.has-guided-analysis) .analysis-workflows,

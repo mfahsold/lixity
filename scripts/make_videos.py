@@ -22,10 +22,10 @@ from pathlib import Path
 
 if __package__:
     from .build_evidence import utc_now, write_build_receipt
-    from .product_tour_edit import ICON, LEDGER, RECEIPT, Edit, compose
+    from .product_tour_edit import ICON, Edit, compose
 else:
     from build_evidence import utc_now, write_build_receipt
-    from product_tour_edit import ICON, LEDGER, RECEIPT, Edit, compose
+    from product_tour_edit import ICON, Edit, compose
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 RAW_DIR = BASE_DIR / ".artifacts" / "screenshots" / "videos"
@@ -141,12 +141,12 @@ def convert(name: str, poster_at: str, max_mp4: int, max_gif: int) -> None:
 def _tour_plan() -> dict:
     """Load the timeline also consumed by the recorder and localized homepages."""
     plan = json.loads(TOUR_TIMING_PATH.read_text(encoding="utf-8"))
-    if plan.get("schema_version") != "lixity-product-tour-timing/2":
+    if plan.get("schema_version") != "lixity-product-tour-timing/3":
         raise SystemExit("Unknown product-tour timing schema")
     scenes = plan["scenes"]
     fps = plan["fps"]
-    if not isinstance(fps, int) or fps <= 0 or len(scenes) != 6 or len({scene["id"] for scene in scenes}) != len(scenes):
-        raise SystemExit("The product tour needs six ordered scenes and a positive integer fps")
+    if not isinstance(fps, int) or fps <= 0 or not scenes or len({scene["id"] for scene in scenes}) != len(scenes):
+        raise SystemExit("The product tour needs distinct caption cues and a positive integer fps")
     captures = plan["captures"]
     if {shot["theme"] for shot in captures} != {"light", "dark"}:
         raise SystemExit("The product tour needs actual light and dark workspace shots")
@@ -158,6 +158,11 @@ def _tour_plan() -> dict:
         previous_end = end
     if previous_end != plan["duration"]:
         raise SystemExit("Tour scenes do not cover the declared duration")
+    if (len({shot["id"] for shot in captures}) != len(captures) or
+            any(not 0 < shot["duration"] <= shot["record_duration"] or
+                shot["record_duration"] * fps % 1 or shot["duration"] * fps % 1 for shot in captures) or
+            sum(shot["duration"] for shot in captures) != scenes[-1]["start"]):
+        raise SystemExit("Tour captures must cover the whole-frame timeline before the end card")
     return plan
 
 
@@ -207,21 +212,24 @@ def _read_source(filename: str, digest: str, base: Path) -> Path:
     return source
 
 
-def _tour_recordings(plan: dict) -> tuple[dict, list[tuple[dict, Path, Path]], Path]:
+def _tour_recordings(plan: dict) -> tuple[dict, list[tuple[dict, Path, Path]]]:
     recording = json.loads((RAW_DIR / "product-tour.json").read_text(encoding="utf-8"))
-    if (recording.get("schema_version") != "lixity-product-tour-recording/3" or
+    if (recording.get("schema_version") != "lixity-product-tour-recording/4" or
             recording.get("fps") != plan["fps"] or recording.get("duration") != plan["duration"]):
         raise SystemExit("Recording metadata does not match the product-tour timing plan")
     segments = recording.get("segments", [])
     if [segment["id"] for segment in segments] != [scene["id"] for scene in plan["captures"]]:
         raise SystemExit("The recording needs one ordered segment per planned camera shot")
     recordings = []
+    streams = {}
     for scene, segment in zip(plan["captures"], segments, strict=True):
         filename = segment["file"]
         source = _read_source(filename, segment["sha256"], RAW_DIR)
-        video, _ = _video_info(source)
+        if source not in streams:
+            streams[source] = _video_info(source)[0]
+        video = streams[source]
         start = segment["startFrame"]
-        frames = scene["duration"] * plan["fps"]
+        frames = scene["record_duration"] * plan["fps"]
         if (not isinstance(start, int) or start < 0 or segment["frames"] != frames or
                 segment.get("theme") != scene["theme"] or (video["width"], video["height"]) != (1440, 900) or
                 Fraction(video["avg_frame_rate"]) != plan["fps"]):
@@ -229,12 +237,11 @@ def _tour_recordings(plan: dict) -> tuple[dict, list[tuple[dict, Path, Path]], P
         if int(video["nb_read_frames"]) < start + frames:
             raise SystemExit(f"{filename} needs {start + frames} frames including its anchor; "
                              f"only {video['nb_read_frames']} were recorded")
-        if not 0 < segment["actionEnd"] <= scene["duration"] - 3:
+        if not 0 < segment["actionEnd"] <= scene["duration"] - .5:
             raise SystemExit(f"{filename} leaves too little time to read the outcome")
         still = _read_source(segment["still"], segment["stillSha256"], RAW_DIR)
         recordings.append((segment, source, still))
-    pdf = recording["exhibitPage"]
-    return recording, recordings, _read_source(pdf["file"], pdf["sha256"], RAW_DIR)
+    return recording, recordings
 
 
 def _webm_codec(encoders: str) -> list[str]:
@@ -256,7 +263,7 @@ def _tour_tool_versions(tools: dict[str, tuple[str, str]]) -> dict[str, str]:
 def convert_product_tour(selection: str | None = None) -> None:
     """Encode the editable FilmCraft cut once per destination codec."""
     plan = _tour_plan()
-    recording, recordings, exhibit = _tour_recordings(plan)
+    recording, recordings = _tour_recordings(plan)
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         raise SystemExit("ffmpeg is required to publish walkthrough videos.")
@@ -292,15 +299,17 @@ def convert_product_tour(selection: str | None = None) -> None:
     script = Path(__file__).resolve()
     inputs = (
         TOUR_TIMING_PATH, RAW_DIR / "product-tour.json", script, script.with_name("product_tour_edit.py"),
-        *(BASE_DIR / asset for asset in (RECEIPT, LEDGER, ICON)),
+        script.with_name("product_tour_capture.cjs"),
+        BASE_DIR / ICON,
     )
     input_hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in inputs}
 
     def encode(width: int, height: int, exports: tuple, staging: Path) -> None:
         edit = Edit(review / f"warehouse-4-{width}x{height}.fcproj", width, height, fps)
-        compose(edit, BASE_DIR, plan, recordings, exhibit)
+        compose(edit, BASE_DIR, plan, recordings)
         with tempfile.TemporaryDirectory(prefix="frames-", dir=review) as temp:
-            sequence = edit.render(Path(temp), (2, 7, 10, 16, 18, 22, 25, 30, 34, 39, 43, 49, 54, 58))
+            sequence = edit.render(Path(temp), (2, 8, 12, 17, 24, 30, 34, 39, 44, 49, 53, 57, 60, 63),
+                                   duration=plan["duration"])
             for name, codec in exports:
                 target = staging / name
                 run([ffmpeg, "-y", "-loglevel", "error", "-framerate", str(fps), "-i", str(sequence),
@@ -341,7 +350,7 @@ def convert_product_tour(selection: str | None = None) -> None:
                 name: digest
                 for segment in recording["segments"]
                 for name, digest in ((segment["file"], segment["sha256"]), (segment["still"], segment["stillSha256"]))
-            } | {recording["exhibitPage"]["file"]: recording["exhibitPage"]["sha256"]},
+            },
             "encoders": {name: codec for _, _, exports in layouts for name, codec in exports},
             "outputs_sha256": outputs,
         })

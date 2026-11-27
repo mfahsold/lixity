@@ -331,7 +331,7 @@ async function checkCorpusScope(browser) {
       await page.locator('#workbench-overview-open').click();
       await openAnalysisSection(page, 'analysis-measurements');
       const measurements = page.locator('#analysis-measurements');
-      assert.equal(await measurements.getAttribute('open'), '', 'Measurement counts open on selection');
+      assert.equal(await measurements.isVisible(), true, 'Measurement counts appear on selection');
       const scopeTiles = measurements.locator('.kpi-group').first().locator('.kpi');
       assert.equal(await scopeTiles.nth(0).locator('b').textContent(), '6', `${scope}: global word KPI must share corpus scope with sentences and ASL`);
       assert.equal(await scopeTiles.nth(3).locator('b').textContent(), '2');

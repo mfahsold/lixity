@@ -298,10 +298,11 @@ Happy path for an author or lector (no technical setup beyond the local app):
    `Shift+Enter`) or **Back to passage** to stay oriented.
 2. Turn **Analysis On** for exactly one question. Use **Underline counted passages** or
    **Mark differing paragraphs**, then return to the unmarked passage before deciding.
-3. In **Analysis overview**, choose one task: **Review passages**
+3. Open **Analysis overview** to see **Manuscript measurements** and the
+   first suggested passage. Choose **Review passages**
    (**Textstellen prüfen**), **Compare chapters** (**Kapitel vergleichen**) or
-   **Explore patterns** (**Muster erkunden**). Pick a secondary view when needed;
-   the next-passage action remains available above the views.
+   **Explore patterns** (**Muster erkunden**) for a report. Pick a secondary
+   view within the task when needed.
 4. Follow research beside the text via **Dossiers** or **Paragraph details →
    Research for this passage**. Distinguish the exact retained quotation from
    the current dossier record; a changed source never silently updates a saved link.
@@ -481,11 +482,13 @@ for text size (16–28 nominal pixels), narrow/standard/wide text and
 compact/standard/relaxed line spacing. Appearance and the desktop split are local
 browser preferences; display changes do not edit the source.
 
-The local overview opens with **Manuscript
-measurements**, manuscript status, the next passage and three task choices.
-Selecting **Review passages**, **Compare
-chapters** or **Explore patterns** reveals one existing analysis section.
-Secondary choices switch sections within that task and retain your inputs.
+The local overview starts on **Manuscript measurements**. The four choices
+above it switch between the measurements and the three report tasks.
+The suggested passage appears with the measurements. **How it’s measured**
+expands a brief explanation in place and links to the full reference.
+Readability formulas, vocabulary measures and style details each expand separately.
+Selecting **Review passages**, **Compare chapters** or **Explore patterns**
+opens one report. Secondary choices switch reports within that task and retain your inputs.
 Use **Sections** in the overview toolbar to reach the choices again
 from a long table or chart. Opening the overview again starts at manuscript
 measurements, with your previous choices still available inside each task.

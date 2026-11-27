@@ -8,6 +8,7 @@ const os = require('node:os');
 const http = require('node:http');
 const assert = require('node:assert/strict');
 const {stagePages} = require('./support/staged-pages.cjs');
+const tourTiming = require('../../docs/videos/product-tour-timing.json');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-public-docs-'));
 const canonicalBase = 'https://lixity.de/';
 const root = stagePages({baseUrl: canonicalBase});
@@ -911,7 +912,10 @@ async function checkDemoCapabilities(page, width) {
     await expect(page.locator('#' + target)).toBeInViewport();
   }
 
-  await page.locator('[data-review-passage]').click();
+  const suggestedPassage = page.locator('#analysis-next-passage [data-review-passage]');
+  await expect(suggestedPassage).toBeHidden();
+  await page.locator('#analysis-measurements-tab').click();
+  await suggestedPassage.click();
   const reviewExplanation = page.locator('#reader-inspector-close');
   if (await reviewExplanation.isVisible()) await reviewExplanation.click();
   const passage = page.locator('#chapters .ptext.open').first();
@@ -1572,7 +1576,10 @@ async function checkSandboxQuotationPairs(page) {
             await expect(video).toHaveAttribute('preload', 'none');
             await expect.poll(() => video.evaluate(el => el.clientWidth / el.clientHeight))
               .toBeCloseTo(portrait ? 9 / 16 : 8 / 5, 2);
-            await expect(page.locator('#tour-transcript li')).toHaveCount(6);
+            const cues = page.locator('#tour-transcript li');
+            await expect(cues).toHaveCount(tourTiming.scenes.length);
+            assert.deepEqual(await cues.evaluateAll(nodes => nodes.map(node => Number(node.dataset.start))),
+              tourTiming.scenes.map(scene => scene.start));
             await page.locator('#impressum > summary').click();
             await expect(page.locator('#impressum address')).toContainText('ROST Services GmbH');
             await page.locator('#impressum > summary').click();
@@ -1629,8 +1636,12 @@ async function checkSandboxQuotationPairs(page) {
         await expect(page).toHaveURL(origin + '/lixity/');
         await page.locator('#examples').click();
         await expect(page).toHaveURL(origin + '/lixity/#product-tour-preview');
-        await page.locator('.tour-explore[href="demo/report.html"]').click();
-        await expect(page, 'The tour leads to the full, read-only example').toHaveURL(isDemoReportURL);
+        await page.locator('.tour-explore[href="guides/first-look.html#passage"]').click();
+        await expect(page, 'The tour opens the instructions for the marked sentence')
+          .toHaveURL(origin + '/lixity/guides/first-look.html#passage');
+        await expect(page.locator('#passage')).toBeInViewport();
+        await page.locator('#passage + p a[href="../demo/report.html"]').click();
+        await expect(page, 'The instructions open the full, read-only example').toHaveURL(isDemoReportURL);
         await expect(page.locator('h1')).toHaveText(demoTitle);
         await page.locator('#example-context > summary').click();
         await page.locator('#example-context a[href="../"]').click();

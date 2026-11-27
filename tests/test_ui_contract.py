@@ -1268,9 +1268,9 @@ class TestUiConsolidationAndSecurityContracts(unittest.TestCase):
                     self.assertIn(key, payload)
                     self.assertTrue(payload[key] and payload[key] != key, f"{language}.{key}")
 
-                # Review guide uses localized intro and passage candidate strings across all 7 locales.
+                # The suggested passage uses a localized action across all seven locales.
                 review = rendered.split('id="analysis-review"', 1)[1].split("</section>", 1)[0]
-                self.assertIn(f"1 {labels['review_manuscript_intro'].split()[1]}", unescape(review))
+                self.assertIn(labels["review_flagged_passage_action"], unescape(review))
 
                 # Research template presets are localized rather than hardcoded German.
                 research_html = unescape(render_research_panel(labels))

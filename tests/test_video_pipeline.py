@@ -18,12 +18,13 @@ MEDIA_TOOLS = FFMPEG and FFPROBE
 PUBLISHED_VIDEOS = Path(__file__).resolve().parents[1] / "docs" / "videos"
 
 
-def test_all_homepage_transcripts_follow_the_full_minute_tour() -> None:
+def test_all_homepage_transcripts_follow_the_full_tour() -> None:
+    plan = make_videos._tour_plan()
     for name, page in render_pages().items():
         starts = [int(value) for value in re.findall(r'<li data-start="(\d+)">', page)]
-        assert starts == [0, 5, 14, 27, 42, 52], name
+        assert starts == [scene["start"] for scene in plan["scenes"]], name
         title = re.search(r'<video[^>]+aria-label="([^"]+)"', page)
-        assert title and "60" in title.group(1), name
+        assert title and str(plan["duration"]) in title.group(1), name
 
 
 @pytest.fixture
@@ -40,9 +41,9 @@ def short_tour_recording(
     )
     plan = make_videos._tour_plan()
     timing = {
-        "schema_version": "lixity-product-tour-recording/3", "fps": plan["fps"], "duration": plan["duration"],
+        "schema_version": "lixity-product-tour-recording/4", "fps": plan["fps"], "duration": plan["duration"],
         "segments": [{"id": scene["id"], "theme": scene["theme"], "file": source.name, "startFrame": 2,
-                      "frames": scene["duration"] * plan["fps"],
+                      "frames": scene["record_duration"] * plan["fps"],
                       "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}
                      for scene in plan["captures"]],
     }
@@ -97,11 +98,10 @@ def test_partial_tour_refreshes_one_portrait_and_both_destinations(tmp_path: Pat
     untouched.write_bytes(b"untouched website landscape")
     for name in (master, alias, poster, horizontal):
         (output / name).write_bytes(b"old " + name.encode())
-    for asset in (make_videos.RECEIPT, make_videos.LEDGER, make_videos.ICON):
-        source = tmp_path / asset
-        source.parent.mkdir(parents=True, exist_ok=True)
-        source.write_bytes(b"test artwork")
-    recording = {"segments": [], "exhibitPage": {"file": "exhibit.png", "sha256": "example"}}
+    source = tmp_path / make_videos.ICON
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_bytes(b"test artwork")
+    recording = {"segments": []}
     (tmp_path / "product-tour.json").write_text(json.dumps(recording), encoding="utf-8")
     rendered = []
 
@@ -109,13 +109,14 @@ def test_partial_tour_refreshes_one_portrait_and_both_destinations(tmp_path: Pat
         def __init__(self, _project, width, height, _fps):
             rendered.append((width, height))
 
-        def render(self, frames, _preview_times):
+        def render(self, frames, _preview_times, *, duration):
+            assert duration == make_videos._tour_plan()["duration"]
             return frames / "frame%04d.png"
 
     monkeypatch.setattr(make_videos, "BASE_DIR", tmp_path)
     monkeypatch.setattr(make_videos, "OUT_DIR", output)
     monkeypatch.setattr(make_videos, "RAW_DIR", tmp_path)
-    monkeypatch.setattr(make_videos, "_tour_recordings", lambda _plan: (recording, [], None))
+    monkeypatch.setattr(make_videos, "_tour_recordings", lambda _plan: (recording, []))
     monkeypatch.setattr(make_videos, "Edit", FakeEdit)
     monkeypatch.setattr(make_videos, "compose", lambda *_args: None)
     monkeypatch.setattr(make_videos, "run", lambda command: Path(command[-1]).write_bytes(b"new " + Path(command[-1]).name.encode()))
@@ -150,14 +151,15 @@ def test_published_portrait_destinations_are_byte_identical() -> None:
 
 @pytest.mark.skipif(not MEDIA_TOOLS, reason="ffmpeg and ffprobe are required for video validation")
 @pytest.mark.parametrize(
-    ("filename", "frames", "width", "height"),
-    [("product-tour.mp4", 1500, 1440, 900), ("product-tour.webm", 1500, 1440, 900),
-     ("product-tour-portrait.mp4", 1500, 1080, 1920),
-     ("social-hook-16x9.mp4", 1500, 1600, 900), ("social-hook-9x16.mp4", 1500, 1080, 1920)],
+    ("filename", "width", "height"),
+    [("product-tour.mp4", 1440, 900), ("product-tour.webm", 1440, 900),
+     ("product-tour-portrait.mp4", 1080, 1920),
+     ("social-hook-16x9.mp4", 1600, 900), ("social-hook-9x16.mp4", 1080, 1920)],
 )
 def test_published_video_has_complete_constant_frame_timing_and_geometry(
-    filename: str, frames: int, width: int, height: int,
+    filename: str, width: int, height: int,
 ) -> None:
+    plan = make_videos._tour_plan()
     path = PUBLISHED_VIDEOS / filename
     assert FFPROBE
     result = subprocess.run(  # noqa: S603 - fixed local published video validation
@@ -173,7 +175,7 @@ def test_published_video_has_complete_constant_frame_timing_and_geometry(
     assert video["color_range"] == "tv"
     assert video["color_space"] == video["color_primaries"] == "bt709"
     assert video["color_transfer"] == "iec61966-2-1"
-    assert video["avg_frame_rate"] == "25/1"
-    assert int(video["nb_read_frames"]) == frames
-    assert float(media["format"]["duration"]) == pytest.approx(frames / 25, abs=.002)
+    assert video["avg_frame_rate"] == f'{plan["fps"]}/1'
+    assert int(video["nb_read_frames"]) == plan["duration"] * plan["fps"]
+    assert float(media["format"]["duration"]) == pytest.approx(plan["duration"], abs=.002)
     assert int(media["format"]["size"]) <= make_videos.TOUR_VIDEO_LIMITS.get(filename, make_videos.DEFAULT_TOUR_VIDEO_LIMIT)

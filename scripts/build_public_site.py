@@ -112,9 +112,6 @@ def render_pages(root: Path | None = None) -> dict[str, str]:
         fields['rhythm_guide_path'] = (
             'guides/first-look-de.html#rhythmus' if lang == 'de' else 'guides/first-look.html#contrast'
         )
-        fields['research_guide_path'] = (
-            'guides/first-look-de.html#quittung' if lang == 'de' else 'guides/first-look.html#receipt'
-        )
         fields['alternates'] = '\n'.join(
             f'<link rel="alternate" hreflang="{code}" href="{page_url(code)}"/>'
             for code in LANGUAGES) + f'\n<link rel="alternate" hreflang="x-default" href="{BASE}"/>'

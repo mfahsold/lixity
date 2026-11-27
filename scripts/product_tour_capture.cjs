@@ -1,4 +1,4 @@
-// Capture six deliberate shots. Preparation is excluded by a decoded frame anchor.
+// Record one real author journey. Decoded anchors omit setup between editorial shots.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -9,70 +9,80 @@ const {performance} = require('node:perf_hooks');
 const {startNativeServer} = require('../tests/browser/support/native-server.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
-const MINIMUM_HOLD = 3;
 const ORIGINAL_SENTENCE = 'It was only when she looked at it again that she began to think that there might have been a reason for the space that he had left on the form.';
 const DRAFT_SENTENCE = 'Only then did she wonder why he had left the line blank.';
-const CLOSING_SENTENCE = 'The receiving line stayed blank.';
-
-function extractExhibitPage(pdf, directory) {
-  const plain = spawnSync('pdftotext', [pdf, '-'], {encoding: 'utf8'});
-  assert.equal(plain.status, 0, 'The tour needs pdftotext to verify the actual exhibit book export');
-  assert.match(plain.stdout, /Warehouse 4 exhibit book/i);
-  const selected = plain.stdout.split('\f').findIndex(text =>
-    text.includes('Office ledger') && text.includes('18:40') && text.includes('20:00'));
-  assert.ok(selected >= 0, 'The exported exhibit book must contain its ledger evidence');
-  const base = path.join(directory, 'product-tour-exhibit-page');
-  const page = String(selected + 1);
-  const image = spawnSync('pdftoppm', ['-f', page, '-l', page, '-r', '144', '-singlefile', '-png', pdf, base]);
-  assert.equal(image.status, 0, 'The verified export page must render with pdftoppm');
-  return {file: path.basename(base) + '.png', page: selected + 1,
-    sha256: createHash('sha256').update(fs.readFileSync(base + '.png')).digest('hex')};
-}
+const LINKED_PASSAGE = 'She brought the torn edges together. They did not fit.';
+const SHOTS = ['passage', 'research', 'compare', 'save', 'export', 'reader'];
+const ALLOWED_WRITES = new Set(['manuscript-compare', 'manuscript-edit', 'site-preflight', 'site-export', 'site-export-report']);
+const READER_PATH = '/__tour-reader/';
+const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 
 async function startTourProject(directory) {
   return startNativeServer(`
 import json
 import sys
-from http.server import ThreadingHTTPServer
 from pathlib import Path
-from lixity.server import LixityServerHandler
-from lixity.research import api
+from lixity.server.handler import LixityServerHandler
+from lixity.server.runtime import _LoopbackHTTPServer
+from lixity.server.workspaces import WorkspaceRegistry
 from scripts.example_project import create_example_project
 
 project = Path(sys.argv[1]) / 'warehouse-4'
 create_example_project(project)
 manuscript = project / 'harbour-manuscript.md'
-dossier = next(item for item in api.list_dossiers(project)['dossiers'] if item['title'] == 'Warehouse 4 exhibit book')
 LixityServerHandler.workspace_root = str(project)
 LixityServerHandler.source_input = str(manuscript)
 LixityServerHandler.exports_dir = str(project / 'exports')
 LixityServerHandler.language = 'en'
-LixityServerHandler.refresh()
-server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
-print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'dossier': dossier['id'], 'revision': dossier['revision']}), flush=True)
-server.serve_forever()
+with _LoopbackHTTPServer(('127.0.0.1', 0), LixityServerHandler) as server:
+    server.workspaces = WorkspaceRegistry(LixityServerHandler)
+    print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'manuscript': str(manuscript)}), flush=True)
+    server.serve_forever()
 `, directory);
 }
 
-function anchorFrame(source, requiredFrames) {
-  // Read a corner of every decoded source frame, rather than guessing when
-  // Playwright's first screencast frame arrived from a wall-clock stopwatch.
+function anchoredFrames(source, shots) {
   const decoded = spawnSync('ffmpeg', ['-v', 'error', '-i', source, '-vf',
     'crop=2:2:0:0,scale=1:1,format=rgb24', '-f', 'rawvideo', 'pipe:1'], {maxBuffer: 16 * 1024 * 1024});
   assert.equal(decoded.status, 0, 'Frame-anchor decoding failed: ' + String(decoded.stderr));
   const pixels = decoded.stdout;
   assert.equal(pixels.length % 3, 0);
-  let markers = 0, first = -1;
+  const anchors = [];
+  let markedFrames = 0;
   for (let frame = 0; frame < pixels.length / 3; frame++) {
     const marked = pixels[frame * 3] > 240 && pixels[frame * 3 + 1] < 20 && pixels[frame * 3 + 2] > 240;
-    if (marked) {
-      assert.equal(first, -1, 'A recording must contain one contiguous frame anchor');
-      markers++;
-    } else if (markers && first === -1) first = frame;
+    if (marked) markedFrames++;
+    else if (markedFrames) {
+      assert.ok(markedFrames >= 3, 'Every shot needs a visible frame anchor');
+      anchors.push(frame);
+      markedFrames = 0;
+    }
   }
-  assert.ok(markers >= 3 && first >= 0, 'The recording must contain a visible frame anchor');
-  assert.ok(pixels.length / 3 - first >= requiredFrames, 'The complete shot must follow its frame anchor');
-  return first;
+  assert.equal(anchors.length, shots.length, 'The full take must contain one decoded anchor per shot');
+  for (const [index, shot] of shots.entries()) {
+    assert.ok(anchors[index] + shot.frames <= (anchors[index + 1] ?? pixels.length / 3),
+      'The full ' + shot.id + ' shot must fit before the next anchor');
+  }
+  return anchors;
+}
+
+function extractReader(downloadPath, destination) {
+  const python = process.env.PYTHON_BIN || path.join(ROOT, '.venv/bin/python');
+  const result = spawnSync(python, ['-c', `
+from pathlib import Path, PurePosixPath
+import sys
+from zipfile import ZipFile
+
+root = Path(sys.argv[2])
+with ZipFile(sys.argv[1]) as bundle:
+    assert bundle.testzip() is None
+    for member in bundle.infolist():
+        name = PurePosixPath(member.filename)
+        assert not name.is_absolute() and '..' not in name.parts
+    bundle.extractall(root)
+assert (root / 'index.html').is_file()
+`, downloadPath, destination], {encoding: 'utf8'});
+  assert.equal(result.status, 0, 'The delivered reading website must be a complete ZIP: ' + result.stderr);
 }
 
 async function recordProductTour(options) {
@@ -80,313 +90,418 @@ async function recordProductTour(options) {
   let server;
   try {
     server = await startTourProject(project);
-    return await recordTourScenes({...options, ...server.fixture, project});
+    return await recordTour({...options, ...server.fixture, project});
   } finally {
-    if (server) await server.close();
-    fs.rmSync(project, {recursive: true, force: true});
+    try { if (server) await server.close(); }
+    finally { fs.rmSync(project, {recursive: true, force: true}); }
   }
 }
 
-async function recordTourScenes({browser, capture, prepareWorkspacePage, url: origin, dossier, revision, project}) {
+async function recordTour({browser, capture, prepareWorkspacePage, url: origin, manuscript, project}) {
   const plan = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/videos/product-tour-timing.json'), 'utf8'));
-  assert.equal(plan.schema_version, 'lixity-product-tour-timing/2');
+  assert.equal(plan.schema_version, 'lixity-product-tour-timing/3');
   assert.equal(plan.fps, 25);
-  assert.equal(plan.scenes.at(-1).end, plan.duration);
-  assert.deepEqual(plan.captures.map(scene => scene.id), ['read', 'passage', 'compare', 'dossier', 'decision', 'pdf']);
+  assert.deepEqual(plan.captures.map(scene => scene.id), SHOTS);
   const directory = path.dirname(capture.videoTarget);
   const sidecar = capture.videoTarget.replace('.webm', '.json');
-  // Fixed segment filenames may be replaced during this run. An old manifest
-  // must never describe a mixture of old and partially recorded new footage.
-  fs.rmSync(sidecar, {force: true});
-  const segments = [];
-  let exhibitPage;
+  const readerDirectory = path.join(project, 'recipient');
+  const recording = fs.mkdtempSync(path.join(directory, '.tour-recording-'));
+  const original = fs.readFileSync(manuscript, 'utf8');
+  assert.equal(original.split(ORIGINAL_SENTENCE).length, 2, 'The tested original sentence must occur once');
+  const amended = original.replace(ORIGINAL_SENTENCE, DRAFT_SENTENCE);
+  const context = await browser.newContext({
+    viewport: {width: capture.width, height: capture.height}, reducedMotion: 'reduce',
+    colorScheme: plan.captures[0].theme, deviceScaleFactor: 2, acceptDownloads: true,
+    recordVideo: {dir: recording, size: {width: capture.width, height: capture.height}},
+  });
+  const page = await context.newPage();
+  const video = page.video();
+  const segments = [], errors = [], writes = [];
+  let currentShot = 'setup';
+  let pointer = {x: 70, y: 820};
+  await prepareWorkspacePage(page, {cursor: true, fixtures: false});
+  page.setDefaultTimeout(8000);
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  await page.route('**/*', async route => {
+    const request = route.request(), url = new URL(request.url());
+    if (url.origin !== origin) return route.abort();
+    if (request.method() === 'POST') {
+      const match = /^\/w\/[a-f0-9]{32}\/api\/([a-z-]+)$/.exec(url.pathname);
+      if (!match || !ALLOWED_WRITES.has(match[1])) {
+        errors.push('Unexpected local write in the product tour: ' + url.pathname);
+        return route.abort();
+      }
+      writes.push(match[1]);
+    }
+    if (!url.pathname.startsWith(READER_PATH)) return route.continue();
+    const member = path.resolve(readerDirectory, decodeURIComponent(url.pathname.slice(READER_PATH.length)));
+    if (request.method() !== 'GET' || !member.startsWith(readerDirectory + path.sep) ||
+        !fs.existsSync(member) || !fs.statSync(member).isFile()) return route.fulfill({status: 404});
+    return route.fulfill({path: member});
+  });
 
-  const visible = async (page, locator, label) => {
-    assert.ok(await locator.evaluate(node => {
-      const box = node.getBoundingClientRect();
-      return box.width > 0 && box.height > 0 && box.left >= 0 && box.top >= 0 &&
-        box.right <= innerWidth && box.bottom <= innerHeight;
-    }), label + ' must fit inside the recorded viewport');
-  };
-  const proseAtTop = async locator => locator.evaluate(node => {
+  const settle = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const readParagraph = text => page.locator('#chapters .ptext').filter({hasText: text});
+  const prose = paragraph => paragraph.locator('.ptext-inner > p');
+  const proseAtTop = locator => locator.evaluate(node => {
     const controls = document.getElementById('manuscript-reader-controls');
     const toolbar = document.querySelector('.toolbar');
-    const inset = Math.max(controls ? controls.getBoundingClientRect().bottom : 0,
-      toolbar ? toolbar.getBoundingClientRect().bottom : 0) + 24;
+    const inset = Math.max(controls?.getBoundingClientRect().bottom || 0,
+      toolbar?.getBoundingClientRect().bottom || 0) + 24;
     window.scrollTo({top: scrollY + node.getBoundingClientRect().top - inset, behavior: 'instant'});
   });
 
-  for (const scene of plan.captures) {
-    const duration = scene.duration;
-    const frames = duration * plan.fps;
-    const context = await browser.newContext({viewport: {width: capture.width, height: capture.height},
-      reducedMotion: 'reduce', colorScheme: scene.theme, deviceScaleFactor: 2,
-      recordVideo: {dir: directory, size: {width: capture.width, height: capture.height}}});
-    const page = await context.newPage();
-    const errors = [];
-    page.on('pageerror', error => errors.push(error.message));
-    page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-    let video;
-    try {
-      await prepareWorkspacePage(page, {cursor: true, fixtures: false});
-      await page.addInitScript(({origin, theme}) => {
-        if (location.origin === origin) localStorage.setItem('lixity-theme', theme);
-      }, {origin, theme: scene.theme});
-      // Record only the disposable app. Comparison reads the unsaved text;
-      // an accidental save or other write fails the recording.
-      await page.route('**/*', route => {
-        const request = route.request(), url = new URL(request.url());
-        if (url.origin !== origin) return route.abort();
-        assert.ok(request.method() !== 'POST' || url.pathname === '/api/manuscript-compare',
-          'Unexpected write in the product tour: ' + url.pathname);
-        return route.continue();
-      });
-      page.setDefaultTimeout(15000);
-      const open = async () => {
-        await page.goto(origin);
-        await page.evaluate(() => document.fonts.ready);
-        assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme.split(' ')[0]), scene.theme);
-      };
-      const settle = async () => page.evaluate(() => new Promise(resolve =>
-        requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      let target, verify, act, detail;
-      const dossierSummary = page.locator(`#research-dossiers-list [data-research-detail=dossier][data-record-id="${dossier}"]`);
-      const dossierCard = dossierSummary.locator('..');
+  async function readyCursor() {
+    await page.locator('#walkthrough-cursor').waitFor({state:'attached'});
+    await page.evaluate(() => {
+      const cursor = document.getElementById('walkthrough-cursor');
+      // A popover tracks real mouse input above native modal controls.
+      cursor.setAttribute('popover', 'manual');
+      Object.assign(cursor.style, {right:'auto', bottom:'auto', padding:'0', overflow:'visible',
+        visibility:'visible', width:'18px', height:'18px', margin:'-9px'});
+      if (!cursor.matches(':popover-open')) cursor.showPopover();
+    });
+  }
 
-      if (scene.id === 'read' || scene.id === 'decision') {
-        await open();
-        const prose = scene.id === 'read' ? ORIGINAL_SENTENCE : CLOSING_SENTENCE;
-        const paragraph = page.locator('.ptext').filter({hasText: prose});
-        detail = paragraph.locator('.ptext-inner > p');
-        assert.equal(await paragraph.count(), 1, 'The author’s passage must be unique');
-        // Move from the preceding paragraph into the real manuscript text.
-        await proseAtTop(paragraph.locator('xpath=preceding-sibling::*[contains(concat(" ", normalize-space(@class), " "), " ptext ")][1]'));
-        act = async () => proseAtTop(paragraph);
-        verify = async () => {
-          assert.ok((await detail.innerText()).includes(prose));
-          await visible(page, detail, 'Selected manuscript passage');
-        };
-      } else if (scene.id === 'passage') {
-        await open();
-        await page.locator('#manuscript-analysis-toggle').click();
-        await page.locator('#style-layer').selectOption('sticky');
-        const readingMarks = page.locator('#reader-analysis-options > summary');
-        await readingMarks.click();
-        await page.locator('#analysis-evidence-enabled').check();
-        await readingMarks.press('Enter');
-        const paragraphId = await page.evaluate(() => Object.keys(paragraphContent).find(id =>
-          paragraphContent[id][0].includes('a reason for the space')));
-        assert.ok(paragraphId, 'Warehouse 4 must contain the blank receipt passage');
-        await page.evaluate(id => { location.hash = id; }, paragraphId);
-        const paragraph = page.locator('#' + paragraphId);
-        await proseAtTop(paragraph);
-        target = paragraph.locator('.ptext-inner > p');
-        await page.waitForFunction(id => [...(CSS.highlights.get('lixity-analysis-evidence') || [])].some(range =>
-          range.startContainer.parentElement.closest('.ptext')?.id === id), paragraphId);
-        act = async click => {
-          const point = await page.evaluate(id => {
-            const hit = [...CSS.highlights.get('lixity-analysis-evidence')].find(range =>
-              range.startContainer.parentElement.closest('.ptext')?.id === id);
-            const rect = hit.getClientRects()[0];
-            return {x: rect.x + Math.min(20, rect.width / 2), y: rect.y + rect.height / 2};
-          }, paragraphId);
-          await click(target, point);
-        };
-        verify = async () => {
-          const card = page.locator('#analysis-evidence-card');
-          await card.waitFor({state: 'visible'});
-          assert.equal(await card.locator('blockquote mark').count(), 22, 'The explanation marks all 22 counted words');
-          await visible(page, card.locator('.analysis-evidence-explanation'), 'Why the sentence was selected and how to review it');
-        };
-        detail = page.locator('#analysis-evidence-card');
-      } else if (scene.id === 'compare') {
-        const filename = path.join(project, 'warehouse-4', 'harbour-manuscript.md');
-        const original = fs.readFileSync(filename, 'utf8');
-        const before = ORIGINAL_SENTENCE;
-        const after = DRAFT_SENTENCE;
-        const start = original.indexOf(before);
-        assert.ok(start >= 0);
-        await open();
-        await page.locator('#manuscript-write').click();
-        await page.locator('.cm-content').waitFor({state: 'visible'});
-        await page.locator('#manuscript-versions > summary').click();
-        await page.locator('#manuscript-compare').click();
-        target = page.locator('#manuscript-comparison-draft');
-        await target.waitFor({state: 'visible'});
-        act = async click => {
-          await click(target);
-          await target.evaluate((node, range) => node.setSelectionRange(...range), [start, start + before.length]);
-          await page.keyboard.insertText(after);
-          await target.evaluate(node => {
-            node.scrollTop += Math.round(node.clientHeight * .4);
-            document.getElementById('manuscript-comparison-base').scrollTop = node.scrollTop;
-            document.getElementById('manuscript-comparison-current').scrollTop = node.scrollTop;
-          });
-        };
-        verify = async () => {
-          assert.equal(await page.locator('#manuscript-comparison-base').inputValue(), original);
-          assert.equal(await page.locator('#manuscript-comparison-current').inputValue(), original);
-          assert.equal(await target.inputValue(), original.replace(before, after));
-          const chapter = page.locator('#manuscript-comparison-chapters li').filter({hasText: 'The Blank Line'});
-          await chapter.waitFor({state: 'visible'});
-          assert.match(await chapter.innerText(), /[-−]19 words/);
-          await visible(page, chapter, 'Measured chapter change');
-          assert.equal(fs.readFileSync(filename, 'utf8'), original);
-        };
-        detail = page.locator('#manuscript-comparison-chapters li').filter({hasText: 'The Blank Line'});
-      } else {
-        await open();
-        await page.locator('#tab-view-research').click();
-        await dossierSummary.waitFor({state: 'visible'});
-        await dossierSummary.evaluate(node => node.scrollIntoView({block: 'center', behavior: 'instant'}));
-        const body = dossierCard.locator('.research-dossier-body-rendered');
-        if (scene.id === 'dossier') {
-          target = dossierSummary;
-          detail = body.locator('.dossier-image').filter({has: page.locator('img[alt*="receipt" i]')});
-          verify = async () => {
-            await body.waitFor({state: 'visible'});
-            const image = detail.locator('img');
-            await image.scrollIntoViewIfNeeded();
-            await image.evaluate(node => node.decode());
-            await image.evaluate(node => node.scrollIntoView({block: 'center', behavior: 'instant'}));
-            await settle();
-            await visible(page, image, 'The retained dispatch receipt');
-          };
-        } else {
-          await dossierSummary.click();
-          target = dossierCard.locator('[data-dossier-pdf-export]');
-          await target.scrollIntoViewIfNeeded();
-          act = async click => {
-            const downloading = page.waitForEvent('download');
-            await click(target);
-            const download = await downloading;
-            assert.ok(download.suggestedFilename().endsWith('-v' + revision + '.pdf'));
-            const pdf = await download.path();
-            const bytes = fs.readFileSync(pdf);
-            assert.equal(bytes.subarray(0, 5).toString(), '%PDF-');
-            assert.ok(bytes.subarray(-32).toString().includes('%%EOF'), 'Download must be a complete PDF');
-            exhibitPage = extractExhibitPage(pdf, directory);
-          };
-          verify = async () => {
-            const status = dossierCard.locator('[data-dossier-pdf-status]');
-            await status.getByText(/PDF download started/i).waitFor({state: 'visible'});
-            await visible(page, status, 'Download confirmation');
-          };
-          detail = target.locator('..');
-        }
-      }
+  async function click(locator, point) {
+    await locator.scrollIntoViewIfNeeded();
+    const box = await locator.boundingBox();
+    assert.ok(box && box.width && box.height, 'A visible click target is required');
+    const destination = point || {x:box.x + box.width / 2, y:box.y + box.height / 2};
+    assert.ok(await locator.evaluate((node, point) => node.contains(document.elementFromPoint(point.x, point.y)),
+      destination), 'The visible cursor must reach the intended control in ' + currentShot);
+    await readyCursor();
+    const movement = Math.min(520, 340 + Math.hypot(destination.x - pointer.x, destination.y - pointer.y) * .12);
+    const movingAt = performance.now();
+    while (true) {
+      const progress = Math.min(1, (performance.now() - movingAt) / movement);
+      const eased = (1 - Math.cos(Math.PI * progress)) / 2;
+      await page.mouse.move(pointer.x + (destination.x - pointer.x) * eased, pointer.y + (destination.y - pointer.y) * eased);
+      if (progress === 1) break;
+      await page.waitForTimeout(16);
+    }
+    pointer = destination;
+    await page.mouse.down();
+    await page.waitForTimeout(100);
+    await page.mouse.up();
+  }
 
-      await settle();
-      if (target) await visible(page, target, scene.id + ' action');
-      // This annotation follows actual mouse input; it never changes product state.
-      await page.addStyleTag({content: '#walkthrough-cursor{width:18px!important;height:18px!important;margin:-9px!important;transition:opacity .2s,transform .08s}'});
-      await page.evaluate(() => {
-        const cursor = document.getElementById('walkthrough-cursor');
-        // Native dialogs live above ordinary z-index overlays. A manual popover
-        // keeps the recording annotation visible during the comparison action.
-        cursor.setAttribute('popover', 'manual');
-        Object.assign(cursor.style, {right: 'auto', bottom: 'auto', padding: '0', overflow: 'visible'});
-        cursor.showPopover();
-      });
-      let pointer = {x: 70, y: 820};
-      await page.mouse.move(pointer.x, pointer.y);
-      await page.evaluate(() => {
-        const marker = document.createElement('div'); marker.id = 'tour-frame-anchor';
-        // A top-layer marker also covers a native comparison dialog and its
-        // backdrop. Ordinary z-index overlays would be dimmed behind it.
-        marker.setAttribute('popover', 'manual');
-        marker.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#ff00ff;z-index:2147483647;pointer-events:none';
-        document.body.appendChild(marker);
-        marker.showPopover();
-        // Keep the screencast producing frames while the top-layer marker is
-        // visible. A static backdrop can otherwise yield a single marker frame.
-        marker.animate([{backgroundColor:'#ff00ff'}, {backgroundColor:'#fa08fa'}],
-          {duration:120, iterations:Infinity, direction:'alternate'});
-      });
-      await page.waitForTimeout(500);
-      await page.evaluate(() => document.getElementById('tour-frame-anchor').remove());
-      const started = performance.now();
-      const clicks = [];
-      const click = async (locator, point) => {
-        const box = await locator.boundingBox();
-        assert.ok(box && box.width && box.height, 'A tour click needs a visible target');
-        const destination = point || {x: box.x + box.width / 2, y: box.y + box.height / 2};
-        assert.ok(await locator.evaluate((node, point) => node.contains(document.elementFromPoint(point.x, point.y)), destination),
-          'The directed click must reach its stated control');
-        // Leave room for the final browser input acknowledgement, while the
-        // measured travel still has to fit the 600–900 ms presentation budget.
-        const movement = Math.min(800, 600 + Math.hypot(destination.x - pointer.x, destination.y - pointer.y) / 1440 * 150);
-        const movingAt = performance.now();
-        while (true) {
-          const progress = Math.min(1, (performance.now() - movingAt) / movement);
-          const eased = (1 - Math.cos(Math.PI * progress)) / 2;
-          await page.mouse.move(pointer.x + (destination.x - pointer.x) * eased, pointer.y + (destination.y - pointer.y) * eased);
-          if (progress === 1) break;
-          await page.waitForTimeout(20);
-        }
-        pointer = destination;
-        const movedFor = (performance.now() - movingAt) / 1000;
-        assert.ok(movedFor >= .6 && movedFor <= .9,
-          'Cursor travel must retain its planned 600–900 ms pace (' + movedFor.toFixed(3) + 's)');
-        await page.waitForTimeout(120);
-        assert.ok(await page.locator('#walkthrough-cursor').evaluate(node => {
-          const rect = node.getBoundingClientRect();
-          return node.matches(':popover-open') && getComputedStyle(node).opacity === '1' &&
-            rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight;
-        }), 'The actual recorded cursor must remain visible above the active surface');
-        await page.mouse.down(); await page.waitForTimeout(120); await page.mouse.up();
-        clicks.push({movement: Number(movedFor.toFixed(3)), x: destination.x, y: destination.y});
-      };
+  async function shotAnchor() {
+    await page.evaluate(() => {
+      const marker = document.createElement('div');
+      marker.id = 'tour-frame-anchor';
+      marker.setAttribute('popover', 'manual');
+      marker.style.cssText = 'position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#ff00ff;pointer-events:none';
+      document.body.appendChild(marker);
+      marker.showPopover();
+      marker.animate([{backgroundColor:'#ff00ff'}, {backgroundColor:'#fa08fa'}],
+        {duration:120, iterations:Infinity, direction:'alternate'});
+    });
+    await page.waitForTimeout(520);
+    await page.evaluate(() => document.getElementById('tour-frame-anchor').remove());
+  }
+
+  async function frameBox(...locators) {
+    const boxes = [];
+    for (const locator of locators) {
+      const box = await locator.boundingBox();
+      if (!box) continue;
+      const left = Math.max(0, box.x), top = Math.max(0, box.y);
+      const right = Math.min(capture.width, box.x + box.width), bottom = Math.min(capture.height, box.y + box.height);
+      if (right > left && bottom > top) boxes.push({left, top, right, bottom});
+    }
+    assert.ok(boxes.length, 'The ' + currentShot + ' focus must be on screen');
+    const x = Math.min(...boxes.map(box => box.left)), y = Math.min(...boxes.map(box => box.top));
+    return {x, y, width: Math.max(...boxes.map(box => box.right)) - x,
+      height: Math.max(...boxes.map(box => box.bottom)) - y};
+  }
+
+  let passageId;
+  let preflight;
+  const prep = {
+    async passage() {
+      await page.goto(origin);
+      await page.evaluate(() => document.fonts.ready);
+      await page.locator('#manuscript-analysis-toggle').click();
+      await page.locator('#style-layer').selectOption('sticky');
+      const readingMarks = page.locator('#reader-analysis-options > summary');
+      await readingMarks.click();
+      await page.locator('#analysis-evidence-enabled').check();
+      await readingMarks.press('Enter');
+      const originalPassage = readParagraph(ORIGINAL_SENTENCE);
+      assert.equal(await originalPassage.count(), 1);
+      passageId = await originalPassage.getAttribute('id');
+      await proseAtTop(originalPassage);
+      await page.waitForFunction(id => [...(CSS.highlights.get('lixity-analysis-evidence') || [])].some(range =>
+        range.startContainer.parentElement.closest('.ptext')?.id === id), passageId);
+    },
+    async research() {
+      await page.locator('.analysis-evidence-close').click();
+      await page.locator('#manuscript-analysis-toggle').click();
+      await proseAtTop(readParagraph(LINKED_PASSAGE));
+    },
+    async compare() {
+      await page.keyboard.press('Escape');
+      const close = page.locator('[data-passage-research-close]');
+      if (await close.isVisible()) await close.click();
+      await proseAtTop(readParagraph(ORIGINAL_SENTENCE));
+    },
+    async save() {},
+    async export() {
+      // The first shot showed the manuscript in context; here the relevant
+      // starting surface is already the Project panel.
+      await page.locator('#tab-view-project').click();
+    },
+    async reader() {
+      await page.goto(origin + READER_PATH + 'index.html');
+      await page.evaluate(() => document.fonts.ready);
+      await page.locator('#reader-publication').waitFor();
+      assert.ok((await page.locator('#chapters').innerText()).includes(DRAFT_SENTENCE));
+      assert.ok(!(await page.locator('#chapters').innerText()).includes(ORIGINAL_SENTENCE));
+      assert.equal(await page.locator('#chapters').getByText('Morning Handover', {exact:true}).count(), 0,
+        'The chapter-six text must not be in the chapter-five reader copy');
+    },
+  };
+  const act = {
+    async passage(focus) {
+      const paragraph = readParagraph(ORIGINAL_SENTENCE);
+      await focus([prose(paragraph), page.locator('#manuscript-analysis-toggle')], [prose(paragraph)]);
+      await page.waitForTimeout(3800);
+      const point = await page.evaluate(id => {
+        const hit = [...CSS.highlights.get('lixity-analysis-evidence')].find(range =>
+          range.startContainer.parentElement.closest('.ptext')?.id === id);
+        const rect = hit.getClientRects()[0];
+        return {x:rect.x + Math.min(20, rect.width / 2), y:rect.y + rect.height / 2};
+      }, passageId);
+      await click(prose(paragraph), point);
+      const card = page.locator('#analysis-evidence-card');
+      await card.waitFor({state:'visible'});
+      assert.equal(await card.locator('blockquote mark').count(), 22);
+      assert.match(await card.innerText(), /22 of 31 words/);
+      await focus([card]);
+      return [card];
+    },
+    async research(focus) {
+      const paragraph = readParagraph(LINKED_PASSAGE);
+      const actions = paragraph.locator('[data-reader-paragraph]');
+      await focus([prose(paragraph), actions]);
+      await click(actions);
+      const values = page.locator('#manuscript-context-menu [data-reader-action="values"]');
+      if (await values.isVisible()) await click(values);
+      const research = page.locator('#reader-inspector-body [data-reader-action="research"]');
+      await research.waitFor({state:'visible'});
+      await focus([prose(paragraph), research], [research]);
+      await page.waitForTimeout(1275);
+      await click(research);
+      const linked = page.locator('#workspace-context-panel [data-passage-research]');
+      await linked.waitFor({state:'visible'});
+      await page.waitForFunction(() => document.querySelector('[data-passage-research]')?.dataset.state === 'ready');
+      assert.match(await linked.innerText(), /morning review leaves the carrier unidentified/i);
+      await focus([prose(paragraph), linked], [linked]);
+      const association = linked.locator('[data-passage-research-associations] > summary').first();
+      await page.waitForTimeout(1700);
+      await click(association);
+      const retained = linked.locator('[data-passage-research-associations]').first();
+      await retained.locator('blockquote').waitFor({state:'visible'});
+      assert.match(await retained.innerText(), /Claim · Version 1/);
+      assert.match(await retained.innerText(), /Dossier · Version 4/);
+      assert.match(await retained.locator('blockquote').innerText(), /She brought the torn edges together\. They did not fit\./);
+      await focus([prose(paragraph), linked], [linked]);
+      return [prose(paragraph), linked];
+    },
+    async compare(focus) {
+      const write = page.locator('#manuscript-write');
+      await focus([prose(readParagraph(ORIGINAL_SENTENCE)), write], [write]);
+      await click(write);
+      await page.locator('.cm-content').waitFor({state:'visible'});
+      const versions = page.locator('#manuscript-versions > summary');
+      await focus([versions]);
+      await click(versions);
+      const compare = page.locator('#manuscript-compare');
+      await click(compare);
+      const draft = page.locator('#manuscript-comparison-draft');
+      const current = page.locator('#manuscript-comparison-current');
+      await draft.waitFor({state:'visible'});
+      assert.equal(await draft.inputValue(), original);
+      assert.equal(await current.inputValue(), original);
+      const start = original.indexOf(ORIGINAL_SENTENCE);
+      await click(draft);
+      await draft.evaluate((node, index) => node.setSelectionRange(index, index), start);
+      await page.keyboard.press('ArrowRight');
+      await draft.evaluate((node, range) => {
+        node.setSelectionRange(range[0], range[1]);
+        document.getElementById('manuscript-comparison-current').scrollTop = node.scrollTop;
+        document.getElementById('manuscript-comparison-base').scrollTop = node.scrollTop;
+      }, [start, start + ORIGINAL_SENTENCE.length]);
+      await focus([current, draft], [draft]);
+      const measured = page.waitForResponse(response =>
+        response.url().endsWith('/api/manuscript-compare') &&
+        response.request().postDataJSON()?.draft_text === amended);
+      await page.waitForTimeout(420);
+      await page.keyboard.type(DRAFT_SENTENCE, {delay:34});
+      const response = await measured;
+      assert.ok(response.ok());
+      const comparison = await response.json();
+      assert.equal(comparison.primary_diff, 'current_to_draft');
+      assert.match(comparison.settings_sha256, /^[0-9a-f]{64}$/);
+      assert.equal(comparison.measurements.current.revision, digest(original));
+      assert.equal(comparison.measurements.draft.revision, digest(amended));
+      assert.equal(fs.readFileSync(manuscript, 'utf8'), original);
+      assert.equal(await draft.inputValue(), amended);
+      const changed = page.locator('#manuscript-comparison-chapters li').filter({hasText:'The Blank Line'});
+      await changed.waitFor({state:'visible'});
+      assert.match(await changed.innerText(), /[-−]19 words/);
+      return [current, draft, changed];
+    },
+    async save(focus) {
+      const use = page.locator('#manuscript-comparison-use');
+      await focus([use, page.locator('#manuscript-comparison-chapters')], [use]);
+      await click(use);
+      const status = page.locator('#manuscript-save-status');
+      await page.waitForFunction(() => document.getElementById('manuscript-save-status')?.dataset.state === 'unsaved');
+      assert.equal(fs.readFileSync(manuscript, 'utf8'), original);
+      const save = page.locator('#manuscript-save');
+      await focus([status, save]);
+      await page.waitForTimeout(800);
+      const saving = page.waitForResponse(response => response.url().endsWith('/api/manuscript-edit') &&
+        response.request().method() === 'POST');
+      await click(save);
+      assert.ok((await saving).ok());
+      await page.waitForFunction(() => document.getElementById('manuscript-save-status')?.dataset.state === 'saved');
+      assert.equal(fs.readFileSync(manuscript, 'utf8'), amended);
+      await focus([status, save]);
       await page.waitForTimeout(1000);
-      const actionStart = (performance.now() - started) / 1000;
-      if (act) await act(click); else await click(target);
-      await verify();
-      await page.evaluate(() => {document.getElementById('walkthrough-cursor').style.visibility = 'hidden';});
+      await Promise.all([page.waitForNavigation(), click(page.locator('#manuscript-close'))]);
+      await page.evaluate(() => document.fonts.ready);
+      const reopened = readParagraph(DRAFT_SENTENCE);
+      await reopened.waitFor({state:'visible'});
+      await proseAtTop(reopened);
+      await focus([prose(reopened)]);
+      assert.equal(await prose(reopened).innerText(), DRAFT_SENTENCE);
+      return [prose(reopened)];
+    },
+    async export(focus) {
+      const actions = page.locator('#project-actions > summary');
+      await focus([actions]);
+      if (!await page.locator('#project-actions').evaluate(node => node.open)) await click(actions);
+      await click(page.locator('#btn-site-export'));
+      const mode = page.locator('#site-export-mode');
+      const profile = page.locator('#site-export-profile');
+      const chapter = page.locator('#site-export-max-chapter');
+      await focus([mode]);
+      await mode.selectOption('reader');
+      await profile.selectOption('readers');
+      await chapter.selectOption('5');
+      assert.equal(await chapter.inputValue(), '5');
+      await focus([mode, profile, chapter, page.locator('#site-export-check')], [mode, profile, chapter]);
+      await page.waitForTimeout(450);
+      const checking = page.waitForResponse(response => response.url().endsWith('/api/site-preflight'));
+      await click(page.locator('#site-export-check'));
+      const response = await checking;
+      assert.ok(response.ok());
+      const preview = await response.json();
+      assert.equal(preview.preflight.schema_version, 'lixity-site-preflight/1');
+      const options = response.request().postDataJSON();
+      assert.equal(options.mode, 'reader');
+      assert.equal(options.publication_profile, 'readers');
+      assert.equal(options.max_chapter, 5);
+      preflight = {mode:options.mode, profile:options.publication_profile, chapter:options.max_chapter};
+      const result = page.locator('#site-export-preflight');
+      await result.waitFor({state:'visible'});
+      await result.scrollIntoViewIfNeeded();
+      await focus([result, page.locator('#site-export-download')]);
+      await page.waitForTimeout(550);
+      const downloading = page.waitForEvent('download');
+      await click(page.locator('#site-export-download'));
+      const download = await downloading;
+      assert.equal(download.suggestedFilename(), 'lixity-reading-website.zip');
+      extractReader(await download.path(), readerDirectory);
+      assert.equal(fs.readFileSync(manuscript, 'utf8'), amended);
+      const status = page.locator('#site-export-status');
+      await status.waitFor({state:'visible'});
+      await status.scrollIntoViewIfNeeded();
+      assert.equal(await status.getAttribute('class'), 'ctl-status ok');
+      await focus([status, page.locator('#site-export-download')]);
+      return [status, page.locator('#site-export-download')];
+    },
+    async reader(focus) {
+      const overview = page.locator('#reader-publication h1').first();
+      await overview.waitFor({state:'visible'});
+      const chooser = page.locator('#publication-reader-chapter');
+      await focus([overview, chooser], [overview]);
+      await page.waitForTimeout(1150);
+      await chooser.selectOption('publication-chapter-5');
+      const revised = page.locator('#chapters .reader-paragraph').filter({hasText:DRAFT_SENTENCE});
+      assert.equal(await revised.count(), 1);
+      await page.waitForTimeout(650);
+      await proseAtTop(revised);
+      await focus([revised]);
+      assert.equal(await revised.innerText(), DRAFT_SENTENCE);
+      return [revised];
+    },
+  };
+
+  try {
+    for (const scene of plan.captures) {
+      currentShot = scene.id;
+      await prep[scene.id]();
+      await page.evaluate(theme => window.LixityComponents?.applyTheme(theme), scene.theme);
+      await settle();
+      await readyCursor();
       await page.mouse.move(70, 820);
+      pointer = {x:70, y:820};
+      await shotAnchor();
+      const started = performance.now();
+      const focusFrames = [];
+      const point = async (locators, portraitLocators = []) => {
+        const box = await frameBox(...locators);
+        const frame = {seconds:focusFrames.length ? Number(((performance.now() - started) / 1000).toFixed(3)) : 0, ...box};
+        if (portraitLocators.length) frame.portrait = await frameBox(...portraitLocators);
+        focusFrames.push(frame);
+      };
+      const detailLocators = await act[scene.id](point);
       await settle();
       const actionEnd = (performance.now() - started) / 1000;
-      assert.ok(actionEnd <= duration - MINIMUM_HOLD, scene.id + ' action overran its readable outcome hold');
-      const box = scene.id === 'pdf' ? await detail.evaluate(node => {
-        const range = document.createRange();
-        range.selectNodeContents(node);
-        return range.getBoundingClientRect().toJSON();
-      }) : await detail.boundingBox();
-      assert.ok(box && box.width && box.height, 'The picture-in-picture needs a visible detail');
+      assert.ok(actionEnd <= scene.duration - .8, scene.id + ' action overran its readable outcome hold (' + actionEnd.toFixed(2) + 's)');
+      const detail = await frameBox(...detailLocators);
+      await page.locator('#walkthrough-cursor').evaluate(node => { node.style.visibility = 'hidden'; });
+      // Leave the last control so a delayed tooltip cannot obscure the outcome.
+      await page.mouse.move(0, 0);
       const still = 'product-tour-' + scene.id + '-outcome.png';
-      const stillBytes = await page.screenshot({path: path.join(directory, still)});
-      await page.waitForTimeout(Math.max(0, (duration + 1) * 1000 - (performance.now() - started)));
-      assert.deepEqual(errors, [], 'Product-tour scene must be free of runtime errors');
-      video = page.video();
-      await context.close();
-      const file = 'product-tour-' + scene.id + '.webm';
-      const source = path.join(directory, file);
-      fs.copyFileSync(await video.path(), source);
-      const startFrame = anchorFrame(source, frames);
-      const sha256 = createHash('sha256').update(fs.readFileSync(source)).digest('hex');
-      const {x, y, width, height} = box;
-      segments.push({id: scene.id, theme: scene.theme, file, sha256, startFrame, frames, detail: {x, y, width, height},
-        still, stillSha256: createHash('sha256').update(stillBytes).digest('hex'),
-        actionStart: Number(actionStart.toFixed(3)),
-        actionEnd: Number(actionEnd.toFixed(3)), outcomeHold: Number((duration - actionEnd).toFixed(3)), clicks});
-      console.log('Product tour ' + scene.id + ': action ends ' + actionEnd.toFixed(2) + 's; readable hold ' + (duration - actionEnd).toFixed(2) + 's');
-    } catch (error) {
-      if (!page.isClosed()) await page.screenshot({path: path.join(directory, 'product-tour-' + scene.id + '-failure.png')}).catch(() => {});
-      throw error;
-    } finally {
-      if (!video) await context.close();
+      const stillBytes = await page.screenshot({path:path.join(recording, still)});
+      const elapsed = (performance.now() - started) / 1000;
+      await page.waitForTimeout(Math.max(0, (scene.record_duration + .5 - elapsed) * 1000));
+      segments.push({id:scene.id, theme:scene.theme, frames:scene.record_duration * plan.fps,
+        detail, focus:focusFrames, still, stillSha256:digest(stillBytes), actionEnd:Number(actionEnd.toFixed(3))});
+      console.log('Product tour ' + scene.id + ': action ends ' + actionEnd.toFixed(2) + 's');
     }
-  }
-  const pendingSidecar = sidecar + '.tmp-' + process.pid;
-  try {
-    fs.writeFileSync(pendingSidecar, JSON.stringify({
-      schema_version: 'lixity-product-tour-recording/3', fps: plan.fps, duration: plan.duration, segments, exhibitPage,
-      originalSentence: ORIGINAL_SENTENCE, draftSentence: DRAFT_SENTENCE, closingSentence: CLOSING_SENTENCE,
-    }, null, 2));
-    fs.renameSync(pendingSidecar, sidecar);
+    assert.deepEqual(errors, [], 'The author take must be free of runtime errors');
+    assert.equal(writes.filter(action => action === 'manuscript-edit').length, 1, 'Only the explicit save may write the manuscript');
+    assert.equal(writes.filter(action => action === 'site-preflight').length, 1);
+    assert.equal(writes.filter(action => action === 'site-export').length, 1);
+    await context.close();
+    const source = await video.path();
+    const anchors = anchoredFrames(source, segments);
+    const file = path.basename(capture.videoTarget), sha256 = digest(fs.readFileSync(source));
+    for (const [index, shot] of segments.entries()) Object.assign(shot, {file, sha256, startFrame:anchors[index]});
+    const newManifest = path.join(recording, 'manifest.json');
+    fs.writeFileSync(newManifest, JSON.stringify({
+      schema_version:'lixity-product-tour-recording/4', fps:plan.fps, duration:plan.duration, segments,
+      originalSentence:ORIGINAL_SENTENCE, draftSentence:DRAFT_SENTENCE, readerScope:preflight,
+    }, null, 2) + '\n');
+    // Publish the manifest last. Readers can reject an interrupted replacement by hash.
+    fs.renameSync(source, capture.videoTarget);
+    for (const {still} of segments) fs.renameSync(path.join(recording, still), path.join(directory, still));
+    fs.renameSync(newManifest, sidecar);
+    return [{video:file, bytes:fs.statSync(capture.videoTarget).size}];
+  } catch (error) {
+    if (!page.isClosed()) await page.screenshot({path:path.join(directory, 'product-tour-' + currentShot + '-failure.png')}).catch(() => {});
+    throw error;
   } finally {
-    fs.rmSync(pendingSidecar, {force: true});
+    try { await context.close(); }
+    finally { fs.rmSync(recording, {recursive:true, force:true}); }
   }
-  return segments.map(segment => ({video: segment.file, bytes: fs.statSync(path.join(directory, segment.file)).size}));
 }
 
 module.exports = {recordProductTour};

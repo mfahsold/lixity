@@ -619,7 +619,7 @@ async function main() {
         await page.waitForTimeout(1000);
         await say('Switch to a two-dimensional chart projection.');
         await page.locator('#dim-projection').selectOption('d1-d2');
-        await page.locator('.dim-view-control').evaluate(element => {
+        await page.locator('.dim-view-control').filter({has: page.locator('#dim-projection')}).evaluate(element => {
           const toolbar = document.querySelector('.toolbar');
           const offset = toolbar ? toolbar.getBoundingClientRect().height : 0;
           window.scrollTo({top: scrollY + element.getBoundingClientRect().top - offset - 16, behavior: 'instant'});

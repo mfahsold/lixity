@@ -493,16 +493,14 @@ def build_outreach_package(source: Path, output: Path) -> None:
                           "Destination: https://lixity.de/" + item["destination"], ""])
         lines.extend([
             "## A clue in the Warehouse 4 manuscript", "",
-            "The silent 60-second tour shows the fictional project in the light and dark workspace.",
-            "English: Follow a missing signature from the draft to the case file in one minute.",
-            "Text alternative: An unsigned receipt leads to a manuscript passage. Lixity explains the count "
-            "behind the marked sentence and compares an unsaved revision. The exhibit book shows two entries "
-            "with the same number and no receiving signature. The closing shot shows a page from the dossier PDF.",
+            "The silent tour shows the fictional project in the light and dark workspace.",
+            "English: Follow one line from the manuscript to the reader's copy.",
+            "Text alternative: The author checks a count, opens a linked record, compares two wordings, "
+            "saves the draft and opens the exported reading website.",
             "Destination: https://lixity.de/#product-tour-preview", "",
-            "Deutsch: Folge in einer Minute der Spur einer fehlenden Unterschrift vom Entwurf bis zur Fallakte.",
-            "Alternativtext: Ein Beleg ohne Unterschrift führt zu einer Manuskriptstelle. Lixity erklärt, welche "
-            "Wörter zur Markierung beitragen, und vergleicht eine ungespeicherte Fassung. Das Dossier zeigt zwei "
-            "Einträge mit derselben Nummer und ohne Empfangsunterschrift. Zuletzt ist eine Seite aus dem PDF zu sehen.",
+            "Deutsch: Folge einer Textstelle vom Manuskript bis zur Lesefassung.",
+            "Alternativtext: Der Autor prüft eine Zählung, öffnet den verknüpften Beleg, vergleicht zwei "
+            "Fassungen, speichert den Entwurf und öffnet die exportierte Lesewebsite.",
             "Ziel: https://lixity.de/index-de.html#product-tour-preview", "",
         ])
         for name, width, height, limit in SOCIAL_CLIPS:

@@ -22,6 +22,8 @@ const fixture = `<!doctype html><title>Lixity public guide</title>
 <a id="install" href="/lixity/guides/installation.html">Install</a>
 <a id="install-reference" href="/lixity/INSTALLATION.md">Installation reference</a>
 <a id="install-anchor" href="/lixity/#install">Install section</a>
+<a id="local-installation" href="#installation">Install section on this page</a>
+<a id="local-section" href="#section">Other section on this page</a>
 <a id="repository" href="https://github.com/mfahsold/lixity">Repository</a>
 <a id="pdf" href="/lixity/demo/warehouse-4-book.pdf?private=SECRET">PDF</a>
 <a id="pdf-editor" href="/lixity/demo/warehouse-4-editor.pdf">Editorial PDF</a>
@@ -224,6 +226,30 @@ runInNewContext(runtime, {location: {origin: 'http://lixity.de', pathname: '/dem
   try {
     const cases = [[publicOrigin, 1440], [publicOrigin, 320], [customOrigin, 1440]];
     for (const [origin, width] of cases) await actualDemo(width, origin);
+    const homeAliases = ['index.html', 'index-de.html', 'index-es.html', 'index-fr.html',
+      'index-it.html', 'index-nl.html', 'index-pt.html'];
+    const samePageCases = [
+      ...homeAliases.map(alias => [customOrigin + '/' + alias, '#local-installation', true]),
+      [publicOrigin + '/lixity/index-de.html', '#local-installation', true],
+      [customOrigin + '/index-xx.html', '#local-installation', false],
+      [customOrigin + '/guides/first-look.html', '#local-installation', false],
+      ...['/demo/report.html', '/guides/installation.html', '/blog/why-this-passage.html']
+        .map(route => [customOrigin + route, '#local-section', false]),
+    ];
+    for (const [url, link, measured] of samePageCases) {
+      const state = await open({url});
+      try {
+        await expect.poll(() => state.pixels.length).toBe(1);
+        await state.page.locator(link).click();
+        if (measured) await expect.poll(() => state.pixels.length, {message: url}).toBe(2);
+        else await settle(state.page);
+        assert.deepEqual(payloads(state).slice(1), measured
+          ? [{p: 'install-open', t: 'Open installation', r: '', e: 'true'}]
+          : [], `Same-page anchors only measure named homepage installation actions: ${url}`);
+        assert.deepEqual(state.errors, []);
+        assert.deepEqual(state.warnings, []);
+      } finally { await state.context.close(); }
+    }
     for (const [origin, width] of cases) {
       const mount = origin === customOrigin ? '' : '/lixity';
       const state = await open({url: origin + mount + '/guides/first-look.html?private=SECRET#quote', width});

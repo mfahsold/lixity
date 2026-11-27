@@ -474,9 +474,9 @@ async function nativeReaderPreferences(browser) {
       const passageOrigin = await page.evaluate(() => { const anchor = LixityReader.capture(); return {id: anchor.panel.id, top: anchor.top}; });
       await page.locator('#workbench-overview-open').click();
       assert.equal(await page.locator('.analysis-workflow-entries').isVisible(), true);
-      const overviewHeading = await page.locator('#analysis-review h2').boundingBox();
+      const overviewHeading = await page.locator('#analysis-measurements-heading').boundingBox();
       assert.ok(overviewHeading.y >= 0 && overviewHeading.y + overviewHeading.height <= 900,
-        'Opening the overview from a deep passage starts at its first review heading');
+        'Opening the overview from a deep passage reveals the measurement heading');
       assert.equal(await page.locator('#workbench-overview-back').isVisible(), true);
       await openAnalysisSection(page, 'matrix');
       await page.locator('#workbench-overview-back').click();

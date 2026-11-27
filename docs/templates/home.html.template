@@ -70,7 +70,7 @@ $og_locales
 </div>
 </section>
 <section class="home-section home-film" aria-labelledby="film-title">
-<div class="film-intro"><p class="film-project">$film_project</p><h2 id="film-title">$film_title</h2><p>$film_context</p><a href="$research_guide_path" hreflang="$passage_guide_language">$research_case_link</a></div>
+<div class="film-intro"><p class="film-project">$film_project</p><h2 id="film-title">$film_title</h2><p>$film_context</p></div>
 <figure id="product-tour-preview" tabindex="-1" class="product-preview product-tour" aria-label="$tour_title">
 <div class="tour-screen">
 <video id="product-tour" width="1440" height="900" poster="$tour_landscape_poster" data-portrait-poster="$tour_portrait_poster" preload="none" muted playsinline controls aria-label="$tour_title" aria-describedby="tour-note">
@@ -79,10 +79,10 @@ $og_locales
 <source src="$tour_landscape_mp4" type="video/mp4"/>
 <a href="demo/report.html" hreflang="en">$demo</a>
 </video>
-<p class="tour-caption" aria-hidden="true" hidden><span>$tour_receipt</span></p>
+<p class="tour-caption" aria-hidden="true" hidden><span>$tour_opening</span></p>
 </div>
 <figcaption>
-<div class="tour-actions"><button type="button" class="ctl tour-toggle" data-play="$tour_play" data-pause="$tour_pause" hidden>$tour_play</button><a class="ctl tour-explore" href="demo/report.html" hreflang="en">$demo <span aria-hidden="true">→</span></a><p id="tour-note">$tour_note</p></div>
+<div class="tour-actions"><button type="button" class="ctl tour-toggle" data-play="$tour_play" data-pause="$tour_pause" hidden>$tour_play</button><a class="ctl tour-explore" href="$passage_guide_path" hreflang="$passage_guide_language">$research_case_link <span aria-hidden="true">→</span></a><p id="tour-note">$tour_note</p></div>
 <p class="tour-error" role="status" hidden>$tour_error <a href="demo/report.html" hreflang="en">$demo</a></p>
 <details id="tour-transcript"><summary>$tour_transcript</summary><ol>
 $tour_cues

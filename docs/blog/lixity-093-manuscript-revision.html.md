@@ -20,13 +20,13 @@ In a local project, choose **Write → Versions → Compare versions**. Try the 
 
 For a clue that arrives several scenes later, open **Story rehearsal**. Write “Who tried the gate?” on a **Question** card and give the clue its own **Revelation** card. Move the cards to see how long you would leave the question open. The manuscript and its measurements stay in their original order while you try it. [Story rehearsal](https://github.com/mfahsold/lixity/blob/v0.9.3/docs/WORKSPACE.md#compare-scene-evidence-and-rehearse-an-intent)
 
-The film follows a different scene in the same manuscript. Mara wonders why the receiving line was left blank. I compare an unsaved, shorter version of that sentence, then check the dispatch receipt against the office ledger.
+The film follows a different scene in the same manuscript. Mara wonders why the receiving line was left blank. I inspect the marked sentence and the research linked from the next paragraph, then compare a shorter version, save it and open the exported reading copy.
 
-[Video walkthrough](../videos/product-tour.webm?v=5d696c75bedf)
+[Video walkthrough](../videos/product-tour.webm?v=3f2f355034d5)
 
-[Video walkthrough](../videos/product-tour.mp4?v=639d955411dd)
+[Video walkthrough](../videos/product-tour.mp4?v=b98531b576ee)
 
-*The Blank Line. A silent, 60-second tour of a fictional scene, its records and the saved exhibit book in PDF.*
+*Why is this sentence marked? A silent, 65-second film about checking a passage and preparing a reading copy in Lixity.*
 
 [Watch with captions](../#product-tour-preview) · [Read the written walkthrough](../#tour-transcript)
 

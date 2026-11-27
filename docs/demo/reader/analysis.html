@@ -1273,6 +1273,75 @@ display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none;
   & .kpi { background: var(--surface-alt); border-radius: var(--radius-sm); }
 }
 .lixity-workspace #analysis-measurements { border-radius: var(--radius-sm); box-shadow: none; }
+.lixity-workspace #analysis-review.analysis-review-chooser {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.analysis-measurement-head {
+  display: grid;
+  align-items: start;
+  gap: var(--space-2);
+}
+.analysis-measurement-head h2 {
+  grid-area: 1 / 1;
+  max-inline-size: 47%;
+  padding-block: var(--space-1);
+}
+#analysis-measurement-method { grid-area: 1 / 1; min-width: 0; pointer-events: none; }
+#analysis-measurement-method > * { pointer-events: auto; }
+#analysis-measurement-method > summary.ctl {
+  display: flex;
+  align-items: center;
+  inline-size: fit-content;
+  max-inline-size: 50%;
+  min-block-size: var(--control-size);
+  margin-inline-start: auto;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  gap: var(--space-2);
+  cursor: pointer;
+  list-style: none;
+  white-space: normal;
+  text-align: start;
+}
+#analysis-measurement-method > summary .reader-control-label { display: inline; }
+#analysis-measurement-method > summary:hover,
+#analysis-measurement-method[open] > summary { border-color: var(--accent); }
+#analysis-measurement-method > summary::-webkit-details-marker { display: none; }
+.analysis-measurement-method-body {
+  max-inline-size: 72ch;
+  margin-block-start: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+}
+.analysis-measurement-method-body .panel-guide { margin-block: 0 var(--space-2); }
+.analysis-measurement-method-body a { white-space: normal; }
+section#analysis-measurements .kpi-row {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
+  gap: var(--space-2);
+}
+@container analysis-outline (min-width: 54rem) {
+  section#analysis-measurements > .kpis { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+  section#analysis-measurements > .kpis > :is(:first-child, .kpi-group:nth-child(2):last-of-type, details) { grid-column: 1 / -1; }
+  section#analysis-measurements .kpi-group { grid-template-rows: auto 1fr; }
+}
+@container analysis-outline (13rem < width <= 35rem) {
+  section#analysis-measurements .kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  section#analysis-measurements .kpi { padding-inline: var(--space-2); }
+}
+@container analysis-outline (max-width: 15rem) {
+  .analysis-measurement-head h2 { max-inline-size: none; }
+  #analysis-measurement-method { grid-area: 2 / 1; }
+  #analysis-measurement-method > summary.ctl { max-inline-size: 100%; margin-inline-start: 0; }
+}
+@media (pointer: coarse) {
+  #analysis-measurement-method > summary.ctl { min-block-size: var(--control-touch-size); }
+}
 .scene-measurements { border-block: 1px solid var(--line); padding-block: var(--space-1); & > summary { font-size: var(--text-control); } &[open] > summary { margin-bottom: var(--space-3); } & > .kpis { padding-bottom: var(--space-4); } }
 /* --- Sentence-length architecture ------------------------------------- */
 .dist { display: grid; gap: .5rem; & .row { display: grid; grid-template-columns: minmax(0, 13rem) minmax(4rem, 1fr) max-content; align-items: center; gap: .75rem; font-size: var(--text-small); } & .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } &.scrollable { max-height: 22rem; overflow-y: auto; padding-right: .35rem; scrollbar-width: thin; scrollbar-color: var(--muted) transparent; &::-webkit-scrollbar { width: .45rem; } &::-webkit-scrollbar-thumb { background: var(--muted); border-radius: var(--radius-pill); } } & .bar { height: 6px; background: var(--line); border-radius: var(--radius-pill); overflow: hidden; & i { display: block; height: 100%; background: var(--accent); } } & .val { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; } }

@@ -14,16 +14,12 @@ from typing import Any
 TICKS = 254_016_000_000
 INK = "#18283D"
 PAPER = "#FAF4E7"
-SOURCE_PAPER = "#EEE4D2"
 GOLD = "#D5BB89"
 LILAC = "#F1EEF7"
 VIOLET = "#593E79"
-RECEIPT = "docs/assets/research/warehouse-4-receipt.png"
-LEDGER = "docs/assets/research/warehouse-4-ledger.png"
 ICON = "docs/assets/brand/icon-192.png"
 TEXT_SCALE = 0.85
 LOGO_SCALE = 0.85
-CAPTURE_SCALE = math.sqrt(1.12)
 #: Safe content zones for critical on-frame text (brand bug exempt).
 #: Landscape 1440x900: title-safe 90-810 (player controls below ~820).
 #: Portrait 1080x1920: title-safe 384-1536, platform strict 384-1248
@@ -64,7 +60,7 @@ class Edit:
         self.fps = fps
         self.command("file.newSequence", {"name": f"Warehouse 4 | {width}x{height}",
                                          "width": width, "height": height, "fps": fps,
-                                         "video": 5, "audio": 0}, first=True)
+                                         "video": 6 if self.port else 5, "audio": 0}, first=True)
 
     def command(self, name: str, params: dict[str, Any], *, first: bool = False) -> Any:
         project = ["--save-as", str(self.path)] if first else ["--project", str(self.path), "--save"]
@@ -86,9 +82,9 @@ class Edit:
         })
         self.command("graphics.set", {**rectangle, "props": {"fill_color": color, "stroke": False}})
 
-    def text(self, start: int, end: int, label: str, x: float, y: float, size: int,
+    def text(self, start: float, end: float, label: str, x: float, y: float, size: int,
              color: str, *, serif: bool = False, clip: int | None = None,
-             check_safe: bool = True) -> int:
+             check_safe: bool = True, track: int = 3) -> int:
         size = _type_size(size)
         if check_safe:
             low, high = PORTRAIT_SAFE_Y if self.port else LANDSCAPE_SAFE_Y
@@ -101,7 +97,7 @@ class Edit:
                   "font": "Georgia" if serif else "Inter",
                   "fontStyle": "Regular" if serif else "SemiBold"}
         if clip is None:
-            params.update({"track": 3, "time": start * TICKS, "seconds": end - start})
+            params.update({"track": track, "time": round(start * TICKS), "seconds": end - start})
         else:
             params["clip"] = clip
         layer = self.command("graphics.newText", params)
@@ -126,20 +122,14 @@ class Edit:
                       foreground, serif=serif, clip=wordmark)
         return wordmark
 
-    def parameter(self, clip: int, effect: int | str, name: str, value: Any,
-                  *, time: int | None = None, keyframe: bool = False) -> None:
-        params: dict[str, Any] = {"clip": clip, "effect": effect, "param": name, "value": value}
-        if time is not None:
-            params["time"] = time
-        if keyframe:
-            params["keyframe"] = True
-        self.command("effects.setParam", params)
+    def parameter(self, clip: int, effect: int | str, name: str, value: Any) -> None:
+        self.command("effects.setParam", {"clip": clip, "effect": effect, "param": name, "value": value})
 
-    def picture(self, source: Source, start: int, end: int,
+    def picture(self, source: Source, start_frame: int, end_frame: int,
                 box: tuple[float, float, float, float], *,
                 crop: tuple[float, float, float, float] | None = None, track: str = "V2",
-                source_frame: int = 0, push: float = 1.0) -> None:
-        """Fit the final crop inside its box and preserve side margins through motion."""
+                source_frame: int = 0, align_top: bool = False) -> None:
+        """Fit the selected area without stretching the recording."""
         x, y, across, down = crop or (0, 0, source.width, source.height)
         x, y = max(0, x), max(0, y)
         across, down = min(source.width - x, across), min(source.height - y, down)
@@ -151,9 +141,13 @@ class Edit:
         if available <= 0 or height <= 0:
             raise SystemExit("The tour edit requested a picture outside its safe frame")
         scale = min(available / across, height / down) * 100
-        placed = self.command("timeline.place", {"item": source.item, "track": track, "seconds": start,
-                                                 "duration": {"seconds": end - start},
-                                                 "sourceIn": {"frame": source_frame}, "audio": False})
+        if align_top:
+            cy += down * scale / 200
+        placed = self.command("timeline.place", {
+            "item": source.item, "track": track, "frame": start_frame,
+            "duration": {"frame": end_frame - start_frame},
+            "sourceIn": {"frame": source_frame}, "audio": False,
+        })
         clip = placed["clips"][0]
         if crop is not None:
             effect = self.command("effects.apply", {"clips": [clip], "effect": "crop"})["applied"][0]["index"]
@@ -163,12 +157,7 @@ class Edit:
                 self.parameter(clip, effect, key, max(0, fraction) * 100)
         self.parameter(clip, "motion", "anchor", [x + across / 2, y + down / 2])
         self.parameter(clip, "motion", "position", [cx, cy])
-        if push == 1.0:
-            self.parameter(clip, "motion", "scale", scale)
-        else:
-            self.parameter(clip, "motion", "scale", scale / push, time=start * TICKS, keyframe=True)
-            self.parameter(clip, "motion", "scale", scale,
-                           time=int((start + (end - start) * .5) * TICKS), keyframe=True)
+        self.parameter(clip, "motion", "scale", scale)
 
     def marker(self, name: str, seconds: int) -> None:
         self.command("markers.add", {"target": "program", "time": seconds * TICKS, "name": name})
@@ -180,7 +169,7 @@ class Edit:
         }:
             raise SystemExit("The FilmCraft cut needs Georgia Regular and Inter SemiBold")
 
-    def render(self, frames: Path, preview_times: tuple[int, ...]) -> Path:
+    def render(self, frames: Path, preview_times: tuple[int, ...], *, duration: int) -> Path:
         """Render review PNGs and a reviewable lossless numbered picture sequence."""
         for seconds in preview_times:
             subprocess.run(  # noqa: S603 - fixed FilmCraft invocation
@@ -190,7 +179,7 @@ class Edit:
             )
         exported = self.command("file.exportMedia", {"path": str(frames / "frame.png"), "format": "png",
                                                         "range": "entire", "audio": False, "wait": True})
-        if exported["offlineMedia"] or exported["warnings"] or exported["result"]["frames"] != 60 * self.fps:
+        if exported["offlineMedia"] or exported["warnings"] or exported["result"]["frames"] != duration * self.fps:
             raise SystemExit(f"FilmCraft could not render the complete tour: {exported}")
         first = Path(exported["path"])
         digits = len(first.stem) - len("frame")
@@ -199,132 +188,137 @@ class Edit:
         return first.with_name(f"frame%0{digits}d.png")
 
 
-def compose(edit: Edit, root: Path, plan: dict[str, Any],
-            footage: list[tuple[dict[str, Any], Path, Path]], exhibit: Path) -> None:
-    """Set the visual rhythm. Internal cuts leave the six chapter cues intact."""
-    artwork = [root / asset for asset in (RECEIPT, LEDGER, ICON)]
-    receipt, ledger, logo, pdf = edit.import_sources(
-        [*artwork, exhibit], [png_size(path) for path in (*artwork, exhibit)],
+SCENE_HEADINGS = {
+    "passage": ("PASSAGE", "Inspect the word count", INK),
+    "research": ("RESEARCH", "Open the linked source", INK),
+    "compare": ("REVISION", "Compare the new draft", LILAC),
+    "save": ("SAVE", "Keep the reviewed change", LILAC),
+    "export": ("EXPORT", "Check the reading copy", PAPER),
+    "reader": ("READING COPY", "Open the result", PAPER),
+}
+
+
+def _framed_crop(source: Source, focus: dict[str, Any], *, portrait: bool) -> tuple[float, float, float, float]:
+    """Keep the action in frame, with enough of the workspace around it to orient the viewer."""
+    x, y, width, height = (float(focus[axis]) for axis in ("x", "y", "width", "height"))
+    if not all(math.isfinite(value) for value in (x, y, width, height)) or width <= 0 or height <= 0:
+        raise SystemExit("The tour capture supplied an invalid focus region")
+    pad = 24 if portrait else 36
+    across = min(source.width, max(418 if portrait else 900, width + 2 * pad))
+    down = min(source.height, max(240 if portrait else 450, height + 2 * pad))
+    return (
+        min(max(0, x + (width - across) / 2), source.width - across),
+        min(max(0, y + (height - down) / 2), source.height - down),
+        across, down,
     )
-    clips = {}
-    details = {}
-    for segment, movie, still in footage:
-        video, held = edit.import_sources([movie, still], [(1440, 900), png_size(still)])
-        clips[segment["id"]] = segment, video, held
-        details[segment["id"]] = tuple(segment["detail"][axis] for axis in ("x", "y", "width", "height"))
-    width, port = edit.width, edit.port
+
+
+def _portrait_comparison(edit: Edit, source: Source, region: dict[str, Any],
+                         start: int, end: int, source_frame: int) -> bool:
+    """Keep the changed sentence and its original visible while the draft is actually typed."""
+    draft = region.get("portrait")
+    if draft is None or draft["height"] != region["height"] or draft["height"] < 240:
+        return False
+    pane_width = draft["width"]
+    if draft["x"] - region["x"] < pane_width:
+        return False
+
+    # Both editor panes share the same screen recording and the same destination frames.
+    # The draft selection sits slightly higher because its textarea is focused and scrolled.
+    pane_height = draft["height"]
+    crop_height = pane_height * .385
+    image_width = edit.width - 144
+    slot_height = 297
+    label_x = (edit.width - min(image_width, slot_height * pane_width / crop_height)) / 2
+    rows = (
+        ("Current file", region["x"], .40, 568, "V2"),
+        ("Draft to review", draft["x"], .37, 909, "V3"),
+    )
+    label_clip = None
+    for label, x, offset, label_y, track in rows:
+        edit.picture(
+            source, start, end, (edit.width / 2, label_y + 24, image_width, slot_height),
+            crop=(x, draft["y"] + pane_height * offset, pane_width, crop_height),
+            track=track, source_frame=source_frame, align_top=True,
+        )
+        label_clip = edit.text(start / edit.fps, end / edit.fps, label, label_x, label_y,
+                               37, VIOLET, clip=label_clip, track=5)
+    return True
+
+
+def compose(edit: Edit, root: Path, plan: dict[str, Any],
+            footage: list[tuple[dict[str, Any], Path, Path]]) -> None:
+    """Follow the recorded author journey from the evidence to the delivered reading copy."""
+    width, port, rate = edit.width, edit.port, edit.fps
     middle = width / 2
-    picture_span = width - 2 * (84 if port else 56)
-    panel = (middle, 910, picture_span, 620) if port else (middle, 543, picture_span, 576)
+    picture_box = (middle, 550, width - 144, 687) if port else (middle, 539, width - 112, 558)
+    movies = list(dict.fromkeys(movie for _, movie, _ in footage))
+    artwork = root / ICON
+    logo, *recordings = edit.import_sources(
+        [artwork, *movies],
+        [png_size(artwork), *((1440, 900) for _ in movies)],
+    )
+    sources = dict(zip(movies, recordings, strict=True))
+    clips = {segment["id"]: (segment, sources[movie]) for segment, movie, _ in footage}
 
-    def capture(source: Source, start: int, end: int, box: tuple[float, float, float, float], *,
-                crop: tuple[float, float, float, float], source_frame: int = 0, track: str = "V2",
-                push: float = 1.0) -> None:
-        """Give recordings 12% more projected area before applying the frame inset."""
-        cx, cy, across, down = box
-        edit.picture(source, start, end, (cx, cy, across * CAPTURE_SCALE, down * CAPTURE_SCALE),
-                     crop=crop, source_frame=source_frame, track=track, push=push)
+    cursor = 0
+    for capture in plan["captures"]:
+        name = capture["id"]
+        duration = capture["duration"]
+        stop = cursor + duration
+        segment, source = clips[name]
+        destination_frames = duration * rate
+        if destination_frames > segment["frames"] or segment["actionEnd"] > duration:
+            raise SystemExit(f"The {name} recording does not contain its complete action within the edit")
 
-    def moving(name: str, start: int, end: int, crop: tuple[float, float, float, float], *,
-               box: tuple[float, float, float, float] = panel, source_seconds: float = 0, track: str = "V2") -> None:
-        segment, video, _ = clips[name]
-        offset = math.ceil(source_seconds * edit.fps)
-        if offset + (end - start) * edit.fps > segment["frames"]:
-            raise SystemExit(f"The {name} recording is too short for its cut")
-        capture(video, start, end, box, crop=crop, source_frame=segment["startFrame"] + offset, track=track)
+        heading_start = cursor
+        if name == "passage":
+            heading_start = plan["scenes"][0]["end"]
+            edit.heading(cursor, heading_start, "WAREHOUSE 4", "Why is this marked?", serif=True)
+        kicker, title, color = SCENE_HEADINGS[name]
+        edit.heading(heading_start, stop, kicker, title, background=color)
+        # Short focus cuts follow the actual UI action without re-timing the recording.
+        focus = {0: segment["detail"]}
+        for region in segment.get("focus", ()):
+            frame = round(float(region["seconds"]) * rate)
+            if 0 <= frame < destination_frames:
+                focus[frame] = region
+        cuts = sorted(focus)
+        for begin, end in zip(cuts, [*cuts[1:], destination_frames], strict=True):
+            region = focus[begin]
+            start_frame, end_frame = cursor * rate + begin, cursor * rate + end
+            source_frame = segment["startFrame"] + begin
+            if port and name == "compare" and _portrait_comparison(
+                edit, source, region, start_frame, end_frame, source_frame,
+            ):
+                continue
+            action = region.get("portrait", region) if port else region
+            if port and name == "research" and action["height"] >= 600:
+                # The previous cut shows the whole drawer. The outcome holds on the
+                # linked claim and exact passage, above the unrelated decision rows.
+                action = {**action, "y": action["y"] + 212, "height": 310}
+            if name == "save" and end == destination_frames:
+                # The reader's writing hint sits to the right of the reopened line.
+                # Frame the saved sentence itself, leaving that hint out of the hold.
+                crop = (action["x"] - 18, action["y"] - 18, action["width"] * .87, action["height"] * 2.1)
+            else:
+                crop = _framed_crop(source, action, portrait=port)
+            edit.picture(
+                source, start_frame, end_frame, picture_box,
+                crop=crop, source_frame=source_frame, align_top=port,
+            )
+        cursor = stop
 
-    def detail(name: str, start: int, end: int, *, pad: int = 0, box: tuple[float, float, float, float] = panel,
-               keep_height: float = 1) -> None:
-        _, _, source = clips[name]
-        x, y, w, h = details[name]
-        crop = ((x - pad) * 2, (y - pad) * 2, (w + 2 * pad) * 2, (h * keep_height + 2 * pad) * 2)
-        capture(source, start, end, box, crop=crop)
-
-    def tag(start: int, end: int, group: int, label: str, x: float, y: float, *, color: str = VIOLET) -> None:
-        edit.text(start, end, label, x, y, 37 if port else 29, color, clip=group)
-
-    opening = edit.heading(0, 5, "WAREHOUSE 4  /  FICTION", "The Blank Line", serif=True, poster=True)
-    receipt_box = (middle, 868, 936, 530) if port else (width * .713, 463, width * .49, 570)
-    paper_crop = (155, 394, 674, 130)
-    edit.picture(receipt, 0, 5, receipt_box, crop=paper_crop, push=1.05)
-    question = "Can Mara sign for an arrival she never saw?"
-    if port:
-        question = question.replace(" she never", "\nshe never")
-    tag(0, 5, opening, question, edit.left, 600 if port else 382, color=GOLD)
-
-    edit.heading(5, 14, "01  /  MANUSCRIPT", "Mara’s account")
-    # Begin on the settled position so the reader's recorded scroll does not repeat the next sentence.
-    _, _, reader = clips["read"]
-    capture(reader, 5, 14, (middle, 865, picture_span, 600) if port else panel,
-            crop=(948, 416, 1436, 944), push=1.05)
-
-    edit.heading(14, 20, "02  /  EXPLANATION", "Trace the count", background=LILAC)
-    x, y, w, _ = details["passage"]
-    moving("passage", 14, 16, (x - 62, y - 79, w + 402, 270),
-           box=(middle, 780 if port else 505, picture_span, 420))
-    analysis_panel = (middle, 906, picture_span, 620) if port else (width * .691, 491, width * .53, 590)
-    detail("passage", 16, 20, box=analysis_panel, keep_height=.61)
-
-    comparison = edit.heading(20, 27, "03  /  REVISION", "Compare one sentence", background=LILAC)
-    # The verified still contains the changed lines without the comparison panel's blinking caret.
-    _, _, compared = clips["compare"]
-    pane_width = picture_span if port else width * .414
-    current_x, draft_x = (middle, middle) if port else (width * .264, width * .736)
-    capture(compared, 20, 27, (current_x, 795 if port else 543, pane_width, 298),
-            crop=(1062, 924, 758, 260))
-    capture(compared, 20, 27, (draft_x, 1124 if port else 495, pane_width, 221),
-            crop=(1840, 922, 780, 144), track="V3")
-    tag(20, 27, comparison, "CURRENT FILE · 31 WORDS", edit.left if port else current_x - pane_width * CAPTURE_SCALE / 2,
-        606 if port else 390)
-    tag(20, 27, comparison, "UNSAVED DRAFT · 12 WORDS", edit.left if port else draft_x - pane_width * CAPTURE_SCALE / 2,
-        1002 if port else 390)
-
-    edit.heading(27, 31, "04  /  RESEARCH", "Find the source records", background=PAPER)
-    exhibit_click = clips["dossier"][0]["clicks"][0]
-    left = details["dossier"][0] - 18
-    moving("dossier", 27, 29, (left, exhibit_click["y"] - 130, exhibit_click["x"] - left + 155, 157),
-           box=(middle, 777, picture_span, 440) if port else (middle, 504, picture_span, 440))
-    _, _, dossier = clips["dossier"]
-    capture(dossier, 29, 31, (middle, 879 if port else 552, picture_span, 550), crop=(2268, 136, 476, 505))
-
-    entry = edit.heading(31, 34, "04  /  RESEARCH", "Read the return entry", background=SOURCE_PAPER)
-    joined = edit.heading(34, 42, "04  /  RESEARCH", "Match the records", background=SOURCE_PAPER)
-    record_width = 936 if port else width * .452
-    ledger_x = middle if port else width * .266
-    receipt_x = middle if port else width * .734
-    edit.picture(ledger, 31, 42, (ledger_x, 750 if port else 503, record_width, 241), crop=(155, 299, 674, 65))
-    edit.picture(receipt, 34, 42, (receipt_x, 1000 if port else 523, record_width, 241),
-                 crop=(155, 279, 674, 113), track="V3")
-    tag(31, 34, entry, "OFFICE LEDGER", ledger_x - record_width / 2, 665 if port else 425)
-    tag(34, 42, joined, "OFFICE LEDGER", ledger_x - record_width / 2, 665 if port else 425)
-    tag(34, 42, joined, "DISPATCH RECEIPT", receipt_x - record_width / 2, 893 if port else 425)
-
-    edit.heading(42, 46, "05  /  MANUSCRIPT", "Mara’s decision")
-    moving("decision", 42, 44, (474, 345, 721, 173),
-           box=(middle, 804, picture_span, 520) if port else (middle, 488, picture_span, 495))
-    _, _, decision = clips["decision"]
-    capture(decision, 44, 46, (middle, 799 if port else 491, picture_span, 305), crop=(950, 1000, 1440, 170))
-    ending = edit.heading(46, 52, "05  /  MANUSCRIPT", "Mara’s decision")
-    edit.text(46, 52, "“The receiving line\nstayed blank.”" if port else "“The receiving line stayed blank.”",
-              edit.left - 3, 811 if port else 484, 72 if port else 70, PAPER, serif=True, clip=ending)
-
-    edit.heading(52, 55, "06  /  EXPORT", "Share the evidence", background=PAPER)
-    # The action starts on the download button and widens once the confirmation is available.
-    x, y, _, h = details["pdf"]
-    moving("pdf", 52, 54, (x - 12, y - 3, 124, h + 6),
-           box=(width * .285, 761, picture_span, 163) if port else (width * .365, 493, width * .56, 153),
-           source_seconds=clips["pdf"][0]["actionStart"])
-    detail("pdf", 54, 55, pad=6, box=(middle, 761, picture_span, 218) if port else (middle, 493, width * .56, 205))
-    edit.heading(55, 57, "06  /  EXPORT", "From the saved version", background=PAPER)
-    capture(pdf, 55, 57, (middle, 757, picture_span, 218) if port else (middle, 494, picture_span, 240),
-            crop=(.10 * pdf.width, .084 * pdf.height, .80 * pdf.width, .10 * pdf.height))
-    end = edit.heading(57, 60, "WAREHOUSE 4", "Try the demo", serif=True, poster=True)
-    edit.text(57, 60, "lixity.de", edit.left, 718 if port else 473, 58 if port else 47,
-              GOLD, clip=end)
+    if cursor >= plan["duration"]:
+        raise SystemExit("The tour needs time for its final demo link")
+    duration = plan["duration"]
+    end_title = edit.heading(cursor, duration, "WAREHOUSE 4", "Try this passage", serif=True, poster=True)
+    edit.text(cursor, duration, "lixity.de", edit.left, 718 if port else 473,
+              58 if port else 47, GOLD, clip=end_title)
     logo_size = round((54 if port else 40) * LOGO_SCALE)
-    edit.picture(logo, 0, 60, (edit.left + logo_size / 2, 191 if port else 82, logo_size, logo_size), track="V5")
-
+    edit.picture(logo, 0, duration * rate,
+                 (edit.left + logo_size / 2, 191 if port else 82, logo_size, logo_size), track="V5")
     for scene in plan["scenes"]:
         edit.marker(scene["id"], scene["start"])
-    edit.marker("end", plan["duration"])
+    edit.marker("end", duration)
     edit.verify_fonts()

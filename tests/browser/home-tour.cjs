@@ -6,10 +6,11 @@ const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
 const {stagePages} = require('./support/staged-pages.cjs');
+const timeline = require('../../docs/videos/product-tour-timing.json');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-home-tour-'));
 const root = stagePages();
-const sceneStarts = [0, 5, 14, 27, 42, 52];
-const reviewTimes = [0.12, 2, 5.12, 10, 16.5, 18.5, 21.5, 25, 30, 32, 39, 43, 45, 49, 52.4, 54.5, 55.8, 57.5, 59];
+const sceneStarts = timeline.scenes.map(scene => scene.start);
+const reviewTimes = [0.12, 2, 5, 10, 13.12, 17, 24, 26.12, 31, 35, 36.12, 40, 44, 46.12, 50, 53, 54.12, 57, 60, 63];
 (async () => {
   const browser = await launchChromium();
   try {
@@ -39,6 +40,7 @@ const reviewTimes = [0.12, 2, 5.12, 10, 16.5, 18.5, 21.5, 25, 30, 32, 39, 43, 45
       await expect(page.locator('.hero-cta .primary#download-cta')).toHaveAttribute('href', 'guides/installation.html#desktop');
       await expect(page.locator('.hero-cta #try-passage')).toHaveAttribute('href', 'sandbox/index.html?lang=de');
       await expect(page.locator('.hero-cta #examples')).toHaveAttribute('href', '#product-tour-preview');
+      await expect(page.locator('.tour-explore')).toHaveAttribute('href', 'guides/first-look-de.html#beleg');
       await page.locator('#tour-share summary').click();
       await expect(page.locator('#tour-share a[download]')).toHaveCount(3);
       await page.locator('#tour-share summary').click();
@@ -47,7 +49,7 @@ const reviewTimes = [0.12, 2, 5.12, 10, 16.5, 18.5, 21.5, 25, 30, 32, 39, 43, 45
       const video = page.locator('#product-tour');
       assert.deepEqual(await page.locator('#tour-transcript li').evaluateAll(nodes =>
         nodes.map(node => Number(node.dataset.start))), sceneStarts,
-      'Caption boundaries must match the six cuts');
+      'Caption boundaries match the edited timeline');
       await video.scrollIntoViewIfNeeded();
       await page.waitForTimeout(700);
       assert.ok(await video.evaluate(v => v.paused && v.currentTime === 0), 'Reduced motion never autoplays');
@@ -57,12 +59,12 @@ const reviewTimes = [0.12, 2, 5.12, 10, 16.5, 18.5, 21.5, 25, 30, 32, 39, 43, 45
       await expect(button).toHaveText('Rundgang pausieren');
       await button.click();
       await expect.poll(() => video.evaluate(v => v.paused), {timeout: 15000}).toBe(true);
-      await video.evaluate(v => { v.currentTime = 22; });
-      await expect(page.locator('.tour-caption')).toHaveText(await page.locator('#tour-transcript li').nth(2).textContent());
+      await video.evaluate(v => { v.currentTime = 31; });
+      await expect(page.locator('.tour-caption')).toHaveText(await page.locator('#tour-transcript li').nth(3).textContent());
       await expect.poll(() => video.evaluate(v => ({seeking:v.seeking, ready:v.readyState}))).toEqual({seeking:false, ready:4});
       await expect(page.locator('.tour-caption')).toBeVisible();
       await page.locator('#tour-transcript summary').click();
-      await expect(page.locator('#tour-transcript li')).toHaveCount(6);
+      await expect(page.locator('#tour-transcript li')).toHaveCount(sceneStarts.length);
       await page.locator('#tour-transcript summary').click();
       await page.locator('.product-tour').screenshot({path: path.join(artifacts, `tour-${width}.png`)});
       const caption = await page.locator('.tour-caption').boundingBox();
@@ -161,8 +163,8 @@ const reviewTimes = [0.12, 2, 5.12, 10, 16.5, 18.5, 21.5, 25, 30, 32, 39, 43, 45
         await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(.1);
         await button.click();
         await expect.poll(() => video.evaluate(v => v.paused)).toBe(true);
-        assert.ok(Math.abs(await video.evaluate(v => v.duration) - 60) <= .04,
-          'The complete six-scene tour must decode to 60 seconds');
+        assert.ok(Math.abs(await video.evaluate(v => v.duration) - timeline.duration) <= .04,
+          'The complete tour must decode to its declared duration');
         const cues = await page.locator('#tour-transcript li').evaluateAll(nodes =>
           nodes.map(node => ({start: Number(node.dataset.start), text: node.textContent})));
         assert.deepEqual(cues.map(cue => cue.start), sceneStarts);
@@ -207,6 +209,6 @@ const reviewTimes = [0.12, 2, 5.12, 10, 16.5, 18.5, 21.5, 25, 30, 32, 39, 43, 45
       }
       await context.close();
     }
-    console.log('Homepage tour: 60-second playback, six cues in all seven languages, static readable captions, reduced motion, pause/offscreen, mobile layout and codec/error fallback passed. Screenshots: ' + artifacts);
+    console.log(`Homepage tour: ${timeline.duration}s playback, ${sceneStarts.length} cues in seven languages, responsive layout, reduced motion, pause and fallback passed. Screenshots: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exitCode=1; });
