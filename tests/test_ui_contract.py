@@ -194,6 +194,18 @@ class TestJsDomContract(unittest.TestCase):
         self.assertNotIn("<b id=unexpected-library-markup>", document)
         self.assertNotIn('id="research-diagram-library"', plain_report)
 
+    def test_voice_probe_reuses_the_existing_take_studio(self):
+        script = (UI_DIR / "assets" / "speech.js").read_text(encoding="utf-8")
+        for hook in (
+            "btn-project-voice-probe", "voice-calibration-probe", "speech-probe-generate",
+            "speech-probe-parts", "speech-probe-script",
+            "speech-probe-retention", "speech-probe-save",
+        ):
+            self.assertIn(f'"{hook}"', script)
+        self.assertIn('field(probeOptions, "probe_fallback", "select")', script)
+        self.assertIn('window.LixityAudioTake.referenceEligibility', script)
+        self.assertIn('request("audio-reference-set"', script)
+
     """Every id the script touches must exist in the markup (no silent breakage)."""
 
     def test_character_panel_separates_declared_pov_in_all_locales(self):

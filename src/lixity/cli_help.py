@@ -341,16 +341,22 @@ COMMAND_HELP: dict[str, tuple[str, str, tuple[str, ...]]] = {
         (
             'All actions except calibration-text require --project. create needs --audio and '
             '--transcript-file and saves immutable audio plus exact transcript under '
-            '.lixity/audio-references/. inspect needs --reference-id and only reads it. record uses '
-            'optional local capture tools. A supplied transcript saves a reference. Use -o to retain '
+            '.lixity/audio-references/. inspect needs --reference-id and only reads it; it accepts a single '
+            'reference or a set and emits set metadata plus per-part transcript/duration/quality without '
+            'audio bytes or embeddings. record uses optional local capture tools. A supplied transcript saves '
+            'a reference. Use -o to retain '
             'the raw WAV when recording without a transcript. generate calls the local Qwen '
             'VoiceDesign worker and saves a synthetic reference using phonetic calibration text by default. '
-            'calibration-text prints plain text; other actions emit JSON. Review transcript fidelity '
-            'yourself.'
+            'calibration-text prints plain text; other actions emit JSON. probe-script reads the exact '
+            'configured manuscript snapshot and emits a deterministic lixity-voice-probe-script/1 JSON '
+            'contract with source/settings/probe hashes, term provenance and status. Only status=ready '
+            'is savable. --target-seconds accepts 120–180; short or invalid source/configuration stays '
+            'explicit in JSON. Review transcript fidelity yourself.'
         ),
         ('lixity audio-reference calibration-text --language en --variant short',
          'lixity audio-reference create --project ./novel --audio reference.wav --transcript-file '
-         'reference.txt'),
+         'reference.txt',
+         'lixity audio-reference probe-script --project ./novel --target-seconds 150'),
     ),
     'audio-import': (
         'AUDIO.md#retain-or-import-chapter-audio',
@@ -530,9 +536,12 @@ AUDIO_OPTION_HELP: dict[str, dict[str, str]] = {'read-aloud': {'--output': 'WAV/
                      '--gain': 'record: attempt default ALSA mixer gain before capture (accepted 0-100; '
                                'hardware range varies)',
                      '--language': 'generate/calibration-text/record --calibration-text: text language '
-                                   '(default: de)',
+                                   '(default: de); probe-script: explicit override, otherwise project language '
+                                   'including auto',
                      '--variant': 'calibration-text or record --calibration-text: passage variant (default: '
                                   'phonetic); generate ignores this option',
+                      '--target-seconds': 'probe-script: target duration from 120 to 180 seconds (default: '
+                                          '%(default)s)',
                      '--transcript-file': 'create/record: exact UTF-8 transcript (record prefers a nonempty '
                                           '--transcript)',
                      '--output': 'record only: write raw WAV; without a transcript this is the only retained '

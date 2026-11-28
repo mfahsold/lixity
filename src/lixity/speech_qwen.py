@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .speech_references import SpeechReference
+    from .speech_references import VoiceReference
 
 from .log import speech_diagnostic_id
 from .speech_engines import native_endpoint, native_engine
@@ -104,7 +104,7 @@ def worker_health(target: str, *, engine: str = "qwen3", opener: Any = None) -> 
 
 
 def synthesize_qwen(text: str, profile: AudioProfile, *, target: str = "local", opener: Any = None,
-                    reference: SpeechReference | None = None) -> bytes:
+                    reference: VoiceReference | None = None) -> bytes:
     """Keep the established adapter entrypoint on the shared native transport."""
     from .speech_worker import synthesize_native
 

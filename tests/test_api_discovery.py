@@ -44,6 +44,10 @@ def test_api_index_without_a_loaded_project(endpoint, path):
     assert "/api/research/record" in data["routes"]["GET"]
     assert "/api/research/history" in data["routes"]["GET"]
     assert "/api/research/ocr-status" in data["routes"]["GET"]
+    assert "/api/voice-probe" in data["routes"]["POST"]
+    assert "/api/audio-reference-set" in data["routes"]["POST"]
+    assert data["capabilities"]["voice_calibration_probe"] is True
+    assert data["capabilities"]["audio_reference_sets"] is True
     for route in ("analyze", "rebuild", "marker-add", "marker-resolve", "research-zotero", "research-zotero-ingest"):
         assert f"/api/{route}" in data["routes"]["POST"]
     assert "/api/export" not in data["routes"]["POST"]

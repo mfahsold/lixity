@@ -13,6 +13,28 @@ from lixity.speech_profiles import AudioProfile
 TEXT = "## First\n\nA bird crosses the garden.\n\n## Second\n\nAnother passage waits here.\n"
 
 
+def _save_job_reference_set(tmp_path, *, fallback_part_index=1):
+    from lixity.speech_probe import build_voice_probe_script
+    from lixity.speech_references import prepare_reference, save_reference_set
+
+    text = " ".join(
+        f"Synthetic sentence number {index} describes a calm private test passage."
+        for index in range(100)
+    )
+    script = build_voice_probe_script(text, language="de", target_seconds=125)
+    assert script.status == "ready"
+    probe = script.to_dict()
+    parts = [
+        prepare_reference(generate_silence_wav(150 / len(script.parts)), f"Private job transcript {index}.")
+        for index in range(1, len(script.parts) + 1)
+    ]
+    return save_reference_set(
+        tmp_path, parts, source_sha256=script.source_sha256, settings_sha256=script.settings_sha256,
+        probe_sha256=script.probe_sha256, language="de", terms=("Mara",),
+        fallback_part_index=fallback_part_index, probe=probe,
+    )
+
+
 def wait_for(jobs, identifier, context="context"):
     for _ in range(200):
         result = jobs.status(identifier, context)
@@ -342,6 +364,40 @@ def test_queue_is_bounded_and_stale_pending_sources_never_reach_renderer():
                 break
             time.sleep(0.005)
         assert 'Stale' not in rendered and 'Never stored' not in rendered
+    finally:
+        release.set()
+        jobs.close()
+
+
+def test_job_copies_the_resolved_reference_set_mapping_before_rendering(tmp_path):
+    entered = threading.Event()
+    release = threading.Event()
+    received = []
+    first = _save_job_reference_set(tmp_path, fallback_part_index=1)
+    second = _save_job_reference_set(tmp_path, fallback_part_index=2)
+    references = {first.id: first}
+    original_probe_text = first.probe["parts"][0]["text"]
+    profile = AudioProfile(engine="qwen3-base", language="de", voice="reference", reference_id=first.id)
+
+    def render(_source, output, **kwargs):
+        entered.set()
+        assert release.wait(5)
+        received.append(kwargs["references"][first.id])
+        Path(output).write_bytes(generate_silence_wav(.01))
+
+    jobs = SpeechJobs(renderer=render)
+    try:
+        job = jobs.start("context", TEXT, profile, {"mode": "preview"}, lambda: True,
+                         references=references)
+        assert entered.wait(2)
+        references[first.id] = second
+        first.probe["parts"][0]["text"] = "Caller mutation."
+        release.set()
+        assert wait_for(jobs, job["id"])["state"] == "ready"
+        assert len(received) == 1
+        assert received[0].id == first.id and received[0].parts == first.parts
+        assert received[0].fallback_part_index == first.fallback_part_index
+        assert received[0].probe["parts"][0]["text"] == original_probe_text
     finally:
         release.set()
         jobs.close()

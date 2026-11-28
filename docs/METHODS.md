@@ -1283,6 +1283,144 @@ silence and breath can extend the observed gap between successive words.
 [Chapter audio audit](#13-chapter-audio-audit-unreleased) uses supplied word
 timings for that gap and reports level-based silence separately.
 
+### 14.5. Project-specific voice probe script
+
+`audio-reference probe-script` and `POST /api/voice-probe` build
+`lixity-voice-probe-script/1` under method version
+`lixity-voice-probe-method/1`. The input is the selected manuscript's supported
+prose projection plus the explicit project configuration. The script retains
+whole recognized sentences; it does not generate new prose or rewrite the
+manuscript. `source_sha256` binds the original retained source bytes when a
+snapshot digest is supplied (CLI/HTTP), otherwise the exact UTF-8 input text.
+`settings_sha256` hashes canonicalized probe-relevant project settings and
+excludes the path-only `manuscript` selector. `probe_sha256` hashes the
+canonical script payload without its own top-level self-hash.
+
+#### Candidate terms and priority
+
+Candidates are collected from the configured term occurrence report (including
+aliases, scoped alternatives and compounds), configured character names and
+aliases, the project pronunciation lexicon, the selected profile's pronunciation
+and phoneme maps, and deterministic surface-form heuristics. Forms belonging only
+to unselected audio profiles are suppressed as generic candidates.
+
+| Candidate | Base score | Notes |
+| --- | ---: | --- |
+| Configured term occurrence | 1000 | Uses the existing term-profile occurrence and chapter-scope rules. |
+| Character name or alias | 950 | Uses the configured character matcher; this is not NER. |
+| Project lexicon entry | 875 | Retains available IPA and/or respelling metadata. |
+| Selected-profile pronunciation or phoneme | 850 | Project literal replacements also use this score; selected-profile metadata wins overlapping project metadata. |
+| Special form | 550–750 | Numbers 650; dotted/abbreviated or all-capital forms 750; hyphen/apostrophe forms 700; internal capitalization 600; initial capital 550. |
+| Frequent content form | `min(count, 500)` | Alphabetic token of at least three characters, at least two occurrences, excluding configured function words and stopwords. |
+
+When the same surface term is found by more than one rule, its provenance kind
+uses the priority `configured_term > character > lexicon > special_form >
+frequent`; its score is the maximum observed score and its count is the number of
+distinct sentence/span occurrences. Ranking is by descending score, descending
+count, casefolded term and exact term, with at most 24 selected terms. This is a
+coverage heuristic, not a measure of literary importance or pronunciation
+difficulty. Sentence-initial articles and a trailing period on an otherwise
+ordinary sentence-final word are excluded from special-form candidates.
+
+#### Sentence filters, deduplication and selection
+
+Sentence boundaries and word counts use the existing language profile, configured
+word pattern and Markdown prose scope. Only sentences with 4–32 counted words are
+eligible. A dialogue flag records overlap with the configured quotation scanner;
+it is not speaker attribution. Exact duplicate sentence text is removed after NFC
+normalization, retaining the earliest source occurrence. Source line spans in
+sentence records identify the containing paragraph, not a newly inferred
+sentence-level line range.
+
+Selection first favors sentences that cover still-uncovered ranked terms, using
+candidate score, number of newly covered terms, a narration/dialogue category
+bonus, proximity to 14 words and earlier source order as tie-breaks. It then fills
+remaining eligible sentences up to 390 words, favoring additional term coverage
+and movement toward the eligible sentence pool's dialogue share. The
+implementation evaluates eligible prefixes from this term-covering order and
+from source order. A prefix
+must contain 260–390 words and admit a valid 3–6-part partition. Choice minimizes
+uncovered selected terms, difference from the requested estimated duration,
+difference from the source dialogue share, word-count difference, preferred part
+count difference and prefix length, in that order.
+
+#### Duration and partitioning
+
+With $W$ selected words, the estimate is
+
+$$
+\hat{t}=\mathrm{round}\left(\frac{60W}{130}\right)\text{ seconds}.
+$$
+
+The requested target is a strict integer from 120 through 180 seconds, default
+150. At 130 WPM, the ready range is 260–390 words. The partitioner uses dynamic
+programming over sentence boundaries to choose 3–6 contiguous parts of 43–87
+words each, approximately 20–40 seconds at the same planning rate. For each
+candidate partition, cost is the sum of squared part-size deviations from an
+equal split plus a word-weighted squared dialogue-share deviation from the whole
+selected script. Ties prefer the part count nearest
+`max(3, min(6, round(target_words / 65)))`, then the smaller part count. Selected
+sentences are restored to source order before parts are emitted.
+
+The 130 WPM value is an estimate, not observed speech timing, a quality score or a
+guarantee that a recording will qualify. If unique prose is below 260 words or no
+valid partition exists, the response has `status: "insufficient_source"`, a
+structured warning and a bounded short-part preview grouped only at the 87-word
+ceiling. Such a preview can have fewer or more than 3–6 parts and cannot be saved.
+Invalid configuration similarly returns `status: "invalid_configuration"` with an
+unsavable diagnostic. No padding, duplication or invented manuscript text is
+used. A ready response has no warnings.
+
+#### Pronunciation spans
+
+Each part retains `substitutions` and `phonemes` arrays. Their `start` and `end`
+are Unicode-code-point offsets with an exclusive end in that part's `text`, after
+sentences have been joined with spaces. They are not raw Markdown byte offsets or
+browser UTF-16 positions. Each span records `source`, `replacement` and `kind`
+(`substitution` or `phoneme`). The selected profile determines whether a lexicon
+entry is represented as IPA or an explicit respelling where the adapter can use
+it; retaining a span does not establish correct pronunciation in rendered audio.
+
+### 14.6. Multi-part reference-set aggregation
+
+A `lixity-audio-reference-set/1` contains 3–6 distinct, ordered existing
+`lixity-audio-reference/1` parts. Each part keeps its exact reviewed transcript.
+The set's actual duration is the sum of PCM frame counts divided by sample rate,
+channel count and sample width, and must be within 120–180 seconds inclusive.
+The script's word-count estimate is not used for this guard. The set identity
+hashes a tagged, counted canonical document containing storage aggregation
+`ordered-independent-parts` version `1`, ordered part IDs,
+source/settings/probe hashes, language, terms, fallback index and complete probe
+script.
+
+ZONOS3 and IMS-Toucan use aggregation contract
+`normalized-mean-speaker-embedding`, version `1`. For ordered part embeddings
+$e_1,\ldots,e_n$, the combined vector is
+
+$$
+\bar{e}=\frac{\sum_{i=1}^{n}e_i/\lVert e_i\rVert_2}
+{\left\lVert\sum_{i=1}^{n}e_i/\lVert e_i\rVert_2\right\rVert_2}.
+$$
+
+Parts therefore have equal weight after per-part L2 normalization; duration does
+not reweight them. The adapters reject non-finite vectors, zero norms and
+mismatched shapes rather than inventing a fallback embedding. Single-reference
+extraction and reuse are unchanged. Qwen Base does not aggregate: it selects the
+1-based `fallback_part_index` and sends only that part through the existing
+singular reference protocol. Coqui/OpenVoice and retained F5-TTS reject sets.
+
+Aggregation caches are keyed by the ordered audio hashes and aggregation version,
+not by script, transcript, term or reference ID. They exist only in the loaded
+worker/model process, are cleared when the reference changes and are never
+persisted or logged. Segment-cache identity includes reference mode, aggregation
+contract/version and the Qwen fallback index, so a method change cannot silently
+reuse audio made under the old aggregation. `speaker_cfg_scale` remains
+unsafe/non-default and is not enabled by this workflow.
+
+This arithmetic defines reproducibility, not speaker identity verification or a
+validated similarity improvement. More or longer parts can add noise, different
+pronunciations or another speaker; listening review remains necessary.
+
 References:
 
 - Bestgen, Y. (2024). *Measuring lexical diversity in texts: The twofold length

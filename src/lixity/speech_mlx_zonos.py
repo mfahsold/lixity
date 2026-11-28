@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import sys
 import threading
@@ -20,7 +21,11 @@ from typing import Any, TextIO
 ALLOWED_MODEL = "mlx-community/ZONOS3-Mini"
 MAX_STDIN_BYTES = 65536
 _MAX_REFERENCE_BYTES = 3 * 1024 * 1024  # Matches the validated project WAV limit.
-_ALLOWED_KWARGS = frozenset({"lang_code", "speed", "temperature", "voice", "ref_audio"})
+_MIN_REFERENCE_SET_PARTS = 3
+_MAX_REFERENCE_SET_PARTS = 6
+# Keep this standalone worker's method version aligned with speech_engines.
+REFERENCE_SET_AGGREGATION_VERSION = "1"
+_ALLOWED_KWARGS = frozenset({"lang_code", "speed", "temperature", "voice", "ref_audio", "ref_audio_parts"})
 
 
 def _exit_with_parent(parent_pid: int) -> None:
@@ -50,6 +55,19 @@ def _parse_request(raw: str) -> tuple[str, Path, dict[str, Any]]:
     unexpected = set(payload) - _ALLOWED_KWARGS
     if unexpected:
         raise ValueError(f"Unsupported ZONOS3 worker parameters: {sorted(unexpected)}")
+    if "ref_audio" in payload and "ref_audio_parts" in payload:
+        raise ValueError("ZONOS3 ref_audio and ref_audio_parts are mutually exclusive")
+    if "ref_audio_parts" in payload:
+        ref_values = payload["ref_audio_parts"]
+        if (not isinstance(ref_values, list)
+                or not _MIN_REFERENCE_SET_PARTS <= len(ref_values) <= _MAX_REFERENCE_SET_PARTS):
+            raise ValueError("ZONOS3 ref_audio_parts must contain three to six paths")
+        for ref_value in ref_values:
+            if not isinstance(ref_value, str) or not ref_value:
+                raise ValueError("ZONOS3 ref_audio_parts entries must be non-empty paths")
+            ref_path = Path(ref_value)
+            if ref_path.is_symlink() or not ref_path.is_file():
+                raise ValueError("ZONOS3 ref_audio_parts entries must be existing regular files")
     if "ref_audio" in payload:
         ref_value = payload["ref_audio"]
         if not isinstance(ref_value, str) or not ref_value:
@@ -70,24 +88,74 @@ def _drain_truncated_line(first_chunk: str) -> None:
             return
 
 
-def _reuse_speaker_embedding(model: Any, kwargs: dict[str, Any], cache: dict[bytes, Any]) -> None:
-    """Reuse one embedding across temporary WAV copies within the warm worker."""
-    reference = kwargs.get("ref_audio")
-    if reference is None:
+def _normalized_set_embedding(model: Any, references: list[str]) -> Any:
+    """Normalize each finite speaker vector, average in order, then normalize."""
+    import numpy as np
+
+    embeddings = []
+    for reference in references:
+        embedding = np.asarray(model.extract_speaker_embedding(reference), dtype=np.float32)
+        norm = float(np.linalg.norm(embedding))
+        if not np.isfinite(embedding).all() or not math.isfinite(norm) or norm <= 0.0:
+            raise ValueError("ZONOS3 returned an invalid speaker embedding")
+        embeddings.append(embedding)
+    shape = embeddings[0].shape
+    if any(embedding.shape != shape for embedding in embeddings):
+        raise ValueError("ZONOS3 returned mismatched speaker embedding shapes")
+    normalized = [embedding / float(np.linalg.norm(embedding)) for embedding in embeddings]
+    mean = np.mean(normalized, axis=0)
+    norm = float(np.linalg.norm(mean))
+    if not np.isfinite(mean).all() or not math.isfinite(norm) or norm <= 0.0:
+        raise ValueError("ZONOS3 returned an invalid combined speaker embedding")
+    return mean / norm
+
+
+def _reuse_speaker_embedding(
+    model: Any,
+    kwargs: dict[str, Any],
+    cache: dict[bytes | tuple[str, tuple[bytes, ...]], Any],
+) -> None:
+    """Reuse single embeddings unchanged and version ordered set aggregation."""
+    references = kwargs.get("ref_audio_parts")
+    key: bytes | tuple[str, tuple[bytes, ...]]
+    if references is None:
+        reference = kwargs.get("ref_audio")
+        if reference is None:
+            return
+        # Preserve the established single-reference byte key and raw embedding.
+        with Path(reference).open("rb") as stream:
+            audio = stream.read(_MAX_REFERENCE_BYTES + 1)
+        if len(audio) > _MAX_REFERENCE_BYTES:
+            raise ValueError("ZONOS3 reference exceeds the project WAV size limit")
+        key = hashlib.sha256(audio).digest()
+        if key not in cache:
+            embedding = model.extract_speaker_embedding(reference)
+            cache.clear()
+            cache[key] = embedding
+        kwargs["speaker_embedding"] = cache[key]
+        del kwargs["ref_audio"]
         return
-    # The caller uses a private temporary path per segment. Match immutable bytes
-    # and let the process lifetime scope the cache to the materialized model.
-    with Path(reference).open("rb") as stream:
-        audio = stream.read(_MAX_REFERENCE_BYTES + 1)
-    if len(audio) > _MAX_REFERENCE_BYTES:
-        raise ValueError("ZONOS3 reference exceeds the project WAV size limit")
-    key = hashlib.sha256(audio).digest()
+    if "ref_audio" in kwargs:
+        raise ValueError("ZONOS3 ref_audio and ref_audio_parts are mutually exclusive")
+    if (not isinstance(references, list)
+            or not _MIN_REFERENCE_SET_PARTS <= len(references) <= _MAX_REFERENCE_SET_PARTS):
+        raise ValueError("ZONOS3 ref_audio_parts must contain three to six paths")
+    audio_parts = []
+    for reference in references:
+        # The caller uses private temporary paths per part. Match immutable bytes
+        # and let the process lifetime scope the cache to the materialized model.
+        with Path(reference).open("rb") as stream:
+            audio = stream.read(_MAX_REFERENCE_BYTES + 1)
+        if len(audio) > _MAX_REFERENCE_BYTES:
+            raise ValueError("ZONOS3 reference exceeds the project WAV size limit")
+        audio_parts.append(audio)
+    hashes = tuple(hashlib.sha256(audio).digest() for audio in audio_parts)
+    key = (REFERENCE_SET_AGGREGATION_VERSION, hashes)
     if key not in cache:
-        embedding = model.extract_speaker_embedding(reference)
         cache.clear()
-        cache[key] = embedding
+        cache[key] = _normalized_set_embedding(model, references)
     kwargs["speaker_embedding"] = cache[key]
-    del kwargs["ref_audio"]
+    kwargs.pop("ref_audio_parts", None)
 
 
 def _serve_persistent(protocol: TextIO, parent_pid: int) -> int:
@@ -99,7 +167,7 @@ def _serve_persistent(protocol: TextIO, parent_pid: int) -> int:
     from mlx_audio.tts import load
 
     model = load(ALLOWED_MODEL)
-    embeddings: dict[bytes, Any] = {}
+    embeddings: dict[bytes | tuple[str, tuple[bytes, ...]], Any] = {}
     protocol.write(json.dumps({"ready": True, "model": ALLOWED_MODEL}) + "\n")
     protocol.flush()
     while True:
@@ -145,6 +213,8 @@ def main(argv: list[str] | None = None) -> int:
     from mlx_audio.tts import load
 
     model = load(ALLOWED_MODEL)
+    if "ref_audio_parts" in kwargs:
+        _reuse_speaker_embedding(model, kwargs, {})
     result = next(model.generate(text, **kwargs))
     write(str(output_path), result.audio, result.sample_rate, format="wav")
     return 0

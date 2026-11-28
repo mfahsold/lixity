@@ -652,8 +652,11 @@ def about(*, section: str | None = None) -> dict[str, Any]:
                 "output": "text|json",
             },
             {
-                "name": "audio-reference", "purpose": "record, create, inspect or generate private voice references",
+                "name": "audio-reference", "purpose": "record, create, inspect or generate private voice references; derive project voice probes",
                 "output": "text|json",
+                "probe_action": "probe-script",
+                "probe_schema_version": "lixity-voice-probe-script/1",
+                "probe_target_seconds": {"minimum": 120, "maximum": 180, "default": 150},
             },
             {
                 "name": "audio-import", "purpose": "retain a chapter WAV for an exact manuscript revision",

@@ -74,6 +74,7 @@ AUDIO_STUDIO_SUITES = (
     "audio-microphone.cjs",
     "audio-permission.cjs",
     "audio-player.cjs",
+    "audio-probe.cjs",
     "audio-references.cjs",
     "audio-recording-diagnostics.cjs",
     "audio-studio.cjs",

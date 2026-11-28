@@ -438,6 +438,75 @@ The render retained content up to about 11 kHz with a wideband reference and
 lost content above about 8 kHz with a reference lacking those frequencies.
 See the [voice-reference methods](METHODS.md#12-voice-reference-signal-diagnostics-audio-reference-inspect).
 
+<a id="voice-probe-and-reference-set-limits"></a>
+
+### Voice probe and reference-set limits
+
+The project voice probe is deterministic within
+`lixity-voice-probe-method/1` for the same manuscript text, resolved language,
+project settings and target duration. Its source, settings and probe SHA-256
+hashes detect changed inputs and bind a saved set to the reviewed script; they do
+not establish authenticity, lock editors or prove that a transcript matches the
+audio. A method, tokenizer, sentence-boundary, term-selection or pronunciation
+change can produce a different script and hash. Compare probes only under the
+same method version and settings.
+
+The 120–180 second target and 130 WPM conversion are planning heuristics. The
+estimate is not measured speech duration, a quality score or a guarantee that a
+take will pass the set's actual PCM-duration check. Term priority, frequent-form
+counts, special-form detection and dialogue balance are coverage heuristics;
+they do not establish literary importance, pronunciation difficulty or speaker
+identity. Sentence splitting and configured term/character matching retain their
+existing limitations. `ready` means structurally savable, not acoustically
+validated. `insufficient_source` and `invalid_configuration` are explicit,
+unsavable outcomes; short previews are not padded or duplicated to appear ready.
+
+Every part transcript is authored and confirmed by a human. The workflow runs no
+automatic ASR and does not verify the recording against either the script or the
+transcript. WAV and transcript format checks, per-part signal notes and successful
+set creation cannot establish word fidelity, accent, naturalness or permission to
+use the voice. A set with a missing, altered or corrupt member is unavailable;
+do not interpret that state as an empty library or reuse it for synthesis.
+
+`lixity-audio-reference-set/1` is an immutable ordered contract with 3–6 distinct
+single `/1` members, exact confirmed transcripts, source/settings/probe hashes,
+the complete probe and a 1-based fallback index. Actual total PCM duration is
+checked at both inclusive 120 and 180 second boundaries. Set deletion retains
+members, while member deletion is blocked until all set and profile references
+are removed. These are storage and lifecycle guarantees, not evidence of speaker
+consistency. Existing single references and audio settings `/5` are unchanged;
+there is no analysis, Research, project-backup or settings-schema migration.
+
+### Multi-part speaker embedding limits
+
+ZONOS3 and IMS-Toucan aggregation version `1` computes an equal-weight normalized
+mean of per-part L2-normalized speaker embeddings. The formula is reproducible
+for fixed model/runtime outputs and ordered inputs, but model extraction,
+checkpoint changes, recording conditions and numerical backends can change the
+vectors. Non-finite, zero-norm or mismatched embeddings fail explicitly rather
+than falling back to a fabricated speaker vector. Qwen Base uses only the declared
+fallback part through its existing singular protocol; Coqui/OpenVoice and retained
+F5-TTS reject sets.
+
+Embedding caches are versioned and process-memory-only. They are keyed by ordered
+audio hashes and aggregation version, replaced when the reference changes, and
+never persisted or logged. Segment-cache identity includes the set aggregation
+version and Qwen fallback index; old aggregation output is not silently reused.
+Single-reference behavior remains unchanged. `speaker_cfg_scale` remains
+unsafe/non-default and is not enabled or recommended by the probe workflow.
+
+Averaging embeddings does not verify that every part contains the same speaker.
+Longer references are not automatically better: additional parts can introduce
+noise, different pronunciation or a different speaker. No blinded listening study
+or validated similarity improvement is claimed for multi-part aggregation.
+
+Manuscript-derived scripts, terms, transcripts, WAVs and embeddings stay local and
+private. Logs and cache metadata omit raw script, transcript, term and reference
+IDs. ZONOS3 receives temporary WAV paths, Toucan receives only local WAV/transcript
+pairs, and Qwen Base receives only its selected fallback part. OpenAI-compatible
+providers receive no local references. Static reading-site exports exclude
+`.lixity/audio-references/`; use the separate private audio backup for these files.
+
 <a id="chapter-audio-comparison-limits-unreleased"></a>
 <a id="chapter-audio-comparison-limits"></a>
 

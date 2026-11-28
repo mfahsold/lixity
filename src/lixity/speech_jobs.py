@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 import tempfile
 import threading
@@ -26,7 +27,7 @@ from .speech_direction import SpeechSegment
 from .speech_profiles import AudioProfile
 
 if TYPE_CHECKING:
-    from .speech_references import SpeechReference
+    from .speech_references import VoiceReference
 
 MAX_AUDIO_BYTES = 200 * 1024 * 1024
 MAX_RETAINED_JOBS = 4
@@ -72,7 +73,7 @@ class _Job:
     fresh_audio: bool = False
     target: str = "local"
     plan: list[SpeechSegment] | None = None
-    references: dict[str, SpeechReference] = field(default_factory=dict, repr=False)
+    references: dict[str, VoiceReference] = field(default_factory=dict, repr=False)
     state: str = "pending"
     done: int = 0
     total: int = 0
@@ -137,7 +138,7 @@ class SpeechJobs:
         fresh_audio: bool = False,
         target: str = "local",
         plan: list[SpeechSegment] | None = None,
-        references: Mapping[str, SpeechReference] | None = None,
+        references: Mapping[str, VoiceReference] | None = None,
         retain: Callable[[Path, Callable[[], bool]], None] | None = None,
         stale_reason: Callable[[], SpeechStaleReason | None] | None = None,
     ) -> dict[str, Any]:
@@ -160,7 +161,7 @@ class SpeechJobs:
                 stale_reason=stale_reason,
             )
             job.plan = [SpeechSegment(p.text, AudioProfile.model_validate(p.profile.model_dump()), p.pause_before, p.pause_after, dict(p.anchor) if p.anchor else None) for p in plan] if plan is not None else None
-            job.references = dict(references or {})
+            job.references = copy.deepcopy(dict(references or {}))
             job.retain = retain
             self._jobs[job.identifier] = job
             source = Path(storage.name) / "source.md"

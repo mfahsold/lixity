@@ -478,7 +478,7 @@ def test_changed_audio_paths_select_audio_workflows(path):
     from scripts.run_browser_suites import suite_names, suites_for_paths
 
     selected = suites_for_paths([path])
-    assert {"audio-loading.cjs", "audio-permission.cjs", "audio-recording-diagnostics.cjs",
+    assert {"audio-loading.cjs", "audio-permission.cjs", "audio-probe.cjs", "audio-recording-diagnostics.cjs",
             "audio-references.cjs", "audio-studio.cjs", "reader-audio.cjs", "settings.cjs",
             "teleprompter-take.cjs"} <= set(selected)
     assert "home-tour.cjs" not in selected

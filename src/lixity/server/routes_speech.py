@@ -46,6 +46,14 @@ from ..speech_direction import (
 )
 from ..speech_export import ssml_export, timeline_json
 from ..speech_jobs import SpeechJobs, SpeechStaleReason, prepare_speech_source
+from ..speech_probe import (
+    DEFAULT_PROBE_SECONDS,
+    DURATION_METHOD,
+    MAX_PROBE_SECONDS,
+    MIN_PROBE_SECONDS,
+    PROBE_METHOD_VERSION,
+    PROBE_SCHEMA,
+)
 from ..speech_profiles import (
     DEFAULT_PARAGRAPH_PAUSE,
     DEFAULT_SCENE_PAUSE,
@@ -69,6 +77,15 @@ from .pdf_context import manuscript_pdf_token, project_settings_token
 
 class _SpeechStale(ValueError):
     pass
+
+
+class _VoiceProbeError(ValueError):
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+_PROBE_IDENTITY = re.compile(r"[0-9a-f]{64}\Z")
 
 
 _AUDIO_CLIENT_EVENTS = frozenset({
@@ -351,7 +368,251 @@ class SpeechRoutesMixin(ResponseMixin):
                "speech_narrator_conflict" if isinstance(exc, NarratorConflict) else
                "speech_instructions_export_only" if isinstance(exc, (MLXDirectionConflict, UnsupportedDirection)) else None)
         message = workspace_labels_for(self.language)[key] if key else str(exc)
-        self._json({"ok": False, "message": message}, code)
+        response: dict[str, Any] = {"ok": False, "message": message}
+        probe_code = getattr(exc, "code", None)
+        if isinstance(probe_code, str) and re.fullmatch(r"[a-z0-9-]{1,64}", probe_code):
+            response["code"] = probe_code
+        elif isinstance(exc, _SpeechStale):
+            response["code"] = "stale-context"
+        self._json(response, code)
+
+    def _probe_for_context(self, text: str, root: Path, target_seconds: int, source_sha256: str) -> Any:
+        from ..speech_probe import build_voice_probe_script
+
+        config = read_explicit_project_config(root)
+        language = config.get("language", self.language)
+        return build_voice_probe_script(
+            text,
+            language=language,
+            project_config=config,
+            target_seconds=target_seconds,
+            source_sha256=source_sha256,
+        )
+
+    def _handle_voice_probe(self, payload: dict[str, Any]) -> None:
+        """Derive a private script from the selected manuscript without writing it."""
+        try:
+            if set(payload) - {"project_token", "source_sha256", "target_seconds"}:
+                raise ValueError("Supply the selected manuscript context and an optional probe duration")
+            target = payload.get("target_seconds", DEFAULT_PROBE_SECONDS)
+            if type(target) is not int or not MIN_PROBE_SECONDS <= target <= MAX_PROBE_SECONDS:
+                raise _VoiceProbeError("invalid-probe-duration", "Probe duration must be between 120 and 180 seconds")
+            with self._workspace_lock:
+                text, digest, _settings, key = self._speech_bound(payload)
+                root = self.get_author_project_root()
+                if root is None:
+                    raise ValueError("Open a manuscript project before deriving a voice probe")
+                probe = self._probe_for_context(text, root, target, digest)
+                if self._speech_bound(payload)[3] != key:
+                    raise _SpeechStale("The selected audio context changed while deriving the probe")
+                self._json({"ok": True, "probe": probe.to_dict()})
+        except (OSError, ValueError, RuntimeError, UserWarning) as exc:
+            self._speech_error(exc)
+
+    @staticmethod
+    def _reference_set_inspection(reference: Any) -> dict[str, Any]:
+        from ..audio_pcm import read_pcm_wav
+        from ..speech_reference_quality import assess_reference
+
+        parts = []
+        total = 0.0
+        for index, part in enumerate(reference.parts, 1):
+            (channels, width, rate), frames = read_pcm_wav(part.audio)
+            duration = len(frames) / (channels * width * rate)
+            total += duration
+            parts.append({
+                "index": index,
+                "id": part.id,
+                "transcript": part.transcript,
+                "duration_seconds": round(duration, 3),
+                "quality": assess_reference(part.audio),
+                "fallback": index == reference.fallback_part_index,
+            })
+        return {
+            "id": reference.id,
+            "kind": "set",
+            "part_count": len(parts),
+            "duration_seconds": round(total, 3),
+            "language": reference.language,
+            "source_sha256": reference.source_sha256,
+            "settings_sha256": reference.settings_sha256,
+            "probe_sha256": reference.probe_sha256,
+            "fallback_part_index": reference.fallback_part_index,
+            "terms": list(reference.terms),
+            "probe": reference.probe,
+            "parts": parts,
+        }
+
+    def _activate_reference_set(self, root: Path, reference_id: str, profile_id: Any) -> dict[str, str]:
+        from ..config import load_project_config, prepare_project_settings
+        from ..speech_engines import NATIVE_ENGINES, native_engine
+        from ..speech_profiles import parse_audio_settings
+
+        if profile_id is None:
+            return {"state": "not_requested", "message": ""}
+        try:
+            if not isinstance(profile_id, str) or not profile_id:
+                raise ValueError("Choose an existing voice profile")
+            settings = parse_audio_settings(load_project_config(root).get("audio"), language=self.language)
+            if profile_id not in settings.profiles:
+                raise ValueError("Choose an existing voice profile")
+            current = settings.profiles[profile_id]
+            capability = audio_capabilities().get(current.engine, {})
+            modes = capability.get("reference_modes")
+            if current.engine == "mlx-audio":
+                if isinstance(modes, list) and "set" not in modes:
+                    raise ValueError("This engine does not support voice probe sets")
+                updated = {**current.model_dump(), "voice": "reference", "reference_id": reference_id}
+            elif current.engine in NATIVE_ENGINES and native_engine(current.engine).reference_required:
+                if isinstance(modes, list) and "set" not in modes:
+                    raise ValueError("This engine does not support voice probe sets")
+                updated = {**current.model_dump(), "reference_id": reference_id}
+            else:
+                raise ValueError("Choose a reference voice profile")
+            settings.profiles[profile_id] = AudioProfile.model_validate(updated)
+            prepare_project_settings(root, {"audio": settings.model_dump(by_alias=True)}).commit()
+            return {"state": "activated", "message": ""}
+        except ValueError:
+            return {"state": "failed", "message": "Voice probe saved; activation failed. Choose a supported reference voice profile and try again."}
+        except OSError:
+            return {"state": "failed", "message": "Voice probe saved; project settings could not be written. Retry activation from the recordings list."}
+
+    def _handle_audio_reference_set(self, payload: dict[str, Any]) -> None:
+        """Save, inspect or delete an immutable project voice probe set."""
+        action = payload.get("action")
+        try:
+            if action not in ("save", "inspect", "delete"):
+                raise _VoiceProbeError("invalid-reference-set", "Choose save, inspect or delete")
+            common = {"action", "project_token", "source_sha256", "reference_id"}
+            if action == "save":
+                allowed = {"action", "project_token", "source_sha256", "probe_sha256", "target_seconds", "allow_retention", "fallback_part_index", "parts", "profile_id"}
+                required = {"action", "project_token", "source_sha256", "probe_sha256", "target_seconds", "allow_retention", "fallback_part_index", "parts"}
+                if set(payload) - allowed or not required <= set(payload):
+                    raise _VoiceProbeError("invalid-reference-set", "Supply the reviewed probe, confirmed parts and retention permission")
+                with self._workspace_lock:
+                    text, digest, _settings, key = self._speech_bound(payload)
+                    root = self.get_author_project_root()
+                    if root is None:
+                        raise ValueError("Open a manuscript project before saving a voice probe")
+                    target = payload["target_seconds"]
+                    if type(target) is not int or not MIN_PROBE_SECONDS <= target <= MAX_PROBE_SECONDS:
+                        raise _VoiceProbeError("invalid-probe-duration", "Probe duration must be between 120 and 180 seconds")
+                    probe = self._probe_for_context(text, root, target, digest)
+                    supplied_hash = payload["probe_sha256"]
+                    if not isinstance(supplied_hash, str) or not _PROBE_IDENTITY.fullmatch(supplied_hash):
+                        raise _VoiceProbeError("invalid-probe", "Invalid voice probe identity")
+                    if supplied_hash != probe.probe_sha256:
+                        raise _VoiceProbeError("stale-probe", "The voice probe changed; review the new script before recording")
+                    if probe.status != "ready":
+                        raise _VoiceProbeError("probe-not-ready", "The manuscript does not yet provide a complete 120–180 second probe")
+                    if payload["allow_retention"] is not True:
+                        raise _VoiceProbeError("retention-required", "Explicit permission to retain the private voice probe is required")
+                    fallback = payload["fallback_part_index"]
+                    if type(fallback) is not int or not 1 <= fallback <= len(probe.parts):
+                        raise _VoiceProbeError("invalid-reference-set", "Choose a fallback part from this voice probe")
+                    rows = payload["parts"]
+                    if not isinstance(rows, list) or len(rows) != len(probe.parts):
+                        raise _VoiceProbeError("invalid-reference-set", "Every voice probe part requires one confirmed recording")
+                    from ..speech_references import prepare_reference, save_reference_set
+                    from ..speech_worker import MAX_REFERENCE_BYTES
+
+                    prepared = []
+                    maximum_encoded = 4 * ((MAX_REFERENCE_BYTES + 2) // 3)
+                    for expected, row in enumerate(rows, 1):
+                        if not isinstance(row, dict) or set(row) != {"index", "audio", "transcript", "confirmed"}:
+                            raise _VoiceProbeError("invalid-reference-set", "Invalid voice probe part")
+                        if type(row["index"]) is not int or row["index"] != expected or row["confirmed"] is not True:
+                            raise _VoiceProbeError("invalid-reference-set", "Confirm every part transcript in probe order")
+                        encoded = row["audio"]
+                        transcript = row["transcript"]
+                        if (not isinstance(encoded, str) or not encoded or len(encoded) > maximum_encoded
+                                or not isinstance(transcript, str) or not transcript.strip()):
+                            raise _VoiceProbeError("invalid-reference-set", "Invalid voice probe audio or transcript")
+                        try:
+                            audio = base64.b64decode(encoded, validate=True)
+                        except (binascii.Error, ValueError) as exc:
+                            raise _VoiceProbeError("invalid-reference-set", "Invalid voice probe audio encoding") from exc
+                        prepared.append(prepare_reference(audio, transcript))
+                    if self._speech_bound(payload)[3] != key:
+                        raise _SpeechStale("The selected audio context changed before saving the voice probe")
+                    reference = save_reference_set(
+                        root,
+                        prepared,
+                        source_sha256=probe.source_sha256,
+                        settings_sha256=probe.settings_sha256,
+                        probe_sha256=probe.probe_sha256,
+                        language=probe.language,
+                        terms=probe.covered_terms,
+                        fallback_part_index=fallback,
+                        probe=probe.to_dict(),
+                    )
+                    inspection = self._reference_set_inspection(reference)
+                    activation = self._activate_reference_set(root, reference.id, payload.get("profile_id"))
+                refresh_warning = ""
+                if activation["state"] == "activated":
+                    try:
+                        self.refresh()
+                    except (OSError, ValueError, RuntimeError, UserWarning):
+                        refresh_warning = "Voice probe activated; the dashboard could not refresh. Reload to view the saved settings."
+                from ..speech_references import list_reference_sets, list_references
+
+                log_event(get_logger("server"), "audio_reference_set_saved", part_count=len(prepared),
+                          activation=activation["state"], dashboard_reload_required=bool(refresh_warning))
+                self._json({
+                    "ok": True,
+                    "schema_version": "lixity-audio-reference-set-created/1",
+                    "reference_set": inspection,
+                    "activation": activation,
+                    "reload_required": bool(refresh_warning),
+                    "refresh_warning": refresh_warning,
+                    "references": list_references(root),
+                    "reference_sets": list_reference_sets(root),
+                })
+                return
+            if set(payload) != common:
+                raise _VoiceProbeError("invalid-reference-set", "Supply the saved voice probe ID and selected manuscript context")
+            reference_id = payload["reference_id"]
+            if not isinstance(reference_id, str) or not _PROBE_IDENTITY.fullmatch(reference_id):
+                raise _VoiceProbeError("invalid-reference-set", "Invalid voice probe identity")
+            with self._workspace_lock:
+                self._speech_bound(payload)
+                root = self.get_author_project_root()
+                if root is None:
+                    raise ValueError("Open a manuscript project before accessing voice probes")
+                from ..speech_references import delete_reference_set, load_reference_set
+
+                if action == "inspect":
+                    reference = load_reference_set(root, reference_id)
+                    self._json({
+                        "ok": True,
+                        "schema_version": "lixity-audio-reference-set-inspection/1",
+                        "reference_set": self._reference_set_inspection(reference),
+                    })
+                    return
+
+                def check_context() -> None:
+                    self._speech_bound(payload)
+
+                delete_reference_set(root, reference_id, before_delete=check_context)
+            from ..speech_references import list_reference_sets, list_references
+
+            self._json({
+                "ok": True,
+                "reference_id": reference_id,
+                "references": list_references(root),
+                "reference_sets": list_reference_sets(root),
+            })
+        except (OSError, ValueError, RuntimeError, UserWarning) as exc:
+            from ..speech_references import VoiceReferenceInUse
+
+            if isinstance(exc, VoiceReferenceInUse):
+                self._json({
+                    "ok": False,
+                    "code": "reference-in-use",
+                    "message": workspace_labels_for(self.language)["speech_reference_delete_in_use"],
+                }, 409)
+                return
+            self._speech_error(exc)
 
     @classmethod
     def _direction_view(cls, *, source_sha256: str | None = None) -> dict[str, Any]:
@@ -457,7 +718,7 @@ class SpeechRoutesMixin(ResponseMixin):
                     workers.append({**mlx_worker, "engines": ["mlx-audio"]})
                 response["workers"] = workers
             from ..speech_record import get_microphone_status
-            from ..speech_references import CALIBRATION_TEXTS, list_references
+            from ..speech_references import CALIBRATION_TEXTS, list_reference_sets, list_references
 
             root = self.get_author_project_root()
             response["microphone"] = get_microphone_status()
@@ -465,6 +726,18 @@ class SpeechRoutesMixin(ResponseMixin):
             response["take_trim_limit_seconds"] = MAX_TRIM_INPUT_SECONDS
             response["reference_format"] = reference_format()
             response["references"] = list_references(root) if root else []
+            response["reference_sets"] = list_reference_sets(root) if root else []
+            response["voice_probe_format"] = {
+                "schema_version": PROBE_SCHEMA,
+                "minimum_seconds": MIN_PROBE_SECONDS,
+                "maximum_seconds": MAX_PROBE_SECONDS,
+                "default_seconds": DEFAULT_PROBE_SECONDS,
+                "minimum_parts": 3,
+                "maximum_parts": 6,
+                "method_version": PROBE_METHOD_VERSION,
+                "duration_method": DURATION_METHOD,
+            }
+            response["reference_set_format"] = "lixity-audio-reference-set/1"
             response["calibration_texts"] = CALIBRATION_TEXTS.get(self.language, CALIBRATION_TEXTS.get("de", {}))
             with self._workspace_lock:
                 self._speech_bound(query)
@@ -700,10 +973,14 @@ class SpeechRoutesMixin(ResponseMixin):
             if not self._same_origin():
                 raise PermissionError("Cross-origin request forbidden")
             raw = parse_qs(urlparse(self.path).query, keep_blank_values=True)
-            allowed = {"project_token", "source_sha256", "id", "reference_id"}
+            allowed = {"project_token", "source_sha256", "id", "reference_id", "part_index"}
             if not set(raw).issubset(allowed) or not {"project_token", "source_sha256"}.issubset(set(raw)):
                 raise ValueError("Supply project token, source SHA and either job ID or reference ID")
             query = {key: value[0] for key, value in raw.items()}
+            if any(len(value) != 1 or not value[0] for value in raw.values()):
+                raise ValueError("Supply one selected audio context and recording")
+            if "id" in raw and "part_index" in raw:
+                raise ValueError("A speech job has no voice probe parts")
             self._speech_manager().cancel_stale()
             with self._workspace_lock:
                 _text, _digest, _settings, key = self._speech_bound(query)
@@ -711,10 +988,21 @@ class SpeechRoutesMixin(ResponseMixin):
                     root = self.get_author_project_root()
                     if root is None:
                         raise ValueError("Open a manuscript project before accessing references")
-                    from ..speech_references import load_reference
-                    ref = load_reference(root, query["reference_id"])
-                    data = ref.audio
-                    filename = f"reference-{ref.id[:8]}.wav"
+                    from ..speech_references import SpeechReferenceSet, load_voice_reference
+
+                    ref = load_voice_reference(root, query["reference_id"])
+                    if isinstance(ref, SpeechReferenceSet):
+                        raw_index = query.get("part_index", "")
+                        if re.fullmatch(r"[1-6]", raw_index) is None or int(raw_index) > len(ref.parts):
+                            raise ValueError("Choose a valid voice probe part")
+                        part = ref.parts[int(raw_index) - 1]
+                        data = part.audio
+                        filename = f"voice-probe-{raw_index}-{part.id[:8]}.wav"
+                    else:
+                        if "part_index" in query:
+                            raise ValueError("A single reference recording has no probe parts")
+                        data = ref.audio
+                        filename = f"reference-{ref.id[:8]}.wav"
                 elif "id" in query:
                     data = self._speech_manager().audio(query["id"], key)
                     filename = "lixity-reading.wav"

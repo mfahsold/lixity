@@ -14,7 +14,7 @@ from .speech_engines import F5_MODEL as F5_MODEL
 from .speech_engines import native_endpoint, native_engine
 from .speech_lifecycle import validate_worker_compute
 from .speech_profiles import AudioProfile
-from .speech_references import SpeechReference
+from .speech_references import VoiceReference
 
 ENDPOINT = native_endpoint("f5-tts")
 TARGET_ENDPOINTS = dict(native_engine("f5-tts").endpoints)
@@ -26,7 +26,7 @@ _RUNTIME_UNAVAILABLE = (
 
 
 def synthesize_f5(text: str, profile: AudioProfile, *, target: str = "local", opener: Any = None,
-                  reference: SpeechReference | None = None) -> bytes:
+                  reference: VoiceReference | None = None) -> bytes:
     """Use the shared bounded transport for the fixed local F5 worker."""
     from .speech_worker import synthesize_native
 

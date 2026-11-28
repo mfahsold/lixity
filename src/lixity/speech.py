@@ -46,7 +46,7 @@ from .speech_profiles import (
 
 if TYPE_CHECKING:
     from .speech_direction import SpeechSegment
-    from .speech_references import SpeechReference
+    from .speech_references import VoiceReference
 
 MAX_SEGMENT_CHARS = 600
 _EDGE_FADE_MS = 5
@@ -407,24 +407,32 @@ def _adjust_pcm_tempo(data: bytes, frames: bytes, *, directory: Path, ffmpeg: st
     return frames
 
 
+def _resolved_voice_reference(
+    profile: AudioProfile, references: Mapping[str, VoiceReference] | None,
+) -> VoiceReference | None:
+    from .speech_profiles import profile_uses_reference
+
+    return (references or {}).get(profile.reference_id) if profile_uses_reference(profile) else None
+
+
 def _synthesize_segment(
     text: str,
     profile: AudioProfile,
     *,
     target: str,
-    references: Mapping[str, SpeechReference] | None,
+    reference: VoiceReference | None,
 ) -> bytes:
     """Dispatch one uncached segment to its configured synthesis adapter."""
-    from .speech_profiles import profile_uses_reference
-
-    reference = (references or {}).get(profile.reference_id) if profile_uses_reference(profile) else None
     if profile.engine in EXTERNAL_ENGINES:
         from .speech_providers import synthesize_external
 
         return synthesize_external(text, profile, reference=reference)
     if profile.engine == "f5-tts":
         from .speech_f5 import synthesize_f5
+        from .speech_references import SpeechReferenceSet
 
+        if isinstance(reference, SpeechReferenceSet):
+            raise ValueError("F5-TTS does not support reference sets; select a single reference recording")
         return synthesize_f5(text, profile, target=target, reference=reference)
     if profile.engine == "ims-toucan":
         from .speech_toucan import synthesize_toucan
@@ -451,7 +459,7 @@ def render_speech_audio(
     fresh_audio: bool = False,
     target: str = "local",
     plan: list[SpeechSegment] | None = None,
-    references: Mapping[str, SpeechReference] | None = None,
+    references: Mapping[str, VoiceReference] | None = None,
 ) -> Path:
     """Stream a consistent selected delivery into an atomic WAV or MP3 copy."""
     _check_cancelled(cancelled)
@@ -492,12 +500,14 @@ def render_speech_audio(
         require_render_direction(cue.profile, cue.profile.instructions)
     if target != "local" and any(cue.text and cue.profile.engine in EXTERNAL_ENGINES for cue in cues):
         raise ValueError("External speech uses its configured provider URL, not the Jetson execution target")
-    from .speech_references import validate_reference
-    for reference_id in {cue.profile.reference_id for cue in cues if cue.text and profile_uses_reference(cue.profile)}:
-        reference = (references or {}).get(reference_id)
-        if reference is None or reference.id != reference_id:
+    from .speech_worker import validate_voice_reference
+    for cue in cues:
+        if not cue.text or not profile_uses_reference(cue.profile):
+            continue
+        reference = _resolved_voice_reference(cue.profile, references)
+        if reference is None or reference.id != cue.profile.reference_id:
             raise ValueError("A verified reference is required for every reference voice profile")
-        validate_reference(reference)
+        validate_voice_reference(cue.profile, reference)
 
     needs_tempo = any(cue.text and cue.profile.speed != 1.0
                       and not mlx_audio_uses_model_speed(cue.profile) for cue in cues)
@@ -528,7 +538,8 @@ def render_speech_audio(
             _check_cancelled(cancelled)
             if not cue.text or native_bindings.get(cue.profile.engine) not in shared_endpoints:
                 continue
-            if fresh_audio or segment_cache is None or segment_cache.get(cue.text, cue.profile) is None:
+            reference = _resolved_voice_reference(cue.profile, references)
+            if fresh_audio or segment_cache is None or segment_cache.get(cue.text, cue.profile, reference) is None:
                 claim_native_endpoint(preflight_claims, cue.profile.engine)
     render_claims: dict[str, str] = {}
     total = sum(bool(cue.text) for cue in cues)
@@ -580,7 +591,8 @@ def render_speech_audio(
                 previous_profile = effective
                 with _observe_speech_segment(done + 1, total, effective, writer.getnframes() * 1000 // rate,
                                              instruction_changed, description_changed, reference_changed) as diagnostic:
-                    data = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, effective)
+                    reference = _resolved_voice_reference(effective, references)
+                    data = None if fresh_audio or segment_cache is None else segment_cache.get(cue.text, effective, reference)
                     cached = data is not None
                     diagnostic["cache"] = ("disabled" if segment_cache is None else "fresh" if fresh_audio else
                                            "hit" if cached else "miss")
@@ -591,13 +603,13 @@ def render_speech_audio(
                     if data is None:
                         # A cache entry may have been evicted after preflight.
                         claim_native_endpoint(render_claims, effective.engine)
-                        data = _synthesize_segment(cue.text, effective, target=target, references=references)
+                        data = _synthesize_segment(cue.text, effective, target=target, reference=reference)
                     params, frames = read_pcm_wav(data)
                     if params != SPEECH_PCM_FORMAT:
                         raise ValueError("Unexpected synthesized audio format")
                     _check_cancelled(cancelled)
                     if not cached and segment_cache is not None:
-                        segment_cache.put(cue.text, effective, data)
+                        segment_cache.put(cue.text, effective, data, reference)
                         _check_cancelled(cancelled)
                     if effective.speed != 1.0 and not mlx_audio_uses_model_speed(effective):
                         # Cache the unmodified model audio. Processing each spoken

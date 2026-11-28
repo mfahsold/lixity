@@ -13,6 +13,9 @@ COQUI_REFERENCE_MODEL = "coqui/tts_models/de/thorsten/vits+openvoice-v2"
 F5_MODEL = "SWivid/F5-TTS"
 TOUCAN_MODEL = "Flux9665/ToucanTTS"
 EXTERNAL_ENGINES = ("openai-compatible", "mlx-audio")
+REFERENCE_SET_AGGREGATION = "normalized-mean-speaker-embedding"
+REFERENCE_SET_AGGREGATION_VERSION = "1"
+REFERENCE_SET_FALLBACK = "selected-part"
 
 
 @dataclass(frozen=True)

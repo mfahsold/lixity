@@ -39,6 +39,12 @@ def audio_project(tmp_path):
     reference = root / ".lixity/audio/references/private.wav"
     reference.parent.mkdir(parents=True, exist_ok=True)
     reference.write_bytes(b"PRIVATE_VOICE_REFERENCE_MUST_NOT_SHIP")
+    private_references = root / ".lixity/audio-references"
+    private_references.mkdir(parents=True, exist_ok=True)
+    (private_references / ("a" * 64 + ".json")).write_text(
+        '{"schema_version":"lixity-audio-reference-set/1","private":"PRIVATE_PROBE_SCRIPT_MUST_NOT_SHIP"}',
+        encoding="utf-8",
+    )
     return root, source, digest, recordings
 
 
@@ -59,7 +65,8 @@ def test_audio_is_opt_in_and_chapter_cap_is_applied_before_reading_later_artifac
     assert track["duration_seconds"] == 1 and track["origin"] == "generated"
     assert exported.files[track["file"]] == recordings[0][1]
     assert exported.manifest["files"][track["file"]]["sha256"] == track["sha256"]
-    for private in (b"PRIVATE_VOICE_REFERENCE_MUST_NOT_SHIP", b"BROKEN_LATER_PRIVATE_METADATA", recordings[1][1]):
+    for private in (b"PRIVATE_VOICE_REFERENCE_MUST_NOT_SHIP", b"PRIVATE_PROBE_SCRIPT_MUST_NOT_SHIP",
+                    b"BROKEN_LATER_PRIVATE_METADATA", recordings[1][1]):
         assert all(private not in content for content in exported.files.values())
     html = exported.files["index.html"].decode()
     assert 'id="publication-audio-player" controls' in html

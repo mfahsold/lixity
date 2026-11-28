@@ -31,6 +31,7 @@ from .constants import (
     MAX_IMAGE_PAYLOAD_BYTES,
     MAX_MEDIA_PAYLOAD_BYTES,
     MAX_PAYLOAD_BYTES,
+    MAX_REFERENCE_SET_PAYLOAD_BYTES,
     MIME_TYPES,
 )
 from .desktop import DesktopSession, desktop_environment_summary
@@ -49,7 +50,7 @@ from .routes_site import SiteExportRoutesMixin
 from .routes_speech import SpeechRoutesMixin
 
 _AUDIO_POST_ACTIONS = frozenset({
-    "audio-audit", "audio-schema", "audio-microphone", "audio-take-trim",
+    "audio-audit", "audio-schema", "audio-microphone", "audio-take-trim", "audio-reference-set", "voice-probe",
     "speech-audio-delete", "speech-audio-import", "speech-cancel", "speech-direction", "speech-plan", "speech-render",
 })
 _MICROPHONE_OPERATIONS = frozenset({
@@ -136,6 +137,8 @@ class LixityServerHandler(
         "speech-audio-delete": "_handle_speech_audio_delete",
         "speech-audio-import": "_handle_speech_audio_import",
         "speech-plan": "_handle_speech_plan",
+        "voice-probe": "_handle_voice_probe",
+        "audio-reference-set": "_handle_audio_reference_set",
         "audio-audit": "_handle_audio_audit",
         "audio-schema": "_handle_audio_schema",
         "speech-direction": "_handle_speech_direction",
@@ -514,6 +517,7 @@ class LixityServerHandler(
     def _dispatch_post(self, action: str) -> None:
         maximum = (512 if action == "audio-client-diagnostic"
                    else 138 * 1024**2 if action == "audio-audit"
+                   else MAX_REFERENCE_SET_PAYLOAD_BYTES if action == "audio-reference-set"
                    else MAX_TRIM_REQUEST_BYTES if action == "audio-take-trim"
                    else MAX_MEDIA_PAYLOAD_BYTES if action in {"research-media-ingest", "research-dossier-media", "speech-audio-import"}
                    else MAX_IMAGE_PAYLOAD_BYTES if action in {"research-image-ingest", "research-dossier-image"}

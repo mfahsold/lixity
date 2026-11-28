@@ -9,16 +9,17 @@ import argparse
 import hashlib
 import importlib
 import io
+import math
 import os
 import re
 import sys
-from collections.abc import Callable, Collection, Mapping
+from collections.abc import Callable, Collection, Mapping, Sequence
 from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .speech_controls import phoneme_spans
-from .speech_engines import TOUCAN_MODEL
+from .speech_engines import REFERENCE_SET_AGGREGATION_VERSION, TOUCAN_MODEL
 from .speech_lifecycle import (
     add_lifecycle_arguments,
     serve_worker,
@@ -26,13 +27,16 @@ from .speech_lifecycle import (
     validate_worker_compute,
 )
 from .speech_profiles import AudioProfile
-from .speech_references import SpeechReference
 from .speech_worker import (
     SAMPLE_RATE,
     SpeechRequestValidationError,
     _decode_reference,
+    _decode_toucan_reference_parts,
     synthesize_native,
 )
+
+if TYPE_CHECKING:
+    from .speech_references import VoiceReference
 
 UPSTREAM_REVISION = "3cc2094d9c7123336eda7e299ac0bc90319ca9ff"
 _MIN_CHECKPOINT_TORCH = (2, 6, 0)
@@ -44,8 +48,43 @@ _SUFFIX_MODIFIERS = frozenset("\u02d0\u02d1\u0306\u0303\u0327\u02b7\u02b0\u02e0\
                               "\u02e5\u02e6\u02e7\u02e8\u02e9\u2b67\u2b68\u2b81\u2b83")
 
 
+def _normalized_mean_speaker_embedding(embeddings: Sequence[Any], numpy: Any) -> Any:
+    """Normalize same-shape finite ECAPA vectors, average, then normalize."""
+    arrays = [
+        embedding.detach().cpu().numpy() if hasattr(embedding, "detach")
+        else numpy.asarray(embedding)
+        for embedding in embeddings
+    ]
+    if not arrays:
+        raise ValueError("IMS Toucan returned an invalid speaker embedding")
+    arrays = [numpy.asarray(embedding, dtype=numpy.float32) for embedding in arrays]
+    shape = arrays[0].shape
+    normalized = []
+    for embedding in arrays:
+        norm = float(numpy.linalg.norm(embedding))
+        if (embedding.shape != shape or not numpy.isfinite(embedding).all()
+                or not math.isfinite(norm) or norm <= 0.0):
+            raise ValueError("IMS Toucan returned an invalid speaker embedding")
+        normalized.append(embedding / norm)
+    mean = numpy.mean(normalized, axis=0)
+    norm = float(numpy.linalg.norm(mean))
+    if not numpy.isfinite(mean).all() or not math.isfinite(norm) or norm <= 0.0:
+        raise ValueError("IMS Toucan returned an invalid combined speaker embedding")
+    return mean / norm
+
+
+def _reference_cache_key(
+    decoded_parts: Sequence[tuple[bytes, bytes]], *, reference_set: bool,
+) -> str | tuple[str, tuple[bytes, ...]]:
+    """Bind set memory to ordered audio hashes and the aggregation version."""
+    hashes = tuple(hashlib.sha256(audio).digest() for audio, _frames in decoded_parts)
+    if reference_set:
+        return REFERENCE_SET_AGGREGATION_VERSION, hashes
+    return hashes[0].hex()
+
+
 def synthesize_toucan(text: str, profile: AudioProfile, *, target: str = "local", opener: Any = None,
-                      reference: SpeechReference | None = None) -> bytes:
+                      reference: VoiceReference | None = None) -> bytes:
     """Use the shared transport without changing an unavailable execution target."""
     if profile.engine != "ims-toucan" or profile.instructions:
         raise ValueError("IMS Toucan requires structured controls, not free-text direction")
@@ -187,7 +226,7 @@ def _load_runtime(model_dir: Path, speaker_dir: Path, *, device: str, threads: i
     language_ids = {language: frontend_module.get_language_id(codes[0]) for language, codes in _LANGUAGES.items()}
     if any(value is None for value in language_ids.values()):
         raise ValueError("IMS Toucan checkout lacks a configured language")
-    reference_key: str | None = None
+    reference_key: str | tuple[str, tuple[bytes, ...]] | None = None
     reference_embedding: Any = None
 
     def validate(phones: str) -> None:
@@ -224,14 +263,32 @@ def _load_runtime(model_dir: Path, speaker_dir: Path, *, device: str, threads: i
             return (" " if text[0].isspace() else "") + normalized + (" " if text[-1].isspace() else "")
 
         phones = prepare_phones(request["input"], request["phonemes"], phonemize=phonemize, validate=validate)
-        reference_audio, frames = _decode_reference(request["reference_audio"], request["reference_text"])
-        key = hashlib.sha256(reference_audio).hexdigest()
+        reference_set = "reference_parts" in request
+        if reference_set:
+            if "reference_audio" in request or "reference_text" in request:
+                raise ValueError("IMS Toucan reference parts and singular reference fields are mutually exclusive")
+            decoded_parts = _decode_toucan_reference_parts(request["reference_parts"])
+        else:
+            decoded_parts = [_decode_reference(request["reference_audio"], request["reference_text"])]
+        key = _reference_cache_key(decoded_parts, reference_set=reference_set)
         with torch.inference_mode():
             if key != reference_key:
-                waveform = numpy.frombuffer(frames, dtype="<i2").astype(numpy.float32) / 32768.0
-                waveform = torch.tensor(waveform, device=device)
-                waveform = resample(orig_freq=SAMPLE_RATE, new_freq=16000).to(device)(waveform)
-                reference_embedding = encoder.encode_batch(wavs=waveform.unsqueeze(0)).squeeze()
+                if not reference_set:
+                    _reference_audio, frames = decoded_parts[0]
+                    waveform = numpy.frombuffer(frames, dtype="<i2").astype(numpy.float32) / 32768.0
+                    waveform = torch.tensor(waveform, device=device)
+                    waveform = resample(orig_freq=SAMPLE_RATE, new_freq=16000).to(device)(waveform)
+                    reference_embedding = encoder.encode_batch(wavs=waveform.unsqueeze(0)).squeeze()
+                else:
+                    embeddings = []
+                    for _audio, frames in decoded_parts:
+                        waveform = numpy.frombuffer(frames, dtype="<i2").astype(numpy.float32) / 32768.0
+                        waveform = torch.tensor(waveform, device=device)
+                        waveform = resample(orig_freq=SAMPLE_RATE, new_freq=16000).to(device)(waveform)
+                        embeddings.append(encoder.encode_batch(wavs=waveform.unsqueeze(0)).squeeze())
+                    reference_embedding = torch.tensor(
+                        _normalized_mean_speaker_embedding(embeddings, numpy), device=device,
+                    )
                 reference_key = key
             vectors = frontend.string_to_tensor(phones, input_phonemes=True, handle_missing=False).to(device)
             mel, _durations, _pitch, _energy = acoustic(

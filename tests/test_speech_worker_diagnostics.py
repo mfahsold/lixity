@@ -105,6 +105,43 @@ def test_worker_rejects_invalid_and_busy_requests_without_logging_payload(record
         assert private not in text
 
 
+def test_worker_reference_set_validation_errors_are_redacted(recorded, monkeypatch):
+    import base64
+
+    from lixity.speech_engines import TOUCAN_MODEL
+
+    handlers = []
+
+    class FakeServer:
+        def __init__(self, _address, handler):
+            handlers.append(handler)
+
+    monkeypatch.setattr(speech_qwen, "ThreadingHTTPServer", FakeServer)
+    speech_qwen.worker_server(lambda _request: pytest.fail("invalid set reached inference"),
+                              port=0, model=TOUCAN_MODEL)
+    request = {
+        "model": TOUCAN_MODEL, "input": "PRIVATE_MANUSCRIPT", "voice": "reference", "language": "de",
+        "instructions": "", "response_format": "wav", "phonemes": {}, "prosody": {},
+        "reference_parts": [
+            {"audio": base64.b64encode(generate_silence_wav(1)).decode(), "text": "PRIVATE_TRANSCRIPT"}
+            for _index in range(3)
+        ],
+    }
+    body = json.dumps(request).encode()
+    handler = object.__new__(handlers[0])
+    handler.path = "/v1/audio/speech"
+    handler.rfile = io.BytesIO(body)
+    handler.headers = SimpleNamespace(get=lambda name, default=None: str(len(body)) if name == "Content-Length" else default,
+                                      get_content_type=lambda: "application/json")
+    replies = []
+    handler.reply = lambda status, data, *_a, **_kw: replies.append((status, data))
+    handler.do_POST()
+    assert replies[0][0] == 400
+    assert b"PRIVATE" not in replies[0][1]
+    assert "PRIVATE_" not in recorded.getvalue()
+    assert "category=validation" in recorded.getvalue()
+
+
 def test_worker_logs_client_disconnect_as_transport_not_synthesis_failure(recorded, monkeypatch):
     handlers = []
     class FakeServer:

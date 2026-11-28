@@ -106,6 +106,16 @@ records sound or changes the host mixer.
 selection persistence and readable recording labels in profiles, direction and
 export previews across all seven locales at desktop and mobile widths.
 
+`audio-probe.cjs` uses a disposable synthetic native project to exercise the
+project voice probe at 1440, 320 and 2560 pixels. It generates a manuscript-derived
+script, checks the 3–6-part bound and viewport geometry, imports a confirmed
+synthetic WAV/transcript for every part, verifies that retention permission and a
+1-based fallback are explicit, and checks that only the complete set is uploaded.
+It then reopens the voice library, checks the set label and part count, counts
+the per-part playback controls, and opens one part. The suite never starts a speech
+worker, records a physical microphone or uses private fixtures. It does not test
+ASR, perceptual quality, speaker similarity or actual multi-part synthesis.
+
 `audio-phonetics.cjs` checks the reviewed format-5 upgrade, retained voice profiles,
 named author references, separate IPA overrides, bounded profile/range prosody,
 inheritance and JSON export at desktop/mobile widths. Free-text delivery remains
@@ -209,8 +219,11 @@ Use `--list --shard INDEX/TOTAL` to inspect a shard's assignments.
 The weights in `scripts/run_browser_suites.py` use the slowest observed wall
 time per suite across three successful full-matrix release runs with two workers
 per shard, rounded up to seconds. An unmeasured suite gets 49 seconds, the
-rounded-up upper quartile of those weights. The latest run completed all 105
-suites, with shard times of 405–555 seconds. Replaying those per-suite times
+rounded-up upper quartile of those weights. The latest retained full run completed
+all 105 suites, with shard times of 405–555 seconds. The newly registered
+`audio-probe.cjs` is not part of those timings and uses the unmeasured-suite
+fallback until a comparable full run supplies its duration. Replaying the
+recorded per-suite times
 with the updated weights gives an estimated 453–494 seconds, excluding setup
 and harness time. A hosted run is needed to measure the new assignment because
 different pairs of suites can contend for resources.

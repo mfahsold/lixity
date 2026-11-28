@@ -16,6 +16,25 @@ def test_base_profile_requires_reference_and_advertises_actual_controls():
     assert capability["instructions"] is False
     assert capability["control_support"]["direction"] == "unsupported"
     assert capability["reference_required"] is True
+    assert capability["reference_modes"] == ["single", "set"]
+    assert capability["reference_set_fallback"] == "selected-part"
+    assert "reference_set_fallback" not in capability["control_support"]
+
+
+def test_reference_set_capabilities_are_additive_and_engine_specific():
+    capabilities = audio_capabilities()
+    for engine in ("mlx-audio", "ims-toucan"):
+        capability = capabilities[engine]
+        assert capability["reference_modes"] == ["single", "set"]
+        assert capability["reference_set_aggregation"] == "normalized-mean-speaker-embedding"
+        assert capability["reference_set_aggregation_version"] == "1"
+        assert "reference_set_aggregation" not in capability["control_support"]
+        assert "reference_set_aggregation_version" not in capability["control_support"]
+    for engine in ("coqui", "coqui-reference", "f5-tts", "qwen3", "qwen3-design", "openai-compatible"):
+        capability = capabilities[engine]
+        assert capability["reference_modes"] == ["single"]
+        assert "reference_set_aggregation" not in capability
+        assert "reference_set_fallback" not in capability
 
 
 @pytest.mark.parametrize("updates", [

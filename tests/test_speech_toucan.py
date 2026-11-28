@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import importlib
 import io
 import json
@@ -12,12 +13,37 @@ from email.message import Message
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 from lixity.speech import generate_silence_wav
 from lixity.speech_engines import TOUCAN_MODEL
 from lixity.speech_profiles import AudioProfile
 from lixity.speech_references import SpeechReference, _identity
+
+
+def _save_set(tmp_path, *, fallback_part_index=1, reverse=False):
+    from lixity.speech_probe import build_voice_probe_script
+    from lixity.speech_references import prepare_reference, save_reference_set
+
+    text = " ".join(
+        f"Synthetic sentence number {index} describes a calm private test passage."
+        for index in range(100)
+    )
+    script = build_voice_probe_script(text, language="de", target_seconds=125)
+    assert script.status == "ready"
+    probe = script.to_dict()
+    parts = [
+        prepare_reference(generate_silence_wav(150 / len(script.parts)), f"Synthetic part {index}.")
+        for index in range(1, len(script.parts) + 1)
+    ]
+    if reverse:
+        parts.reverse()
+    return save_reference_set(
+        tmp_path, parts, source_sha256=script.source_sha256, settings_sha256=script.settings_sha256,
+        probe_sha256=script.probe_sha256, language="de", terms=("Mara",),
+        fallback_part_index=fallback_part_index, probe=probe,
+    )
 
 
 def test_missing_toucan_assets_fail_before_importing_optional_dependencies(tmp_path, monkeypatch):
@@ -206,6 +232,150 @@ def test_toucan_http_worker_accepts_long_segments_and_rejects_transport_limit():
         with error.value:
             assert error.value.code == 400
         assert len(calls) == 1
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
+def test_toucan_adapter_sends_all_probe_parts_for_embedding_aggregation(tmp_path):
+    from lixity.speech_toucan import synthesize_toucan
+
+    reference = _save_set(tmp_path)
+    profile = AudioProfile(engine="ims-toucan", language="de", voice="reference", reference_id=reference.id)
+    calls = []
+
+    class Response(io.BytesIO):
+        status = 200
+
+    def open_request(request, timeout):
+        calls.append(request)
+        response = Response(generate_silence_wav(.1))
+        response.headers = Message()
+        response.headers["Content-Type"] = "audio/wav"
+        response.headers["X-Lixity-Model"] = TOUCAN_MODEL
+        response.headers["X-Lixity-Voice"] = "reference"
+        return response
+
+    synthesize_toucan("Name.", profile, reference=reference, opener=SimpleNamespace(open=open_request))
+    payload = json.loads(calls[0].data)
+    assert len(payload["reference_parts"]) == len(reference.parts)
+    assert [base64.b64decode(part["audio"]) for part in payload["reference_parts"]] == [
+        part.audio for part in reference.parts
+    ]
+    assert [part["text"] for part in payload["reference_parts"]] == [
+        part.transcript for part in reference.parts
+    ]
+    assert "reference_audio" not in payload and "reference_text" not in payload
+
+
+def test_toucan_set_embedding_aggregation_and_memory_key_are_versioned():
+    import numpy as np
+
+    from lixity.speech_engines import REFERENCE_SET_AGGREGATION_VERSION
+    from lixity.speech_toucan import _normalized_mean_speaker_embedding, _reference_cache_key
+
+    embeddings = [np.asarray([3.0, 0.0]), np.asarray([0.0, 5.0]), np.asarray([1.0, 1.0])]
+    expected = np.mean([
+        np.asarray([1.0, 0.0]), np.asarray([0.0, 1.0]), np.asarray([1.0, 1.0]) / np.sqrt(2.0),
+    ], axis=0)
+    expected /= np.linalg.norm(expected)
+    combined = _normalized_mean_speaker_embedding(embeddings, np)
+    assert np.allclose(combined, expected)
+    assert np.isclose(np.linalg.norm(combined), 1.0)
+
+    decoded = [(b"first", b""), (b"second", b""), (b"third", b"")]
+    key = _reference_cache_key(decoded, reference_set=True)
+    assert key == (REFERENCE_SET_AGGREGATION_VERSION, tuple(
+        hashlib.sha256(audio).digest() for audio, _frames in decoded
+    ))
+    assert key != _reference_cache_key(list(reversed(decoded)), reference_set=True)
+    single = [(b"first", b"")]
+    assert _reference_cache_key(single, reference_set=False) == hashlib.sha256(b"first").hexdigest()
+
+
+@pytest.mark.parametrize("embeddings", [
+    [np.asarray([0.0, 0.0]), np.asarray([1.0, 0.0]), np.asarray([0.0, 1.0])],
+    [np.asarray([np.nan, 0.0]), np.asarray([1.0, 0.0]), np.asarray([0.0, 1.0])],
+    [np.asarray([np.inf, 0.0]), np.asarray([1.0, 0.0]), np.asarray([0.0, 1.0])],
+    [np.asarray([1.0]), np.asarray([1.0, 0.0]), np.asarray([0.0, 1.0])],
+    [np.asarray([1.0, 0.0]), np.asarray([-0.5, np.sqrt(3.0) / 2.0]),
+     np.asarray([-0.5, -np.sqrt(3.0) / 2.0])],
+])
+def test_toucan_set_embedding_aggregation_rejects_invalid_vectors(embeddings):
+    import numpy as np
+
+    from lixity.speech_toucan import _normalized_mean_speaker_embedding
+
+    with pytest.raises(ValueError, match="embedding"):
+        _normalized_mean_speaker_embedding(embeddings, np)
+
+
+def test_toucan_http_worker_validates_reference_set_transport_and_limits():
+    import http.client
+
+    from lixity.speech_worker import (
+        MAX_BASE_REQUEST_BYTES,
+        MAX_REFERENCE_SET_REQUEST_BYTES,
+        MAX_REQUEST_BYTES,
+        worker_server,
+    )
+
+    assert MAX_BASE_REQUEST_BYTES == MAX_REQUEST_BYTES + 4 * ((3 * 1024 * 1024 + 2) // 3)
+    assert MAX_REFERENCE_SET_REQUEST_BYTES == 16 * 1024 * 1024
+    calls = []
+    server = worker_server(lambda request: calls.append(request) or generate_silence_wav(.1), port=0, model=TOUCAN_MODEL)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    endpoint = f"http://127.0.0.1:{server.server_port}/v1/audio/speech"
+
+    def parts(durations):
+        return [
+            {"audio": base64.b64encode(generate_silence_wav(duration)).decode(),
+             "text": f"Private reference {index}."}
+            for index, duration in enumerate(durations, 1)
+        ]
+
+    valid_parts = parts((40, 40, 40))
+    payload = {"model": TOUCAN_MODEL, "input": "Name.", "language": "de", "voice": "reference",
+               "instructions": "", "response_format": "wav", "phonemes": {}, "prosody": {}}
+
+    def post(value):
+        return opener.open(urllib.request.Request(endpoint, data=json.dumps(value).encode(),
+                                                   headers={"Content-Type": "application/json"}))
+
+    try:
+        with post({**payload, "reference_parts": valid_parts}) as response:
+            assert response.status == 200
+        assert [part["text"] for part in calls[0]["reference_parts"]] == [
+            part["text"] for part in valid_parts
+        ]
+        invalid = [
+            {**payload, "reference_parts": valid_parts[:2]},
+            {**payload, "reference_parts": [*valid_parts, valid_parts[0]]},
+            {**payload, "reference_parts": parts((40, 40, 39.999))},
+            {**payload, "reference_parts": parts((45, 45, 45, 45.001))},
+            {**payload, "reference_parts": [{**valid_parts[0], "unexpected": "PRIVATE"}]},
+            {**payload, "reference_parts": valid_parts,
+             "reference_audio": valid_parts[0]["audio"], "reference_text": valid_parts[0]["text"]},
+        ]
+        for value in invalid:
+            with pytest.raises(urllib.error.HTTPError) as error:
+                post(value)
+            with error.value:
+                assert error.value.code == 400
+                assert b"PRIVATE" not in error.value.read()
+        assert len(calls) == 1
+        connection = http.client.HTTPConnection("127.0.0.1", server.server_port)
+        try:
+            connection.putrequest("POST", "/v1/audio/speech")
+            connection.putheader("Content-Type", "application/json")
+            connection.putheader("Content-Length", str(MAX_REFERENCE_SET_REQUEST_BYTES + 1))
+            connection.endheaders()
+            assert connection.getresponse().status == 400
+        finally:
+            connection.close()
     finally:
         server.shutdown()
         server.server_close()

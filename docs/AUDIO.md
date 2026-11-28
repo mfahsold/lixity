@@ -17,17 +17,18 @@ for project work, the [CLI reference](USAGE.md) for commands, and the
 
 The published v0.9.3 includes recording, passage direction, the teleprompter,
 and the ZONOS3, IMS-Toucan and OpenAI-compatible adapters. This manual follows
-the current checkout, where the updated audio layout, shared IPA and
-alternate-spelling lexicon, profile-draft upgrade, assembly level correction,
-shared preview planner, and expanded audio diagnostics are unreleased. In
-v0.9.3, use profile spelling replacements or the IMS-Toucan profile's IPA
-dictionary. Audio settings, direction, timeline and transcript schemas have
-independent versions; check your installation with `lixity --version` and the
-relevant command's `--help`.
+the current checkout, where the updated audio layout, project-specific voice
+probes and immutable multi-part reference sets, shared IPA and alternate-spelling
+lexicon, profile-draft upgrade, assembly level correction, shared preview planner,
+and expanded audio diagnostics are unreleased. In v0.9.3, use profile spelling
+replacements or the IMS-Toucan profile's IPA dictionary. Audio settings,
+direction, timeline and transcript schemas have independent versions; check your
+installation with `lixity --version` and the relevant command's `--help`.
 
 | I want to… | Open in the workspace | Commands and details |
 | --- | --- | --- |
 | Record a voice or import a take | **Project → Settings → Audio and services → Record author's voice** | `audio-reference` · [Record and review](#author-voice-recording-and-listening) |
+| Build a manuscript-specific voice calibration set | **Author's voice → Project voice probe** | `audio-reference probe-script` · [Voice probe](#project-specific-voice-calibration-probe-unreleased) |
 | Choose the narrator or edit pronunciation | **Project → Settings → Audio and services → Voice profiles** | [Voice profiles](#voice-profiles) · [Project pronunciations](#project-pronunciations) |
 | Choose an input or check its level | **Project → Settings → Audio and services → Microphone and levels** | `audio-microphone`, `audio-calibrate` · [Microphone and calibration](#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record) |
 | Hear a paragraph or shape its delivery | **Manuscript → Listen and direct → Listen & direct** | `read-aloud`, `audio-direction` · [Passage direction](#passage-direction) |
@@ -62,6 +63,10 @@ synthesizes audio.
   transcript. A compatible voice profile can use it to synthesize new speech.
   The Teleprompter records from your microphone and leaves the take for review
   or download. Use **Author's voice** to save a reviewed excerpt as a reference.
+- A **voice probe set** is an immutable ordered set of 3–6 saved reference parts
+  derived from one manuscript-specific script. It retains the complete script,
+  exact confirmed transcripts and a fallback part. ZONOS3 and IMS-Toucan can use
+  the set; Qwen Base uses only its fallback part.
 - A **retained chapter recording** is a complete WAV for one chapter and manuscript
   revision. A successful chapter render or an explicit chapter WAV import
   retains it. A [reader export](WORKSPACE.md#include-existing-chapter-recordings)
@@ -291,6 +296,9 @@ preserved.
   and PCM format before reuse. Repeating a render reuses only segments with the
   same effective spoken text, model family, language, voice/reference and
   delivery controls; pause or leveling changes do not require new synthesis.
+  Reference-set identity also includes the aggregation contract/version and,
+   for Qwen Base, the selected fallback index. Existing single-reference cache
+   entries keep their established identity.
   IMS-Toucan bundles complete sentences into fragments of up to 1,800
   characters so its per-utterance duration, pitch and energy predictions keep
   paragraph context. ZONOS3 bundles complete sentences up to the 600-character
@@ -703,6 +711,105 @@ their delivery assignments. For reference engines, delivery references are inten
 speaker. Lixity checks profile compatibility but cannot verify the speaker in a
 recording; see the [single narrator rules](#single-narrator-and-delivery-variation). Reusing a reference encourages consistency, but accent, identity,
 naturalness and pronunciation still require listening.
+
+<a id="project-specific-voice-calibration-probe-unreleased"></a>
+<a id="project-specific-voice-calibration-probe"></a>
+
+## Project-specific voice calibration probe
+
+The current checkout can derive a private reading script from the selected
+manuscript instead of asking you to find a representative passage by hand. The
+`lixity-voice-probe-script/1` script targets 120–180 seconds (150 by default),
+using 130 words per minute only as a planning estimate. A ready script contains
+3–6 sentence-aligned parts of roughly 20–40 seconds each. It favors configured
+terms, aliases, scoped alternatives and compounds; character names; the project
+lexicon and selected-profile pronunciations; and repeated content or special
+forms. Source, settings and probe SHA-256 hashes bind the preview to its inputs.
+
+Generation is read-only. `status: "ready"` is the only savable result.
+`insufficient_source` keeps a bounded preview when unique manuscript prose cannot
+fill the duration and part constraints; `invalid_configuration` reports a
+configuration problem. Both are explicitly unsavable. Lixity does not pad the
+script, repeat sentences or invent manuscript wording. The estimate is not a
+measurement of your speech or a voice-quality score.
+
+### Record and save a set in Author's voice
+
+1. Open a writable project and choose **Project → Settings → Audio and services
+   → Record author's voice → Project voice probe**. Choose the target duration and
+   select **Generate script**. Review the complete text, selected terms and
+   pronunciation cues before recording.
+2. Work through the parts in order. Use the existing recording or WAV-import
+   controls for each part. Every part remains a normal 1–60 second, mono 24 kHz
+   16-bit PCM reference. Enter the words you actually spoke, listen again and
+   confirm **I checked that this transcript matches the recording**. Editing a
+   transcript clears its confirmation. There is no automatic speech recognition.
+3. Choose the **fallback part** as a 1-based part number. Qwen Base uses this part
+   only; the other supported aggregating engines use the complete ordered set.
+   Check the explicit permission to retain the private script and recordings.
+4. Select **Save voice set**. Saving and activation are separate: optionally
+   choose an existing compatible reference profile to activate. A failed
+   activation leaves the saved set intact. The complete set is uploaded only
+   after every part is confirmed.
+5. In **Choose from recordings**, the library shows set labels, part count and
+   actual total duration. Play individual parts and request their signal-quality
+   notes on demand. Singles and sets remain separate list entries. The notes are
+   the existing uncalibrated signal diagnostics, not a set-quality score.
+
+A set stores immutable, ordered existing `lixity-audio-reference/1` members and
+one `lixity-audio-reference-set/1` manifest under `.lixity/audio-references/`.
+The manifest retains the full probe script, exact member order, confirmed
+transcripts through those members, source/settings/probe hashes and the fallback
+index. Actual summed PCM duration must be 120–180 seconds; the script's estimated
+duration is not substituted for that measurement. Deleting a set removes only
+its manifest and keeps every member recording. Deleting a member is blocked while
+a set or saved profile still references it.
+
+### Preview the script from the CLI
+
+```sh
+lixity audio-reference probe-script --project ./novel --target-seconds 150
+```
+
+This reads the project's configured manuscript and prints the script JSON to
+stdout. It does not record audio, save a set or change settings. The existing
+`create`, `inspect`, `record`, `generate` and `calibration-text` actions remain.
+The full set workflow is available in Author's voice and through the local HTTP
+API; see the [automation contract](AGENTS.md#project-voice-probes-and-reference-sets-unreleased).
+
+### Engine support and limits
+
+| Engine | Reference-set behavior |
+| --- | --- |
+| ZONOS3 (`mlx-audio`) | Extracts one speaker embedding per part, L2-normalizes each, averages in order and normalizes the mean. |
+| IMS-Toucan | Uses the same normalized-mean aggregation over one embedding per part. |
+| Qwen Base (`qwen3-base`) | Sends only the declared fallback part through the existing single-reference protocol. |
+| Coqui/OpenVoice and retained F5-TTS | Reject sets; select a single reference instead. |
+
+Single-reference behavior is unchanged. Longer sets are not automatically better,
+and no validated improvement in speaker similarity is claimed. The probe workflow
+does not enable `speaker_cfg_scale`; it remains unsafe/non-default and is not a
+recommended tuning control. Listen to short renders for pronunciation, accent,
+continuity and resemblance with the author's consent.
+
+### Privacy and compatibility
+
+Manuscript text, generated scripts, terms, transcripts, WAVs and derived speaker
+embeddings stay local and private. Static reading-site exports exclude
+`.lixity/audio-references/`. Operational logs and segment-cache metadata contain
+no raw script, transcript, term or reference ID. Embeddings are versioned,
+process-memory-only caches and are never persisted or logged.
+
+Workers receive only the data needed for the selected engine: ZONOS3 receives
+temporary WAV paths, IMS-Toucan receives local WAV/transcript pairs, and Qwen Base
+receives only the selected fallback recording and transcript. OpenAI-compatible
+providers receive no local reference audio, transcripts or probe script.
+
+This is additive. `lixity-audio-reference/1` and `lixity-audio-settings/5` remain
+unchanged; a profile's opaque `reference_id` can identify either a single
+recording or a set. No analysis, Research, project-backup or settings-schema
+migration is required. See [probe methods](METHODS.md#145-project-specific-voice-probe-script)
+and [stability limits](STABILITY.md#voice-probe-and-reference-set-limits).
 
 ## Microphone settings and calibration (`audio-microphone`, `audio-calibrate`, `audio-reference record`)
 
@@ -1284,9 +1391,12 @@ The browser offers JSON/SSML downloads for a passage, chapter or manuscript.
 From the manuscript, open **Listen and direct** and choose **Export direction
 → Preview export** in either audio tab. Choose the plan scope, review the text
 and controls, then download the timeline or SSML. This can run offline with the
-saved voice profile. Exports identify saved references by an internal ID.
-JSON retains effective text, original spoken text, pronunciation substitutions,
-direction, profile choices and pause values. Speech start times and durations
+saved voice profile. Direction-plan exports identify saved references by an
+opaque internal ID. Static reading-site exports are different: they exclude
+`.lixity/audio-references/`, including probe scripts, transcripts, set manifests
+and reference WAVs. JSON retains effective text, original spoken text,
+pronunciation substitutions, direction, profile choices and pause values. Speech
+start times and durations
 are unknown before synthesis; planned pauses are not measured timestamps.
 Profile metadata includes configured provider URLs/model IDs and credential
 environment-variable names, never resolved key values. Review that metadata when

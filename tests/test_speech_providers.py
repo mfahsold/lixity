@@ -1,6 +1,7 @@
 """Explicit external speech requests preserve provider and privacy boundaries."""
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import math
@@ -15,6 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 from pydantic import ValidationError
 
@@ -33,6 +35,28 @@ from lixity.speech_profiles import (
 def external(**changes):
     return AudioProfile.model_validate({"engine": "openai-compatible", "voice": "custom-voice",
         "language": "nl", "model": "synthetic-model", "base_url": "http://127.0.0.1:8768/v1", **changes})
+
+
+def _save_zonos_reference_set(tmp_path, *, fallback_part_index=1):
+    from lixity.speech_probe import build_voice_probe_script
+    from lixity.speech_references import prepare_reference, save_reference_set
+
+    text = " ".join(
+        f"Synthetic sentence number {index} describes a calm private test passage."
+        for index in range(100)
+    )
+    script = build_voice_probe_script(text, language="de", target_seconds=125)
+    assert script.status == "ready"
+    probe = script.to_dict()
+    parts = [
+        prepare_reference(generate_silence_wav(150 / len(script.parts)), f"Private ZONOS transcript {index}.")
+        for index in range(1, len(script.parts) + 1)
+    ]
+    return save_reference_set(
+        tmp_path, parts, source_sha256=script.source_sha256, settings_sha256=script.settings_sha256,
+        probe_sha256=script.probe_sha256, language="de", terms=("Mara",),
+        fallback_part_index=fallback_part_index, probe=probe,
+    )
 
 
 def _short_tone_wav(seconds=0.2):
@@ -263,6 +287,46 @@ def test_local_zonos_dispatches_reference_through_private_worker(monkeypatch):
     audio = synthesize_external('Synthetic text.', selected, reference=reference)
     assert observed == [('Synthetic text.', selected, reference)]
     assert read_pcm_wav(audio)[0] == (1, 2, 24000)
+
+
+def test_local_zonos_direct_keeps_single_raw_path_and_private_ordered_set_parts(tmp_path, monkeypatch):
+    from lixity import speech_providers
+    from lixity.speech_references import SpeechReferenceSet, save_reference
+
+    single = save_reference(tmp_path, generate_silence_wav(1), "Single private transcript.")
+    reference_set = _save_zonos_reference_set(tmp_path)
+    monkeypatch.setattr(speech_providers, "_zonos_worker_paths", lambda: (Path("/runtime"), Path("/worker.py")))
+    monkeypatch.setattr(speech_providers, "_zonos_worker_available", lambda *_args: True)
+    directories = []
+
+    def synthesize(_runtime, _worker, request):
+        directory = Path(request["output_path"]).parent
+        directories.append(directory)
+        assert directory.stat().st_mode & 0o777 == 0o700
+        if isinstance(request.get("ref_audio_parts"), list):
+            paths = [Path(value) for value in request["ref_audio_parts"]]
+            assert [path.name for path in paths] == [
+                f"reference-{index}.wav" for index in range(1, len(reference_set.parts) + 1)
+            ]
+            assert [path.read_bytes() for path in paths] == [part.audio for part in reference_set.parts]
+            assert all(path.stat().st_mode & 0o777 == 0o600 for path in paths)
+            assert "ref_audio" not in request
+        else:
+            path = Path(request["ref_audio"])
+            assert path.name == "reference.wav" and path.read_bytes() == single.audio
+            assert path.stat().st_mode & 0o777 == 0o600
+            assert "ref_audio_parts" not in request
+        assert "speaker_embedding" not in request
+        Path(request["output_path"]).write_bytes(_short_tone_wav(1))
+        return {"token_count": 20, "is_final_chunk": True}
+
+    monkeypatch.setattr(speech_providers._ZONOS_SESSION, "synthesize", synthesize)
+    for reference in (single, reference_set):
+        selected = AudioProfile(engine="mlx-audio", language="de", voice="reference",
+                                reference_id=reference.id, speed=1.0)
+        assert speech_providers._synthesize_zonos_direct("Ein synthetischer Satz.", selected, reference)
+    assert isinstance(reference_set, SpeechReferenceSet)
+    assert all(not directory.exists() for directory in directories)
 
 
 def test_render_dispatches_multiple_external_models_and_reuses_distinct_cache(tmp_path):
@@ -506,6 +570,26 @@ def test_zonos_worker_request_parser_enforces_pin_allowlist_and_symlinks(tmp_pat
         }))
 
 
+def test_zonos_worker_requires_three_to_six_mutually_exclusive_reference_paths(tmp_path):
+    from lixity.speech_mlx_zonos import ALLOWED_MODEL, _parse_request
+
+    output = tmp_path / "out.wav"
+    paths = []
+    for index in range(6):
+        path = tmp_path / f"reference-{index}.wav"
+        path.write_bytes(b"RIFF")
+        paths.append(str(path))
+    base = {"model": ALLOWED_MODEL, "input": "Hallo.", "output_path": str(output)}
+
+    assert _parse_request(json.dumps({**base, "ref_audio_parts": paths[:3]}))[2]["ref_audio_parts"] == paths[:3]
+    assert _parse_request(json.dumps({**base, "ref_audio_parts": paths}))[2]["ref_audio_parts"] == paths
+    for value in (paths[:2], [*paths, paths[0]], "not-a-list", [paths[0], "", paths[1]]):
+        with pytest.raises(ValueError, match=r"three to six|non-empty"):
+            _parse_request(json.dumps({**base, "ref_audio_parts": value}))
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        _parse_request(json.dumps({**base, "ref_audio": paths[0], "ref_audio_parts": paths[:3]}))
+
+
 @pytest.mark.parametrize('url', [
     'http://169.254.169.254/latest/meta-data',
     'https://169.254.169.254/v1',
@@ -596,6 +680,121 @@ for line in sys.stdin:
         session.close()
 
 
+def test_zonos_single_embedding_behavior_and_cache_key_are_unchanged(tmp_path):
+    from lixity.speech_mlx_zonos import _reuse_speaker_embedding
+
+    audio = b"synthetic single reference"
+    path = tmp_path / "reference.wav"
+    path.write_bytes(audio)
+    copy = tmp_path / "reference-copy.wav"
+    copy.write_bytes(audio)
+    embedding = object()
+    calls = []
+
+    class Model:
+        def extract_speaker_embedding(self, reference):
+            calls.append(reference)
+            return embedding
+
+    cache = {}
+    kwargs = {"ref_audio": str(path), "speed": 1.1}
+    _reuse_speaker_embedding(Model(), kwargs, cache)
+    assert kwargs == {"speed": 1.1, "speaker_embedding": embedding}
+    assert cache == {hashlib.sha256(audio).digest(): embedding}
+    _reuse_speaker_embedding(Model(), {"ref_audio": str(copy)}, cache)
+    assert calls == [str(path)]
+
+
+def test_zonos_probe_set_averages_and_reuses_speaker_embeddings(tmp_path):
+    import numpy as np
+
+    from lixity.speech_engines import REFERENCE_SET_AGGREGATION_VERSION
+    from lixity.speech_mlx_zonos import _reuse_speaker_embedding
+
+    paths = []
+    for index, data in enumerate((b"first", b"second", b"third"), 1):
+        path = tmp_path / f"reference-{index}.wav"
+        path.write_bytes(data)
+        paths.append(str(path))
+    calls = []
+
+    class Model:
+        def extract_speaker_embedding(self, path):
+            calls.append(path)
+            return np.asarray([
+                [1.0, 0.0], [0.0, 1.0], [1.0, 1.0] / np.sqrt(2.0),
+            ][len(calls) - 1], dtype=np.float32)
+
+    cache = {}
+    kwargs = {"ref_audio_parts": paths}
+    _reuse_speaker_embedding(Model(), kwargs, cache)
+    assert len(calls) == 3
+    assert "ref_audio_parts" not in kwargs
+    expected = np.mean([
+        np.asarray([1.0, 0.0]), np.asarray([0.0, 1.0]), np.asarray([1.0, 1.0]) / np.sqrt(2.0),
+    ], axis=0)
+    expected /= np.linalg.norm(expected)
+    assert np.allclose(kwargs["speaker_embedding"], expected)
+    assert list(cache) == [(REFERENCE_SET_AGGREGATION_VERSION, tuple(
+        hashlib.sha256(data).digest() for data in (b"first", b"second", b"third")
+    ))]
+    _reuse_speaker_embedding(Model(), {"ref_audio_parts": paths}, cache)
+    assert len(calls) == 3
+
+
+@pytest.mark.parametrize("vectors", [
+    ([0.0, 0.0], [1.0, 0.0], [0.0, 1.0]),
+    ([np.nan, 0.0], [1.0, 0.0], [0.0, 1.0]),
+    ([np.inf, 0.0], [1.0, 0.0], [0.0, 1.0]),
+    ([1.0], [1.0, 0.0], [0.0, 1.0]),
+    ([1.0, 0.0], [-0.5, np.sqrt(3.0) / 2.0], [-0.5, -np.sqrt(3.0) / 2.0]),
+])
+def test_zonos_reference_set_rejects_invalid_embeddings(tmp_path, vectors):
+    import numpy as np
+
+    from lixity.speech_mlx_zonos import _reuse_speaker_embedding
+
+    paths = []
+    for index in range(3):
+        path = tmp_path / f"reference-{index}.wav"
+        path.write_bytes(bytes([index]))
+        paths.append(str(path))
+    values = iter(vectors)
+
+    class Model:
+        def extract_speaker_embedding(self, _reference):
+            return np.asarray(next(values), dtype=np.float32)
+
+    with pytest.raises(ValueError, match="embedding"):
+        _reuse_speaker_embedding(Model(), {"ref_audio_parts": paths}, {})
+    assert not any(path.read_bytes() for path in tmp_path.glob("*.json"))
+
+
+def test_zonos_reference_set_cache_key_preserves_part_order(tmp_path):
+    import numpy as np
+
+    from lixity.speech_mlx_zonos import _reuse_speaker_embedding
+
+    paths = []
+    for index, _vector in enumerate(([1.0, 0.0], [0.0, 1.0], [1.0, 1.0])):
+        path = tmp_path / f"reference-{index}.wav"
+        path.write_bytes(f"part-{index}".encode())
+        paths.append(str(path))
+
+    class Model:
+        def extract_speaker_embedding(self, reference):
+            index = paths.index(reference)
+            return np.asarray(([1.0, 0.0], [0.0, 1.0], [1.0, 1.0])[index], dtype=np.float32)
+
+    cache = {}
+    _reuse_speaker_embedding(Model(), {"ref_audio_parts": paths}, cache)
+    first_key = next(iter(cache))
+    reversed_kwargs = {"ref_audio_parts": list(reversed(paths))}
+    _reuse_speaker_embedding(Model(), reversed_kwargs, cache)
+    assert list(cache) != [first_key]
+    assert len(cache) == 1
+
+
 def test_zonos_worker_keeps_dependency_output_off_its_response_pipe(tmp_path):
     import sys
     from pathlib import Path
@@ -609,6 +808,7 @@ def test_zonos_worker_keeps_dependency_output_off_its_response_pipe(tmp_path):
     package.mkdir()
     (package / 'tts.py').write_text(
         "import os\n"
+        "import numpy as np\n"
         "from pathlib import Path\n"
         "from types import SimpleNamespace\n"
         "class Model:\n"
@@ -616,11 +816,12 @@ def test_zonos_worker_keeps_dependency_output_off_its_response_pipe(tmp_path):
         "        embedding = Path(reference).read_bytes()\n"
         "        with Path(__file__).with_name('encoded').open('ab') as output:\n"
         "            output.write(embedding + b'\\n')\n"
-        "        return embedding\n"
+        "        return np.frombuffer(embedding, dtype=np.uint8).astype(np.float32)\n"
         "    def generate(self, text, **kwargs):\n"
         "        os.write(1, b'native generation progress\\n')\n"
         "        assert 'ref_audio' not in kwargs\n"
-        "        audio = text.encode() + kwargs.get('speaker_embedding', b'')\n"
+        "        embedding = kwargs.get('speaker_embedding', np.asarray([], dtype=np.float32))\n"
+        "        audio = text.encode() + embedding.tobytes()\n"
         "        yield SimpleNamespace(audio=audio, sample_rate=24000)\n"
         "def load(model):\n"
         "    print('loading local weights', flush=True)\n"
@@ -653,7 +854,7 @@ def test_zonos_worker_keeps_dependency_output_off_its_response_pipe(tmp_path):
                 reference.write_bytes(reference_audio)
                 request['ref_audio'] = str(reference)
             session.synthesize(Path(sys.executable), worker, request)
-            assert output.read_bytes() == segment.encode() + reference_audio
+            assert output.read_bytes().startswith(segment.encode())
         assert (package / 'encoded').read_bytes().splitlines() == [b'first', b'second']
     finally:
         session.close()

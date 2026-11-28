@@ -9,7 +9,7 @@ of saved files during copying.
 | Selected manuscript, explicitly selected settings and assets, and any accepted research | `lixity project-backup` and `lixity project-restore` |
 | Accepted research history and retained sources, with root `lixity.toml` when present | [Research archive export and restoration](research/USAGE.md#export-and-restoration) |
 | Accepted research plus a Zotero data directory and its stored attachments | [Paired Zotero/research backup and restore](research/USAGE.md#paired-zoteroresearch-backup-and-restore) |
-| Saved voice references, passage directions or chapter recordings | [Separate private audio backup](#back-up-private-audio-separately) |
+| Saved voice references, reference sets, passage directions or chapter recordings | [Separate private audio backup](#back-up-private-audio-separately) |
 
 ## Back up and verify a restored copy
 
@@ -80,9 +80,16 @@ profiles.
 
 | Project path | What to keep and check |
 | --- | --- |
-| `.lixity/audio-references/` | The recorded voice and reviewed transcript in each immutable reference record. Check **Author’s voice → Choose from recordings** or run `lixity audio-reference inspect --project ./restored-novel --reference-id ID`. |
+| `.lixity/audio-references/` | Immutable single `lixity-audio-reference/1` recordings and reviewed transcripts, plus immutable `lixity-audio-reference-set/1` manifests. A set manifest retains its ordered member IDs, source/settings/probe hashes, fallback selection and complete private probe script. Check **Author’s voice → Choose from recordings** or run `lixity audio-reference inspect --project ./restored-novel --reference-id ID` for a single recording. |
 | `.lixity/audio-directions.json` | Passage range choices bound to the saved manuscript. Review them with `lixity audio-direction inspect --project ./restored-novel`. |
 | `.lixity/audio/exports/` | Complete chapter WAVs and their source-bound metadata. Open the intended chapter and check that **Chapter recording** is ready for reader export. |
+
+Copy the entire reference directory when retaining voice sets: a set is unusable
+if any referenced member recording is missing or corrupt. Set deletion removes
+only its manifest and retains the member recordings; a member cannot be deleted
+while a set references it. These files also stay out of static reading-site
+exports. Treat the directory as private voice and manuscript-derived data, not
+as a disposable cache.
 
 Restore these bytes only into the corresponding paths of a separate test copy.
 Keep a verified copy before changing a live project. If a direction is stale or

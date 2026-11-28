@@ -3546,17 +3546,18 @@ for project work, the [CLI reference](USAGE.md) for commands, and the
 
 The published v0.9.3 includes recording, passage direction, the teleprompter,
 and the ZONOS3, IMS-Toucan and OpenAI-compatible adapters. This manual follows
-the current checkout, where the updated audio layout, shared IPA and
-alternate-spelling lexicon, profile-draft upgrade, assembly level correction,
-shared preview planner, and expanded audio diagnostics are unreleased. In
-v0.9.3, use profile spelling replacements or the IMS-Toucan profile's IPA
-dictionary. Audio settings, direction, timeline and transcript schemas have
-independent versions; check your installation with `lixity --version` and the
-relevant command's `--help`.
+the current checkout, where the updated audio layout, project-specific voice
+probes and immutable multi-part reference sets, shared IPA and alternate-spelling
+lexicon, profile-draft upgrade, assembly level correction, shared preview planner,
+and expanded audio diagnostics are unreleased. In v0.9.3, use profile spelling
+replacements or the IMS-Toucan profile's IPA dictionary. Audio settings,
+direction, timeline and transcript schemas have independent versions; check your
+installation with `lixity --version` and the relevant command's `--help`.
 
 | I want to… | Open in the workspace | Commands and details |
 | --- | --- | --- |
 | Record a voice or import a take | **Project → Settings → Audio and services → Record author's voice** | `audio-reference` · [Record and review](#author-voice-recording-and-listening) |
+| Build a manuscript-specific voice calibration set | **Author's voice → Project voice probe** | `audio-reference probe-script` · [Voice probe](#project-specific-voice-calibration-probe-unreleased) |
 | Choose the narrator or edit pronunciation | **Project → Settings → Audio and services → Voice profiles** | [Voice profiles](#voice-profiles) · [Project pronunciations](#project-pronunciations) |
 | Choose an input or check its level | **Project → Settings → Audio and services → Microphone and levels** | `audio-microphone`, `audio-calibrate` · [Microphone and calibration](#microphone-settings-and-calibration-audio-microphone-audio-calibrate-audio-reference-record) |
 | Hear a paragraph or shape its delivery | **Manuscript → Listen and direct → Listen & direct** | `read-aloud`, `audio-direction` · [Passage direction](#passage-direction) |
@@ -3591,6 +3592,10 @@ synthesizes audio.
   transcript. A compatible voice profile can use it to synthesize new speech.
   The Teleprompter records from your microphone and leaves the take for review
   or download. Use **Author's voice** to save a reviewed excerpt as a reference.
+- A **voice probe set** is an immutable ordered set of 3–6 saved reference parts
+  derived from one manuscript-specific script. It retains the complete script,
+  exact confirmed transcripts and a fallback part. ZONOS3 and IMS-Toucan can use
+  the set; Qwen Base uses only its fallback part.
 - A **retained chapter recording** is a complete WAV for one chapter and manuscript
   revision. A successful chapter render or an explicit chapter WAV import
   retains it. A [reader export](WORKSPACE.md#include-existing-chapter-recordings)
@@ -3820,6 +3825,9 @@ preserved.
   and PCM format before reuse. Repeating a render reuses only segments with the
   same effective spoken text, model family, language, voice/reference and
   delivery controls; pause or leveling changes do not require new synthesis.
+  Reference-set identity also includes the aggregation contract/version and,
+   for Qwen Base, the selected fallback index. Existing single-reference cache
+   entries keep their established identity.
   IMS-Toucan bundles complete sentences into fragments of up to 1,800
   characters so its per-utterance duration, pitch and energy predictions keep
   paragraph context. ZONOS3 bundles complete sentences up to the 600-character
@@ -4232,6 +4240,105 @@ their delivery assignments. For reference engines, delivery references are inten
 speaker. Lixity checks profile compatibility but cannot verify the speaker in a
 recording; see the [single narrator rules](#single-narrator-and-delivery-variation). Reusing a reference encourages consistency, but accent, identity,
 naturalness and pronunciation still require listening.
+
+<a id="project-specific-voice-calibration-probe-unreleased"></a>
+<a id="project-specific-voice-calibration-probe"></a>
+
+## Project-specific voice calibration probe
+
+The current checkout can derive a private reading script from the selected
+manuscript instead of asking you to find a representative passage by hand. The
+`lixity-voice-probe-script/1` script targets 120–180 seconds (150 by default),
+using 130 words per minute only as a planning estimate. A ready script contains
+3–6 sentence-aligned parts of roughly 20–40 seconds each. It favors configured
+terms, aliases, scoped alternatives and compounds; character names; the project
+lexicon and selected-profile pronunciations; and repeated content or special
+forms. Source, settings and probe SHA-256 hashes bind the preview to its inputs.
+
+Generation is read-only. `status: "ready"` is the only savable result.
+`insufficient_source` keeps a bounded preview when unique manuscript prose cannot
+fill the duration and part constraints; `invalid_configuration` reports a
+configuration problem. Both are explicitly unsavable. Lixity does not pad the
+script, repeat sentences or invent manuscript wording. The estimate is not a
+measurement of your speech or a voice-quality score.
+
+### Record and save a set in Author's voice
+
+1. Open a writable project and choose **Project → Settings → Audio and services
+   → Record author's voice → Project voice probe**. Choose the target duration and
+   select **Generate script**. Review the complete text, selected terms and
+   pronunciation cues before recording.
+2. Work through the parts in order. Use the existing recording or WAV-import
+   controls for each part. Every part remains a normal 1–60 second, mono 24 kHz
+   16-bit PCM reference. Enter the words you actually spoke, listen again and
+   confirm **I checked that this transcript matches the recording**. Editing a
+   transcript clears its confirmation. There is no automatic speech recognition.
+3. Choose the **fallback part** as a 1-based part number. Qwen Base uses this part
+   only; the other supported aggregating engines use the complete ordered set.
+   Check the explicit permission to retain the private script and recordings.
+4. Select **Save voice set**. Saving and activation are separate: optionally
+   choose an existing compatible reference profile to activate. A failed
+   activation leaves the saved set intact. The complete set is uploaded only
+   after every part is confirmed.
+5. In **Choose from recordings**, the library shows set labels, part count and
+   actual total duration. Play individual parts and request their signal-quality
+   notes on demand. Singles and sets remain separate list entries. The notes are
+   the existing uncalibrated signal diagnostics, not a set-quality score.
+
+A set stores immutable, ordered existing `lixity-audio-reference/1` members and
+one `lixity-audio-reference-set/1` manifest under `.lixity/audio-references/`.
+The manifest retains the full probe script, exact member order, confirmed
+transcripts through those members, source/settings/probe hashes and the fallback
+index. Actual summed PCM duration must be 120–180 seconds; the script's estimated
+duration is not substituted for that measurement. Deleting a set removes only
+its manifest and keeps every member recording. Deleting a member is blocked while
+a set or saved profile still references it.
+
+### Preview the script from the CLI
+
+```sh
+lixity audio-reference probe-script --project ./novel --target-seconds 150
+```
+
+This reads the project's configured manuscript and prints the script JSON to
+stdout. It does not record audio, save a set or change settings. The existing
+`create`, `inspect`, `record`, `generate` and `calibration-text` actions remain.
+The full set workflow is available in Author's voice and through the local HTTP
+API; see the [automation contract](AGENTS.md#project-voice-probes-and-reference-sets-unreleased).
+
+### Engine support and limits
+
+| Engine | Reference-set behavior |
+| --- | --- |
+| ZONOS3 (`mlx-audio`) | Extracts one speaker embedding per part, L2-normalizes each, averages in order and normalizes the mean. |
+| IMS-Toucan | Uses the same normalized-mean aggregation over one embedding per part. |
+| Qwen Base (`qwen3-base`) | Sends only the declared fallback part through the existing single-reference protocol. |
+| Coqui/OpenVoice and retained F5-TTS | Reject sets; select a single reference instead. |
+
+Single-reference behavior is unchanged. Longer sets are not automatically better,
+and no validated improvement in speaker similarity is claimed. The probe workflow
+does not enable `speaker_cfg_scale`; it remains unsafe/non-default and is not a
+recommended tuning control. Listen to short renders for pronunciation, accent,
+continuity and resemblance with the author's consent.
+
+### Privacy and compatibility
+
+Manuscript text, generated scripts, terms, transcripts, WAVs and derived speaker
+embeddings stay local and private. Static reading-site exports exclude
+`.lixity/audio-references/`. Operational logs and segment-cache metadata contain
+no raw script, transcript, term or reference ID. Embeddings are versioned,
+process-memory-only caches and are never persisted or logged.
+
+Workers receive only the data needed for the selected engine: ZONOS3 receives
+temporary WAV paths, IMS-Toucan receives local WAV/transcript pairs, and Qwen Base
+receives only the selected fallback recording and transcript. OpenAI-compatible
+providers receive no local reference audio, transcripts or probe script.
+
+This is additive. `lixity-audio-reference/1` and `lixity-audio-settings/5` remain
+unchanged; a profile's opaque `reference_id` can identify either a single
+recording or a set. No analysis, Research, project-backup or settings-schema
+migration is required. See [probe methods](METHODS.md#145-project-specific-voice-probe-script)
+and [stability limits](STABILITY.md#voice-probe-and-reference-set-limits).
 
 ## Microphone settings and calibration (`audio-microphone`, `audio-calibrate`, `audio-reference record`)
 
@@ -4813,9 +4920,12 @@ The browser offers JSON/SSML downloads for a passage, chapter or manuscript.
 From the manuscript, open **Listen and direct** and choose **Export direction
 → Preview export** in either audio tab. Choose the plan scope, review the text
 and controls, then download the timeline or SSML. This can run offline with the
-saved voice profile. Exports identify saved references by an internal ID.
-JSON retains effective text, original spoken text, pronunciation substitutions,
-direction, profile choices and pause values. Speech start times and durations
+saved voice profile. Direction-plan exports identify saved references by an
+opaque internal ID. Static reading-site exports are different: they exclude
+`.lixity/audio-references/`, including probe scripts, transcripts, set manifests
+and reference WAVs. JSON retains effective text, original spoken text,
+pronunciation substitutions, direction, profile choices and pause values. Speech
+start times and durations
 are unknown before synthesis; planned pauses are not measured timestamps.
 Profile metadata includes configured provider URLs/model IDs and credential
 environment-variable names, never resolved key values. Review that metadata when
@@ -9311,6 +9421,144 @@ silence and breath can extend the observed gap between successive words.
 [Chapter audio audit](#13-chapter-audio-audit-unreleased) uses supplied word
 timings for that gap and reports level-based silence separately.
 
+### 14.5. Project-specific voice probe script
+
+`audio-reference probe-script` and `POST /api/voice-probe` build
+`lixity-voice-probe-script/1` under method version
+`lixity-voice-probe-method/1`. The input is the selected manuscript's supported
+prose projection plus the explicit project configuration. The script retains
+whole recognized sentences; it does not generate new prose or rewrite the
+manuscript. `source_sha256` binds the original retained source bytes when a
+snapshot digest is supplied (CLI/HTTP), otherwise the exact UTF-8 input text.
+`settings_sha256` hashes canonicalized probe-relevant project settings and
+excludes the path-only `manuscript` selector. `probe_sha256` hashes the
+canonical script payload without its own top-level self-hash.
+
+#### Candidate terms and priority
+
+Candidates are collected from the configured term occurrence report (including
+aliases, scoped alternatives and compounds), configured character names and
+aliases, the project pronunciation lexicon, the selected profile's pronunciation
+and phoneme maps, and deterministic surface-form heuristics. Forms belonging only
+to unselected audio profiles are suppressed as generic candidates.
+
+| Candidate | Base score | Notes |
+| --- | ---: | --- |
+| Configured term occurrence | 1000 | Uses the existing term-profile occurrence and chapter-scope rules. |
+| Character name or alias | 950 | Uses the configured character matcher; this is not NER. |
+| Project lexicon entry | 875 | Retains available IPA and/or respelling metadata. |
+| Selected-profile pronunciation or phoneme | 850 | Project literal replacements also use this score; selected-profile metadata wins overlapping project metadata. |
+| Special form | 550–750 | Numbers 650; dotted/abbreviated or all-capital forms 750; hyphen/apostrophe forms 700; internal capitalization 600; initial capital 550. |
+| Frequent content form | `min(count, 500)` | Alphabetic token of at least three characters, at least two occurrences, excluding configured function words and stopwords. |
+
+When the same surface term is found by more than one rule, its provenance kind
+uses the priority `configured_term > character > lexicon > special_form >
+frequent`; its score is the maximum observed score and its count is the number of
+distinct sentence/span occurrences. Ranking is by descending score, descending
+count, casefolded term and exact term, with at most 24 selected terms. This is a
+coverage heuristic, not a measure of literary importance or pronunciation
+difficulty. Sentence-initial articles and a trailing period on an otherwise
+ordinary sentence-final word are excluded from special-form candidates.
+
+#### Sentence filters, deduplication and selection
+
+Sentence boundaries and word counts use the existing language profile, configured
+word pattern and Markdown prose scope. Only sentences with 4–32 counted words are
+eligible. A dialogue flag records overlap with the configured quotation scanner;
+it is not speaker attribution. Exact duplicate sentence text is removed after NFC
+normalization, retaining the earliest source occurrence. Source line spans in
+sentence records identify the containing paragraph, not a newly inferred
+sentence-level line range.
+
+Selection first favors sentences that cover still-uncovered ranked terms, using
+candidate score, number of newly covered terms, a narration/dialogue category
+bonus, proximity to 14 words and earlier source order as tie-breaks. It then fills
+remaining eligible sentences up to 390 words, favoring additional term coverage
+and movement toward the eligible sentence pool's dialogue share. The
+implementation evaluates eligible prefixes from this term-covering order and
+from source order. A prefix
+must contain 260–390 words and admit a valid 3–6-part partition. Choice minimizes
+uncovered selected terms, difference from the requested estimated duration,
+difference from the source dialogue share, word-count difference, preferred part
+count difference and prefix length, in that order.
+
+#### Duration and partitioning
+
+With $W$ selected words, the estimate is
+
+$$
+\hat{t}=\mathrm{round}\left(\frac{60W}{130}\right)\text{ seconds}.
+$$
+
+The requested target is a strict integer from 120 through 180 seconds, default
+150. At 130 WPM, the ready range is 260–390 words. The partitioner uses dynamic
+programming over sentence boundaries to choose 3–6 contiguous parts of 43–87
+words each, approximately 20–40 seconds at the same planning rate. For each
+candidate partition, cost is the sum of squared part-size deviations from an
+equal split plus a word-weighted squared dialogue-share deviation from the whole
+selected script. Ties prefer the part count nearest
+`max(3, min(6, round(target_words / 65)))`, then the smaller part count. Selected
+sentences are restored to source order before parts are emitted.
+
+The 130 WPM value is an estimate, not observed speech timing, a quality score or a
+guarantee that a recording will qualify. If unique prose is below 260 words or no
+valid partition exists, the response has `status: "insufficient_source"`, a
+structured warning and a bounded short-part preview grouped only at the 87-word
+ceiling. Such a preview can have fewer or more than 3–6 parts and cannot be saved.
+Invalid configuration similarly returns `status: "invalid_configuration"` with an
+unsavable diagnostic. No padding, duplication or invented manuscript text is
+used. A ready response has no warnings.
+
+#### Pronunciation spans
+
+Each part retains `substitutions` and `phonemes` arrays. Their `start` and `end`
+are Unicode-code-point offsets with an exclusive end in that part's `text`, after
+sentences have been joined with spaces. They are not raw Markdown byte offsets or
+browser UTF-16 positions. Each span records `source`, `replacement` and `kind`
+(`substitution` or `phoneme`). The selected profile determines whether a lexicon
+entry is represented as IPA or an explicit respelling where the adapter can use
+it; retaining a span does not establish correct pronunciation in rendered audio.
+
+### 14.6. Multi-part reference-set aggregation
+
+A `lixity-audio-reference-set/1` contains 3–6 distinct, ordered existing
+`lixity-audio-reference/1` parts. Each part keeps its exact reviewed transcript.
+The set's actual duration is the sum of PCM frame counts divided by sample rate,
+channel count and sample width, and must be within 120–180 seconds inclusive.
+The script's word-count estimate is not used for this guard. The set identity
+hashes a tagged, counted canonical document containing storage aggregation
+`ordered-independent-parts` version `1`, ordered part IDs,
+source/settings/probe hashes, language, terms, fallback index and complete probe
+script.
+
+ZONOS3 and IMS-Toucan use aggregation contract
+`normalized-mean-speaker-embedding`, version `1`. For ordered part embeddings
+$e_1,\ldots,e_n$, the combined vector is
+
+$$
+\bar{e}=\frac{\sum_{i=1}^{n}e_i/\lVert e_i\rVert_2}
+{\left\lVert\sum_{i=1}^{n}e_i/\lVert e_i\rVert_2\right\rVert_2}.
+$$
+
+Parts therefore have equal weight after per-part L2 normalization; duration does
+not reweight them. The adapters reject non-finite vectors, zero norms and
+mismatched shapes rather than inventing a fallback embedding. Single-reference
+extraction and reuse are unchanged. Qwen Base does not aggregate: it selects the
+1-based `fallback_part_index` and sends only that part through the existing
+singular reference protocol. Coqui/OpenVoice and retained F5-TTS reject sets.
+
+Aggregation caches are keyed by the ordered audio hashes and aggregation version,
+not by script, transcript, term or reference ID. They exist only in the loaded
+worker/model process, are cleared when the reference changes and are never
+persisted or logged. Segment-cache identity includes reference mode, aggregation
+contract/version and the Qwen fallback index, so a method change cannot silently
+reuse audio made under the old aggregation. `speaker_cfg_scale` remains
+unsafe/non-default and is not enabled by this workflow.
+
+This arithmetic defines reproducibility, not speaker identity verification or a
+validated similarity improvement. More or longer parts can add noise, different
+pronunciations or another speaker; listening review remains necessary.
+
 References:
 
 - Bestgen, Y. (2024). *Measuring lexical diversity in texts: The twofold length
@@ -10124,6 +10372,75 @@ A prior local OpenVoice V2 check used one target reference and one converter.
 The render retained content up to about 11 kHz with a wideband reference and
 lost content above about 8 kHz with a reference lacking those frequencies.
 See the [voice-reference methods](METHODS.md#12-voice-reference-signal-diagnostics-audio-reference-inspect).
+
+<a id="voice-probe-and-reference-set-limits"></a>
+
+### Voice probe and reference-set limits
+
+The project voice probe is deterministic within
+`lixity-voice-probe-method/1` for the same manuscript text, resolved language,
+project settings and target duration. Its source, settings and probe SHA-256
+hashes detect changed inputs and bind a saved set to the reviewed script; they do
+not establish authenticity, lock editors or prove that a transcript matches the
+audio. A method, tokenizer, sentence-boundary, term-selection or pronunciation
+change can produce a different script and hash. Compare probes only under the
+same method version and settings.
+
+The 120–180 second target and 130 WPM conversion are planning heuristics. The
+estimate is not measured speech duration, a quality score or a guarantee that a
+take will pass the set's actual PCM-duration check. Term priority, frequent-form
+counts, special-form detection and dialogue balance are coverage heuristics;
+they do not establish literary importance, pronunciation difficulty or speaker
+identity. Sentence splitting and configured term/character matching retain their
+existing limitations. `ready` means structurally savable, not acoustically
+validated. `insufficient_source` and `invalid_configuration` are explicit,
+unsavable outcomes; short previews are not padded or duplicated to appear ready.
+
+Every part transcript is authored and confirmed by a human. The workflow runs no
+automatic ASR and does not verify the recording against either the script or the
+transcript. WAV and transcript format checks, per-part signal notes and successful
+set creation cannot establish word fidelity, accent, naturalness or permission to
+use the voice. A set with a missing, altered or corrupt member is unavailable;
+do not interpret that state as an empty library or reuse it for synthesis.
+
+`lixity-audio-reference-set/1` is an immutable ordered contract with 3–6 distinct
+single `/1` members, exact confirmed transcripts, source/settings/probe hashes,
+the complete probe and a 1-based fallback index. Actual total PCM duration is
+checked at both inclusive 120 and 180 second boundaries. Set deletion retains
+members, while member deletion is blocked until all set and profile references
+are removed. These are storage and lifecycle guarantees, not evidence of speaker
+consistency. Existing single references and audio settings `/5` are unchanged;
+there is no analysis, Research, project-backup or settings-schema migration.
+
+### Multi-part speaker embedding limits
+
+ZONOS3 and IMS-Toucan aggregation version `1` computes an equal-weight normalized
+mean of per-part L2-normalized speaker embeddings. The formula is reproducible
+for fixed model/runtime outputs and ordered inputs, but model extraction,
+checkpoint changes, recording conditions and numerical backends can change the
+vectors. Non-finite, zero-norm or mismatched embeddings fail explicitly rather
+than falling back to a fabricated speaker vector. Qwen Base uses only the declared
+fallback part through its existing singular protocol; Coqui/OpenVoice and retained
+F5-TTS reject sets.
+
+Embedding caches are versioned and process-memory-only. They are keyed by ordered
+audio hashes and aggregation version, replaced when the reference changes, and
+never persisted or logged. Segment-cache identity includes the set aggregation
+version and Qwen fallback index; old aggregation output is not silently reused.
+Single-reference behavior remains unchanged. `speaker_cfg_scale` remains
+unsafe/non-default and is not enabled or recommended by the probe workflow.
+
+Averaging embeddings does not verify that every part contains the same speaker.
+Longer references are not automatically better: additional parts can introduce
+noise, different pronunciation or a different speaker. No blinded listening study
+or validated similarity improvement is claimed for multi-part aggregation.
+
+Manuscript-derived scripts, terms, transcripts, WAVs and embeddings stay local and
+private. Logs and cache metadata omit raw script, transcript, term and reference
+IDs. ZONOS3 receives temporary WAV paths, Toucan receives only local WAV/transcript
+pairs, and Qwen Base receives only its selected fallback part. OpenAI-compatible
+providers receive no local references. Static reading-site exports exclude
+`.lixity/audio-references/`; use the separate private audio backup for these files.
 
 <a id="chapter-audio-comparison-limits-unreleased"></a>
 <a id="chapter-audio-comparison-limits"></a>
@@ -11110,9 +11427,13 @@ reference before launch. The isolated worker receives a temporary audio copy and
 the effective synthesis text only for an explicit render. `speed` is sent as a
 model condition, while free-text direction is unsupported by this adapter. The
 isolated worker is reused across renders in the same Lixity process and closes
-after five idle minutes. Unreleased worker behavior retains one speaker
-embedding keyed by the reference WAV's SHA-256 for that worker's lifetime.
-Status, plan and timeline output contain neither the embedding nor its key.
+after five idle minutes. A single reference retains its established speaker
+embedding keyed by the reference WAV's SHA-256 for that worker's lifetime. An
+ordered reference set uses aggregation contract
+`normalized-mean-speaker-embedding`, version `1`: one embedding per part is
+L2-normalized, averaged in order and renormalized. Set cache keys include the
+ordered audio hashes and aggregation version. Status, plan and timeline output
+contain neither embeddings nor their keys.
 Other MLX or OpenAI-compatible HTTP bindings report unknown provider readiness
 before render. Plan and timeline export remain available without the runtime.
 
@@ -13275,6 +13596,112 @@ human-controlled recording and review, the 1–60 second PCM format, exact
 transcript and an unsaved Base preview. Format and immutable-record checks do
 not verify that the transcript matches the sound or that a voice is suitable.
 
+<a id="project-voice-probes-and-reference-sets-unreleased"></a>
+<a id="project-voice-probes-and-reference-sets"></a>
+
+#### Project voice probes and reference sets (unreleased)
+
+`lixity audio-reference probe-script --project PATH [--target-seconds N]`
+reads the project's configured manuscript and prints `lixity-voice-probe-script/1`
+JSON to stdout. `N` is a strict integer from 120 through 180 (default 150). It is
+read-only and creates no reference or settings state. The
+existing `create`, `inspect`, `record`, `generate` and `calibration-text` actions
+are unchanged. The complete set workflow is HTTP/UI-only.
+
+`POST <prefix>/voice-probe` accepts exactly the required `project_token` and
+`source_sha256`, plus optional strict integer `target_seconds` (120–180, default
+150). It derives the current script from the selected manuscript and root-local
+settings and returns `{ok:true, probe:...}` without writing project files. The
+probe contains `schema_version`, `status`, `language`, `target_seconds`,
+`estimated_seconds`, `duration_method`, `method_version`, `source_sha256`,
+`settings_sha256`, `selected_terms`, `covered_terms`, `term_provenance`,
+structured `warnings`, `parts` and `probe_sha256`. Each 1-based part contains its
+text, word count, terms, sentence records, `substitutions` and `phonemes`.
+Span offsets are Unicode code points with an exclusive end
+in that part's text, not Markdown bytes or UTF-16 positions.
+
+Status is `ready`, `insufficient_source` or `invalid_configuration`. Only `ready`
+is savable. A ready script has 3–6 sentence-aligned parts and an estimated
+120–180 seconds at the declared 130 WPM method; this is not measured speech time.
+Short manuscripts retain an explicit unsavable preview, and invalid settings
+retain an explicit diagnostic. Generation never pads, duplicates or invents
+prose. See [probe methods](METHODS.md#145-project-specific-voice-probe-script) and
+[limits](STABILITY.md#voice-probe-and-reference-set-limits).
+
+`POST <prefix>/audio-reference-set` implements `action: "save"|"inspect"|"delete"`.
+All actions require the current `project_token` and `source_sha256`; tokens guard
+selected context, not authentication. Unknown fields fail. Invalid input returns
+400; changed selected context returns 409 with `code:"stale-context"`.
+
+For `save`, the required fields are `action`, `project_token`, `source_sha256`,
+`probe_sha256`, `target_seconds`, `allow_retention`, `fallback_part_index` and
+`parts`; `profile_id` is optional. The server regenerates the current probe and
+accepts only its exact 64-hex `probe_sha256`; arbitrary browser-supplied script
+text is not a save input. A changed probe returns `code:"stale-probe"`, a non-ready
+probe returns `code:"probe-not-ready"`, and retention must be the JSON boolean
+`true` (`code:"retention-required"` otherwise). `fallback_part_index` is a strict
+1-based integer within the current part count.
+
+`parts` must contain one object per current probe part, in order, with exactly
+`index`, base64 `audio`, `transcript` and `confirmed`. Indices are consecutive
+from 1 and every `confirmed` value must be the JSON boolean `true`. Audio uses the
+existing single-reference WAV rules (1–60 seconds, mono 24 kHz 16-bit PCM), and
+transcripts are nonblank exact reviewed text. Lixity does not run ASR or compare
+the transcript with the script/audio. Before any write it validates 3–6 distinct
+members, the complete probe, hashes, fallback and actual summed PCM duration of
+120–180 seconds inclusive. The set and its members are immutable
+`lixity-audio-reference-set/1` and `lixity-audio-reference/1` records under
+`.lixity/audio-references/`; identical retries reuse the same records.
+
+A successful save returns
+`schema_version:"lixity-audio-reference-set-created/1"`, `reference_set`,
+`activation`, `reload_required`, optional `refresh_warning`, and separate
+`references` and `reference_sets` arrays. `activation.state` is `activated`,
+`failed` or `not_requested`; saving never implicitly changes the profile engine.
+The inspection projection contains the set ID, `kind:"set"`, part count, actual
+total duration, language, source/settings/probe hashes, fallback index, terms,
+complete probe and ordered parts. Each part has its 1-based `index`, opaque `id`,
+exact `transcript`, measured duration, on-demand `quality` projection and
+`fallback` boolean. Set list summaries omit transcripts and remain separate from
+single-reference summaries.
+
+For `inspect` and `delete`, send exactly `action`, `project_token`,
+`source_sha256` and `reference_id`. Inspect returns
+`schema_version:"lixity-audio-reference-set-inspection/1"` with the same
+`reference_set` projection. Delete removes only the set manifest and returns the
+updated `references` and `reference_sets` arrays; all member recordings remain.
+Delete is blocked while a saved profile uses the set or any member. The existing
+single-reference delete action is likewise blocked while a set references that
+member (`code:"reference-in-use"` for a profile conflict).
+
+`GET <prefix>/speech` keeps `lixity-speech-local/1` and additively returns
+`references`, `reference_sets`, `voice_probe_format` (schema, minimum/maximum/default
+seconds and 3–6 part bounds) and
+`reference_set_format:"lixity-audio-reference-set/1"`. `GET /api` advertises
+`capabilities.voice_calibration_probe` and `capabilities.audio_reference_sets`.
+`GET <prefix>/speech-audio` accepts a set `reference_id` only with a valid
+1-based `part_index`; a single `reference_id` rejects `part_index`. The response
+is that exact member WAV.
+
+A schema `/5` profile's existing opaque 64-hex `reference_id` accepts either a
+single or set identity; no settings-schema migration is needed, and
+`lixity-audio-reference/1` is unchanged. Engine capability `reference_modes`
+identifies support. ZONOS3 and IMS-Toucan use all ordered parts and the
+normalized-mean embedding aggregation described above. Qwen Base uses only the
+set's fallback part through the existing singular request fields. Coqui/OpenVoice
+and retained F5-TTS reject sets. OpenAI-compatible providers receive no local
+reference data.
+
+Scripts, terms, transcripts, WAVs and embeddings remain private local project
+data. Static reading-site exports exclude `.lixity/audio-references/`. Logs and
+cache metadata contain no raw script, transcript, term or reference ID;
+embeddings are versioned in-memory worker/model caches only, never persisted or
+logged. ZONOS3 receives temporary WAV paths, Toucan receives local WAV/transcript
+pairs, and Qwen Base receives only the selected fallback part. Single-reference
+behavior is unchanged. Longer sets are not automatically better, and no validated
+speaker-similarity improvement or speaker-identity verification is claimed.
+`speaker_cfg_scale` remains unsafe/non-default.
+
 Removed Piper profiles are rejected with actionable migration guidance. Existing
 Qwen records retain the `/1` wire contract; saved profiles without an explicit
 engine are not silently reinterpreted. `audio-migrate --project PATH --replace
@@ -13435,9 +13862,10 @@ Chapter jobs retain verified raw PCM in a private project-keyed user cache
 project). The CLI uses the same store. `--fresh-audio` recomputes entries and
 previews remain uncached. A chapter retry starts a new context-bound job and
 can reuse matching segments. Cache identity includes effective synthesis inputs,
-including the external endpoint or reference identity when applicable. It does
-not fingerprint local checkpoint bytes. Clear or refresh the cache after those
-assets change.
+including the external endpoint or reference identity when applicable. For a
+reference set it also includes the aggregation contract/version and the Qwen
+Base fallback index. It does not fingerprint local checkpoint bytes. Clear or
+refresh the cache after those assets change.
 
 Unreleased PCM assembly applies bounded internal 5 ms edge fades after any
 per-segment tempo conversion. Frame counts and explicit pause lengths stay

@@ -23,6 +23,7 @@ from .audio_pcm import SPEECH_PCM_FORMAT, read_pcm_wav
 from .log import get_logger, log_event
 from .speech_worker import (
     MAX_BASE_REQUEST_BYTES,
+    MAX_REFERENCE_SET_REQUEST_BYTES,
     MAX_RESPONSE_BYTES,
     SYNTHESIS_TIMEOUT_SECONDS,
 )
@@ -91,7 +92,7 @@ def _child(connection: Connection, loader: Loader) -> None:
         metadata = {"runtime": asdict(runtime)} if is_dataclass(runtime) and not isinstance(runtime, type) else {}
         connection.send_bytes(json.dumps(metadata).encode())
         while True:
-            request = json.loads(connection.recv_bytes(MAX_BASE_REQUEST_BYTES))
+            request = json.loads(connection.recv_bytes(MAX_REFERENCE_SET_REQUEST_BYTES))
             data = renderer(request)
             if not isinstance(data, bytes) or len(data) > MAX_RESPONSE_BYTES or read_pcm_wav(data)[0] != SPEECH_PCM_FORMAT:
                 raise ValueError("Invalid generated PCM audio")
@@ -177,7 +178,8 @@ class ModelLifecycle:
 
     def __call__(self, request: dict[str, Any]) -> bytes:
         payload = json.dumps(request).encode()
-        if len(payload) > MAX_BASE_REQUEST_BYTES:
+        maximum = MAX_REFERENCE_SET_REQUEST_BYTES if "reference_parts" in request else MAX_BASE_REQUEST_BYTES
+        if len(payload) > maximum:
             raise ValueError("Native model request exceeds transport limit")
         with self._operation:
             if self._closed:

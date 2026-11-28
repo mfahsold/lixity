@@ -6,7 +6,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .audio_pcm import SPEECH_PCM_FORMAT, read_pcm_wav
 from .io import FileUtils
@@ -14,10 +14,14 @@ from .speech_engines import native_engine
 from .speech_profiles import (
     EXTERNAL_ENGINES,
     AudioProfile,
+    audio_capabilities,
     mlx_audio_uses_model_speed,
     profile_uses_reference,
 )
 from .speech_worker import MAX_RESPONSE_BYTES
+
+if TYPE_CHECKING:
+    from .speech_references import VoiceReference
 
 CACHE_BYTES = 2 * 1024**3
 _SCHEMA = "lixity-speech-segment/1"
@@ -48,7 +52,16 @@ class SpeechSegmentCache:
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.directory, self.max_bytes = directory, max_bytes
 
-    def _paths(self, text: str, profile: AudioProfile) -> tuple[str, Path, Path]:
+    def _paths(
+        self,
+        text: str,
+        profile: AudioProfile,
+        reference: VoiceReference | None = None,
+        *,
+        reference_set: bool = False,
+    ) -> tuple[str, Path, Path]:
+        from .speech_references import SpeechReferenceSet
+
         request: dict[str, Any] = {"schema_version": _SCHEMA, "model": profile.model if profile.engine in EXTERNAL_ENGINES else native_engine(profile.engine).model, "text": text,
                    "language": profile.language, "voice": profile.voice,
                    "instructions": profile.instructions}
@@ -74,6 +87,24 @@ class SpeechSegmentCache:
                 request["prosody"] = profile.prosody.model_dump()
         if profile_uses_reference(profile):
             request["reference_id"] = profile.reference_id
+            is_reference_set = reference_set or isinstance(reference, SpeechReferenceSet)
+            if is_reference_set:
+                if reference is not None and reference.id != profile.reference_id:
+                    raise ValueError("Reference set does not match the selected voice profile")
+                request["reference_mode"] = "set"
+                capability = audio_capabilities()[profile.engine]
+                aggregation = capability.get("reference_set_aggregation")
+                if aggregation is not None:
+                    request["reference_set_aggregation"] = aggregation
+                    request["reference_set_aggregation_version"] = capability["reference_set_aggregation_version"]
+                fallback = capability.get("reference_set_fallback")
+                if fallback is not None:
+                    request["reference_set_fallback"] = fallback
+                    if isinstance(reference, SpeechReferenceSet):
+                        index = reference.fallback_part_index
+                        if type(index) is not int or not 1 <= index <= len(reference.parts):
+                            raise ValueError("Invalid Qwen Base reference-set fallback part")
+                        request["reference_set_fallback_index"] = index
         key = hashlib.sha256(json.dumps(request, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         audio, metadata = self.directory / (key + ".wav"), self.directory / (key + ".json")
         if audio.is_symlink() or metadata.is_symlink():
@@ -87,8 +118,15 @@ class SpeechSegmentCache:
         except ValueError:
             return False
 
-    def get(self, text: str, profile: AudioProfile) -> bytes | None:
-        key, audio, metadata = self._paths(text, profile)
+    def get(
+        self,
+        text: str,
+        profile: AudioProfile,
+        reference: VoiceReference | None = None,
+        *,
+        reference_set: bool = False,
+    ) -> bytes | None:
+        key, audio, metadata = self._paths(text, profile, reference, reference_set=reference_set)
         try:
             raw_record, _ = FileUtils.read_bounded_regular_bytes(metadata, maximum=4096)
             record = json.loads(raw_record.decode("utf-8"))
@@ -105,10 +143,18 @@ class SpeechSegmentCache:
             # Derived data is reconstructible; a missing/invalid pair is a miss.
             return None
 
-    def put(self, text: str, profile: AudioProfile, data: bytes) -> None:
+    def put(
+        self,
+        text: str,
+        profile: AudioProfile,
+        data: bytes,
+        reference: VoiceReference | None = None,
+        *,
+        reference_set: bool = False,
+    ) -> None:
         if not self._valid_audio(data):
             raise ValueError("Only complete mono 24 kHz PCM can be retained")
-        key, audio, metadata = self._paths(text, profile)
+        key, audio, metadata = self._paths(text, profile, reference, reference_set=reference_set)
         record = json.dumps({"schema_version": _SCHEMA, "request_sha256": key,
                              "audio_sha256": hashlib.sha256(data).hexdigest(), "byte_length": len(data)})
         if len(data) + len(record.encode()) > self.max_bytes:

@@ -1,6 +1,8 @@
 """Completed synthetic segments survive failures without publishing partial audio."""
 from __future__ import annotations
 
+import hashlib
+import json
 import shutil
 from types import SimpleNamespace
 
@@ -12,6 +14,40 @@ from lixity.speech_profiles import AudioProfile
 
 def narrator(**changes):
     return AudioProfile(**{"engine": "qwen3", "voice": "Ryan", "language": "en", **changes})
+
+
+def _prepared_cache_parts():
+    from lixity.speech_probe import build_voice_probe_script
+    from lixity.speech_references import prepare_reference
+
+    text = " ".join(
+        f"Synthetic sentence number {index} describes a calm private test passage."
+        for index in range(100)
+    )
+    script = build_voice_probe_script(text, language="de", target_seconds=125)
+    assert script.status == "ready"
+    return [
+        prepare_reference(generate_silence_wav(150 / len(script.parts)), f"Private fallback transcript {index}.")
+        for index in range(1, len(script.parts) + 1)
+    ]
+
+
+def _save_reference_set(tmp_path, parts, *, fallback_part_index=1):
+    from lixity.speech_probe import build_voice_probe_script
+    from lixity.speech_references import save_reference_set
+
+    text = " ".join(
+        f"Synthetic sentence number {index} describes a calm private test passage."
+        for index in range(100)
+    )
+    script = build_voice_probe_script(text, language="de", target_seconds=125)
+    assert script.status == "ready" and len(script.parts) == len(parts)
+    probe = script.to_dict()
+    return save_reference_set(
+        tmp_path, parts, source_sha256=script.source_sha256, settings_sha256=script.settings_sha256,
+        probe_sha256=script.probe_sha256, language="de", terms=("Mara",),
+        fallback_part_index=fallback_part_index, probe=probe,
+    )
 
 
 def test_failed_render_reuses_only_completed_exact_requests(tmp_path, monkeypatch):
@@ -146,6 +182,110 @@ def test_base_cache_separates_reference_and_model_but_not_playback_speed(tmp_pat
     assert cache.get(text, custom) is None
     metadata = next(cache.directory.glob("*.json")).read_text()
     assert text not in metadata and first_id not in metadata
+
+
+def test_reference_set_cache_identity_includes_order_and_explicit_policy(tmp_path):
+    from lixity.speech_cache import SpeechSegmentCache
+    from lixity.speech_engines import (
+        QWEN_BASE_MODEL,
+        REFERENCE_SET_AGGREGATION,
+        REFERENCE_SET_AGGREGATION_VERSION,
+        REFERENCE_SET_FALLBACK,
+        TOUCAN_MODEL,
+    )
+    from lixity.speech_profiles import MLX_AUDIO_BASE_URL, MLX_AUDIO_TTS_MODEL
+    from lixity.speech_providers import speech_endpoint
+
+    parts = _prepared_cache_parts()
+    reference = _save_reference_set(tmp_path, parts, fallback_part_index=2)
+    reordered = _save_reference_set(tmp_path, list(reversed(parts)), fallback_part_index=2)
+    other_fallback = _save_reference_set(tmp_path, parts, fallback_part_index=1)
+    cache = SpeechSegmentCache(tmp_path / "segments")
+    text = "Synthetic reference cache text."
+    audio = generate_silence_wav(.01, 24000)
+
+    profiles = {
+        "qwen3-base": AudioProfile(engine="qwen3-base", language="de", voice="reference",
+                                  reference_id=reference.id),
+        "mlx-audio": AudioProfile(engine="mlx-audio", language="de", voice="reference",
+                                 reference_id=reference.id),
+        "ims-toucan": AudioProfile(engine="ims-toucan", language="de", voice="reference",
+                                  reference_id=reference.id),
+    }
+    keys = {}
+    for engine, selected in profiles.items():
+        key = cache._paths(text, selected, reference)[0]
+        keys[engine] = key
+        single = selected.model_copy(update={"reference_id": parts[0].id})
+        assert cache._paths(text, single, parts[0])[0] == cache._paths(text, single)[0]
+        assert key != cache._paths(text, single, parts[0])[0]
+        assert key != cache._paths(text, selected.model_copy(update={"reference_id": reordered.id}), reordered)[0]
+        assert key != cache._paths(text, selected.model_copy(update={"reference_id": other_fallback.id}), other_fallback)[0]
+
+    base_request = {
+        "schema_version": "lixity-speech-segment/1", "model": QWEN_BASE_MODEL,
+        "text": text, "language": "de", "voice": "reference", "instructions": "",
+        "reference_id": reference.id, "reference_mode": "set",
+        "reference_set_fallback": REFERENCE_SET_FALLBACK, "reference_set_fallback_index": 2,
+    }
+    assert keys["qwen3-base"] == hashlib.sha256(json.dumps(
+        base_request, sort_keys=True, ensure_ascii=False,
+    ).encode()).hexdigest()
+
+    zonos_request = {
+        "schema_version": "lixity-speech-segment/1", "model": MLX_AUDIO_TTS_MODEL,
+        "text": text, "language": "de", "voice": "reference", "instructions": "",
+        "endpoint": speech_endpoint(MLX_AUDIO_BASE_URL), "adapter": "lixity-mlx-audio/1",
+        "api_key_env": "", "speed": 1.1, "reference_id": reference.id, "reference_mode": "set",
+        "reference_set_aggregation": REFERENCE_SET_AGGREGATION,
+        "reference_set_aggregation_version": REFERENCE_SET_AGGREGATION_VERSION,
+    }
+    assert keys["mlx-audio"] == hashlib.sha256(json.dumps(
+        zonos_request, sort_keys=True, ensure_ascii=False,
+    ).encode()).hexdigest()
+    assert cache._paths(text, profiles["mlx-audio"], reference_set=True)[0] == keys["mlx-audio"]
+
+    toucan_request = {
+        "schema_version": "lixity-speech-segment/1", "model": TOUCAN_MODEL,
+        "text": text, "language": "de", "voice": "reference", "instructions": "",
+        "adapter": "lixity-toucan/2", "phonemes": {}, "prosody": {},
+        "reference_id": reference.id, "reference_mode": "set",
+        "reference_set_aggregation": REFERENCE_SET_AGGREGATION,
+        "reference_set_aggregation_version": REFERENCE_SET_AGGREGATION_VERSION,
+    }
+    assert keys["ims-toucan"] == hashlib.sha256(json.dumps(
+        toucan_request, sort_keys=True, ensure_ascii=False,
+    ).encode()).hexdigest()
+    assert cache._paths(text, profiles["ims-toucan"], reference_set=True)[0] == keys["ims-toucan"]
+
+    cache.put(text, profiles["qwen3-base"], audio, reference)
+    assert cache.get(text, profiles["qwen3-base"], reference) == audio
+    metadata = next(cache.directory.glob("*.json")).read_text()
+    assert text not in metadata
+    assert all(part.transcript not in metadata for part in parts)
+    assert reference.id not in metadata
+    assert "embedding" not in metadata
+
+
+def test_render_passes_resolved_reference_sets_to_segment_cache(tmp_path, monkeypatch):
+    parts = _prepared_cache_parts()
+    first = _save_reference_set(tmp_path, parts, fallback_part_index=1)
+    second = _save_reference_set(tmp_path, parts, fallback_part_index=2)
+    source, output = tmp_path / "source.md", tmp_path / "out.wav"
+    source.write_text("Synthetic source.")
+    calls = []
+
+    def synthesize(_text, _profile, **kwargs):
+        calls.append(kwargs["reference"])
+        return generate_silence_wav(.01, 24000)
+
+    monkeypatch.setattr("lixity.speech_qwen.synthesize_qwen", synthesize)
+    for reference in (first, first, second, second):
+        selected = AudioProfile(engine="qwen3-base", language="de", voice="reference",
+                                reference_id=reference.id)
+        render_speech_audio(source, output, profile=selected, cache_dir=tmp_path / "cache",
+                            references={reference.id: reference})
+    assert calls == [first, second]
 
 
 def test_existing_voice_cache_keys_remain_stable(tmp_path):

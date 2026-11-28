@@ -46,6 +46,15 @@ from .speech_engines import (
     QWEN_MODEL as QWEN_MODEL,
 )
 from .speech_engines import (
+    REFERENCE_SET_AGGREGATION as REFERENCE_SET_AGGREGATION,
+)
+from .speech_engines import (
+    REFERENCE_SET_AGGREGATION_VERSION as REFERENCE_SET_AGGREGATION_VERSION,
+)
+from .speech_engines import (
+    REFERENCE_SET_FALLBACK as REFERENCE_SET_FALLBACK,
+)
+from .speech_engines import (
     TOUCAN_MODEL as TOUCAN_MODEL,
 )
 
@@ -459,6 +468,9 @@ def audio_capabilities() -> dict[str, Any]:
             "configurable_model": True, "provider_fields": False,
             "configurable_voice": True, "configurable_language": True,
             "reference_supported": True, "local_worker": "isolated-mlx-audio",
+            "reference_modes": ["single", "set"],
+            "reference_set_aggregation": REFERENCE_SET_AGGREGATION,
+            "reference_set_aggregation_version": REFERENCE_SET_AGGREGATION_VERSION,
             "configurable_instructions": False,
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": MLX_AUDIO_DEFAULT_MODEL_SPEED, "implementation": "model-condition"},
@@ -488,6 +500,9 @@ def audio_capabilities() -> dict[str, Any]:
             "guide_url": "https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md#ims-toucan-author-voice-and-phonetic-direction",
             "voices": {"reference": {"name": "Reference", "languages": ["de", "en"]}},
             "reference_required": True,
+            "reference_modes": ["single", "set"],
+            "reference_set_aggregation": REFERENCE_SET_AGGREGATION,
+            "reference_set_aggregation_version": REFERENCE_SET_AGGREGATION_VERSION,
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": TOUCAN_MODEL,
@@ -496,6 +511,7 @@ def audio_capabilities() -> dict[str, Any]:
             "name": name, "short_name": short_name, "tier": "advanced", "targets": ["local"], "languages": ["de"],
             "voices": {voice: {"name": voice_name, "languages": ["de"]}},
             "reference_required": engine == "coqui-reference",
+            "reference_modes": ["single"],
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": model,
@@ -509,6 +525,7 @@ def audio_capabilities() -> dict[str, Any]:
             "runtime_reason": "The bundled F5-TTS runtime is unavailable; existing profiles remain readable for export and cached audio.",
             "voices": {"reference": {"name": "Reference", "languages": ["de", "en"]}},
             "reference_required": True,
+            "reference_modes": ["single"],
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": F5_MODEL,
@@ -525,6 +542,8 @@ def audio_capabilities() -> dict[str, Any]:
             "targets": ["local", "jetson"], "languages": list(QWEN_LANGUAGES),
             "voices": {"reference": {"name": "Reference", "languages": list(QWEN_LANGUAGES)}},
             "reference_required": True,
+            "reference_modes": ["single", "set"],
+            "reference_set_fallback": REFERENCE_SET_FALLBACK,
             "speed": {"supported": True, "minimum": MIN_PLAYBACK_SPEED, "maximum": MAX_PLAYBACK_SPEED,
                       "default": DEFAULT_PLAYBACK_SPEED, "implementation": "ffmpeg-atempo"},
             "model": QWEN_BASE_MODEL,
@@ -533,6 +552,7 @@ def audio_capabilities() -> dict[str, Any]:
     for engine, capability in capabilities.items():
         if engine not in {"mlx-audio", "ims-toucan", "openai-compatible"}:
             capability["creation_enabled"] = False
+        capability.setdefault("reference_modes", ["single"])
         support = speech_control_support(engine)
         capability["instructions"] = support.direction == "model_interpreted"
         capability["control_support"] = support.as_dict()

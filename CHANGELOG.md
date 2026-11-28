@@ -9,6 +9,20 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Derive a deterministic, project-specific voice probe from the selected
+  manuscript. The CLI and local HTTP API produce a private
+  `lixity-voice-probe-script/1` with a 120–180 second target, sentence-aligned
+  parts, project terms and pronunciation cues; short or invalid inputs remain
+  explicit, unsavable previews without padding or duplication.
+- Save immutable 3–6-part `lixity-audio-reference-set/1` recordings through the
+  Author's voice studio and HTTP API. Sets require author-confirmed exact
+  transcripts, explicit retention permission, a 1-based fallback part and
+  120–180 seconds of actual PCM audio; singles and sets have separate library
+  lists and safe deletion rules.
+- Let ZONOS3 and IMS-Toucan aggregate ordered reference-set speaker embeddings,
+  while Qwen Base uses only the declared fallback part through its existing
+  singular protocol. Keep embeddings in versioned process memory, never in
+  project files or logs, and reject sets for Coqui/F5.
 - Show on-demand reference-quality notes in the voice library, with localized
   guidance for clipping, low level, noise, digital pauses and band limiting.
   Recommend a 15-second quick check and a preferred 30–60-second continuous

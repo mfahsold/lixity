@@ -31,7 +31,7 @@ from .log import get_logger, log_event, speech_diagnostic_id
 
 if TYPE_CHECKING:
     from .speech_profiles import AudioProfile
-    from .speech_references import SpeechReference
+    from .speech_references import VoiceReference
 
 ADAPTER_ID = "lixity-openai-speech/1"
 MAX_REQUEST_BYTES = 32768
@@ -438,28 +438,33 @@ def close_zonos_worker() -> None:
 
 
 def _synthesize_zonos_direct(text: str, profile: AudioProfile,
-                             reference: SpeechReference | None) -> bytes:
-    from .speech_references import validate_reference
+                             reference: VoiceReference | None) -> bytes:
+    from .speech_references import SpeechReferenceSet
+    from .speech_worker import validate_voice_reference
 
     runtime, worker_script = _zonos_worker_paths()
     if not _zonos_worker_available(runtime, worker_script):
         raise FileNotFoundError("ZONOS3 synthesis requires an executable local MLX-Audio runtime and worker script")
-    if profile.voice == "reference":
-        if reference is None or reference.id != profile.reference_id:
-            raise ValueError("A verified reference is required for the selected ZONOS3 voice")
-        validate_reference(reference)
-    elif reference is not None:
-        raise ValueError("A preset ZONOS3 voice cannot use a local reference")
+    validate_voice_reference(profile, reference)
     request_data = external_speech_request(text, profile)
     with tempfile.TemporaryDirectory(prefix="lixity-zonos-") as directory:
         os.chmod(directory, 0o700)
         output = Path(directory) / "speech.wav"
-        worker_request = dict(request_data)
+        worker_request: dict[str, Any] = dict(request_data)
         worker_request.pop("response_format", None)
         worker_request["output_path"] = str(output)
-        if reference is not None:
+        if isinstance(reference, SpeechReferenceSet):
+            reference_paths = []
+            for index, part in enumerate(reference.parts, 1):
+                reference_path = Path(directory) / f"reference-{index}.wav"
+                reference_path.write_bytes(part.audio)
+                reference_path.chmod(0o600)
+                reference_paths.append(str(reference_path))
+            worker_request["ref_audio_parts"] = reference_paths
+        elif reference is not None:
             reference_path = Path(directory) / "reference.wav"
             reference_path.write_bytes(reference.audio)
+            reference_path.chmod(0o600)
             worker_request["ref_audio"] = str(reference_path)
         metadata = _ZONOS_SESSION.synthesize(runtime, worker_script, worker_request)
         if output.is_symlink() or not output.is_file():
@@ -489,7 +494,7 @@ def _synthesize_zonos_direct(text: str, profile: AudioProfile,
 
 
 def synthesize_external(text: str, profile: AudioProfile, *, opener: Any = None,
-                        reference: SpeechReference | None = None) -> bytes:
+                        reference: VoiceReference | None = None) -> bytes:
     """Send one explicit bounded request and return normalized PCM, without fallback."""
     from .speech import MAX_SEGMENT_CHARS
     from .speech_profiles import EXTERNAL_ENGINES, AudioProfile

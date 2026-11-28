@@ -10,12 +10,16 @@ MAX_PAYLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
 MAX_IMAGE_PAYLOAD_BYTES = 32 * 1024 * 1024
 MAX_MEDIA_PAYLOAD_BYTES = 72 * 1024 * 1024
 MAX_ARTIFACT_BYTES = 200 * 1024 * 1024  # 200 MB
+# 180 seconds of mono 24 kHz PCM16 is 8.64 MiB, about 11.52 MiB in base64.
+MAX_REFERENCE_SET_PAYLOAD_BYTES = 16 * 1024 * 1024
 AUDIO_CAPTURE_ROUTE = "/api/audio-capture.js"
 
 # Native UI capabilities, also used by synthetic documentation captures.
 NATIVE_UI_ACTIONS = (
     "speech-render",
     "speech-plan",
+    "voice-probe",
+    "audio-reference-set",
     "audio-audit",
     "site-export",
     "site-preflight",

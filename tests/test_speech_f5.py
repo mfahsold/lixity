@@ -91,6 +91,33 @@ def test_synthesize_f5_validates_request_and_reference():
         synthesize_f5("   ", profile, reference=reference)
 
 
+def test_f5_rejects_reference_sets_instead_of_using_part_one():
+    from lixity.speech_references import SpeechReferenceSet
+
+    reference = SpeechReferenceSet(
+        "a" * 64, (), "b" * 64, "c" * 64, "d" * 64, "de", (), 1, {},
+    )
+    profile = AudioProfile(engine="f5-tts", voice="reference", reference_id=reference.id, language="de")
+    with pytest.raises(ValueError, match="does not support reference sets"):
+        synthesize_f5("Hallo.", profile, reference=reference)
+
+
+def test_f5_render_rejects_reference_sets_before_plan_execution(tmp_path, monkeypatch):
+    from lixity.speech import render_speech_audio
+    from lixity.speech_references import SpeechReferenceSet
+
+    reference = SpeechReferenceSet(
+        "a" * 64, (), "b" * 64, "c" * 64, "d" * 64, "de", (), 1, {},
+    )
+    profile = AudioProfile(engine="f5-tts", voice="reference", reference_id=reference.id, language="de")
+    source, output = tmp_path / "source.md", tmp_path / "out.wav"
+    source.write_text("Synthetic source.")
+    monkeypatch.setattr("lixity.speech_f5.synthesize_f5", lambda *_a, **_kw: pytest.fail("unexpected synthesis"))
+    with pytest.raises(ValueError, match="does not support reference sets"):
+        render_speech_audio(source, output, profile=profile, references={reference.id: reference})
+    assert not output.exists()
+
+
 def test_synthesize_f5_sends_payload_and_receives_wav():
     ref_audio = generate_test_wav(1.0)
     ref_id = _identity(ref_audio, "Referenztext.")

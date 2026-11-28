@@ -818,7 +818,7 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
         parse_audio_settings,
         resolve_audio_profile,
     )
-    from .speech_references import SpeechReference, references_for_plan, references_unchanged
+    from .speech_references import VoiceReference, references_for_plan, references_unchanged
 
     workspace = args._workspace
     args.plan_only = args.plan_only or args.ssml or args.timeline
@@ -914,7 +914,7 @@ def _cmd_read_aloud(args: argparse.Namespace) -> int:
         if view is not None and view["source_sha256"] != source_hash:
             raise ValueError("Manuscript changed while preparing speech; retry")
         direction_hash = view["direction_sha256"] if view is not None else None
-        references: dict[str, SpeechReference] = {}
+        references: dict[str, VoiceReference] = {}
 
         def check_context() -> bool:
             try:
@@ -1582,7 +1582,7 @@ def _build_parser(only_command: str | None = None) -> argparse.ArgumentParser:
             )
             from .speech_worker import MAX_REFERENCE_BYTES
 
-            p.add_argument("action", choices=("create", "inspect", "record", "generate", "calibration-text"))
+            p.add_argument("action", choices=("create", "inspect", "record", "generate", "calibration-text", "probe-script"))
             p.add_argument("--project", default=None, help=AUDIO_OPTION_HELP[name]['--project'])
             p.add_argument("--audio", help=AUDIO_OPTION_HELP[name]['--audio'].format(
                 minimum=MIN_REFERENCE_SECONDS, maximum=MAX_REFERENCE_SECONDS, mib=MAX_REFERENCE_BYTES // 1024**2,
@@ -1597,8 +1597,9 @@ def _build_parser(only_command: str | None = None) -> argparse.ArgumentParser:
             p.add_argument("--device", default=None, help="record: hardware capture device")
             p.add_argument("--calibration-text", action="store_true", help="record: read the standard phonetically balanced calibration text")
             p.add_argument("--variant", choices=("phonetic", "short"), default="phonetic", help=AUDIO_OPTION_HELP[name]['--variant'])
-            p.add_argument("--language", default="de", choices=("de", "en"), help=AUDIO_OPTION_HELP[name]['--language'])
+            p.add_argument("--language", dest="audio_reference_language", default=None, choices=("de", "en"), help=AUDIO_OPTION_HELP[name]['--language'])
             p.add_argument("--voice-description", default=None, help="generate: description of the voice to synthesize")
+            p.add_argument("--target-seconds", type=int, default=150, help=AUDIO_OPTION_HELP[name]['--target-seconds'])
             p.add_argument("-o", "--output", help=AUDIO_OPTION_HELP[name]['--output'])
             continue
         if name == "audio-direction":
@@ -2318,25 +2319,44 @@ def _main(argv: list[str] | None = None) -> int:
     if args.command == "audio-reference":
         from .speech_reference_quality import assess_reference
         from .speech_references import (
+            SpeechReferenceSet,
             get_calibration_text,
-            load_reference,
+            load_voice_reference,
             read_reference_input,
             save_reference,
         )
         from .speech_worker import MAX_REFERENCE_BYTES
+        reference_language = args.audio_reference_language or "de"
         try:
             if args.action == "calibration-text":
-                print(get_calibration_text(args.language, args.variant))
+                print(get_calibration_text(reference_language, args.variant))
                 return EXIT_OK
             if not args.project:
                 raise ValueError(f"audio-reference {args.action} requires --project")
+            if args.action == "probe-script":
+                from .speech_probe import build_voice_probe_script
+                from .workspace import resolve_manuscript_target
+
+                workspace = resolve_manuscript_target(None, project=args.project, allow_discovery=False)
+                text, source_hash = FileUtils.read_source_snapshot(workspace.manuscript)
+                project_settings = read_explicit_project_config(workspace.root)
+                language = (
+                    args.audio_reference_language if args.audio_reference_language is not None
+                    else project_settings.get("language", "en")
+                )
+                probe = build_voice_probe_script(
+                    text, language=language, project_config=project_settings,
+                    target_seconds=args.target_seconds, source_sha256=source_hash,
+                )
+                print(_json(probe.to_dict(), indent=True))
+                return EXIT_OK
             if args.action == "generate":
                 from .speech_references import generate_reference
 
                 reference = generate_reference(
                     args.project,
                     text=args.transcript,
-                    language=args.language,
+                    language=reference_language,
                     voice_description=args.voice_description,
                 )
                 quality = assess_reference(reference.audio)
@@ -2345,8 +2365,40 @@ def _main(argv: list[str] | None = None) -> int:
             if args.action == "inspect":
                 if not args.reference_id:
                     raise ValueError(_m("audio_reference_inspect_input"))
-                reference = load_reference(args.project, args.reference_id)
-                print(_json({**assess_reference(reference.audio), "reference_id": reference.id}, indent=True))
+                inspected_reference = load_voice_reference(args.project, args.reference_id)
+                if isinstance(inspected_reference, SpeechReferenceSet):
+                    from .audio_pcm import read_pcm_wav
+
+                    inspected_parts = []
+                    total_duration = 0.0
+                    for index, part in enumerate(inspected_reference.parts, 1):
+                        (channels, width, rate), frames = read_pcm_wav(part.audio)
+                        duration = len(frames) / (channels * width * rate)
+                        total_duration += duration
+                        inspected_parts.append({
+                            "index": index,
+                            "id": part.id,
+                            "transcript": part.transcript,
+                            "duration_seconds": round(duration, 3),
+                            "quality": assess_reference(part.audio),
+                            "fallback": index == inspected_reference.fallback_part_index,
+                        })
+                    print(_json({
+                        "schema_version": "lixity-audio-reference-set-inspection/1",
+                        "id": inspected_reference.id,
+                        "kind": "set",
+                        "part_count": len(inspected_reference.parts),
+                        "duration_seconds": round(total_duration, 3),
+                        "language": inspected_reference.language,
+                        "source_sha256": inspected_reference.source_sha256,
+                        "settings_sha256": inspected_reference.settings_sha256,
+                        "probe_sha256": inspected_reference.probe_sha256,
+                        "fallback_part_index": inspected_reference.fallback_part_index,
+                        "terms": list(inspected_reference.terms),
+                        "parts": inspected_parts,
+                    }, indent=True))
+                    return EXIT_OK
+                print(_json({**assess_reference(inspected_reference.audio), "reference_id": inspected_reference.id}, indent=True))
                 return EXIT_OK
             if args.action == "record":
                 from pathlib import Path
@@ -2359,7 +2411,7 @@ def _main(argv: list[str] | None = None) -> int:
                     transcript = read_reference_input(args.transcript_file, 8000).decode("utf-8")
                 using_calibration_text = not transcript and args.calibration_text
                 if using_calibration_text:
-                    transcript = get_calibration_text(args.language, args.variant)
+                    transcript = get_calibration_text(reference_language, args.variant)
 
                 duration = args.duration
                 if duration is None:
@@ -2368,7 +2420,7 @@ def _main(argv: list[str] | None = None) -> int:
 
                 if args.calibration_text and transcript:
                     print("\n================== KALIBRIERUNGSTEXT (TELEPROMPTER) ==================", file=sys.stderr)
-                    print(f"Sprache: {args.language} | Variante: {args.variant} | Dauer: {duration:.0f}s", file=sys.stderr)
+                    print(f"Sprache: {reference_language} | Variante: {args.variant} | Dauer: {duration:.0f}s", file=sys.stderr)
                     print("Bitte nach dem Countdown laut, ruhig und deutlich vorlesen:\n", file=sys.stderr)
                     print(transcript, file=sys.stderr)
                     print("=======================================================================\n", file=sys.stderr)

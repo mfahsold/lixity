@@ -35,6 +35,30 @@ def profile(**updates):
     return AudioProfile(engine="qwen3", voice="Ryan", language="en", **updates)
 
 
+def _save_base_set(tmp_path, *, fallback_part_index=1, reverse=False):
+    from lixity.speech_probe import build_voice_probe_script
+    from lixity.speech_references import prepare_reference, save_reference_set
+
+    text = " ".join(
+        f"Synthetic sentence number {index} describes a calm private test passage."
+        for index in range(100)
+    )
+    script = build_voice_probe_script(text, language="de", target_seconds=125)
+    assert script.status == "ready"
+    probe = script.to_dict()
+    parts = [
+        prepare_reference(generate_silence_wav(150 / len(script.parts)), f"Exact fallback transcript {index}.")
+        for index in range(1, len(script.parts) + 1)
+    ]
+    if reverse:
+        parts.reverse()
+    return save_reference_set(
+        tmp_path, parts, source_sha256=script.source_sha256, settings_sha256=script.settings_sha256,
+        probe_sha256=script.probe_sha256, language="de", terms=("Mara",),
+        fallback_part_index=fallback_part_index, probe=probe,
+    )
+
+
 def test_adapter_fixed_endpoint_and_validated_identity():
     headers = Message()
     headers["Content-Type"] = "audio/wav"
@@ -150,6 +174,47 @@ def test_worker_health_validation_and_pcm():
         thread.join()
 
 
+def test_base_reference_set_uses_only_its_declared_fallback_part(tmp_path):
+    from dataclasses import replace
+
+    from lixity.speech_profiles import QWEN_BASE_MODEL
+    from lixity.speech_qwen import synthesize_qwen
+
+    first = _save_base_set(tmp_path, fallback_part_index=1)
+    second = _save_base_set(tmp_path, fallback_part_index=2)
+    requests = []
+    headers = Message()
+    headers["Content-Type"] = "audio/wav"
+    headers["X-Lixity-Model"] = QWEN_BASE_MODEL
+    headers["X-Lixity-Voice"] = "reference"
+
+    class Response(io.BytesIO):
+        status = 200
+
+    def open_request(request, timeout):
+        requests.append(json.loads(request.data))
+        response = Response(generate_silence_wav(.2))
+        response.headers = headers
+        return response
+
+    opener = SimpleNamespace(open=open_request)
+    for reference in (first, second):
+        selected = AudioProfile(engine="qwen3-base", voice="reference", reference_id=reference.id)
+        synthesize_qwen("Hi.", selected, reference=reference, opener=opener)
+        expected = reference.parts[reference.fallback_part_index - 1]
+        sent = requests[-1]
+        assert base64.b64decode(sent["reference_audio"]) == expected.audio
+        assert sent["reference_text"] == expected.transcript
+        assert sent["x_vector_only"] is True
+        assert "reference_parts" not in sent
+    assert requests[0]["reference_text"] != requests[1]["reference_text"]
+
+    selected = AudioProfile(engine="qwen3-base", voice="reference", reference_id=second.id)
+    with pytest.raises(ValueError, match="fallback"):
+        synthesize_qwen("Hi.", selected, reference=replace(second, fallback_part_index=0), opener=opener)
+    assert len(requests) == 2
+
+
 def test_base_worker_accepts_bounded_reference_and_rejects_unsupported_direction(tmp_path):
     model_id = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
     calls = []
@@ -181,7 +246,7 @@ def test_base_worker_accepts_bounded_reference_and_rejects_unsupported_direction
                        {"reference_audio": base64.b64encode(generate_silence_wav(60 + 1 / 24000)).decode()},
                        {"reference_text": ""}, {"reference_text": "text\x00invalid"},
                        {"reference_text": "\ud800"}, {"voice": "Ryan"},
-                       {"x_vector_only": 1}, {"x_vector_only": "true"}):
+                       {"x_vector_only": 1}, {"x_vector_only": "true"}, {"reference_parts": []}):
             with pytest.raises(urllib.error.HTTPError) as error:
                 post({**payload, **update})
             with error.value:

@@ -100,6 +100,17 @@
 #modal-speech .voice-active-card > span { min-width: 0; overflow-wrap: anywhere; flex: 1 1 16rem; }
 #modal-speech .voice-ref-info { flex-basis: 12rem; }
 #modal-speech .voice-ref-text { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+#modal-speech .voice-probe-section { min-inline-size: 0; overflow-wrap: anywhere; }
+#modal-speech .voice-probe-controls { align-items: end; }
+#modal-speech .voice-probe-controls > .setting-field { flex: 1 1 10rem; min-inline-size: 0; }
+#modal-speech .voice-probe-controls > .ctl { max-inline-size: 100%; white-space: normal; }
+#modal-speech .voice-probe-parts { margin-block: var(--space-2); }
+#modal-speech .voice-probe-card { min-inline-size: 0; }
+#modal-speech .voice-probe-card > .voice-prompt-text { white-space: pre-line; }
+#modal-speech .voice-probe-options { min-inline-size: 0; }
+#modal-speech .voice-probe-options > .ctl-note { grid-column: 1 / -1; margin: 0; }
+#modal-speech .voice-probe-warning { margin-block: var(--space-2); }
+#modal-speech .voice-probe-warning:empty { display: none; }
 #modal-speech .segmented-buttons { display: flex; flex-wrap: wrap; gap: .3rem; }
 #modal-speech .seg-btn { padding: .35rem .6rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); cursor: pointer; }
 #modal-speech .seg-btn.active { border-color: var(--accent); background: var(--accent-light); }

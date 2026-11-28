@@ -1,6 +1,7 @@
 """Model residency uses real spawned processes without optional inference stacks."""
 from __future__ import annotations
 
+import json
 import os
 import time
 
@@ -36,6 +37,24 @@ def test_cold_health_reuse_and_release():
         assert lifecycle.child_pid is None
         lifecycle({})
         assert lifecycle.child_pid != first
+
+
+def test_spawned_worker_accepts_a_bounded_toucan_reference_set():
+    from lixity.speech_worker import MAX_BASE_REQUEST_BYTES, MAX_REFERENCE_SET_REQUEST_BYTES
+
+    payload = {"reference_parts": ["x" * (MAX_BASE_REQUEST_BYTES + 1)]}
+    assert len(json.dumps(payload).encode()) < MAX_REFERENCE_SET_REQUEST_BYTES
+    with ModelLifecycle(load_fake) as lifecycle:
+        assert lifecycle(payload)[:4] == b"RIFF"
+
+
+def test_spawned_worker_rejects_an_oversized_request_before_loading():
+    from lixity.speech_worker import MAX_REFERENCE_SET_REQUEST_BYTES
+
+    with ModelLifecycle(load_fake) as lifecycle:
+        with pytest.raises(ValueError, match="transport limit"):
+            lifecycle({"reference_parts": ["x" * MAX_REFERENCE_SET_REQUEST_BYTES]})
+        assert lifecycle.child_pid is None
 
 
 def test_idle_interval_begins_after_completion():

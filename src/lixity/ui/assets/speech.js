@@ -28,6 +28,7 @@
   var recTimerInterval = null, isRecordingVoice = false, desktopAudioRecording = false, lastRecordedWavBlob = null, sampleVariant = "short";
 
   var importedTake = null, takeTokens = null, takeImportSequence = 0;
+  var probeActive = false, probeLaunched = false, probeState = null, probeSaving = false, probeSequence = 0;
   var trimLimitSeconds = 0, trimSource = null;
   var speechLayout = document.getElementById("workspace-reader-layout"), narrowSpeech = matchMedia("(max-width: 900px)");
   var speechDocked = false, placingSpeech = false, speechPassage = null, speechOpener = null;
@@ -120,17 +121,21 @@
         typeof value.configuration_error !== "string") return null;
     return value;
   }
-  function canRecordVoice() { return speechReady && openedContext === context() && Boolean(referenceRecording?.duration_seconds); }
+  function canRecordVoice() {
+    if (!speechReady || openedContext !== context()) return false;
+    if (probeActive) return Boolean(probeState && probeState.script.status === "ready" && probeContextMatches());
+    return Boolean(referenceRecording?.duration_seconds);
+  }
   function recordingDurationChanged() {
     var input = fields.recording_duration;
     return referenceRecording && (input.validity.badInput || input.value !== String(referenceRecording.reference_seconds ?? ""));
   }
   function recordingDurationHasTake() {
-    return voiceSaving || isRecordingVoice || recordingPending || Boolean(importedTake);
+    return voiceSaving || isRecordingVoice || recordingPending || Boolean(importedTake) || probeHasTakes();
   }
   function updateRecordingDuration() {
     var hasTake = recordingDurationHasTake();
-    var canEdit = referenceRecording && openedContext === context() && !profileSaving && !hasTake;
+    var canEdit = !probeActive && referenceRecording && openedContext === context() && !profileSaving && !hasTake;
     fields.recording_duration.disabled = !canEdit;
     fields.recording_duration_save.disabled = !canEdit || (!recordingDurationChanged() && referenceRecording.duration_seconds !== null);
     fields.recording_duration_discard.disabled = profileSaving || hasTake || !recordingDurationChanged();
@@ -153,6 +158,7 @@
     fields.recLimit.hidden = false;
   }
   function profileDraftMessage() {
+    if (probeActive && probeHasTakes()) return "probe_unsaved";
     if (mode === "reference" && recordingDurationChanged()) return "recording_duration_unsaved";
     if (mode !== "profiles") return "";
     if (pronunciationPending()) return "pronunciation_pending";
@@ -416,7 +422,7 @@
     } finally { placingSpeech = false; }
   }
   function closeAudioSurface() {
-    if (profileSaving || voiceSaving || direction.busy()) { status(label("saving")); return false; }
+    if (profileSaving || probeSaving || voiceSaving || direction.busy()) { status(label("saving")); return false; }
     if (direction.dirty()) { status(label(mode === "output" ? "direction_output_draft" : "direction_switch_first")); return false; }
     var draft = profileDraftMessage();
     if (draft) { status(label(draft)); return false; }
@@ -433,6 +439,7 @@
     ++recordingSequence; releaseRecording();
     recordedChunks = []; totalRecordedSamples = 0;
     clearVoiceTake();
+    resetVoiceProbe();
     invalidate();
     if (speechDocked) {
       speechLayout.classList.remove("speech-dock-open");
@@ -451,6 +458,7 @@
   function addHelp(el, key) {
     var aliases = {engine:"service_help", voice:"voice_hint", voice_description:"design_hint", reference_id:"reference_hint",
       record_author_title:"record_help", profiles_title:"profile_help", go_to_chapter_audio:"render_help",
+      voice_probe:"voice_probe_help", voice_probe_generate:"voice_probe_target_help", voice_probe_save:"voice_probe_save_help",
       pronunciations:"pronunciation_hint",
       direction_instructions:"direction_hint", instructions:"direction_hint", audit_audio:"audit_hint", audit_transcript:"audit_hint",
       export_scope:"export_hint", direction_plan:"export_hint", worker_refresh:"service_help", profile:"profile_help",
@@ -1380,7 +1388,8 @@
     }
   }
   function referenceName(reference, index, limit) {
-    var name = (reference.title || reference.transcript || "").trim() || label("reference_untitled") + " " + (index + 1);
+    var name = reference.kind === "set" ? uiFormat("speech_probe_library_name", {count:reference.part_count}) :
+      ((reference.title || reference.transcript || "").trim() || label("reference_untitled") + " " + (index + 1));
     return limit && name.length > limit ? name.slice(0, limit).trimEnd() + "…" : name;
   }
   function referenceDuration(reference) {
@@ -1393,6 +1402,20 @@
     target.replaceChildren();
     var quality = referenceQuality.get(reference.id);
     if (!quality) return;
+    if (reference.kind === "set") {
+      node("p", target, "ctl-note", label("probe_quality"));
+      (quality.parts || []).forEach(function(part) {
+        node("p", target, "ctl-note", uiFormat("speech_probe_part", {index:part.index}));
+        var notes = Array.isArray(part.quality.notes) ? part.quality.notes : [];
+        if (!notes.length) node("p", target, "ctl-note", label("reference_quality_none"));
+        notes.forEach(function(note) {
+          var key = "speech_reference_quality_" + String(note.code || "").replace(/[^a-z0-9_]/g, "");
+          var text = label(key.replace(/^speech_/, ""));
+          node("p", target, "ctl-note", text && text !== key && text !== "speech_" + key ? text : note.message || key);
+        });
+      });
+      return;
+    }
     var notes = Array.isArray(quality.notes) ? quality.notes : [];
     if (!notes.length) {
       node("p", target, "ctl-note", label("reference_quality_none"));
@@ -1408,11 +1431,18 @@
     if (!reference || trigger.disabled || openedContext !== context()) return;
     trigger.disabled = true;
     try {
-      var response = await request("audio-microphone", Object.assign(tokens(), {
+      var response = reference.kind === "set" ? await request("audio-reference-set", Object.assign(tokens(), {
+        action:"inspect", reference_id:reference.id
+      })) : await request("audio-microphone", Object.assign(tokens(), {
         action:"inspect_reference", reference_id:reference.id
       }));
-      if (response.reference_id !== reference.id || !response.quality) throw new Error(label("failed"));
-      referenceQuality.set(reference.id, response.quality);
+      if (reference.kind === "set") {
+        if (!response.reference_set || response.reference_set.id !== reference.id) throw new Error(label("failed"));
+        referenceQuality.set(reference.id, {parts:response.reference_set.parts});
+      } else {
+        if (response.reference_id !== reference.id || !response.quality) throw new Error(label("failed"));
+        referenceQuality.set(reference.id, response.quality);
+      }
       renderReferenceQuality(reference, target);
       target.hidden = false;
     } catch (error) { status(error.message); }
@@ -1425,13 +1455,19 @@
     return referenceName(reference, index, 72) + (duration ? " · " + duration : "");
   }
   function referenceOptions(selected) {
-    options(fields.reference_id, [["", label("reference_none")]].concat(allReferences.map(function(reference) {
+    var cap = profileCapability(), supportsSets = !cap || !Array.isArray(cap.reference_modes) || cap.reference_modes.includes("set");
+    options(fields.reference_id, [["", label("reference_none")]].concat(allReferences.filter(function(reference) {
+      return reference.kind !== "set" || supportsSets;
+    }).map(function(reference) {
       return [reference.id, referenceLabel(reference.id)];
     })), selected, label("reference_unavailable"));
   }
-  function playReference(referenceId) {
+  function playReference(referenceId, partIndex) {
     clearAudio();
-    var source = url("speech-audio", {reference_id: referenceId});
+    var reference = allReferences.find(function(item) { return item.id === referenceId; });
+    var extra = {reference_id:referenceId};
+    if (reference && reference.kind === "set") extra.part_index = String(partIndex || reference.fallback_part_index || 1);
+    var source = url("speech-audio", extra);
     fields.audio.src = source;
     fields.playback_section.hidden = fields.audio.hidden = false;
     fields.audio.play().catch(function(error) {
@@ -1478,20 +1514,22 @@
   }
   var referenceDeleting = false;
   async function deleteLibraryRecording(referenceId, name, trigger) {
-    if (!profileSettingsAvailable || referenceDeleting || voiceSaving || isRecordingVoice || recordingPending ||
+    if (!profileSettingsAvailable || referenceDeleting || probeSaving || voiceSaving || isRecordingVoice || recordingPending ||
         !speechReady || openedContext !== context()) return;
     if (!window.confirm(uiFormat("speech_reference_delete_confirm", {name:name}))) return;
     var sequence = openSequence, captureContext = context(), restoreFocus = document.activeElement === trigger;
     function current() { return sequence === openSequence && dialog.open && captureContext === context(); }
     referenceDeleting = true; trigger.disabled = true;
     try {
-      var response = await request("audio-microphone", Object.assign(tokens(), {
-        action:"delete_reference", reference_id:referenceId
-      }));
+      var response = referenceId && allReferences.some(function(item) { return item.id === referenceId && item.kind === "set"; }) ?
+        await request("audio-reference-set", Object.assign(tokens(), {action:"delete", reference_id:referenceId})) :
+        await request("audio-microphone", Object.assign(tokens(), {action:"delete_reference", reference_id:referenceId}));
       if (!current()) return;
       if (response.reference_id !== referenceId) throw new Error(label("failed"));
-      if (fields.audio.getAttribute("src") === url("speech-audio", {reference_id:referenceId})) clearAudio();
-      allReferences = allReferences.filter(function(item) { return item.id !== referenceId; });
+      clearAudio();
+      allReferences = Array.isArray(response.references) ?
+        (response.references).concat(response.reference_sets || []) :
+        allReferences.filter(function(item) { return item.id !== referenceId; });
       referenceQuality.delete(referenceId);
       referenceOptions(fields.reference_id.value);
       renderReferenceList(allReferences); renderActiveVoiceBadge(); updateVoiceCard();
@@ -1515,6 +1553,9 @@
     var persisted = savedSettings || settings;
     var activeProfile = persisted && persisted.selected && persisted.profiles[persisted.selected];
     var usedReferences = new Set(Object.values(persisted?.profiles || {}).map(function(profile) { return profile.reference_id; }));
+    allReferences.forEach(function(reference) {
+      if (reference.kind === "set") (reference.part_ids || []).forEach(function(id) { usedReferences.add(id); });
+    });
     refs.forEach(function(ref, index) {
       var item = node("div", fields.reference_list, "voice-ref-item");
       var info = node("div", item, "voice-ref-info");
@@ -1532,19 +1573,40 @@
       qualityBtn.type = "button";
       qualityBtn.addEventListener("click", function() { inspectReferenceQuality(ref, qualityBtn, qualityBox); });
       var actions = node("div", item, "row");
-      var play = node("button", actions, "ctl", "▶");
-      play.type = "button";
-      window.LixityComponents.setControlLabel(play, label("listen_reference"));
-      play.addEventListener("click", function() { playReference(ref.id); });
+      if (ref.kind === "set") {
+        for (var partIndex = 1; partIndex <= ref.part_count; partIndex++) {
+          (function(index) {
+            var partPlay = node("button", actions, "ctl", "▶ " + index);
+            partPlay.type = "button";
+            window.LixityComponents.setControlLabel(partPlay, uiFormat("speech_probe_play_part", {index:index}));
+            partPlay.addEventListener("click", function() { playReference(ref.id, index); });
+          })(partIndex);
+        }
+        node("span", actions, "ctl-note", uiFormat("speech_probe_fallback_short", {index:ref.fallback_part_index}));
+      } else {
+        var play = node("button", actions, "ctl", "▶");
+        play.type = "button";
+        window.LixityComponents.setControlLabel(play, label("listen_reference"));
+        play.addEventListener("click", function() { playReference(ref.id); });
+      }
       var isCurrent = activeProfile && activeProfile.reference_id === ref.id;
       if (isCurrent) {
         node("span", actions, "badge", "✓ " + label("active_voice"));
       } else {
         var useBtn = node("button", actions, "ctl", label("use_as_active"));
         useBtn.type = "button";
+        var draftProfile = settings && settings.selected && settings.profiles[settings.selected];
+        var draftCap = draftProfile && capabilities && capabilities[draftProfile.engine];
+        var setUnsupported = ref.kind === "set" && draftCap && Array.isArray(draftCap.reference_modes) &&
+          !draftCap.reference_modes.includes("set");
+        if (setUnsupported) { useBtn.disabled = true; useBtn.title = label("probe_engine_unsupported"); }
         useBtn.addEventListener("click", async function() {
           var curProf = settings && settings.selected && settings.profiles[settings.selected];
           if (curProf && switchMode("profiles")) {
+            var currentCap = capabilities && capabilities[curProf.engine];
+            if (ref.kind === "set" && currentCap && Array.isArray(currentCap.reference_modes) && !currentCap.reference_modes.includes("set")) {
+              status(label("probe_engine_unsupported")); return;
+            }
             // Populate a visible draft first. A rejected write must not change
             // the persisted active badge or hide fields that need correction.
             fields.reference_id.value = ref.id;
@@ -1568,6 +1630,184 @@
         remove.setAttribute("aria-label", label("reference_delete") + " · " + shortName);
       }
     });
+  }
+  function probeContextMatches() {
+    var current = tokens();
+    return Boolean(probeState && probeState.context.project_token === current.project_token &&
+      probeState.context.source_sha256 === current.source_sha256);
+  }
+  function activeProbePart() { return probeState && probeState.parts[probeState.active]; }
+  function probeHasTakes() { return Boolean(probeState && probeState.parts.some(function(part) { return part.take; })); }
+  function probePartSeconds(part) {
+    if (!part) return 30;
+    if (Number.isFinite(part.estimated_seconds)) return Math.max(10, Math.min(60, Math.ceil(part.estimated_seconds + 4)));
+    return Math.max(10, Math.min(60, Math.ceil(part.words * 60 / 130 + 4)));
+  }
+  function probePartReady(part) {
+    return Boolean(part && part.take && window.LixityAudioTake.referenceEligibility(part.take, referenceFormat).eligible);
+  }
+  function probeAllReady() {
+    return Boolean(probeState && probeState.script.status === "ready" && probeContextMatches() &&
+      probeState.parts.length >= 3 && probeState.parts.length <= 6 && probeState.parts.every(probePartReady));
+  }
+  function renderProbe() {
+    if (!fields.probe_section) return;
+    fields.probe_section.hidden = !probeLaunched;
+    if (fields.reference_text_card) fields.reference_text_card.hidden = probeActive;
+    fields.probe_generate.disabled = probeSaving || !speechReady || openedContext !== context();
+    fields.probe_target.disabled = fields.probe_generate.disabled;
+    if (!probeActive || !probeState) return;
+    var script = probeState.script, active = activeProbePart();
+    fields.probe_summary.textContent = uiFormat("speech_probe_summary", {
+      seconds:script.estimated_seconds, parts:script.parts.length, covered:script.covered_terms.length,
+      selected:(script.selected_terms || []).length
+    });
+    var warnings = Array.isArray(script.warnings) ? script.warnings : [];
+    fields.probe_warning.textContent = warnings.map(function(warning) { return warning.message || warning.code || ""; }).join(" ");
+    fields.probe_warning.hidden = !fields.probe_warning.textContent;
+    fields.probe_part_nav.replaceChildren();
+    probeState.parts.forEach(function(part, index) {
+      var item = node("button", fields.probe_part_nav, "seg-btn" + (index === probeState.active ? " active" : ""));
+      item.type = "button"; item.dataset.probePart = String(part.index); item.dataset.probePartIndex = String(index);
+      item.setAttribute("aria-pressed", String(index === probeState.active));
+      item.textContent = uiFormat("speech_probe_part", {index:part.index}) + (probePartReady(part) ? " ✓" : "");
+      item.addEventListener("click", function() { selectProbePart(index); });
+    });
+    if (!active) {
+      fields.probe_active_label.textContent = ""; fields.probe_script.replaceChildren();
+      fields.probe_terms.textContent = ""; fields.probe_terms.hidden = true;
+      fields.probe_pronunciations.textContent = ""; fields.probe_pronunciations.hidden = true;
+      fields.recBtn.disabled = fields.saveVoiceBtn.disabled = fields.probe_save.disabled = true;
+      fields.recLimit.hidden = true; return;
+    }
+    fields.probe_active_label.textContent = uiFormat("speech_probe_part", {index:active.index});
+    fields.probe_script.replaceChildren();
+    if (window.LixitySpeechPresentation) {
+      try {
+        window.LixitySpeechPresentation.appendText(fields.probe_script, {
+          text:active.text, phonemes:active.phonemes || []
+        });
+      } catch (_) { fields.probe_script.textContent = active.text; }
+    } else fields.probe_script.textContent = active.text;
+    fields.probe_terms.textContent = (active.terms || []).join(" · ");
+    fields.probe_terms.hidden = !fields.probe_terms.textContent;
+    var pronunciationHints = (active.substitutions || []).map(function(span) {
+      return span.source + " → " + span.replacement;
+    }).concat((active.phonemes || []).map(function(span) {
+      return span.source + " [" + span.replacement + "]";
+    }));
+    fields.probe_pronunciations.textContent = pronunciationHints.length ? label("probe_pronunciations") + ": " + pronunciationHints.join(" · ") : "";
+    fields.probe_pronunciations.hidden = !fields.probe_pronunciations.textContent;
+    var fallbackValue = String(probeState.fallback);
+    options(fields.probe_fallback, probeState.parts.map(function(part) {
+      return [String(part.index), uiFormat("speech_probe_part", {index:part.index})];
+    }), fallbackValue);
+    fields.probe_generate.disabled = probeSaving || !speechReady || openedContext !== context();
+    fields.probe_target.disabled = fields.probe_generate.disabled;
+    fields.probe_fallback.disabled = probeSaving || isRecordingVoice || recordingPending || voiceSaving;
+    fields.probe_retention.disabled = fields.probe_fallback.disabled;
+    fields.probe_save.disabled = !probeAllReady() || !fields.probe_retention.checked || probeSaving ||
+      isRecordingVoice || recordingPending || voiceSaving;
+    fields.probe_exit.disabled = probeSaving || isRecordingVoice || recordingPending || voiceSaving;
+    fields.take_confirmed.disabled = fields.takeTranscriptInput.disabled = probeSaving || isRecordingVoice || recordingPending || voiceSaving;
+    fields.recBtn.disabled = !canRecordVoice() || probeSaving || isRecordingVoice || recordingPending || voiceSaving;
+    actionLabel(fields.saveVoiceBtn, "probe_part_ready", "check");
+    fields.saveVoiceBtn.disabled = !probePartReady(active) || probeSaving || isRecordingVoice || recordingPending || voiceSaving;
+    fields.recLimit.textContent = uiFormat("speech_probe_record_limit", {seconds:probePartSeconds(active)});
+    fields.recLimit.hidden = false;
+  }
+  function selectProbePart(index) {
+    if (!probeActive || !probeState || !Number.isInteger(index) || index < 0 || index >= probeState.parts.length ||
+        probeSaving || isRecordingVoice || recordingPending || voiceSaving) return;
+    probeState.active = index;
+    clearVoiceTake(true);
+    var part = activeProbePart();
+    if (part.take) presentImportedTake(part.take, part.tokens);
+    renderProbe();
+  }
+  async function generateVoiceProbe() {
+    if (!speechReady || probeSaving || voiceSaving || isRecordingVoice || recordingPending || openedContext !== context()) return;
+    if (!probeActive && importedTake) { status(label("take_unsaved")); return; }
+    if (probeHasTakes() && !window.confirm(label("probe_discard_confirm"))) return;
+    if (!fields.probe_target.reportValidity()) return;
+    var sequence = ++probeSequence, captureContext = context(), attempt = {};
+    probeSaving = true; fields.probe_generate.disabled = true; fields.probe_target.disabled = true;
+    status(label("saving"));
+    try {
+      var response = await request("voice-probe", Object.assign({}, tokens(), {
+        target_seconds:fields.probe_target.valueAsNumber
+      }), null, attempt);
+      if (sequence !== probeSequence || !dialog.open || captureContext !== context() || !response.probe) return;
+      probeActive = true; probeLaunched = true;
+      probeState = {script:response.probe, context:tokens(), active:0, fallback:1,
+        parts:response.probe.parts.map(function(part) { return Object.assign({}, part, {take:null, tokens:null}); })};
+      clearVoiceTake(true);
+      renderProbe(); selectProbePart(0);
+      status(label(response.probe.status === "ready" ? "probe_ready" : "probe_insufficient"));
+      fields.probe_section.scrollIntoView({block:"nearest"});
+    } catch (error) {
+      if (sequence === probeSequence && dialog.open && captureContext === context()) status(error.message);
+    } finally {
+      probeSaving = false; fields.probe_generate.disabled = openedContext !== context(); fields.probe_target.disabled = fields.probe_generate.disabled;
+      if (probeActive) renderProbe();
+    }
+  }
+  function resetVoiceProbe() {
+    probeActive = false; probeLaunched = false; probeState = null; ++probeSequence;
+    if (fields.probe_section) fields.probe_section.hidden = true;
+    if (fields.reference_text_card) fields.reference_text_card.hidden = false;
+    if (fields.probe_script) fields.probe_script.replaceChildren();
+  }
+  function exitVoiceProbe() {
+    if (!probeActive || probeSaving || isRecordingVoice || recordingPending || voiceSaving) return;
+    if (probeHasTakes() && !window.confirm(label("probe_discard_confirm"))) return;
+    clearVoiceTake(true); resetVoiceProbe(); prepareRecordingDuration(); recordingFeedback("idle");
+    fields.recBtn.disabled = !canRecordVoice(); status("");
+  }
+  function confirmProbePart() {
+    var part = activeProbePart();
+    if (!probeActive || !part || !probePartReady(part) || !probeContextMatches()) return;
+    var next = probeState.parts.findIndex(function(candidate) { return !probePartReady(candidate); });
+    if (next >= 0) { selectProbePart(next); status(label("probe_part_ready")); return; }
+    renderProbe(); status(label("probe_all_ready")); fields.probe_save.focus({preventScroll:true});
+  }
+  async function saveVoiceProbe() {
+    if (!probeActive || !probeAllReady() || !fields.probe_retention.checked || probeSaving || voiceSaving ||
+        isRecordingVoice || recordingPending || openedContext !== context()) return;
+    var sequence = ++probeSequence, captureContext = context(), attempt = {};
+    var fallbackPart = Number(fields.probe_fallback.value);
+    if (!Number.isInteger(fallbackPart) || fallbackPart < 1 || fallbackPart > probeState.parts.length) {
+      fallbackPart = probeState.fallback || 1;
+    }
+    probeSaving = true; renderProbe(); status(label("saving"));
+    try {
+      var encoded = await Promise.all(probeState.parts.map(function(part) { return audioBase64(part.take.blob); }));
+      if (sequence !== probeSequence || !dialog.open || captureContext !== context() || !probeContextMatches()) return;
+      var response = await request("audio-reference-set", {
+        action:"save", project_token:tokens().project_token, source_sha256:tokens().source_sha256,
+        target_seconds:probeState.script.target_seconds, probe_sha256:probeState.script.probe_sha256,
+        allow_retention:true, fallback_part_index:fallbackPart,
+        profile_id:(settings && settings.selected) || "default",
+        parts:probeState.parts.map(function(part, index) {
+          return {index:index + 1, audio:encoded[index], transcript:part.take.transcript, confirmed:true};
+        })
+      }, null, attempt);
+      if (sequence !== probeSequence || !dialog.open || captureContext !== context()) return;
+      if (response.activation && response.activation.state === "activated") { location.reload(); return; }
+      allReferences = (response.references || []).concat(response.reference_sets || []);
+      renderReferenceList(allReferences); referenceOptions(fields.reference_id.value); renderActiveVoiceBadge(); updateVoiceCard();
+      clearVoiceTake(true); resetVoiceProbe(); prepareRecordingDuration();
+      fields.recBtn.disabled = !canRecordVoice(); status(response.activation && response.activation.state === "failed" ?
+        label("record_saved_not_active") : label("probe_saved"));
+    } catch (error) {
+      if (sequence === probeSequence && dialog.open && captureContext === context()) {
+        if (attempt.status !== 409) window.LixityLog?.audioClient?.("reference_save_failed", attempt.id);
+        status(error.message);
+      }
+    } finally {
+      probeSaving = false;
+      if (probeActive) renderProbe();
+    }
   }
   function startRecordingTimer(limit, current, capture) {
     var started = performance.now(), checking = false;
@@ -1610,13 +1850,15 @@
     fields.recBtn.dataset.help = label("record_help");
     fields.recTimer.hidden = true;
     fields.promptControls.forEach(function(el) { el.disabled = false; });
-    fields.saveVoiceBtn.disabled = !takeValid;
+    fields.saveVoiceBtn.disabled = probeActive ? !probePartReady(activeProbePart()) : !takeValid;
+    actionLabel(fields.saveVoiceBtn, probeActive ? "probe_part_ready" : "record_save", probeActive ? "check" : "save");
     recordingFeedback("idle");
   }
   async function startVoiceRecording() {
-    if (!canRecordVoice() || recordingPending || isRecordingVoice || voiceSaving) return;
-    var seconds = referenceRecording.duration_seconds;
-    var spoken = sampleVariant === "custom" ? fields.customTextarea.value.trim() : fields.promptText.textContent.trim();
+    if (!canRecordVoice() || probeSaving || recordingPending || isRecordingVoice || voiceSaving) return;
+    var seconds = probeActive ? probePartSeconds(activeProbePart()) : referenceRecording.duration_seconds;
+    var spoken = probeActive ? activeProbePart().text :
+      (sampleVariant === "custom" ? fields.customTextarea.value.trim() : fields.promptText.textContent.trim());
     if (!spoken) {
       recordingDiagnostic("preflight", "InvalidStateError");
       status(label("transcript_help")); recordingFeedback("failed", label("transcript_help")); return;
@@ -1639,7 +1881,8 @@
     if (desktopCapture) {
       try {
         var preferredDevice = nativeMicrophoneInventory() ? preferredMicrophone || fields.microphone_device.value || null : null;
-        var nativeStatus = await desktopCapture.startRecording(preferredDevice, "author-voice.wav", seconds);
+        var nativeStatus = await desktopCapture.startRecording(preferredDevice,
+          probeActive ? "voice-probe-" + activeProbePart().index + ".wav" : "author-voice.wav", seconds);
         if (!current()) {
           desktopCapture.cancelRecording().catch(function() {});
           return;
@@ -1752,7 +1995,7 @@
           ? window.LixityDesktopBridge.decodeBase64Wav(raw)
           : new Blob([Uint8Array.from(atob(raw.wav_base64), function(c) { return c.charCodeAt(0); })], {type: "audio/wav"});
         var desktopTake = await window.LixityAudioTake.create(blob,
-          {filename: (raw && raw.filename) || "author-voice.wav", transcript: takeTranscript, transcript_status: takeTranscript ? "draft" : "missing"});
+          {filename: (raw && raw.filename) || (probeActive ? "voice-probe-" + activeProbePart().index + ".wav" : "author-voice.wav"), transcript: takeTranscript, transcript_status: takeTranscript ? "draft" : "missing"});
         if (desktopSequence !== openSequence || desktopSerial !== recordingSequence || !dialog.open || !matchingTakeContext(desktopBound)) return;
         presentRecordedTake(desktopTake, desktopBound);
       } catch (error) {
@@ -1762,7 +2005,7 @@
         }
       } finally {
         voiceSaving = false;
-        if (desktopSequence === openSequence && dialog.open) { fields.recBtn.disabled = !canRecordVoice(); fields.saveVoiceBtn.disabled = !takeValid; }
+        if (desktopSequence === openSequence && dialog.open) { fields.recBtn.disabled = !canRecordVoice(); fields.saveVoiceBtn.disabled = probeActive ? !probePartReady(activeProbePart()) : !takeValid; }
       }
       return;
     }
@@ -1779,7 +2022,7 @@
       var wavBytes = window.LixityAudioTake.encodeWav(recordedChunks, totalRecordedSamples, sampleRate);
       recordedChunks = []; totalRecordedSamples = 0;
       var take = await window.LixityAudioTake.create(new Blob([wavBytes], {type:"audio/wav"}),
-        {filename:"author-voice.wav", transcript:takeTranscript, transcript_status:takeTranscript ? "draft" : "missing"});
+        {filename:probeActive ? "voice-probe-" + activeProbePart().index + ".wav" : "author-voice.wav", transcript:takeTranscript, transcript_status:takeTranscript ? "draft" : "missing"});
       if (sequence !== openSequence || serial !== recordingSequence || !dialog.open || !matchingTakeContext(bound)) return;
       presentRecordedTake(take, bound);
     } catch (error) {
@@ -1789,7 +2032,7 @@
       }
     } finally {
       voiceSaving = false;
-      if (sequence === openSequence && dialog.open) { fields.recBtn.disabled = !canRecordVoice(); fields.saveVoiceBtn.disabled = !takeValid; }
+      if (sequence === openSequence && dialog.open) { fields.recBtn.disabled = !canRecordVoice(); fields.saveVoiceBtn.disabled = probeActive ? !probePartReady(activeProbePart()) : !takeValid; }
     }
   }
   function referenceSaved(res) {
@@ -1797,7 +2040,7 @@
     if (res.activation && res.activation.state === "activated") { location.reload(); return true; }
     // Saving a take and assigning it to a profile are distinct outcomes.
     if (res.reference.quality) referenceQuality.set(res.reference.id, res.reference.quality);
-    allReferences = res.references || allReferences;
+    allReferences = (res.references || []).concat(allReferences.filter(function(reference) { return reference.kind === "set"; }));
     renderReferenceList(allReferences); referenceOptions(fields.reference_id.value);
     renderActiveVoiceBadge(); updateVoiceCard();
     status(label("record_saved_not_active"));
@@ -1810,16 +2053,22 @@
     try {
       importedTake = window.LixityAudioTake.withTranscript(importedTake, text,
         fields.take_confirmed.checked ? "confirmed" : text.trim() ? "draft" : "missing");
+      if (probeActive && probeState) {
+        var part = activeProbePart();
+        part.take = importedTake; part.tokens = Object.assign({}, takeTokens);
+        renderProbe();
+      }
       var eligibility = window.LixityAudioTake.referenceEligibility(importedTake, referenceFormat);
       takeValid = eligibility.eligible;
       fields.takeNotice.textContent = eligibility.reason === "duration" || eligibility.reason === "transcript" ?
         referenceText("take_" + eligibility.reason) : label(eligibility.reason ? "take_" + eligibility.reason : "take_ready");
     } catch (_) { takeValid = false; fields.takeNotice.textContent = label("take_invalid"); }
     fields.takeNotice.hidden = false;
-    fields.saveVoiceBtn.disabled = !takeValid || voiceSaving || !matchingTakeContext(takeTokens);
+    fields.saveVoiceBtn.disabled = !takeValid || voiceSaving || !matchingTakeContext(takeTokens) ||
+      (probeActive && !probePartReady(activeProbePart()));
   }
   async function exportVoiceTake(kind) {
-    if (!importedTake || isRecordingVoice || recordingPending) return;
+    if (!importedTake || isRecordingVoice || recordingPending || probeSaving) return;
     try {
       var text = fields.takeTranscriptInput.value;
       var take = window.LixityAudioTake.withTranscript(importedTake, text,
@@ -1827,8 +2076,12 @@
       await window.LixityAudioTake.download(take, kind);
     } catch (_) { status(label("take_export_failed")); }
   }
-  function clearVoiceTake() {
+  function clearVoiceTake(keepProbePart) {
     ++takeImportSequence;
+    if (probeActive && probeState && !keepProbePart) {
+      var part = activeProbePart();
+      if (part) { part.take = null; part.tokens = null; }
+    }
     importedTake = null; trimSource = null; takeTokens = null;
     lastRecordedWavBlob = null; takeValid = false; takeTranscript = "";
     fields.takePlayer.pause();
@@ -1841,10 +2094,11 @@
     fields.take_confirmed.closest("label").hidden = fields.takeNotice.hidden = true;
     fields.saveVoiceBtn.disabled = true;
     updateRecordingDuration();
+    if (probeActive) renderProbe();
   }
   function discardVoiceTake() {
-    if (!importedTake || isRecordingVoice || recordingPending) return;
-    if (voiceSaving) { status(label("saving")); return; }
+    if (!importedTake || isRecordingVoice || recordingPending || probeSaving) return;
+    if (voiceSaving || probeSaving) { status(label("saving")); return; }
     clearVoiceTake();
     fields.upload_voice_file.value = fields.take_metadata_file.value = fields.upload_voice_transcript.value = "";
     recordingFeedback("idle");
@@ -1852,7 +2106,7 @@
     (fields.recBtn.disabled ? fields.heading : fields.recBtn).focus();
   }
   function presentImportedTake(take, bound, original) {
-    if (isRecordingVoice || recordingPending || voiceSaving) return;
+    if (isRecordingVoice || recordingPending || probeSaving || voiceSaving) return;
     fields.audio.pause(); fields.takePlayer.pause();
     var nextUrl = URL.createObjectURL(take.blob);
     if (takeUrl) URL.revokeObjectURL(takeUrl);
@@ -1888,7 +2142,7 @@
     });
   }
   async function trimVoiceTake() {
-    if (!referenceFormat || !trimLimitSeconds || !importedTake || trimSource || voiceSaving || isRecordingVoice || recordingPending || !matchingTakeContext(takeTokens)) return;
+    if (!referenceFormat || !trimLimitSeconds || !importedTake || trimSource || probeSaving || voiceSaving || isRecordingVoice || recordingPending || !matchingTakeContext(takeTokens)) return;
     var prior = importedTake, bound = Object.assign({}, takeTokens), sequence = openSequence;
     var audio = prior.metadata.audio, rate = audio.sample_rate_hz, feedback = fields.trim_status;
     var start = Math.round(fields.take_trim_start.valueAsNumber * rate), end = Math.round(fields.take_trim_end.valueAsNumber * rate);
@@ -1926,7 +2180,7 @@
       [fields.take_confirmed, fields.takeTranscriptInput, fields.take_trim_start,
         fields.take_trim_end].forEach(function(input) { input.disabled = false; });
       window.LixityComponents.setButtonPending(fields.trim_apply, false);
-      if (current()) { fields.recBtn.disabled = !canRecordVoice(); fields.saveVoiceBtn.disabled = !takeValid; }
+      if (current()) { fields.recBtn.disabled = !canRecordVoice(); fields.saveVoiceBtn.disabled = probeActive ? !probePartReady(activeProbePart()) : !takeValid; }
     }
   }
   function matchingTakeContext(bound) {
@@ -1934,7 +2188,7 @@
     return bound && bound.project_token === current.project_token && bound.source_sha256 === current.source_sha256;
   }
   async function receiveTake(detail) {
-    if (!matchingTakeContext(detail.context)) return;
+    if (probeSaving || !matchingTakeContext(detail.context)) return;
     var serial = ++takeImportSequence, bound = Object.assign({}, detail.context);
     try {
       var take = await window.LixityAudioTake.validate(detail.take);
@@ -1947,6 +2201,7 @@
     } catch (_) { if (dialog && dialog.open && matchingTakeContext(bound)) status(label("take_invalid")); }
   }
   async function saveVoiceTake() {
+    if (probeActive) { confirmProbePart(); return; }
     if (!lastRecordedWavBlob || !takeValid || voiceSaving) return;
     if (!matchingTakeContext(takeTokens)) { status(label("take_context")); return; }
     if (importedTake) { refreshImportedTake(false); if (!takeValid) return; }
@@ -1977,12 +2232,12 @@
     finally {
       voiceSaving = false;
       updateRecordingDuration();
-      if (sequence === openSequence && dialog.open) { fields.recBtn.disabled = !canRecordVoice(); if (fields.saveVoiceBtn) fields.saveVoiceBtn.disabled = !takeValid; }
+      if (sequence === openSequence && dialog.open) { fields.recBtn.disabled = !canRecordVoice(); if (fields.saveVoiceBtn) fields.saveVoiceBtn.disabled = probeActive ? !probePartReady(activeProbePart()) : !takeValid; }
     }
   }
   function switchMode(newMode, initializing) {
     if (newMode === mode && !initializing) return true;
-    if (profileSaving || voiceSaving || (direction && direction.busy())) return false;
+    if (profileSaving || probeSaving || voiceSaving || (direction && direction.busy())) return false;
     var draft = profileDraftMessage();
     if (draft) { status(label(draft)); return false; }
     if (direction && direction.dirty() && newMode !== "reader" && newMode !== "output" && newMode !== mode) {
@@ -2069,7 +2324,47 @@
     var introCard = node("div", fields.reference_section, "voice-studio-intro");
     node("p", introCard, "ctl-note", label("record_author_intro"));
     fields.active_voice_badge = node("div", fields.reference_section, "voice-active-card");
+    fields.probe_section = node("section", fields.reference_section, "settings-section voice-probe-section");
+    fields.probe_section.id = "voice-calibration-probe"; fields.probe_section.hidden = true;
+    node("h4", fields.probe_section, "section-heading", label("voice_probe_title"));
+    node("p", fields.probe_section, "ctl-note", label("voice_probe_intro"));
+    var probeControls = node("div", fields.probe_section, "row voice-probe-controls");
+    fields.probe_target = field(probeControls, "probe_target", "number");
+    fields.probe_target.min = "120"; fields.probe_target.max = "180"; fields.probe_target.step = "1"; fields.probe_target.value = "150";
+    fields.probe_target.disabled = true;
+    fields.probe_generate = button(probeControls, "voice_probe_generate", generateVoiceProbe, "sparkles");
+    fields.probe_generate.id = "speech-probe-generate"; fields.probe_generate.disabled = true;
+    fields.probe_exit = button(probeControls, "voice_probe_exit", exitVoiceProbe, "x");
+    fields.probe_exit.id = "speech-probe-exit";
+    fields.probe_summary = node("p", fields.probe_section, "ctl-note"); fields.probe_summary.id = "speech-probe-summary";
+    fields.probe_warning = node("p", fields.probe_section, "ctl-note voice-probe-warning");
+    fields.probe_warning.id = "speech-probe-status"; fields.probe_warning.setAttribute("role", "status"); fields.probe_warning.hidden = true;
+    fields.probe_part_nav = node("div", fields.probe_section, "segmented-buttons voice-probe-parts");
+    fields.probe_part_nav.id = "speech-probe-parts"; fields.probe_part_nav.setAttribute("role", "group");
+    fields.probe_part_nav.setAttribute("aria-label", label("voice_probe_parts"));
+    var activeProbeCard = node("div", fields.probe_section, "voice-reading-card voice-probe-card");
+    fields.probe_active_label = node("h5", activeProbeCard, "voice-reading-label");
+    fields.probe_active_label.id = "speech-probe-active-label";
+    fields.probe_script = node("p", activeProbeCard, "voice-prompt-text"); fields.probe_script.id = "speech-probe-script";
+    fields.probe_script.setAttribute("aria-labelledby", fields.probe_active_label.id);
+    fields.probe_terms = node("p", activeProbeCard, "ctl-note voice-probe-terms"); fields.probe_terms.hidden = true;
+    fields.probe_pronunciations = node("p", activeProbeCard, "ctl-note voice-probe-pronunciations");
+    fields.probe_pronunciations.hidden = true;
+    var probeOptions = node("div", fields.probe_section, "settings-grid voice-probe-options");
+    fields.probe_fallback = field(probeOptions, "probe_fallback", "select");
+    fields.probe_fallback.id = "speech-probe-fallback";
+    fields.probe_fallback.addEventListener("change", function() {
+      if (!probeState) return;
+      probeState.fallback = Number(fields.probe_fallback.value); renderProbe();
+    });
+    node("p", probeOptions, "ctl-note", label("probe_fallback_help"));
+    fields.probe_retention = window.LixityComponents.createField(fields.probe_section,
+      {label:label("probe_retention"), type:"checkbox", id:"speech-probe-retention"});
+    fields.probe_retention.addEventListener("change", renderProbe);
+    fields.probe_save = button(fields.probe_section, "voice_probe_save", saveVoiceProbe, "save");
+    fields.probe_save.id = "speech-probe-save"; fields.probe_save.classList.add("primary"); fields.probe_save.disabled = true;
     var textCard = node("div", fields.reference_section, "voice-reading-card");
+    fields.reference_text_card = textCard;
     var textHeader = node("div", textCard, "voice-reading-header");
     fields.promptLabel = node("span", textHeader, "voice-reading-label");
     var sampleSwitcher = node("div", textHeader, "segmented-buttons");
@@ -2189,7 +2484,7 @@
       var file = uploadFile.files && uploadFile.files[0];
       var text = uploadTranscript.value, metadata = uploadMetadata.files && uploadMetadata.files[0];
       if (!file) { status(label("take_invalid")); return; }
-      if (voiceSaving || isRecordingVoice || recordingPending) return;
+      if (voiceSaving || probeSaving || isRecordingVoice || recordingPending) return;
       var sequence = openSequence, captureContext = context(), bound = tokens();
       voiceSaving = true; fields.recBtn.disabled = true;
       uploadBtn.disabled = true; status(label("saving"));
@@ -2780,6 +3075,7 @@
     var micCapture = nativeMicrophoneInventory(), currentContext = context();
     if (!micCapture || openedContext !== currentContext) preferredMicrophone = "";
     if (!dialog) build(); invalidate(); direction.disable(); settings = null; savedSettings = null; workers = null; profilesDirty = false; profileSaving = false; openedContext = currentContext; paragraph = null;
+    resetVoiceProbe(); fields.probe_target.value = "150";
     chapterAudio = null; ++chapterAudioSequence;
     fields.chapter_audio_file.value = ""; setChapterAudioBusy(false);
     fields.chapter_audio_status.textContent = label("loading");
@@ -2837,7 +3133,7 @@
         data.settings.schema_version !== currentAudioSchema : data.audio_settings_present === false);
       settings = data.settings || {schema_version: "lixity-audio-settings/1", selected: "", profiles: {}}; capabilities = data.capabilities; workers = data.workers;
       pronunciationScope = settings.schema_version === currentAudioSchema ? "project" : "profile";
-      allReferences = data.references || [];
+      allReferences = (data.references || []).concat(data.reference_sets || []);
       renderReferenceList(allReferences);
       calibrationTexts = data.calibration_texts || null; fields.updatePromptText();
       renderActiveVoiceBadge();
@@ -2872,6 +3168,7 @@
       if (migrationRequired) direction.disable();
       arrangeSections();
       speechReady = true; fields.recBtn.disabled = !canRecordVoice(); fields.reference_section.inert = false;
+      fields.probe_generate.disabled = false; fields.probe_target.disabled = false;
       fields.chapter_audio_import.disabled = fields.chapter_audio_file.disabled = false;
       refreshChapterAudio();
       recordingFeedback("idle");
@@ -2897,6 +3194,14 @@
   var audioActions = document.getElementById("project-audio-settings-actions");
   audioActions.classList.add("speech-project-actions");
   button(audioActions, "record_author_title", function() { open("reference"); }, "mic").id = "btn-project-record-voice";
+  button(audioActions, "voice_probe", function() {
+    open("reference").then(function() {
+      if (dialog.open && fields.probe_section) {
+        probeLaunched = true; fields.probe_section.hidden = false;
+        fields.probe_section.scrollIntoView({block:"nearest"}); fields.probe_generate.focus({preventScroll:true});
+      }
+    });
+  }, "sparkles").id = "btn-project-voice-probe";
   fields.project_profiles_action = button(audioActions, "profiles_title", function() { open("profiles"); }, "sliders");
   fields.project_profiles_action.id = "settings-speech";
   button(audioActions, "microphone_title", function() { open("microphone"); }, "volume-2").id = "settings-speech-mic";
@@ -2935,7 +3240,7 @@
       visibleReaderSpeech(event.detail);
       if (!dialog.hidden) return;
     }
-    if (profileSaving || voiceSaving) { status(label("saving")); return; }
+    if (profileSaving || probeSaving || voiceSaving) { status(label("saving")); return; }
     if (direction.busy() || direction.dirty()) {
       status(label(direction.busy() ? "saving" : "direction_switch_first")); return;
     }
@@ -2954,6 +3259,10 @@
     }
     if (direction.dirty() || direction.busy()) {
       invalidate(); direction.stale(); status(label("direction_context_changed")); return;
+    }
+    if (probeActive && !probeContextMatches()) {
+      fields.recBtn.disabled = fields.saveVoiceBtn.disabled = fields.probe_save.disabled = true;
+      updateRecordingDuration(); status(label("probe_context")); return;
     }
     if (importedTake && !matchingTakeContext(takeTokens)) {
       fields.saveVoiceBtn.disabled = true;

@@ -20,7 +20,11 @@ from typing import TYPE_CHECKING, Any
 
 from .audio_pcm import SPEECH_PCM_FORMAT, read_pcm_wav
 from .log import get_logger, log_event, speech_diagnostic_id, speech_diagnostic_scope
-from .speech_engines import QWEN_MODEL, engine_for_model, native_engine
+from .speech_engines import (
+    QWEN_MODEL,
+    engine_for_model,
+    native_engine,
+)
 from .speech_profiles import AudioProfile, audio_capabilities, speech_segment_limit
 from .speech_providers import _NoRedirect as _NoRedirect
 from .speech_providers import no_redirect_opener
@@ -32,15 +36,20 @@ from .speech_recording_settings import (
 )
 
 if TYPE_CHECKING:
-    from .speech_references import SpeechReference
+    from .speech_references import VoiceReference
 
 MAX_REQUEST_BYTES = 32768
 MAX_REFERENCE_BYTES = 3 * 1024 * 1024
 MAX_BASE_REQUEST_BYTES = MAX_REQUEST_BYTES + 4 * ((MAX_REFERENCE_BYTES + 2) // 3)
+MAX_REFERENCE_SET_REQUEST_BYTES = 16 * 1024 * 1024
 MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 SAMPLE_RATE = SPEECH_PCM_FORMAT[2]
 REFERENCE_WAV_FORMAT = (1, 2, SAMPLE_RATE)
 MAX_REFERENCE_TRANSCRIPT_CHARS = 2000
+MIN_TOUCAN_REFERENCE_SET_SECONDS = 120
+MAX_TOUCAN_REFERENCE_SET_SECONDS = 180
+MIN_REFERENCE_SET_PARTS = 3
+MAX_REFERENCE_SET_PARTS = 6
 SYNTHESIS_TIMEOUT_SECONDS = 3600
 _RENDER_ID_HEADER = "X-Lixity-Render-Id"
 
@@ -147,8 +156,8 @@ def worker_health(target: str, *, engine: str = "qwen3", opener: Any = None,
 
 
 def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local", opener: Any = None,
-                    reference: SpeechReference | None = None,
-                      endpoints: Mapping[str, str] | None = None, diagnostic_id: str | None = None) -> bytes:
+                     reference: VoiceReference | None = None,
+                     endpoints: Mapping[str, str] | None = None, diagnostic_id: str | None = None) -> bytes:
     """Request bounded PCM WAV through a fixed loopback target, without fallback."""
     profile = AudioProfile.model_validate(profile.model_dump())
     spec = native_engine(profile.engine)
@@ -159,22 +168,32 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
     model_id = spec.model
     worker_name = "Qwen" if profile.engine.startswith("qwen") else "Coqui" if profile.engine.startswith("coqui") else audio_capabilities()[profile.engine]["name"]
     endpoints = spec.endpoints if endpoints is None else endpoints
+    validate_voice_reference(profile, reference)
     request_data: dict[str, Any] = {"model": model_id, "input": text, "voice": profile.voice,
                           "language": profile.language, "instructions": profile.instructions,
                           "response_format": "wav"}
     if profile.engine == "qwen3-design":
         request_data["voice_description"] = profile.voice_description
     elif spec.reference_required:
-        from .speech_references import validate_reference
-        if reference is None or reference.id != profile.reference_id:
+        from .speech_references import SpeechReferenceSet
+
+        if reference is None:  # Defensive: validate_voice_reference already rejected this.
             raise ValueError(f"{worker_name} requires the matching verified reference")
-        validate_reference(reference)
-        request_data["reference_audio"] = base64.b64encode(reference.audio).decode("ascii")
-        request_data["reference_text"] = reference.transcript
+        if isinstance(reference, SpeechReferenceSet):
+            if profile.engine == "ims-toucan":
+                request_data["reference_parts"] = [
+                    {"audio": base64.b64encode(part.audio).decode("ascii"), "text": part.transcript}
+                    for part in reference.parts
+                ]
+            else:
+                reference = reference.parts[reference.fallback_part_index - 1]
+                request_data["reference_audio"] = base64.b64encode(reference.audio).decode("ascii")
+                request_data["reference_text"] = reference.transcript
+        else:
+            request_data["reference_audio"] = base64.b64encode(reference.audio).decode("ascii")
+            request_data["reference_text"] = reference.transcript
         if profile.engine == "qwen3-base" and len(text.strip().split()) <= 4:
             request_data["x_vector_only"] = True
-    elif reference is not None:
-        raise ValueError("This native model does not use a reference")
     if profile.engine == "ims-toucan":
         from .speech_controls import phoneme_spans
 
@@ -184,7 +203,12 @@ def synthesize_native(text: str, profile: AudioProfile, *, target: str = "local"
         }
         request_data["prosody"] = profile.prosody.model_dump()
     payload = json.dumps(request_data, ensure_ascii=False).encode("utf-8")
-    if len(payload) > (MAX_BASE_REQUEST_BYTES if spec.reference_required else MAX_REQUEST_BYTES):
+    request_limit = (
+        MAX_REFERENCE_SET_REQUEST_BYTES
+        if profile.engine == "ims-toucan" and "reference_parts" in request_data
+        else MAX_BASE_REQUEST_BYTES if spec.reference_required else MAX_REQUEST_BYTES
+    )
+    if len(payload) > request_limit:
         raise ValueError(f"{worker_name} synthesis request is too large")
     headers = {"Content-Type": "application/json"}
     render_id = _valid_render_id(diagnostic_id if diagnostic_id is not None else speech_diagnostic_id())
@@ -303,6 +327,74 @@ def _decode_reference(encoded: object, transcript: object) -> tuple[bytes, bytes
     return data, frames
 
 
+def validate_voice_reference(profile: AudioProfile, reference: VoiceReference | None) -> None:
+    """Validate one immutable snapshot and the selected engine's reference mode."""
+    from .speech_profiles import profile_uses_reference
+    from .speech_references import SpeechReferenceSet, validate_reference
+
+    if isinstance(reference, SpeechReferenceSet):
+        if profile.engine in ("coqui", "coqui-reference"):
+            raise ValueError("Coqui does not support reference sets; select a single reference recording")
+        if profile.engine == "f5-tts":
+            raise ValueError("F5-TTS does not support reference sets; select a single reference recording")
+    if not profile_uses_reference(profile):
+        if reference is not None:
+            raise ValueError("This speech model does not use a reference")
+        return
+    if reference is None or reference.id != profile.reference_id:
+        name = audio_capabilities()[profile.engine]["name"]
+        raise ValueError(f"{name} requires the matching verified reference")
+    if (isinstance(reference, SpeechReferenceSet) and profile.engine == "qwen3-base"
+            and (type(reference.fallback_part_index) is not int
+                 or not 1 <= reference.fallback_part_index <= len(reference.parts))):
+        raise ValueError("Qwen Base requires a valid 1-based fallback part in its reference set")
+    validate_reference(reference)
+    if not isinstance(reference, SpeechReferenceSet):
+        return
+    if not MIN_REFERENCE_SET_PARTS <= len(reference.parts) <= MAX_REFERENCE_SET_PARTS:
+        raise ValueError("A voice reference set requires three to six parts")
+    if profile.engine not in ("mlx-audio", "qwen3-base", "ims-toucan"):
+        raise ValueError("This speech model does not support reference sets")
+    if profile.engine == "ims-toucan":
+        channels, width, rate = REFERENCE_WAV_FORMAT
+        bytes_per_second = channels * width * rate
+        total_frames = sum(len(read_pcm_wav(part.audio)[1]) for part in reference.parts)
+        if not (
+            MIN_TOUCAN_REFERENCE_SET_SECONDS * bytes_per_second
+            <= total_frames
+            <= MAX_TOUCAN_REFERENCE_SET_SECONDS * bytes_per_second
+        ):
+            raise ValueError("IMS-Toucan reference sets must contain 120 to 180 seconds of audio in total")
+
+
+def _decode_toucan_reference_parts(value: object) -> list[tuple[bytes, bytes]]:
+    """Validate the strict Toucan set transport and its actual total duration."""
+    if (not isinstance(value, list)
+            or not MIN_REFERENCE_SET_PARTS <= len(value) <= MAX_REFERENCE_SET_PARTS):
+        raise ValueError("Invalid reference parts")
+    decoded: list[tuple[bytes, bytes]] = []
+    seen: set[tuple[bytes, str]] = set()
+    for part in value:
+        if not isinstance(part, dict) or set(part) != {"audio", "text"}:
+            raise ValueError("Invalid reference part")
+        audio, frames = _decode_reference(part["audio"], part["text"])
+        identity = audio, part["text"]
+        if identity in seen:
+            raise ValueError("Invalid duplicate reference part")
+        seen.add(identity)
+        decoded.append((audio, frames))
+    channels, width, rate = REFERENCE_WAV_FORMAT
+    bytes_per_second = channels * width * rate
+    total_frames = sum(len(frames) for _audio, frames in decoded)
+    if not (
+        MIN_TOUCAN_REFERENCE_SET_SECONDS * bytes_per_second
+        <= total_frames
+        <= MAX_TOUCAN_REFERENCE_SET_SECONDS * bytes_per_second
+    ):
+        raise ValueError("Invalid reference set duration")
+    return decoded
+
+
 def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 8769,
                   runtime_info: Any = None, model: str = QWEN_MODEL,
                   health_info: Callable[[], dict[str, Any]] | None = None,
@@ -368,7 +460,12 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                 return
             try:
                 size = int(self.headers.get("Content-Length", "0"))
-                if not 0 < size <= (MAX_BASE_REQUEST_BYTES if spec.reference_required else MAX_REQUEST_BYTES):
+                read_limit = (
+                    MAX_REFERENCE_SET_REQUEST_BYTES
+                    if engine == "ims-toucan"
+                    else MAX_BASE_REQUEST_BYTES if spec.reference_required else MAX_REQUEST_BYTES
+                )
+                if not 0 < size <= read_limit:
                     raise ValueError("Invalid request size")
                 if self.headers.get_content_type() != "application/json":
                     raise ValueError("Expected JSON")
@@ -378,11 +475,22 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                 request = json.loads(raw)
                 if not isinstance(request, dict):
                     raise ValueError("Invalid request fields")
+                uses_reference_parts = engine == "ims-toucan" and "reference_parts" in request
+                request_limit = (
+                    MAX_REFERENCE_SET_REQUEST_BYTES
+                    if uses_reference_parts
+                    else MAX_BASE_REQUEST_BYTES if spec.reference_required else MAX_REQUEST_BYTES
+                )
+                if len(raw) > request_limit:
+                    raise ValueError("Invalid request size")
                 expected_fields = {"model", "input", "voice", "language", "instructions", "response_format"}
                 if engine == "qwen3-design":
                     expected_fields.add("voice_description")
                 if spec.reference_required:
-                    expected_fields.update(("reference_audio", "reference_text"))
+                    if uses_reference_parts:
+                        expected_fields.add("reference_parts")
+                    else:
+                        expected_fields.update(("reference_audio", "reference_text"))
                 if engine == "qwen3-base" and "x_vector_only" in request:
                     if type(request["x_vector_only"]) is not bool:
                         raise ValueError("Invalid speaker-embedding flag")
@@ -400,7 +508,10 @@ def worker_server(synthesize: Callable[[dict[str, Any]], bytes], *, port: int = 
                                   "voice": request["voice"], "instructions": request["instructions"],
                                   "voice_description": request.get("voice_description", "")}
                 if spec.reference_required:
-                    _decode_reference(request["reference_audio"], request["reference_text"])
+                    if uses_reference_parts:
+                        _decode_toucan_reference_parts(request["reference_parts"])
+                    else:
+                        _decode_reference(request["reference_audio"], request["reference_text"])
                     profile_fields["reference_id"] = "0" * 64
                 if engine == "ims-toucan":
                     if request["instructions"]:

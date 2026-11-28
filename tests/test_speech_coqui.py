@@ -117,6 +117,19 @@ def test_coqui_cache_keys_do_not_collide_with_qwen_or_other_references(tmp_path)
     assert len(keys) == 4
 
 
+def test_coqui_rejects_reference_sets_without_selecting_part_one(tmp_path):
+    from lixity.speech_references import SpeechReferenceSet
+
+    reference = SpeechReferenceSet(
+        "a" * 64, (), "b" * 64, "c" * 64, "d" * 64, "de", (), 1, {},
+    )
+    preset = AudioProfile(engine="coqui", language="de", voice="thorsten")
+    cloning = AudioProfile(engine="coqui-reference", language="de", voice="reference", reference_id=reference.id)
+    for profile in (preset, cloning):
+        with pytest.raises(ValueError, match="does not support reference sets"):
+            synthesize_qwen("Hallo.", profile, reference=reference)
+
+
 def test_coqui_worker_accepts_valid_requests_and_identifies_model() -> None:
     calls = []
     server = worker_server(lambda request: calls.append(request) or generate_silence_wav(.01), port=0, model=COQUI_MODEL)

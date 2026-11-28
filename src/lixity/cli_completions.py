@@ -104,8 +104,8 @@ _lixity_complete() {
                 --audio|--transcript-file|-o|--output) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
                 --language) COMPREPLY=( $(compgen -W "de en" -- "$cur") ) ;;
                 --variant) COMPREPLY=( $(compgen -W "phonetic short" -- "$cur") ) ;;
-                --gain|--duration|--device|--transcript|--reference-id|--voice-description) ;;
-                *) COMPREPLY=( $(compgen -W "create inspect record generate calibration-text --help --project --audio --transcript-file --transcript --reference-id --duration --gain --device --calibration-text --variant --language --voice-description -o --output" -- "$cur") ) ;;
+                --gain|--duration|--device|--transcript|--reference-id|--voice-description|--target-seconds) ;;
+                *) COMPREPLY=( $(compgen -W "create inspect record generate calibration-text probe-script --help --project --audio --transcript-file --transcript --reference-id --duration --gain --device --calibration-text --variant --language --voice-description --target-seconds -o --output" -- "$cur") ) ;;
             esac
             return 0
             ;;
@@ -339,7 +339,7 @@ __LIXITY_ZSH_COMMANDS__
           ;;
         audio-reference)
           _arguments \
-            '1:action:(create inspect record generate calibration-text)' \
+            '1:action:(create inspect record generate calibration-text probe-script)' \
             '--project[Explicit project root]:directory:_files -/' \
             '--audio[Reference WAV]:file:_files' \
             '--transcript-file[Exact UTF-8 transcript]:file:_files' \
@@ -352,6 +352,7 @@ __LIXITY_ZSH_COMMANDS__
             '--variant[Calibration text variant]:variant:(phonetic short)' \
             '--language[Language code]:language:(de en)' \
             '--voice-description[Voice description for synthetic generation]:text:' \
+            '--target-seconds[Probe target duration 120-180]:seconds:' \
             '-o[Save raw recorded WAV]:file:_files' \
             '--output[Save raw recorded WAV]:file:_files'
           ;;
